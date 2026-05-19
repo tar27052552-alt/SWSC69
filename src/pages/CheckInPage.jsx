@@ -1,0 +1,333 @@
+import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { CheckCircle, AlertTriangle, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
+import CameraCapture from '../components/CameraCapture';
+
+const TH_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
+
+export default function CheckInPage() {
+  const { user, checkInState, setCheckInState } = useAuth();
+  const navigate = useNavigate();
+  const [step, setStep] = useState(0); // 0=start, 1=locating, 2=camera
+  const [photoUrl, setPhotoUrl] = useState(null);
+  const [distanceInfo, setDistanceInfo] = useState('');
+  const [enabledDays, setEnabledDays] = useState(["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์"]);
+  const [disabledDates, setDisabledDates] = useState([]);
+  const [startDate, setStartDate] = useState('');
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [greetingSchedules, setGreetingSchedules] = useState([]);
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const { data, error } = await supabase.from('attendance_settings').select('*');
+        if (error) throw error;
+        if (data) {
+          const days = data.find(d => d.key === 'enabled_days')?.value;
+          const dates = data.find(d => d.key === 'disabled_dates')?.value;
+          const startD = data.find(d => d.key === 'start_date')?.value;
+          if (days) setEnabledDays(days);
+          if (dates) setDisabledDates(dates);
+          if (startD) setStartDate(startD);
+        }
+      } catch (err) {
+        console.error('Error loading settings in CheckInPage:', err);
+      } finally {
+        setLoadingSettings(false);
+      }
+    }
+    async function loadGreetingSchedules() {
+      try {
+        const { data, error } = await supabase
+          .from('schedules')
+          .select('*')
+          .eq('type', 'greeting');
+        if (!error && data) {
+          setGreetingSchedules(data);
+        }
+      } catch (err) {
+        console.error('Error loading greeting schedules:', err);
+      }
+    }
+    loadSettings();
+    loadGreetingSchedules();
+  }, []);
+
+  const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const todayStr = toGregorianStr();
+  const todayDayName = TH_DAYS[new Date().getDay()];
+  const isBeforeStart = startDate && todayStr < startDate;
+  const isEnabledToday = enabledDays.includes(todayDayName) && !disabledDates.includes(todayStr) && !isBeforeStart;
+
+  const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3;
+    const p1 = lat1 * Math.PI/180;
+    const p2 = lat2 * Math.PI/180;
+    const dp = (lat2-lat1) * Math.PI/180;
+    const dl = (lon2-lon1) * Math.PI/180;
+    const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  };
+
+  const handleStartCheckIn = () => {
+    setStep(1);
+    
+    if (!navigator.geolocation) {
+      alert("เบราว์เซอร์ไม่รองรับ GPS");
+      setStep(0); return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const schoolLat = 16.713227719670115; 
+        const schoolLng = 98.57308240750432;
+        const dist = getDistance(latitude, longitude, schoolLat, schoolLng);
+        
+        if (dist > 300) {
+          alert(`ไม่สามารถเช็คชื่อได้! คุณอยู่ห่างจากโรงเรียน ${Math.round(dist)} เมตร (ต้องไม่เกิน 300 เมตร)`);
+          setStep(0);
+        } else {
+          setDistanceInfo(`ระยะห่างจากโรงเรียน: ${Math.round(dist)} เมตร`);
+          setTimeout(() => setStep(2), 1500);
+        }
+      },
+      (err) => {
+        alert("ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS");
+        setStep(0);
+      }
+    );
+  };
+
+  const handleSubmitCheckIn = async () => {
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes();
+    
+    // Check duty
+    const dayIndex = now.getDay();
+    const daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+    const todayName = daysTh[dayIndex];
+    
+    let hasGreetingDuty = false;
+    const todaySchedule = greetingSchedules.find(s => s.day === todayName);
+    if (todaySchedule && user?.nickname) {
+      const scheduleData = todaySchedule.data || {};
+      if (scheduleData.gate1?.includes(user.nickname) ||
+          scheduleData.gate2?.includes(user.nickname) ||
+          scheduleData.gate3?.includes(user.nickname)) {
+        hasGreetingDuty = true;
+      }
+    }
+
+    const limitM = hasGreetingDuty ? 0 : 35; // 07:00 or 07:35
+    const isLate = (h > 7) || (h === 7 && m > limitM); 
+    const timeStr = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')} น.`;
+    const status = isLate ? 'late' : 'on_time';
+    
+    try {
+      if (user) {
+        const record = {
+          user_id: String(user.id),
+          user_name: user.name,
+          nickname: user.nickname,
+          date: toGregorianStr(now),
+          time: timeStr,
+          status: status,
+          photo: photoUrl,
+          is_manual: false
+        };
+        const { error: upsertError } = await supabase
+          .from('student_attendance')
+          .upsert([record], { onConflict: 'user_id,date' });
+        
+        if (upsertError) {
+          console.error("CheckIn error:", upsertError);
+          alert("ไม่สามารถบันทึกข้อมูลได้: " + upsertError.message);
+          return;
+        }
+
+        // Auto-fine if late
+        if (isLate) {
+          const limitHour = 7;
+          const limitMinute = limitM;
+          const limitDate = new Date(now);
+          limitDate.setHours(limitHour, limitMinute, 0, 0);
+
+          let minutesLate = 0;
+          if (now > limitDate) {
+            const diffMs = now - limitDate;
+            minutesLate = Math.ceil(diffMs / (1000 * 60));
+          }
+
+          if (minutesLate > 0) {
+            const dateStr = toGregorianStr(now);
+            // Check if fine already exists for this user, date and violation
+            const { data: existingFine } = await supabase
+              .from('discipline_fines')
+              .select('id')
+              .eq('user_id', String(user.id))
+              .eq('date', dateStr)
+              .eq('violation', 'มาสาย (นาที)');
+
+            if (!existingFine || existingFine.length === 0) {
+              const baseAmount = 5; // 5 Baht per minute
+              let finalAmount = baseAmount * minutesLate;
+
+              // 2x fine multiplier for Discipline dept (deptId === 2)
+              if (user.deptId === 2) {
+                finalAmount *= 2;
+              }
+
+              const fineRecord = {
+                user_id: String(user.id),
+                user_name: user.name,
+                nickname: user.nickname,
+                violation: 'มาสาย (นาที)',
+                amount: finalAmount,
+                date: dateStr,
+                note: `มาสาย ${minutesLate} นาที (เวลาเช็คชื่อ ${timeStr})${user.deptId === 2 ? ' - ปรับ 2 เท่าเนื่องจากเป็นสารวัตรนักเรียน' : ''}`,
+                by: 'ระบบอัตโนมัติ',
+                paid: false
+              };
+              await supabase.from('discipline_fines').insert([fineRecord]);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error submitting attendance and logging auto-fine:', err);
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+      return;
+    }
+
+    setCheckInState({ status: status, time: timeStr, photo: photoUrl });
+  };
+
+  if (user?.role === 'admin' || user?.nickname === 'แอดมิน') {
+    return (
+      <div style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
+        <CheckCircle size={64} color="#00bcd4" style={{ margin: '0 auto' }} />
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#37474f', marginTop: 16 }}>
+          บัญชีผู้ดูแลระบบ
+        </h2>
+        <div style={{ fontSize: 14, color: '#757575', marginTop: 8 }}>
+          ในฐานะผู้ดูแลระบบ คุณได้รับการยกเว้นและไม่จำเป็นต้องเช็คชื่อเข้าโรงเรียน
+        </div>
+        <div style={{ marginTop: 32 }}>
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
+            กลับหน้าหลัก
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (checkInState) {
+    return (
+      <div style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
+        {checkInState.status === 'on_time' ? <CheckCircle size={64} color="#2e7d32" style={{ margin: '0 auto' }} /> : <AlertTriangle size={64} color="#c62828" style={{ margin: '0 auto' }} />}
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: checkInState.status === 'on_time' ? '#2e7d32' : '#c62828', marginTop: 16 }}>
+          {checkInState.status === 'on_time' ? 'เช็คชื่อสำเร็จ!' : 'คุณมาสาย!'}
+        </h2>
+        <div style={{ fontSize: 15, color: '#757575', marginTop: 8 }}>บันทึกเวลา: {checkInState.time}</div>
+        
+        {checkInState.photo && (
+          <div style={{ marginTop: 24, borderRadius: 12, overflow: 'hidden', border: '4px solid #f0f0f0', display: 'inline-block' }}>
+            <img src={checkInState.photo} alt="check-in selfie" style={{ width: 200, height: 200, objectFit: 'cover', display: 'block' }} />
+          </div>
+        )}
+
+        <div style={{ marginTop: 32 }}>
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
+            กลับหน้าหลัก
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: 500, margin: '0 auto' }}>
+      <div className="page-header" style={{ textAlign: 'center' }}>
+        <div className="page-title">📍 เช็คชื่อมาโรงเรียน</div>
+        <div className="page-subtitle">กรุณาเช็คชื่อก่อนเวลา 07:35 น. (เวรยืนไหว้ 07:00 น.)</div>
+      </div>
+
+      <div className="card" style={{ padding: '32px 20px', textAlign: 'center' }}>
+        {step === 0 && (
+          loadingSettings ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '20px 0' }}>
+              <div style={{ width: 40, height: 40, border: '4px solid #f3f3f3', borderTop: '4px solid #00bcd4', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <div style={{ fontSize: 14, color: '#757575' }}>กำลังตรวจสอบการตั้งค่าระบบ...</div>
+            </div>
+          ) : !isEnabledToday ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '20px 10px' }}>
+              <AlertTriangle size={56} color="#e53935" />
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: '#37474f', margin: 0 }}>
+                  {isBeforeStart ? 'ยังไม่ถึงกำหนดเริ่มระบบเช็คชื่อ' : 'วันนี้ไม่ได้เปิดระบบเช็คชื่อสภานักเรียน'}
+                </h3>
+                <p style={{ fontSize: 13, color: '#757575', marginTop: 8, lineHeight: 1.5 }}>
+                  {isBeforeStart 
+                    ? `ฝ่ายปกครองได้ตั้งค่ากำหนดเริ่มเปิดระบบเช็คชื่อในวันที่ ${new Date(startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                    : `ฝ่ายปกครองได้ปิดระบบการเช็คชื่อเข้าแถวในวันนี้ (วัน${todayDayName}ที่ ${new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })})`
+                  }
+                </p>
+              </div>
+              <button className="btn btn-gray" onClick={() => navigate('/dashboard')} style={{ width: '100%', marginTop: 8 }}>
+                กลับหน้าหลัก
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <MapPin size={48} color="#00bcd4" />
+              <div style={{ fontSize: 14, color: '#616161' }}>
+                ระบบจะทำการตรวจสอบพิกัด GPS ว่าคุณอยู่ในบริเวณโรงเรียนหรือไม่ จากนั้นให้ถ่ายภาพเซลฟี่เพื่อยืนยันตัวตน
+              </div>
+              <button className="btn btn-primary" onClick={handleStartCheckIn} style={{ marginTop: 16, width: '100%', padding: '12px 0', fontSize: 16 }}>
+                เริ่มเช็คชื่อ
+              </button>
+            </div>
+          )
+        )}
+
+        {step === 1 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '20px 0' }}>
+            <div style={{ width: 60, height: 60, border: '5px solid #f3f3f3', borderTop: '5px solid #00bcd4', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 16 }}>กำลังดึงตำแหน่ง GPS...</div>
+              <div style={{ fontSize: 13, color: '#9e9e9e', marginTop: 4 }}>กรุณารอสักครู่ ระบบกำลังตรวจสอบพิกัด</div>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+            <div style={{ fontSize: 13, background: '#e0f7fa', color: '#00838f', padding: '8px 16px', borderRadius: 20, fontWeight: 500 }}>
+              ✓ ตำแหน่งผ่านเกณฑ์ ({distanceInfo})
+            </div>
+            
+            <CameraCapture
+              onCapture={(dataUrl) => setPhotoUrl(dataUrl)}
+              facingMode="user"
+              height={280}
+            />
+
+            <button 
+              className="btn btn-primary" 
+              style={{ width: '100%', padding: '12px 0', fontSize: 16 }}
+              disabled={!photoUrl}
+              onClick={handleSubmitCheckIn}
+            >
+              บันทึกการเช็คชื่อ
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
