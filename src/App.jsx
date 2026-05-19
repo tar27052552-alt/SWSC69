@@ -150,7 +150,7 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter basename="/<repository-name>">
+    <BrowserRouter basename="/SWSC69">
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>

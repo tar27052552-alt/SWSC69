@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  base: '/<repository-name>/', // กำหนดชื่อ repository ตรงนี้
+  base: '/SWSC69/', // กำหนดชื่อ repository ตรงนี้
   plugins: [
     react(),
     tailwindcss(),
