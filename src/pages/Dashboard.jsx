@@ -258,17 +258,53 @@ export default function Dashboard() {
           </NavLink>
         </div>
       ) : (
-        <div style={{ background: checkInState.status === 'on_time' ? '#e8f5e9' : '#ffebee', borderRadius: 8, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, border: `1px solid ${checkInState.status === 'on_time' ? '#c8e6c9' : '#ffcdd2'}` }}>
-          {checkInState.status === 'on_time' ? <CheckCircle size={24} color="#2e7d32" /> : <AlertTriangle size={24} color="#c62828" />}
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: checkInState.status === 'on_time' ? '#2e7d32' : '#c62828' }}>
-              {checkInState.status === 'on_time' ? 'บันทึกการเช็คชื่อแล้ว (มาปกติ)' : 'บันทึกการเช็คชื่อแล้ว (มาสาย)'}
+        (() => {
+          let bannerBg = '#ffebee';
+          let borderCol = '#ffcdd2';
+          let textCol = '#c62828';
+          let icon = <AlertTriangle size={24} color="#c62828" />;
+          let statusText = 'บันทึกการเช็คชื่อแล้ว (มาสาย)';
+
+          if (checkInState.status === 'on_time') {
+            bannerBg = '#e8f5e9';
+            borderCol = '#c8e6c9';
+            textCol = '#2e7d32';
+            icon = <CheckCircle size={24} color="#2e7d32" />;
+            statusText = 'บันทึกการเช็คชื่อแล้ว (มาปกติ)';
+          } else if (checkInState.status === 'leave') {
+            bannerBg = '#fff8e1';
+            borderCol = '#ffe082';
+            textCol = '#f57f17';
+            icon = <AlertTriangle size={24} color="#f57f17" />;
+            statusText = 'บันทึกการเช็คชื่อแล้ว (ลากิจ/ลาป่วย)';
+          } else if (checkInState.status === 'missing') {
+            bannerBg = '#f5f5f5';
+            borderCol = '#e0e0e0';
+            textCol = '#616161';
+            icon = <AlertTriangle size={24} color="#616161" />;
+            statusText = 'ระบบบันทึกว่า (ขาดแถว)';
+          } else if (checkInState.status === 'not_required') {
+            bannerBg = '#eceff1';
+            borderCol = '#cfd8dc';
+            textCol = '#455a64';
+            icon = <CheckCircle size={24} color="#455a64" />;
+            statusText = 'ไม่มีการเช็คชื่อในวันนี้ (ไม่บังคับ)';
+          }
+
+          return (
+            <div style={{ background: bannerBg, borderRadius: 8, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, border: `1px solid ${borderCol}` }}>
+              {icon}
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: textCol }}>
+                  {statusText}
+                </div>
+                <div style={{ fontSize: 12, color: '#757575', marginTop: 4 }}>
+                  เวลาที่บันทึก: {checkInState.time || '-'}
+                </div>
+              </div>
             </div>
-            <div style={{ fontSize: 12, color: '#757575', marginTop: 4 }}>
-              เวลาที่บันทึก: {checkInState.time}
-            </div>
-          </div>
-        </div>
+          );
+        })()
       )}
 
       {/* Clean Duty Banner */}

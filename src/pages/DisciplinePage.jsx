@@ -3,6 +3,8 @@ import { DEPARTMENTS } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Search, X, Save, AlertTriangle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
+import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 const VIOLATION_TYPES = [
   'วางรองเท้าไม่เรียบร้อย (ข้าง)',
@@ -41,6 +43,7 @@ export default function DisciplinePage() {
   const [form, setForm] = useState({ userId:'', violation: VIOLATION_TYPES[0], multiplier: 1, amount:20, date:'', note:'' });
   const [paymentModal, setPaymentModal] = useState(null); // fine object being paid
   const [slipPreview, setSlipPreview] = useState(null);
+  const [submittingSlip, setSubmittingSlip] = useState(false);
   const PROMPTPAY_ID = '1639800408765'; // <-- เปลี่ยนเป็นเบอร์ PromptPay ของสภา
   const PROMPTPAY_NAME = 'น.ส. ทิตติกรณ์ แสงหงษ์';
 
@@ -214,21 +217,7 @@ export default function DisciplinePage() {
     }
   };
 
-  const handleClearAllAttendance = async () => {
-    if (!window.confirm('คุณต้องการล้างข้อมูลการเช็คชื่อเข้าแถวและเวรทำความสะอาดห้องสภาทั้งหมดในฐานข้อมูลใช่หรือไม่? (การดำเนินการนี้จะไม่สามารถย้อนกลับได้)')) return;
-    try {
-      const { error: err1 } = await supabase.from('student_attendance').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      const { error: err2 } = await supabase.from('clean_duty_checks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (err1) throw err1;
-      if (err2) throw err2;
-      alert('ล้างข้อมูลก่อนหน้าเรียบร้อยแล้ว!');
-      setDbAttendance([]);
-      setDbCleanChecks([]);
-    } catch (err) {
-      console.error('Error clearing data:', err);
-      alert('เกิดข้อผิดพลาดในการล้างข้อมูล: ' + err.message);
-    }
-  };
+
 
   useEffect(() => {
     async function loadAttendance() {
@@ -246,7 +235,7 @@ export default function DisciplinePage() {
       }
     }
     loadAttendance();
-  }, [selectedDate]);
+  }, [selectedDate, checkInState]); // re-fetch เมื่อ checkInState เปลี่ยน (หลังเช็คชื่อ)
 
   useEffect(() => {
     async function loadCleanChecks() {
@@ -275,6 +264,24 @@ export default function DisciplinePage() {
   };
 
   const handleManualCheckIn = async (userId, status) => {
+    if (status === 'reset') {
+      if (!window.confirm('คุณต้องการลบประวัติการเช็คชื่อของนักเรียนคนนี้ เพื่อให้สามารถใช้กล้องเช็คชื่อใหม่ได้ใช่หรือไม่?')) return;
+      try {
+        const { error } = await supabase
+          .from('student_attendance')
+          .delete()
+          .eq('user_id', String(userId))
+          .eq('date', selectedDate);
+        if (error) throw error;
+        
+        setDbAttendance(prev => prev.filter(x => String(x.user_id) !== String(userId)));
+      } catch (err) {
+        console.error('Error resetting check-in:', err);
+        alert('เกิดข้อผิดพลาดในการรีเซ็ตสถานะ: ' + err.message);
+      }
+      return;
+    }
+
     let time = '-';
     if (status === 'on_time' || status === 'late') {
       time = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
@@ -356,8 +363,8 @@ export default function DisciplinePage() {
       };
     }
 
-    // 2. Real-time check-in (current day only)
-    if (selectedDate === todayStr && user?.id === u.id && checkInState) {
+    // 2. Real-time check-in (current day only) — ใช้ String() ป้องกัน type mismatch
+    if (selectedDate === todayStr && String(user?.id) === String(u.id) && checkInState) {
       return {
         ...u,
         checkInStatus: checkInState.status,
@@ -452,6 +459,18 @@ export default function DisciplinePage() {
           paid: data[0].paid
         };
         setFines(prev => [inserted, ...prev]);
+
+        // Send Discord embed notification
+        const embedTitle = `💸 บันทึกค่าปรับใหม่ - ฝ่ายปกครอง`;
+        const embedDesc = `มีการออกใบสั่งปรับสมาชิกสภานักเรียนเนื่องจากกระทำความผิดระเบียบ`;
+        const fields = [
+          { name: '👤 ผู้รับโทษ', value: `${inserted.userName} (${inserted.nickname})`, inline: true },
+          { name: '⚖️ ข้อหาความผิด', value: inserted.violation, inline: true },
+          { name: '💰 ยอดเงินค่าปรับ', value: `${inserted.amount} บาท`, inline: true },
+          { name: '📝 หมายเหตุ', value: inserted.note || 'ไม่มี', inline: false },
+          { name: '✍️ บันทึกโดย', value: inserted.by, inline: true }
+        ];
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15158332, fields, null, 'discipline_fines'); // สีแดงสำหรับค่าปรับ
       }
     } catch (err) {
       console.error('Error saving fine:', err);
@@ -479,20 +498,37 @@ export default function DisciplinePage() {
   };
 
   const handleUploadSlip = async () => {
+    if (submittingSlip) return;
     if (!slipPreview || !paymentModal) return;
+    setSubmittingSlip(true);
     try {
+      let finalSlipUrl = slipPreview;
+      if (slipPreview && slipPreview.startsWith('data:')) {
+        try {
+          const fileName = `slip_${paymentModal.id}_${Date.now()}.jpg`;
+          const uploadResult = await uploadFileToDrive(slipPreview, fileName, 'slips');
+          if (uploadResult && uploadResult.url) {
+            finalSlipUrl = uploadResult.url;
+          }
+        } catch (uploadErr) {
+          console.error("Failed to upload slip to Google Drive. Storing locally as Base64 fallback:", uploadErr);
+        }
+      }
+
       const { error } = await supabase
         .from('discipline_fines')
-        .update({ payment_status: 'slip_uploaded', payment_slip: slipPreview })
+        .update({ payment_status: 'slip_uploaded', payment_slip: finalSlipUrl })
         .eq('id', paymentModal.id);
       if (error) throw error;
-      setFines(prev => prev.map(f => f.id === paymentModal.id ? { ...f, paymentStatus: 'slip_uploaded', paymentSlip: slipPreview } : f));
+      setFines(prev => prev.map(f => f.id === paymentModal.id ? { ...f, paymentStatus: 'slip_uploaded', paymentSlip: finalSlipUrl } : f));
       setPaymentModal(null);
       setSlipPreview(null);
       alert('อัปโหลดสลิปเรียบร้อยแล้ว! รอฝ่ายการเงินตรวจสอบครับ');
     } catch (err) {
       console.error('Error uploading slip:', err);
       alert('เกิดข้อผิดพลาดในการอัปโหลดสลิป: ' + err.message);
+    } finally {
+      setSubmittingSlip(false);
     }
   };
 
@@ -697,20 +733,7 @@ export default function DisciplinePage() {
                 </div>
               </div>
 
-              {/* Clear database records */}
-              <div style={{ borderTop: '1px solid #ffebee', paddingTop: 16, marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: '#c62828' }}>ล้างข้อมูลการเช็คชื่อ & เวร ทั้งหมด</div>
-                  <div style={{ fontSize: 11, color: '#757575' }}>ลบข้อมูลการเช็คชื่อเข้าแถวและเวรทำความสะอาดห้องสภาของสมาชิกทุกคนออกจากฐานข้อมูล</div>
-                </div>
-                <button
-                  className="btn btn-danger"
-                  style={{ background: '#d32f2f', padding: '8px 16px', fontSize: 13 }}
-                  onClick={handleClearAllAttendance}
-                >
-                  🗑️ ล้างข้อมูลก่อนหน้านี้ทั้งหมด
-                </button>
-              </div>
+
             </div>
           )}
         </div>
@@ -777,13 +800,15 @@ export default function DisciplinePage() {
                       {canManage && (
                         <td style={{ textAlign:'center' }}>
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                            <button 
-                              className={`btn ${f.paid ? 'btn-success' : 'btn-gray'} btn-sm`} 
-                              style={{ padding: '4px 8px', fontSize: 11 }}
-                              onClick={() => togglePaid(f.id)}
-                            >
-                              {f.paid ? '✓ จ่ายแล้ว' : '💵 ค้างชำระ'}
-                            </button>
+                            {!f.paid && (
+                              <button 
+                                className="btn btn-gray btn-sm" 
+                                style={{ padding: '4px 8px', fontSize: 11 }}
+                                onClick={() => togglePaid(f.id)}
+                              >
+                                💵 ค้างชำระ
+                              </button>
+                            )}
                             {ps === 'slip_uploaded' && (
                               <button 
                                 className="btn btn-primary btn-sm" 
@@ -881,6 +906,7 @@ export default function DisciplinePage() {
                             <option value="late">สาย</option>
                             <option value="leave">ลา</option>
                             <option value="missing">ขาด</option>
+                            <option value="reset">รีเซ็ต (ลบประวัติ)</option>
                             {u.checkInStatus === 'not_required' && <option value="not_required">ไม่บังคับ</option>}
                           </select>
                         ) : (
@@ -891,7 +917,7 @@ export default function DisciplinePage() {
                       </td>
                       <td>
                         {u.photo ? (
-                          <img src={u.photo} alt="selfie" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, cursor: 'pointer', border: '1px solid #e0e0e0' }} onClick={() => setViewPhotoUrl(u.photo)} title="คลิกเพื่อดูรูปเต็ม" />
+                          <img src={transformGoogleDriveUrl(u.photo)} alt="selfie" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, cursor: 'pointer', border: '1px solid #e0e0e0' }} onClick={() => setViewPhotoUrl(transformGoogleDriveUrl(u.photo))} title="คลิกเพื่อดูรูปเต็ม" />
                         ) : (
                           <span style={{ fontSize: 11, color: '#bdbdbd' }}>- ไม่มีภาพ -</span>
                         )}
@@ -1008,7 +1034,7 @@ export default function DisciplinePage() {
                         </td>
                         <td>
                           {photo ? (
-                             <img src={photo} alt="clean-proof" style={{ width:36, height:36, objectFit:'cover', borderRadius:4, cursor:'pointer', border:'1px solid #e0e0e0' }} onClick={() => setViewPhotoUrl(photo)} />
+                             <img src={transformGoogleDriveUrl(photo)} alt="clean-proof" style={{ width:36, height:36, objectFit:'cover', borderRadius:4, cursor:'pointer', border:'1px solid #e0e0e0' }} onClick={() => setViewPhotoUrl(transformGoogleDriveUrl(photo))} />
                           ) : (
                             <span style={{ fontSize:11, color:'#bdbdbd' }}>- ไม่มีภาพ -</span>
                           )}
@@ -1156,8 +1182,8 @@ export default function DisciplinePage() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-gray" onClick={()=>setPaymentModal(null)}>ยกเลิก</button>
-              <button className="btn btn-primary" onClick={handleUploadSlip} disabled={!slipPreview}>
-                📤 ส่งสลิปรอตรวจสอบ
+              <button className="btn btn-primary" onClick={handleUploadSlip} disabled={!slipPreview || submittingSlip}>
+                {submittingSlip ? 'กำลังบันทึก...' : '📤 ส่งสลิปรอตรวจสอบ'}
               </button>
             </div>
           </div>
@@ -1231,7 +1257,7 @@ export default function DisciplinePage() {
               <button onClick={() => setViewPhotoUrl(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9e9e9e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={20} /></button>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000', borderRadius: 8, overflow: 'hidden' }}>
-              <img src={viewPhotoUrl} alt="expanded proof" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
+              <img src={transformGoogleDriveUrl(viewPhotoUrl)} alt="expanded proof" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
             </div>
           </div>
         </div>

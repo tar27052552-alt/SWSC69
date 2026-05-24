@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { DEPARTMENTS } from '../data/mockData';
 import { Plus, X, Save, Search, CheckCircle, Clock, XCircle, Eye } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { transformGoogleDriveUrl } from '../lib/googleDriveUpload';
+import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 const EXPENSE_CATEGORIES = [
   'ค่าวัสดุอุปกรณ์', 'ค่าอาหารและเครื่องดื่ม', 'ค่าสถานที่',
@@ -44,6 +46,7 @@ export default function FinancePage() {
   
   // สมาชิกตัวจริงที่ดึงจากระบบ
   const [usersList, setUsersList] = useState([]);
+  const [feeSlipModal, setFeeSlipModal] = useState(null);
 
   useEffect(() => {
     async function loadFinanceData() {
@@ -156,6 +159,20 @@ export default function FinancePage() {
           approvedBy: data[0].approved_by
         };
         setRequests(prev => [inserted, ...prev]);
+
+        // Send Discord notification for new withdrawal request
+        const dept = inserted.deptId ? (() => { const DEPTS = [{id:'finance',short:'การเงิน'},{id:'academic',short:'วิชาการ'},{id:'pr',short:'ประชาสัมพันธ์'},{id:'discipline',short:'กิจการ'},{id:'secretary',short:'เลขาฯ'},{id:'av',short:'โสตฯ'},{id:'facilities',short:'อาคารฯ'}]; return DEPTS.find(d=>d.id===inserted.deptId)?.short || inserted.deptId; })() : 'ไม่ระบุ';
+        const embedTitle = `📋 คำขอเบิกเงินสภานักเรียนใหม่`;
+        const embedDesc = `มีสมาชิกยื่นคำขอเบิกเงินเข้ามาในระบบ กรุณาตรวจสอบและดำเนินการ`;
+        const embedFields = [
+          { name: '📄 รายการ', value: inserted.title, inline: true },
+          { name: '📂 หมวด', value: inserted.category, inline: true },
+          { name: '💵 จำนวนเงิน', value: `${inserted.amount.toLocaleString()} บาท`, inline: true },
+          { name: '👤 ผู้ขอ', value: inserted.requester, inline: true },
+          { name: '🏛️ ฝ่าย', value: dept, inline: true },
+          { name: '📝 หมายเหตุ', value: inserted.note || 'ไม่มี', inline: false }
+        ];
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15105570, embedFields, null, 'finance'); // สีส้มสำหรับคำขอใหม่
       }
     } catch (err) {
       console.error('Error inserting finance request:', err);
@@ -171,7 +188,21 @@ export default function FinancePage() {
         .update({ status: 'approved', approved_by: user.nickname })
         .eq('id', id);
       if (error) throw error;
+      const target = requests.find(r => r.id === id);
       setRequests(prev => prev.map(r => r.id===id ? { ...r, status:'approved', approvedBy: user.nickname } : r));
+
+      // Send Discord notification for approval
+      if (target) {
+        const embedTitle = `✅ อนุมัติคำขอเบิกเงินสภานักเรียน`;
+        const embedDesc = `คำขอเบิกเงิน **${target.title}** ได้รับการอนุมัติเรียบร้อยแล้ว`;
+        const embedFields = [
+          { name: '📄 รายการ', value: target.title, inline: true },
+          { name: '💵 จำนวน', value: `${target.amount.toLocaleString()} บาท`, inline: true },
+          { name: '👤 ผู้ขอ', value: target.requester, inline: true },
+          { name: '✍️ อนุมัติโดย', value: user.nickname, inline: true }
+        ];
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, embedFields, null, 'finance'); // สีเขียวสำหรับอนุมัติ
+      }
     } catch (err) {
       console.error('Error approving request:', err);
       alert('เกิดข้อผิดพลาดในการอนุมัติคำขอ: ' + err.message);
@@ -185,7 +216,21 @@ export default function FinancePage() {
         .update({ status: 'rejected', note: note })
         .eq('id', id);
       if (error) throw error;
+      const target = requests.find(r => r.id === id);
       setRequests(prev => prev.map(r => r.id===id ? { ...r, status:'rejected', note } : r));
+
+      // Send Discord notification for rejection
+      if (target) {
+        const embedTitle = `❌ ปฏิเสธคำขอเบิกเงินสภานักเรียน`;
+        const embedDesc = `คำขอเบิกเงิน **${target.title}** ไม่ได้รับการอนุมัติ`;
+        const embedFields = [
+          { name: '📄 รายการ', value: target.title, inline: true },
+          { name: '💵 จำนวน', value: `${target.amount.toLocaleString()} บาท`, inline: true },
+          { name: '👤 ผู้ขอ', value: target.requester, inline: true },
+          { name: '📝 เหตุผลการปฏิเสธ', value: note || 'ไม่ระบุ', inline: false }
+        ];
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15158332, embedFields, null, 'finance'); // สีแดงสำหรับปฏิเสธ
+      }
     } catch (err) {
       console.error('Error rejecting request:', err);
       alert('เกิดข้อผิดพลาดในการปฏิเสธคำขอ: ' + err.message);
@@ -379,7 +424,12 @@ export default function FinancePage() {
 
           {fees.map(fee => {
             const members = usersList.filter(u => u.role !== 'admin');
-            const paidCount = members.filter(u => fee.payments && fee.payments[u.id]).length;
+            const paidCount = members.filter(u => {
+              const p = fee.payments?.[u.id];
+              if (!p) return false;
+              if (typeof p === 'object') return p.paid === true;
+              return p === true;
+            }).length;
             const totalCollected = paidCount * fee.amount;
             const totalExpected = members.length * fee.amount;
 
@@ -413,12 +463,14 @@ export default function FinancePage() {
                 <div style={{ overflowX:'auto' }}>
                   <table className="simple-table">
                     <thead>
-                      <tr><th>#</th><th>สมาชิก</th><th>ฝ่าย</th><th>สถานะ</th></tr>
+                      <tr><th>#</th><th>สมาชิก</th><th>ฝ่าย</th><th>สถานะ</th><th>หลักฐาน</th></tr>
                     </thead>
                     <tbody>
                       {members.map((u, i) => {
                         const dept = DEPARTMENTS.find(d => d.id === u.deptId);
-                        const paid = (fee.payments && fee.payments[u.id]) || false;
+                        const paymentInfo = fee.payments?.[u.id];
+                        const paid = typeof paymentInfo === 'object' ? paymentInfo.paid : !!paymentInfo;
+                        const slip = typeof paymentInfo === 'object' ? paymentInfo.slip : null;
                         return (
                           <tr key={u.id}>
                             <td style={{ color:'#9e9e9e', fontSize:12 }}>{i+1}</td>
@@ -439,7 +491,16 @@ export default function FinancePage() {
                                   onChange={async (e) => {
                                     const val = e.target.value === 'paid';
                                     try {
-                                      const nextPayments = { ...(fee.payments || {}), [u.id]: val };
+                                      let nextPayments = { ...(fee.payments || {}) };
+                                      if (val) {
+                                        if (typeof nextPayments[u.id] === 'object') {
+                                          nextPayments[u.id] = { ...nextPayments[u.id], paid: true, status: 'paid' };
+                                        } else {
+                                          nextPayments[u.id] = true;
+                                        }
+                                      } else {
+                                        delete nextPayments[u.id];
+                                      }
                                       const { error } = await supabase
                                         .from('finance_fees')
                                         .update({ payments: nextPayments })
@@ -465,6 +526,19 @@ export default function FinancePage() {
                                 <span className="badge" style={{ background: paid ? '#e8f5e9' : '#ffebee', color: paid ? '#2e7d32' : '#c62828' }}>
                                   {paid ? '✅ จ่ายแล้ว' : '❌ ยังไม่จ่าย'}
                                 </span>
+                              )}
+                            </td>
+                            <td>
+                              {slip ? (
+                                <button
+                                  className="btn btn-gray btn-sm"
+                                  style={{ fontSize:11, padding:'4px 8px', display:'inline-flex', alignItems:'center', gap:4 }}
+                                  onClick={() => setFeeSlipModal({ userName: u.name, title: fee.title, amount: fee.amount, date: fee.date, slip })}
+                                >
+                                  <Eye size={12}/> ดูสลิป
+                                </button>
+                              ) : (
+                                <span style={{ color:'#bdbdbd', fontSize:11 }}>-</span>
                               )}
                             </td>
                           </tr>
@@ -588,6 +662,17 @@ export default function FinancePage() {
                   if (error) throw error;
                   if (data && data[0]) {
                     setFees(prev => [data[0], ...prev]);
+                    
+                    // Send Discord embed notification
+                    const embedTitle = `💰 ประกาศเรียกเก็บเงินสภานักเรียน`;
+                    const embedDesc = `ฝ่ายการเงินได้ออกรายการเรียกเก็บเงินใหม่ในระบบ`;
+                    const fields = [
+                      { name: '📋 รายการเรียกเก็บ', value: data[0].title, inline: true },
+                      { name: '💵 ยอดเงินเรียกเก็บ', value: `${data[0].amount} บาท`, inline: true },
+                      { name: '📅 กำหนดส่ง', value: data[0].date, inline: true },
+                      { name: '💡 คำแนะนำ', value: 'กรุณาเข้าระบบพอร์ทัลสภานักเรียนเพื่อสแกน QR Code ชำระเงินด้วย PromptPay และอัปโหลดสลิป', inline: false }
+                    ];
+                    sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'finance'); // สีน้ำเงินสำหรับฝ่ายการเงิน
                   }
                 } catch (err) {
                   console.error('Error creating fee payment collection:', err);
@@ -671,7 +756,7 @@ export default function FinancePage() {
                 <div>วันที่: {slipViewModal.date}</div>
               </div>
               {slipViewModal.paymentSlip && (
-                <img src={slipViewModal.paymentSlip} alt="payment slip" style={{ width:'100%', borderRadius:8, border:'1px solid #e0e0e0' }} />
+                <img src={transformGoogleDriveUrl(slipViewModal.paymentSlip)} alt="payment slip" style={{ width:'100%', borderRadius:8, border:'1px solid #e0e0e0' }} />
               )}
             </div>
             {isFinance && slipViewModal.paymentStatus === 'slip_uploaded' && (
@@ -680,6 +765,31 @@ export default function FinancePage() {
                 <button className="btn btn-success" onClick={() => confirmFinePaid(slipViewModal)}>✓ ยืนยันการชำระ</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Fee Slip View Modal */}
+      {feeSlipModal && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setFeeSlipModal(null)}>
+          <div className="modal-box" style={{ maxWidth:480 }}>
+            <div className="modal-header">
+              <span style={{ fontWeight:700, fontSize:15 }}>📤 สลิปหลักฐานการชำระเงิน - {feeSlipModal.userName}</span>
+              <button onClick={()=>setFeeSlipModal(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'#9e9e9e' }}><X size={18}/></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ background:'#f9f9f9', borderRadius:6, padding:'10px 14px', marginBottom:12, fontSize:13 }}>
+                <div>รายการเก็บเงิน: <strong>{feeSlipModal.title}</strong></div>
+                <div>ยอดชำระ: <strong style={{ color:'#e65100' }}>{feeSlipModal.amount} บาท</strong></div>
+                <div>วันที่เรียกเก็บ: {feeSlipModal.date}</div>
+              </div>
+              {feeSlipModal.slip && (
+                <img src={transformGoogleDriveUrl(feeSlipModal.slip)} alt="fee payment slip" style={{ width:'100%', borderRadius:8, border:'1px solid #e0e0e0' }} />
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={() => setFeeSlipModal(null)}>ปิด</button>
+            </div>
           </div>
         </div>
       )}

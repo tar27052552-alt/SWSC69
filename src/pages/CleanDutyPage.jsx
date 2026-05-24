@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CheckCircle, AlertTriangle, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import CameraCapture from '../components/CameraCapture';
+import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
+import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 export default function CleanDutyPage() {
   const { user, cleanDutyState, setCleanDutyState } = useAuth();
@@ -11,38 +13,88 @@ export default function CleanDutyPage() {
   const [photoUrl, setPhotoUrl] = useState(null);
   const [startDate, setStartDate] = useState('');
   const [loadingSettings, setLoadingSettings] = useState(true);
+  const [loadingDuty, setLoadingDuty] = useState(true);
+  const [dutyMembers, setDutyMembers] = useState([]);
+  const [hasDutyToday, setHasDutyToday] = useState(false);
+  const [isMyDutyToday, setIsMyDutyToday] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    async function loadSettings() {
+    async function initPage() {
       try {
-        const { data, error } = await supabase.from('attendance_settings').select('*');
-        if (error) throw error;
-        if (data) {
-          const startD = data.find(d => d.key === 'start_date')?.value;
+        // Load Settings
+        const { data: settingsData, error: settingsError } = await supabase.from('attendance_settings').select('*');
+        if (!settingsError && settingsData) {
+          const startD = settingsData.find(d => d.key === 'start_date')?.value;
           if (startD) setStartDate(startD);
         }
+
+        // Load today's Clean Room Duty
+        const DAY_MAP = { 0:'อาทิตย์', 1:'จันทร์', 2:'อังคาร', 3:'พุธ', 4:'พฤหัส', 5:'ศุกร์', 6:'เสาร์' };
+        const todayKey = DAY_MAP[new Date().getDay()];
+        
+        const { data: scheduleData, error: scheduleError } = await supabase
+          .from('schedules')
+          .select('*')
+          .eq('type', 'clean_room')
+          .eq('day', todayKey);
+        
+        let members = [];
+        if (!scheduleError && scheduleData && scheduleData[0]) {
+          const rowData = scheduleData[0].data;
+          members = rowData.members || [];
+        }
+        
+        setDutyMembers(members);
+        const hasDuty = members.length > 0 && members[0] !== '–';
+        setHasDutyToday(hasDuty);
+        
+        const myNickname = user?.nickname || '';
+        const isMyDuty = hasDuty && members.some(n => n === myNickname);
+        setIsMyDutyToday(isMyDuty);
       } catch (err) {
-        console.error('Error loading settings in CleanDutyPage:', err);
+        console.error('Error in CleanDutyPage init:', err);
       } finally {
         setLoadingSettings(false);
+        setLoadingDuty(false);
       }
     }
-    loadSettings();
-  }, []);
+    initPage();
+  }, [user]);
 
   const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
   const isBeforeStart = startDate && todayStr < startDate;
+  
+  const isSubmitting = useRef(false);
 
   const handleSubmit = async () => {
+    if (isSubmitting.current || submitting) return;
+    isSubmitting.current = true;
+    setSubmitting(true);
+
     const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+    const todayFormatted = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
     
     try {
       if (user) {
+        let finalPhotoUrl = photoUrl;
+        if (photoUrl && photoUrl.startsWith('data:')) {
+          try {
+            const fileName = `cleanduty_${user.nickname || 'user'}_${todayFormatted}_${Date.now()}.jpg`;
+            const uploadResult = await uploadFileToDrive(photoUrl, fileName, 'duties');
+            if (uploadResult && uploadResult.url) {
+              finalPhotoUrl = uploadResult.url;
+            }
+          } catch (uploadErr) {
+            console.error("Failed to upload clean duty image to Google Drive. Using local base64 fallback:", uploadErr);
+          }
+        }
+
         const record = {
           nickname: user.nickname,
-          date: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
+          date: todayFormatted,
           status: 'done',
-          photo: photoUrl
+          photo: finalPhotoUrl
         };
         const { error: upsertError } = await supabase
           .from('clean_duty_checks')
@@ -51,23 +103,33 @@ export default function CleanDutyPage() {
         if (upsertError) {
           console.error("Clean Duty error:", upsertError);
           alert("ไม่สามารถบันทึกข้อมูลได้: " + upsertError.message);
+          isSubmitting.current = false;
+          setSubmitting(false);
           return;
         }
+
+        // Notify Discord (attendance channel)
+        const embedTitle = `🧹 [เวรห้องสภา] ${user.nickname} ส่งรายงานเวรเรียบร้อย`;
+        const embedDesc = `ส่งรายงานการทำความสะอาดห้องสภานักเรียนประจำวันที่ **${todayFormatted}** เวลา **${timeStr}**`;
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, [], finalPhotoUrl, 'attendance_alerts');
+        
+        // Update local state with Google Drive URL
+        setCleanDutyState({ status: 'done', time: timeStr, photo: finalPhotoUrl });
       }
     } catch (err) {
       console.error('Error submitting clean duty to Supabase:', err);
       alert('เกิดข้อผิดพลาด: ' + err.message);
-      return;
+    } finally {
+      isSubmitting.current = false;
+      setSubmitting(false);
     }
-
-    setCleanDutyState({ status: 'done', time: timeStr, photo: photoUrl });
   };
 
-  if (loadingSettings) {
+  if (loadingSettings || loadingDuty) {
     return (
       <div style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
         <div style={{ width: 40, height: 40, border: '4px solid #f3f3f3', borderTop: '4px solid #00bcd4', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }} />
-        <div style={{ fontSize: 14, color: '#757575', marginTop: 12 }}>กำลังตรวจสอบการตั้งค่าระบบ...</div>
+        <div style={{ fontSize: 14, color: '#757575', marginTop: 12 }}>กำลังตรวจสอบข้อมูลเวรวันนี้...</div>
       </div>
     );
   }
@@ -110,6 +172,60 @@ export default function CleanDutyPage() {
     );
   }
 
+  if (!isMyDutyToday) {
+    const DAY_MAP = { 0:'อาทิตย์', 1:'จันทร์', 2:'อังคาร', 3:'พุธ', 4:'พฤหัส', 5:'ศุกร์', 6:'เสาร์' };
+    const todayKey = DAY_MAP[new Date().getDay()];
+    return (
+      <div style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
+        <div style={{ fontSize: 64, margin: '0 auto' }}>🔒</div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#37474f', marginTop: 16 }}>
+          เฉพาะผู้มีเวรทำความสะอาดในวันนี้
+        </h2>
+        <div style={{ fontSize: 14, color: '#757575', marginTop: 8, lineHeight: 1.6 }}>
+          ระบบจำกัดให้ส่งรายงานเวรได้เฉพาะผู้ที่มีรายชื่อเวรทำความสะอาดในวัน{todayKey}เท่านั้น
+        </div>
+        
+        <div style={{ 
+          marginTop: 24, 
+          padding: '16px 20px', 
+          background: '#f8f9fa', 
+          borderRadius: 8, 
+          border: '1px solid #e9ecef',
+          display: 'inline-block',
+          minWidth: 280
+        }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: '#495057', marginBottom: 8 }}>
+            รายชื่อผู้รับผิดชอบวันนี้:
+          </div>
+          {hasDutyToday ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+              {dutyMembers.map((n, i) => (
+                <span key={i} style={{
+                  background: '#e0f7fa',
+                  color: '#00838f',
+                  border: '1px solid #b2ebf2',
+                  borderRadius: 4, 
+                  padding: '4px 10px', 
+                  fontSize: 13, 
+                  fontWeight: 600,
+                }}>{n}</span>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: '#6c757d', fontSize: 13 }}>ไม่มีเวรทำความสะอาดในวันนี้ (วันหยุด)</div>
+          )}
+        </div>
+
+        <div style={{ marginTop: 32 }}>
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
+            กลับหน้าหลัก
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+
   if (cleanDutyState) {
     return (
       <div style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
@@ -119,7 +235,7 @@ export default function CleanDutyPage() {
         
         {cleanDutyState.photo && (
           <div style={{ marginTop: 24, borderRadius: 12, overflow: 'hidden', border: '4px solid #f0f0f0', display: 'inline-block' }}>
-            <img src={cleanDutyState.photo} alt="clean-duty" style={{ width: 200, height: 200, objectFit: 'cover', display: 'block' }} />
+            <img src={transformGoogleDriveUrl(cleanDutyState.photo)} alt="clean-duty" style={{ width: 200, height: 200, objectFit: 'cover', display: 'block' }} />
           </div>
         )}
 
@@ -150,10 +266,10 @@ export default function CleanDutyPage() {
           <button 
             className="btn btn-primary" 
             style={{ width: '100%', padding: '12px 0', fontSize: 16 }}
-            disabled={!photoUrl}
+            disabled={!photoUrl || submitting}
             onClick={handleSubmit}
           >
-            ยืนยันการส่งรูป
+            {submitting ? 'กำลังบันทึก...' : 'ยืนยันการส่งรูป'}
           </button>
         </div>
       </div>

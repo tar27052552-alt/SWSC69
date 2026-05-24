@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
@@ -22,6 +22,7 @@ import OfficePage from './pages/OfficePage';
 import RecreationPage from './pages/RecreationPage';
 import FacilitiesPage from './pages/FacilitiesPage';
 import ReceptionPage from './pages/ReceptionPage';
+import SubmitNewsPage from './pages/SubmitNewsPage';
 
 function PrivateRoute({ children }) {
   const { user } = useAuth();
@@ -131,6 +132,7 @@ function AppRoutes() {
       <Route path="/my-attendance" element={<PrivateRoute><MyAttendancePage /></PrivateRoute>} />
       <Route path="/profile"    element={<PrivateRoute><MyStats /></PrivateRoute>} />
       <Route path="/settings"   element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
+      <Route path="/submit-news" element={<PrivateRoute><SubmitNewsPage /></PrivateRoute>} />
       <Route path="/admin"      element={<PrivateRoute><AdminPage /></PrivateRoute>} />
       <Route path="/discipline" element={<PrivateRoute><DisciplinePage /></PrivateRoute>} />
       <Route path="/my-fines"   element={<PrivateRoute><MyFinesPage /></PrivateRoute>} />
@@ -150,10 +152,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter basename="/SWSC69">
+    <HashRouter>
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 }

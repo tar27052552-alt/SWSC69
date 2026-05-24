@@ -4,6 +4,8 @@ import { CheckCircle, AlertTriangle, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import CameraCapture from '../components/CameraCapture';
+import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
+import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 const TH_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
 
@@ -18,6 +20,9 @@ export default function CheckInPage() {
   const [startDate, setStartDate] = useState('');
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [greetingSchedules, setGreetingSchedules] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const isSubmitting = useRef(false);
+  const [currentDate, setCurrentDate] = useState(() => new Date());
 
   useEffect(() => {
     async function loadSettings() {
@@ -51,13 +56,48 @@ export default function CheckInPage() {
         console.error('Error loading greeting schedules:', err);
       }
     }
+    
     loadSettings();
     loadGreetingSchedules();
+
+    // 10-second interval to check/update date
+    const timer = setInterval(() => {
+      setCurrentDate(new Date());
+    }, 10000);
+
+    // Supabase Realtime channel subscriptions
+    const settingsChannel = supabase
+      .channel('attendance-settings-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'attendance_settings' },
+        () => {
+          loadSettings();
+        }
+      )
+      .subscribe();
+
+    const schedulesChannel = supabase
+      .channel('schedules-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'schedules' },
+        () => {
+          loadGreetingSchedules();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(timer);
+      supabase.removeChannel(settingsChannel);
+      supabase.removeChannel(schedulesChannel);
+    };
   }, []);
 
   const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const todayStr = toGregorianStr();
-  const todayDayName = TH_DAYS[new Date().getDay()];
+  const todayStr = toGregorianStr(currentDate);
+  const todayDayName = TH_DAYS[currentDate.getDay()];
   const isBeforeStart = startDate && todayStr < startDate;
   const isEnabledToday = enabledDays.includes(todayDayName) && !disabledDates.includes(todayStr) && !isBeforeStart;
 
@@ -102,6 +142,10 @@ export default function CheckInPage() {
   };
 
   const handleSubmitCheckIn = async () => {
+    if (isSubmitting.current || submitting) return;
+    isSubmitting.current = true;
+    setSubmitting(true);
+
     const now = new Date();
     const h = now.getHours();
     const m = now.getMinutes();
@@ -129,6 +173,19 @@ export default function CheckInPage() {
     
     try {
       if (user) {
+        let finalPhotoUrl = photoUrl;
+        if (photoUrl && photoUrl.startsWith('data:')) {
+          try {
+            const fileName = `selfie_${user.nickname || user.id}_${toGregorianStr(now)}_${Date.now()}.jpg`;
+            const uploadResult = await uploadFileToDrive(photoUrl, fileName, 'selfies');
+            if (uploadResult && uploadResult.url) {
+              finalPhotoUrl = uploadResult.url;
+            }
+          } catch (uploadErr) {
+            console.error("Failed to upload selfie to Google Drive. Storing locally as Base64 as fallback:", uploadErr);
+          }
+        }
+
         const record = {
           user_id: String(user.id),
           user_name: user.name,
@@ -136,7 +193,7 @@ export default function CheckInPage() {
           date: toGregorianStr(now),
           time: timeStr,
           status: status,
-          photo: photoUrl,
+          photo: finalPhotoUrl,
           is_manual: false
         };
         const { error: upsertError } = await supabase
@@ -146,17 +203,21 @@ export default function CheckInPage() {
         if (upsertError) {
           console.error("CheckIn error:", upsertError);
           alert("ไม่สามารถบันทึกข้อมูลได้: " + upsertError.message);
+          isSubmitting.current = false;
+          setSubmitting(false);
           return;
         }
 
         // Auto-fine if late
+        let minutesLate = 0;
+        let finalAmount = 0;
+
         if (isLate) {
           const limitHour = 7;
           const limitMinute = limitM;
           const limitDate = new Date(now);
           limitDate.setHours(limitHour, limitMinute, 0, 0);
 
-          let minutesLate = 0;
           if (now > limitDate) {
             const diffMs = now - limitDate;
             minutesLate = Math.ceil(diffMs / (1000 * 60));
@@ -174,7 +235,7 @@ export default function CheckInPage() {
 
             if (!existingFine || existingFine.length === 0) {
               const baseAmount = 5; // 5 Baht per minute
-              let finalAmount = baseAmount * minutesLate;
+              finalAmount = baseAmount * minutesLate;
 
               // 2x fine multiplier for Discipline dept (deptId === 2)
               if (user.deptId === 2) {
@@ -193,17 +254,41 @@ export default function CheckInPage() {
                 paid: false
               };
               await supabase.from('discipline_fines').insert([fineRecord]);
+            } else {
+              const baseAmount = 5;
+              finalAmount = baseAmount * minutesLate;
+              if (user.deptId === 2) finalAmount *= 2;
             }
           }
         }
+
+        // Notify Discord
+        let embedTitle = `🟢 [เช็คชื่อเข้าแถว] ${user.nickname} เช็คชื่อสำเร็จ`;
+        let embedDesc = `เมื่อเวลา **${timeStr}** ของวันที่ **${toGregorianStr(now)}**`;
+        let embedColor = 3066993; // Green
+        const fields = [];
+
+        if (status === 'late') {
+          embedColor = 15158332; // Red
+          embedTitle = `🔴 [เช็คชื่อเข้าแถว] ${user.nickname} มาสาย!`;
+          embedDesc += `\n⚠️ เช็คชื่อสายไป **${minutesLate}** นาที (เกณฑ์ยืนเวร/สภาคือ 07:${limitM.toString().padStart(2,'0')} น.)`;
+          fields.push({
+            name: "ค่าปรับอัตโนมัติ",
+            value: `💸 โดนปรับ **${finalAmount}** บาท (บันทึกเข้าระบบ)`,
+            inline: true
+          });
+        }
+
+        // Send to Discord (attendance channel)
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, embedColor, fields, finalPhotoUrl, 'attendance_alerts');
       }
+      setCheckInState({ status: status, time: timeStr, photo: photoUrl });
     } catch (err) {
       console.error('Error submitting attendance and logging auto-fine:', err);
       alert('เกิดข้อผิดพลาด: ' + err.message);
-      return;
+    } finally {
+      setSubmitting(false);
     }
-
-    setCheckInState({ status: status, time: timeStr, photo: photoUrl });
   };
 
   if (user?.role === 'admin' || user?.nickname === 'แอดมิน') {
@@ -226,17 +311,39 @@ export default function CheckInPage() {
   }
 
   if (checkInState) {
+    let icon = <AlertTriangle size={64} color="#c62828" style={{ margin: '0 auto' }} />;
+    let titleText = 'คุณมาสาย!';
+    let titleColor = '#c62828';
+
+    if (checkInState.status === 'on_time') {
+      icon = <CheckCircle size={64} color="#2e7d32" style={{ margin: '0 auto' }} />;
+      titleText = 'เช็คชื่อสำเร็จ!';
+      titleColor = '#2e7d32';
+    } else if (checkInState.status === 'leave') {
+      icon = <CheckCircle size={64} color="#f57f17" style={{ margin: '0 auto' }} />;
+      titleText = 'บันทึกการลาแล้ว';
+      titleColor = '#f57f17';
+    } else if (checkInState.status === 'missing') {
+      icon = <AlertTriangle size={64} color="#616161" style={{ margin: '0 auto' }} />;
+      titleText = 'คุณขาดแถว!';
+      titleColor = '#616161';
+    } else if (checkInState.status === 'not_required') {
+      icon = <CheckCircle size={64} color="#455a64" style={{ margin: '0 auto' }} />;
+      titleText = 'ได้รับการยกเว้น';
+      titleColor = '#455a64';
+    }
+
     return (
       <div style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
-        {checkInState.status === 'on_time' ? <CheckCircle size={64} color="#2e7d32" style={{ margin: '0 auto' }} /> : <AlertTriangle size={64} color="#c62828" style={{ margin: '0 auto' }} />}
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: checkInState.status === 'on_time' ? '#2e7d32' : '#c62828', marginTop: 16 }}>
-          {checkInState.status === 'on_time' ? 'เช็คชื่อสำเร็จ!' : 'คุณมาสาย!'}
+        {icon}
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: titleColor, marginTop: 16 }}>
+          {titleText}
         </h2>
-        <div style={{ fontSize: 15, color: '#757575', marginTop: 8 }}>บันทึกเวลา: {checkInState.time}</div>
+        <div style={{ fontSize: 15, color: '#757575', marginTop: 8 }}>บันทึกเวลา: {checkInState.time || '-'}</div>
         
         {checkInState.photo && (
           <div style={{ marginTop: 24, borderRadius: 12, overflow: 'hidden', border: '4px solid #f0f0f0', display: 'inline-block' }}>
-            <img src={checkInState.photo} alt="check-in selfie" style={{ width: 200, height: 200, objectFit: 'cover', display: 'block' }} />
+            <img src={transformGoogleDriveUrl(checkInState.photo)} alt="check-in selfie" style={{ width: 200, height: 200, objectFit: 'cover', display: 'block' }} />
           </div>
         )}
 
@@ -273,7 +380,7 @@ export default function CheckInPage() {
                 <p style={{ fontSize: 13, color: '#757575', marginTop: 8, lineHeight: 1.5 }}>
                   {isBeforeStart 
                     ? `ฝ่ายปกครองได้ตั้งค่ากำหนดเริ่มเปิดระบบเช็คชื่อในวันที่ ${new Date(startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}`
-                    : `ฝ่ายปกครองได้ปิดระบบการเช็คชื่อเข้าแถวในวันนี้ (วัน${todayDayName}ที่ ${new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })})`
+                    : `ฝ่ายปกครองได้ปิดระบบการเช็คชื่อเข้าแถวในวันนี้ (วัน${todayDayName}ที่ ${currentDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })})`
                   }
                 </p>
               </div>
@@ -320,10 +427,10 @@ export default function CheckInPage() {
             <button 
               className="btn btn-primary" 
               style={{ width: '100%', padding: '12px 0', fontSize: 16 }}
-              disabled={!photoUrl}
+              disabled={!photoUrl || submitting}
               onClick={handleSubmitCheckIn}
             >
-              บันทึกการเช็คชื่อ
+              {submitting ? 'กำลังบันทึก...' : 'บันทึกการเช็คชื่อ'}
             </button>
           </div>
         )}

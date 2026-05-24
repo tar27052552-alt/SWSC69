@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Edit2, Lock, Unlock, ChevronDown } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 const ALL_NAMES = [
   'อ้วน', 'ใบหม่อน', 'กร', 'แปม', 'เจมส์', 'มิก', 'ณโม', 'โฟกัส', 'น้ำภัท', 'โนโน', 'คิว', 'พอใจ',
   'พี', 'ปาล์ม', 'จักร', 'ข้าวปุ้น', 'โต๋', 'น้ำขิง', 'มิวสิค', 'ยู', 'กัปตัน', 'ปลายฟ้า', 'ชัย', 'ใบเตย',
@@ -314,6 +315,18 @@ export default function SchedulesPage() {
             }, { onConflict: 'type,day' });
           if (error) throw error;
         }
+
+        // Notify Discord (pr channel)
+        const typeLabels = {
+          greeting: 'ตารางเวรยืนต้อนรับหน้าประตูโรงเรียน',
+          national_flag: 'ตารางเวรเชิญธงชาติ (ธงใหญ่)',
+          color_flag: 'ตารางเวรเชิญธงสีประจำโรงเรียน',
+          clean_room: 'ตารางเวรทำความสะอาดห้องสภานักเรียน',
+          pr_news: 'ตารางเวรหาข่าวประชาสัมพันธ์'
+        };
+        const embedTitle = `📅 มีการอัปเดตตารางเวรปฏิบัติหน้าที่สภานักเรียน`;
+        const embedDesc = `ปรับปรุงตารางเวร: **${typeLabels[typeStr] || typeStr}** เรียบร้อยแล้ว\nกรุณาเข้าสู่ระบบพอร์ทัลสภาเพื่อตรวจสอบหน้าที่และวันปฏิบัติงานของท่านครับ 🏫`;
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15814656, [], null, 'pr');
       } catch (err) {
         console.error('Error saving schedule:', err);
         alert('บันทึกตารางลงฐานข้อมูลล้มเหลว: ' + err.message);

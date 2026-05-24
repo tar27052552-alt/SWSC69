@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, X, Save, Search, FileText } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { Plus, X, Save, Search, FileText, Upload, Download, Loader, AlertTriangle } from 'lucide-react';
+import { readSheet, writeSheet, updateSheet, uploadFileToDrive, deleteSheet } from '../lib/googleDriveUpload';
+import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 const PROJECT_STATUS = {
   planning:    { label:'วางแผน',        badge:'badge-gray'   },
@@ -11,220 +12,554 @@ const PROJECT_STATUS = {
   cancelled:   { label:'ยกเลิก',        badge:'badge-red'    },
 };
 
-const MOCK_PROJECTS = [];
-
-const MOCK_DOCS = [];
-
 export default function AcademicPage() {
   const { isAdmin, user } = useAuth();
   const canManage = isAdmin || user?.deptId === 3;
-  const [projects, setProjects] = useState(MOCK_PROJECTS);
-  const [docs, setDocs] = useState(MOCK_DOCS);
+  const [projects, setProjects] = useState([]);
+  const [docs, setDocs] = useState([]);
   const [tab, setTab] = useState('projects');
   const [search, setSearch] = useState('');
-  const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ title:'', category:'กิจกรรม', owner:'', budget:'', dueDate:'', desc:'' });
+  
+  // Loading states
+  const [loadingData, setLoadingData] = useState(true);
+  const [savingProj, setSavingProj] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState({});
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  // Modals
+  const [projModal, setProjModal] = useState(false);
+  const [docModal, setDocModal] = useState(false);
+
+  // Forms
+  const [projForm, setProjForm] = useState({ title: '', category: 'กิจกรรม', owner: '', budget: '', dueDate: '', desc: '' });
+  const [docForm, setDocForm] = useState({ title: '', file: null, fileName: '', fileBase64: '' });
+
+  const loadAcademicData = async () => {
+    try {
+      setLoadingData(true);
+      // โหลดโครงการ
+      const pData = await readSheet('Academic_Projects');
+      if (pData) {
+        const sortedProjects = pData.sort((a, b) => new Date(b.created_at || b.due_date) - new Date(a.created_at || a.due_date));
+        setProjects(sortedProjects.map(p => ({
+          id: p.id,
+          title: p.title,
+          category: p.category,
+          owner: p.owner,
+          budget: p.budget,
+          dueDate: p.due_date,
+          status: p.status,
+          desc: p.description
+        })));
+      }
+
+      // โหลดเอกสาร
+      const dData = await readSheet('Academic_Docs');
+      if (dData) {
+        const sortedDocs = dData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setDocs(sortedDocs.map(d => ({
+          id: d.id,
+          title: d.title,
+          type: d.type,
+          size: d.size,
+          uploadedBy: d.uploaded_by,
+          date: d.date,
+          fileUrl: d.file_url
+        })));
+      }
+    } catch (err) {
+      console.error('Error loading academic data from Sheets:', err);
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadAcademicData() {
-      try {
-        // โหลดโครงการ
-        const { data: pData, error: pErr } = await supabase
-          .from('academic_projects')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (!pErr && pData) {
-          setProjects(pData.map(p => ({
-            id: p.id,
-            title: p.title,
-            category: p.category,
-            owner: p.owner,
-            budget: p.budget,
-            dueDate: p.due_date,
-            status: p.status,
-            desc: p.description
-          })));
-        }
-
-        // โหลดเอกสาร
-        const { data: dData, error: dErr } = await supabase
-          .from('academic_docs')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (!dErr && dData) {
-          setDocs(dData.map(d => ({
-            id: d.id,
-            title: d.title,
-            type: d.type,
-            uploadedBy: d.uploaded_by,
-            date: d.date
-          })));
-        }
-      } catch (err) {
-        console.error('Error loading academic data:', err);
-      }
-    }
     loadAcademicData();
   }, []);
 
-  const filtered = projects.filter(p => p.title.includes(search) || p.owner.includes(search) || p.category.includes(search));
+  const filtered = projects.filter(p => 
+    p.title.toLowerCase().includes(search.toLowerCase()) || 
+    p.owner.toLowerCase().includes(search.toLowerCase()) || 
+    p.category.toLowerCase().includes(search.toLowerCase())
+  );
 
-  const handleSave = async () => {
+  const handleSaveProject = async () => {
+    if (!projForm.title || !projForm.dueDate) return;
+    setSavingProj(true);
+
     const newProj = {
-      title: form.title,
-      category: form.category,
-      owner: form.owner || user?.nickname || 'ไม่ระบุ',
-      budget: parseInt(form.budget) || 0,
-      due_date: form.dueDate,
+      title: projForm.title,
+      category: projForm.category,
+      owner: projForm.owner || user?.nickname || 'ไม่ระบุ',
+      budget: parseInt(projForm.budget) || 0,
+      due_date: projForm.dueDate,
       status: 'planning',
-      description: form.desc
+      description: projForm.desc
     };
 
     try {
-      const { data, error } = await supabase
-        .from('academic_projects')
-        .insert([newProj])
-        .select();
-      if (error) throw error;
-      if (data && data[0]) {
+      const savedData = await writeSheet('Academic_Projects', newProj);
+      if (savedData) {
         const inserted = {
-          id: data[0].id,
-          title: data[0].title,
-          category: data[0].category,
-          owner: data[0].owner,
-          budget: data[0].budget,
-          dueDate: data[0].due_date,
-          status: data[0].status,
-          desc: data[0].description
+          id: savedData.id,
+          title: savedData.title,
+          category: savedData.category,
+          owner: savedData.owner,
+          budget: savedData.budget,
+          dueDate: savedData.due_date,
+          status: savedData.status,
+          desc: savedData.description
         };
         setProjects(prev => [inserted, ...prev]);
+        setProjModal(false);
+        setProjForm({ title: '', category: 'กิจกรรม', owner: '', budget: '', dueDate: '', desc: '' });
+        alert('เพิ่มโครงการวิชาการลง Google Sheets เรียบร้อย!');
+
+        // Notify Discord (general channel)
+        const embedTitle = `📚 ฝ่ายวิชาการเสนอโครงการใหม่`;
+        const embedDesc = `หัวข้อโครงการ: **${inserted.title}**`;
+        const fields = [
+          { name: "👤 ผู้รับผิดชอบ", value: inserted.owner, inline: true },
+          { name: "🏷️ หมวดหมู่", value: inserted.category, inline: true },
+          { name: "💵 งบประมาณ", value: `${inserted.budget} บาท`, inline: true },
+          { name: "📅 กำหนดแล้วเสร็จ", value: inserted.dueDate, inline: true },
+          { name: "📝 รายละเอียด", value: inserted.desc || "ไม่มี", inline: false }
+        ];
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 10181046, fields, null, 'academic');
       }
     } catch (err) {
-      console.error('Error inserting academic project:', err);
+      console.error('Error saving academic project:', err);
       alert('เกิดข้อผิดพลาดในการบันทึกโครงการ: ' + err.message);
+    } finally {
+      setSavingProj(false);
     }
-    setModal(false); setForm({ title:'', category:'กิจกรรม', owner:'', budget:'', dueDate:'', desc:'' });
   };
 
   const changeStatus = async (id, status) => {
+    setUpdatingStatus(prev => ({ ...prev, [id]: true }));
     try {
-      const { error } = await supabase
-        .from('academic_projects')
-        .update({ status })
-        .eq('id', id);
-      if (error) throw error;
-      setProjects(p => p.map(x => x.id===id ? {...x, status} : x));
+      await updateSheet('Academic_Projects', id, { status });
+      
+      const targetProj = projects.find(p => p.id === id);
+      if (targetProj) {
+        const statusLabels = { planning: 'วางแผน', in_progress: 'กำลังดำเนินการ', completed: 'สำเร็จเสร็จสิ้น', review: 'รอตรวจสอบ' };
+        const colorMap = { planning: 9803157, in_progress: 3447003, completed: 3066993, review: 15105570 };
+        const embedTitle = `📚 อัปเดตสถานะโครงการฝ่ายวิชาการ`;
+        const embedDesc = `โครงการ **${targetProj.title}** ได้เปลี่ยนสถานะเป็น **${statusLabels[status] || status}**`;
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, colorMap[status] || 3066993, [], null, 'academic');
+      }
+
+      setProjects(prev => prev.map(x => x.id === id ? { ...x, status } : x));
     } catch (err) {
-      console.error('Error updating project status:', err);
-      alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ: ' + err.message);
+      console.error('Error updating project status in Sheet:', err);
+      alert('เกิดข้อผิดพลาดในการอัปเดตสถานะโครงการ: ' + err.message);
+    } finally {
+      setUpdatingStatus(prev => ({ ...prev, [id]: false }));
     }
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setDocForm(p => ({
+        ...p,
+        file: file,
+        fileName: file.name,
+        fileBase64: event.target.result
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadDoc = async () => {
+    if (!docForm.fileBase64 || !docForm.fileName) {
+      alert("กรุณาเลือกไฟล์เอกสาร");
+      return;
+    }
+    setUploadingDoc(true);
+
+    try {
+      const file = docForm.file;
+      const fileExt = file.name.split('.').pop().toUpperCase();
+      
+      // Calculate file size in human readable string
+      let fileSizeStr = `${(file.size / 1024).toFixed(1)} KB`;
+      if (file.size > 1024 * 1024) {
+        fileSizeStr = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+      }
+
+      // 1. Upload file to Google Drive
+      const uploadResult = await uploadFileToDrive(docForm.fileBase64, docForm.fileName, 'academic');
+      
+      // 2. Write metadata to Google Sheet
+      if (uploadResult && uploadResult.url) {
+        const docMeta = {
+          title: docForm.title || file.name,
+          type: ['PDF', 'DOCX', 'XLSX', 'PNG', 'JPG', 'PPTX'].includes(fileExt) ? fileExt : 'default',
+          size: fileSizeStr,
+          uploaded_by: user?.name || user?.nickname || 'ฝ่ายวิชาการ',
+          date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }),
+          file_url: uploadResult.url
+        };
+
+        const savedDoc = await writeSheet('Academic_Docs', docMeta);
+        if (savedDoc) {
+          setDocs(prev => [{
+            id: savedDoc.id,
+            title: savedDoc.title,
+            type: savedDoc.type,
+            size: savedDoc.size,
+            uploadedBy: savedDoc.uploaded_by,
+            date: savedDoc.date,
+            fileUrl: savedDoc.file_url
+          }, ...prev]);
+          
+          setDocModal(false);
+          setDocForm({ title: '', file: null, fileName: '', fileBase64: '' });
+          alert("อัปโหลดเอกสารแผนงานวิชาการสำเร็จ!");
+
+          // Notify Discord (general channel)
+          const embedTitle = `📤 เอกสารใหม่ของฝ่ายวิชาการลงคลังแล้ว`;
+          const embedDesc = `หัวข้อเอกสาร: **${savedDoc.title}**`;
+          const fields = [
+            { name: "👤 ผู้อัปโหลด", value: savedDoc.uploaded_by, inline: true },
+            { name: "📎 ประเภท", value: savedDoc.type, inline: true },
+            { name: "📦 ขนาดไฟล์", value: savedDoc.size, inline: true },
+            { name: "📅 วันที่บันทึก", value: savedDoc.date, inline: true }
+          ];
+          sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'academic');
+        }
+      }
+    } catch (err) {
+      console.error('Error uploading academic doc:', err);
+      alert('เกิดข้อผิดพลาดในการอัปโหลดไฟล์: ' + err.message);
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleDeleteProject = async (id) => {
+    if (!window.confirm('คุณแน่ใจหรือไม่ที่จะลบโครงการ/กิจกรรมนี้?')) return;
+    try {
+      const res = await deleteSheet('Academic_Projects', id);
+      if (res && res.success) {
+        setProjects(prev => prev.filter(p => p.id !== id));
+        alert('ลบข้อมูลสำเร็จ');
+      } else {
+        alert('ไม่สามารถลบข้อมูลได้: ' + (res?.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+    }
+  };
+
+  const handleDeleteDoc = async (id) => {
+    if (!window.confirm('คุณแน่ใจหรือไม่ที่จะลบเอกสารนี้?')) return;
+    try {
+      const res = await deleteSheet('Academic_Docs', id);
+      if (res && res.success) {
+        setDocs(prev => prev.filter(d => d.id !== id));
+        alert('ลบข้อมูลสำเร็จ');
+      } else {
+        alert('ไม่สามารถลบข้อมูลได้: ' + (res?.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+    }
+  };
+
+  const FILE_ICON = { PDF: '🔴', DOCX: '🔵', XLSX: '🟢', PNG: '🟡', JPG: '🟡', PPTX: '🟠', default: '📎' };
+
   return (
     <div>
-      <div className="page-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <div className="page-title">📚 ฝ่ายวิชาการ</div>
-          <div className="page-subtitle">จัดการโครงการ เอกสาร และแผนงานประจำปี</div>
+          <div className="page-subtitle">จัดการโครงการ เอกสารเผยแพร่ และแผนงานวิชาการประจำปี (เก็บแบบไร้ค่าใช้จ่ายบน Google Sheets & Drive)</div>
         </div>
-        {canManage && <button className="btn btn-primary" onClick={()=>setModal(true)}><Plus size={14}/> เพิ่มโครงการ</button>}
+        {canManage && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            {tab === 'projects' ? (
+              <button className="btn btn-primary" onClick={() => setProjModal(true)}>
+                <Plus size={14} /> เพิ่มโครงการ
+              </button>
+            ) : (
+              <button className="btn btn-primary" onClick={() => setDocModal(true)}>
+                <Upload size={14} /> อัปโหลดเอกสาร
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Stats */}
-      <div className="stats-row" style={{ marginBottom:16 }}>
-        {Object.entries(PROJECT_STATUS).map(([k,s]) => (
+      <div className="stats-row" style={{ marginBottom: 16 }}>
+        {Object.entries(PROJECT_STATUS).map(([k, s]) => (
           <div key={k} className="stat-box">
-            <div className="stat-icon-box" style={{ background:'#f5f5f5', fontSize:16 }}>
-              {k==='planning'?'📋':k==='in_progress'?'⚙️':k==='review'?'👁':k==='done'?'✅':'❌'}
+            <div className="stat-icon-box" style={{ background: '#f5f5f5', fontSize: 16 }}>
+              {k === 'planning' ? '📋' : k === 'in_progress' ? '⚙️' : k === 'review' ? '👁' : k === 'done' ? '✅' : '❌'}
             </div>
             <div>
-              <div className="stat-value" style={{ color:'#212121' }}>{projects.filter(p=>p.status===k).length}</div>
+              <div className="stat-value" style={{ color: '#212121' }}>{projects.filter(p => p.status === k).length}</div>
               <div className="stat-label">{s.label}</div>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Tabs */}
       <div className="tab-bar">
-        <button className={`tab-btn${tab==='projects'?' active':''}`} onClick={()=>setTab('projects')}>📋 โครงการทั้งหมด</button>
-        <button className={`tab-btn${tab==='docs'?' active':''}`} onClick={()=>setTab('docs')}>📁 คลังเอกสาร</button>
+        <button className={`tab-btn${tab === 'projects' ? ' active' : ''}`} onClick={() => setTab('projects')}>📋 โครงการทั้งหมด</button>
+        <button className={`tab-btn${tab === 'docs' ? ' active' : ''}`} onClick={() => setTab('docs')}>📁 คลังเอกสาร</button>
       </div>
 
-      {tab==='projects' && (
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title">โครงการทั้งหมด</span>
-            <div style={{ position:'relative' }}>
-              <Search size={13} style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', color:'#bdbdbd' }}/>
-              <input className="input-field" placeholder="ค้นหา..." value={search} onChange={e=>setSearch(e.target.value)} style={{ paddingLeft:28, padding:'6px 8px 6px 28px', fontSize:12, width:200 }}/>
-            </div>
-          </div>
-          <div style={{ overflowX:'auto' }}>
-            <table className="simple-table">
-              <thead><tr><th>#</th><th>โครงการ</th><th>หมวด</th><th>ผู้รับผิดชอบ</th><th>งบประมาณ</th><th>กำหนด</th><th>สถานะ</th>{canManage && <th>เปลี่ยนสถานะ</th>}</tr></thead>
-              <tbody>
-                {filtered.map((p,i) => {
-                  const s = PROJECT_STATUS[p.status];
-                  return (
-                    <tr key={p.id}>
-                      <td style={{ color:'#9e9e9e', fontSize:12 }}>{i+1}</td>
-                      <td><div style={{ fontWeight:600, fontSize:13 }}>{p.title}</div><div style={{ fontSize:11, color:'#9e9e9e' }}>{p.desc}</div></td>
-                      <td><span className="badge badge-gray" style={{ fontSize:11 }}>{p.category}</span></td>
-                      <td style={{ fontSize:13 }}>{p.owner}</td>
-                      <td style={{ fontSize:13 }}>{p.budget > 0 ? p.budget.toLocaleString()+' บาท' : '–'}</td>
-                      <td style={{ fontSize:12 }}>{new Date(p.dueDate).toLocaleDateString('th-TH',{day:'numeric',month:'short'})}</td>
-                      <td><span className={`badge ${s.badge}`} style={{ fontSize:11 }}>{s.label}</span></td>
-                      {canManage && (
-                        <td>
-                          <select className="select-field" value={p.status} onChange={e=>changeStatus(p.id,e.target.value)} style={{ fontSize:11, padding:'4px 6px', width:140 }}>
-                            {Object.entries(PROJECT_STATUS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
-                          </select>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      {loadingData ? (
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: 12 }}>
+          <div style={{ width: 40, height: 40, border: '4px solid #f3f3f3', borderTop: '4px solid #00bcd4', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+          <div style={{ fontSize: 14, color: '#757575' }}>กำลังดึงข้อมูลโครงการจาก Google Sheets backend...</div>
         </div>
-      )}
-
-      {tab==='docs' && (
-        <div className="card">
-          <div className="card-header"><span className="card-title">📁 คลังเอกสาร</span>{canManage && <button className="btn btn-primary btn-sm"><Plus size={13}/> อัปโหลด</button>}</div>
-          <table className="simple-table">
-            <thead><tr><th>#</th><th>เอกสาร</th><th>ประเภท</th><th>อัปโหลดโดย</th><th>วันที่</th></tr></thead>
-            <tbody>{docs.map((d,i) => (
-              <tr key={d.id}>
-                <td style={{ color:'#9e9e9e', fontSize:12 }}>{i+1}</td>
-                <td><div style={{ display:'flex', alignItems:'center', gap:8 }}><FileText size={16} color="#9e9e9e"/><span style={{ fontWeight:600, fontSize:13 }}>{d.title}</span></div></td>
-                <td><span className="badge badge-gray" style={{ fontSize:11 }}>{d.type}</span></td>
-                <td style={{ fontSize:13 }}>{d.uploadedBy}</td>
-                <td style={{ fontSize:12, color:'#9e9e9e' }}>{d.date}</td>
-              </tr>
-            ))}</tbody>
-          </table>
-        </div>
-      )}
-
-      {modal && (
-        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(false)}>
-          <div className="modal-box">
-            <div className="modal-header"><span style={{ fontWeight:700 }}>📋 เพิ่มโครงการใหม่</span><button onClick={()=>setModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#9e9e9e' }}><X size={18}/></button></div>
-            <div className="modal-body" style={{ display:'flex', flexDirection:'column', gap:14 }}>
-              <div><label className="form-label">ชื่อโครงการ *</label><input className="input-field" value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))} placeholder="ชื่อโครงการ"/></div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-                <div><label className="form-label">หมวด</label><select className="select-field" value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value}))}><option>กิจกรรม</option><option>เอกสาร</option><option>งานวิชาการ</option></select></div>
-                <div><label className="form-label">ผู้รับผิดชอบ</label><input className="input-field" value={form.owner} onChange={e=>setForm(p=>({...p,owner:e.target.value}))} placeholder="ชื่อเล่น"/></div>
-                <div><label className="form-label">งบประมาณ (บาท)</label><input className="input-field" type="number" value={form.budget} onChange={e=>setForm(p=>({...p,budget:e.target.value}))} placeholder="0"/></div>
-                <div><label className="form-label">กำหนด *</label><input className="input-field" type="date" value={form.dueDate} onChange={e=>setForm(p=>({...p,dueDate:e.target.value}))}/></div>
+      ) : (
+        <>
+          {/* Projects */}
+          {tab === 'projects' && (
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div className="card-header" style={{ padding: '18px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="card-title" style={{ margin: 0 }}>ทะเบียนโครงการฝ่ายวิชาการ</span>
+                <div style={{ position: 'relative' }}>
+                  <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#bdbdbd' }} />
+                  <input className="input-field" placeholder="ค้นหาโครงการ..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 28, padding: '6px 8px 6px 28px', fontSize: 12, width: 200 }} />
+                </div>
               </div>
-              <div><label className="form-label">รายละเอียด</label><input className="input-field" value={form.desc} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} placeholder="คำอธิบายโครงการ"/></div>
+              
+              {filtered.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9e9e9e' }}>
+                  📋 ไม่พบข้อมูลโครงการฝ่ายวิชาการใน Sheets
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="simple-table">
+                    <thead><tr><th>#</th><th>โครงการ</th><th>หมวด</th><th>ผู้รับผิดชอบ</th><th>งบประมาณ</th><th>กำหนดส่งงาน</th><th>สถานะ</th>{canManage && <th>เปลี่ยนสถานะ</th>}</tr></thead>
+                    <tbody>
+                      {filtered.map((p, i) => {
+                        const s = PROJECT_STATUS[p.status] || PROJECT_STATUS.planning;
+                        return (
+                          <tr key={p.id}>
+                            <td style={{ color: '#9e9e9e', fontSize: 12 }}>{i + 1}</td>
+                            <td>
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>{p.title}</div>
+                              <div style={{ fontSize: 11, color: '#9e9e9e' }}>{p.desc}</div>
+                            </td>
+                            <td><span className="badge badge-gray" style={{ fontSize: 11 }}>{p.category}</span></td>
+                            <td style={{ fontSize: 13 }}>{p.owner}</td>
+                            <td style={{ fontSize: 13 }}>{p.budget > 0 ? p.budget.toLocaleString() + ' บาท' : '–'}</td>
+                            <td style={{ fontSize: 12 }}>
+                              {p.dueDate ? new Date(p.dueDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '–'}
+                            </td>
+                            <td>
+                              <span className={`badge ${s.badge}`} style={{ fontSize: 11 }}>
+                                {s.label}
+                              </span>
+                            </td>
+                            {canManage && (
+                              <td style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                <select 
+                                  className="select-field" 
+                                  value={p.status} 
+                                  disabled={updatingStatus[p.id]}
+                                  onChange={e => changeStatus(p.id, e.target.value)} 
+                                  style={{ fontSize: 11, padding: '4px 6px', width: 140 }}
+                                >
+                                  {Object.entries(PROJECT_STATUS).map(([k, v]) => (
+                                    <option key={k} value={k}>{v.label}</option>
+                                  ))}
+                                </select>
+                                <button 
+                                  className="btn btn-outline btn-sm" 
+                                  style={{ color: '#e53935', borderColor: '#e53935', fontSize: 11, padding: '4px 8px' }}
+                                  onClick={() => handleDeleteProject(p.id)}
+                                >
+                                  ลบ
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Docs */}
+          {tab === 'docs' && (
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div className="card-header" style={{ padding: '18px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="card-title" style={{ margin: 0 }}>📁 คลังเอกสารฝ่ายวิชาการ (จัดเก็บใน Google Drive โควต้าฟรี)</span>
+              </div>
+              
+              {docs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9e9e9e' }}>
+                  📁 ยังไม่มีไฟล์เอกสารวิชาการอัปโหลดไว้ใน Google Sheets
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="simple-table">
+                    <thead><tr><th>#</th><th>ชื่อเอกสารวิชาการ</th><th>ประเภท</th><th>ขนาด</th><th>อัปโหลดโดย</th><th>วันที่อัปโหลด</th><th>เปิดไฟล์</th></tr></thead>
+                    <tbody>
+                      {docs.map((d, i) => (
+                        <tr key={d.id}>
+                          <td style={{ color: '#9e9e9e', fontSize: 12 }}>{i + 1}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 18 }}>{FILE_ICON[d.type] || FILE_ICON.default}</span>
+                              <span style={{ fontWeight: 600, fontSize: 13 }}>{d.title}</span>
+                            </div>
+                          </td>
+                          <td><span className="badge badge-gray" style={{ fontSize: 11 }}>{d.type}</span></td>
+                          <td style={{ fontSize: 12, color: '#9e9e9e' }}>{d.size || '–'}</td>
+                          <td style={{ fontSize: 13 }}>{d.uploadedBy}</td>
+                          <td style={{ fontSize: 12, color: '#9e9e9e' }}>{d.date}</td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button 
+                                className="btn btn-gray btn-sm" 
+                                style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                onClick={() => {
+                                  if (d.fileUrl) window.open(d.fileUrl, '_blank');
+                                  else alert('ไม่พบที่อยู่ไฟล์เอกสาร');
+                                }}
+                              >
+                                <Download size={12} /> เปิด
+                              </button>
+                              {canManage && (
+                                <button 
+                                  className="btn btn-outline btn-sm" 
+                                  style={{ color: '#e53935', borderColor: '#e53935', fontSize: 11, padding: '4px 8px' }}
+                                  onClick={() => handleDeleteDoc(d.id)}
+                                >
+                                  ลบ
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Add Project Modal */}
+      {projModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setProjModal(false)}>
+          <div className="modal-box">
+            <div className="modal-header">
+              <span style={{ fontWeight: 700, fontSize: 15 }}>📋 เพิ่มโครงการใหม่ (วิชาการ)</span>
+              <button onClick={() => setProjModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9e9e9e' }}><X size={18} /></button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label className="form-label">ชื่อโครงการ *</label>
+                <input className="input-field" value={projForm.title} onChange={e => setProjForm(p => ({ ...p, title: e.target.value }))} placeholder="ชื่อโครงการ เช่น โครงการติวเข้มพิชิต ONET" />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="form-label">หมวดหมู่</label>
+                  <select className="select-field" value={projForm.category} onChange={e => setProjForm(p => ({ ...p, category: e.target.value }))}>
+                    <option>กิจกรรม</option>
+                    <option>เอกสาร</option>
+                    <option>งานวิชาการ</option>
+                    <option>คู่มือการเรียน</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">ผู้รับผิดชอบ</label>
+                  <input className="input-field" value={projForm.owner} onChange={e => setProjForm(p => ({ ...p, owner: e.target.value }))} placeholder="ชื่อผู้รับผิดชอบหลัก" />
+                </div>
+                <div>
+                  <label className="form-label">งบประมาณ (บาท)</label>
+                  <input className="input-field" type="number" value={projForm.budget} onChange={e => setProjForm(p => ({ ...p, budget: e.target.value }))} placeholder="0" />
+                </div>
+                <div>
+                  <label className="form-label">กำหนดส่งงาน / ดำเนินการ *</label>
+                  <input className="input-field" type="date" value={projForm.dueDate} onChange={e => setProjForm(p => ({ ...p, dueDate: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="form-label">รายละเอียด / วัตถุประสงค์</label>
+                <input className="input-field" value={projForm.desc} onChange={e => setProjForm(p => ({ ...p, desc: e.target.value }))} placeholder="คำอธิบายโครงการหรือรายละเอียดคร่าวๆ" />
+              </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-gray" onClick={()=>setModal(false)}>ยกเลิก</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={!form.title||!form.dueDate}><Save size={14}/> บันทึก</button>
+              <button className="btn btn-gray" onClick={() => setProjModal(false)}>ยกเลิก</button>
+              <button className="btn btn-primary" onClick={handleSaveProject} disabled={!projForm.title || !projForm.dueDate || savingProj}>
+                {savingProj ? <Loader size={14} className="animate-spin" style={{ marginRight: 6 }} /> : <Save size={14} />}
+                {savingProj ? 'กำลังบันทึก...' : 'บันทึกลง Sheets'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Document Modal */}
+      {docModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setDocModal(false)}>
+          <div className="modal-box" style={{ maxWidth: 450 }}>
+            <div className="modal-header">
+              <span style={{ fontWeight: 700, fontSize: 15 }}>📤 อัปโหลดเอกสารวิชาการ (Google Drive)</span>
+              <button onClick={() => setDocModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9e9e9e' }}><X size={18} /></button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label className="form-label">ชื่อเอกสาร / คลังวิชาการ *</label>
+                <input className="input-field" placeholder="เช่น แผนงานกิจกรรมและโครงการวิชาการสภา 2568" value={docForm.title} onChange={e => setDocForm(p => ({ ...p, title: e.target.value }))} />
+              </div>
+              
+              <div>
+                <label className="form-label">เลือกไฟล์เอกสาร (PDF, DOCX, XLSX, รูปภาพ, PPTX) *</label>
+                <label style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  padding: '20px 24px',
+                  border: '2px dashed #00bcd4',
+                  borderRadius: 12,
+                  background: '#e0f7fa22',
+                  color: '#00838f',
+                  cursor: 'pointer',
+                  width: '100%',
+                  textAlign: 'center',
+                  fontWeight: 600,
+                  fontSize: 14
+                }}>
+                  <Upload size={24} />
+                  <span>{docForm.fileName ? docForm.fileName : "คลิกเพื่อเลือกไฟล์และส่งไป Google Drive"}</span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#616161' }}>ระบบจะบันทึกเข้า Google Drive อัตโนมัติ</span>
+                  <input type="file" accept=".pdf,.docx,.xlsx,.xls,.png,.jpg,.jpeg,.doc,.pptx,.ppt" onChange={handleFileChange} style={{ display: 'none' }} />
+                </label>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-gray" onClick={() => setDocModal(false)}>ยกเลิก</button>
+              <button className="btn btn-primary" onClick={handleUploadDoc} disabled={!docForm.fileBase64 || uploadingDoc}>
+                {uploadingDoc ? <Loader size={14} className="animate-spin" style={{ marginRight: 6 }} /> : <Upload size={14} />}
+                {uploadingDoc ? 'กำลังอัปโหลด...' : 'อัปโหลดลงคลัง'}
+              </button>
             </div>
           </div>
         </div>

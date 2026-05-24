@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const DAYS_TH = ['อา','จ','อ','พ','พฤ','ศ','ส'];
@@ -43,6 +44,16 @@ export default function CalendarPage() {
         }]);
         
       if (error) throw error;
+
+      // Notify Discord (pr channel)
+      const typeLabel = TYPE_LABELS[newEv.type] || 'กิจกรรม';
+      const embedTitle = `📅 มีการเพิ่มกิจกรรมลงในปฏิทินสภาใหม่`;
+      const embedDesc = `หัวข้อ: **${newEv.title}** (${typeLabel})`;
+      const fields = [
+        { name: "📆 วันที่จัดกิจกรรม", value: new Date(newEv.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), inline: true },
+        { name: "📝 รายละเอียดเพิ่มเติม", value: newEv.desc || "ไม่มี", inline: false }
+      ];
+      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'calendar');
       
       setIsAdding(false);
       setNewEv({ title: '', date: todayStr, type: 'event', desc: '' });

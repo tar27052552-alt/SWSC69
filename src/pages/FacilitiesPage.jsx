@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Save } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Plus, X, Save, Trash2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 const MOCK_REQUESTS = [];
 
@@ -44,10 +46,36 @@ export default function FacilitiesPage() {
         .update({ status })
         .eq('id', id);
       if (error) throw error;
+
+      // Find the request details
+      const req = requests.find(x => x.id === id);
+      if (req) {
+        const statusLabels = { pending: '⏳ รอตรวจสอบ', approved: '🟢 อนุมัติแล้ว', rejected: '🔴 ปฏิเสธการขอยืม', done: '✅ ดำเนินการเสร็จสิ้น' };
+        const colorMap = { pending: 15105570, approved: 3066993, rejected: 15158332, done: 3066993 };
+        const embedTitle = `🏫 อัปเดตสถานะใบคำขอจัดเตรียมสถานที่ / ยืมอุปกรณ์`;
+        const embedDesc = `คำขอ **${req.title}** (โดย ${req.requester}) ได้รับการเปลี่ยนสถานะเป็น **${statusLabels[status] || status}**`;
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, colorMap[status] || 3066993, [], null, 'general');
+      }
+
       setRequests(p => p.map(x => x.id === id ? { ...x, status } : x));
     } catch (err) {
       console.error('Error updating facility request status:', err);
       alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ: ' + err.message);
+    }
+  };
+
+  const handleDeleteRequest = async (id) => {
+    if (!window.confirm('คุณแน่ใจหรือไม่ที่จะลบคำขอจัดสถานที่นี้?')) return;
+    try {
+      const { error } = await supabase
+        .from('facilities_requests')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      setRequests(p => p.filter(x => x.id !== id));
+    } catch (err) {
+      console.error('Error deleting facility request:', err);
+      alert('เกิดข้อผิดพลาดในการลบคำขอ: ' + err.message);
     }
   };
 
@@ -84,6 +112,19 @@ export default function FacilitiesPage() {
           status: data[0].status
         };
         setRequests(prev => [inserted, ...prev]);
+
+        // Notify Discord (general)
+        const embedTitle = `🏫 มีการยื่นคำขอจัดเตรียมสถานที่ / ยืมอุปกรณ์ใหม่`;
+        const embedDesc = `ชื่องาน: **${inserted.title}**`;
+        const fields = [
+          { name: "👤 ผู้ยื่นคำขอ", value: inserted.requester, inline: true },
+          { name: "📅 วันที่จัดงาน", value: inserted.eventDate, inline: true },
+          { name: "⏰ เวลาจัดงาน", value: inserted.time, inline: true },
+          { name: "🪑 เก้าอี้", value: `${inserted.chairs} ตัว`, inline: true },
+          { name: "🧱 โต๊ะ", value: `${inserted.tables} ตัว`, inline: true },
+          { name: "📎 อุปกรณ์อื่นๆ", value: inserted.other || "ไม่มี", inline: false }
+        ];
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15105570, fields, null, 'general');
       }
     } catch (err) {
       console.error('Error inserting facility request:', err);
@@ -143,7 +184,7 @@ export default function FacilitiesPage() {
                     {r.status === 'pending' && (
                       <div style={{ display: 'flex', gap: 5 }}>
                         <button onClick={() => changeStatus(r.id, 'approved')} className="btn btn-success btn-sm" style={{ fontSize: 11 }}>✓ รับงาน</button>
-                        <button onClick={() => setRequests(p => p.filter(x => x.id !== r.id))} className="btn btn-danger btn-sm"><X size={12} /></button>
+                        <button onClick={() => handleDeleteRequest(r.id)} className="btn btn-danger btn-sm"><X size={12} /></button>
                       </div>
                     )}
                   </td>

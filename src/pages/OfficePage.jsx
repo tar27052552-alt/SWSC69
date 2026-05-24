@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, X, Save } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 const MOCK_USAGE_LOG = [];
 
@@ -47,6 +48,17 @@ export default function OfficePage() {
       if (error) throw error;
       if (data && data[0]) {
         setLog(prev => [data[0], ...prev]);
+
+        // Notify Discord (general)
+        const embedTitle = `🏢 มีการลงทะเบียนเข้าใช้งานห้องสภานักเรียน`;
+        const embedDesc = `ลงทะเบียนโดย: **${data[0].by}**`;
+        const fields = [
+          { name: "📆 วันที่เข้าใช้งาน", value: data[0].date, inline: true },
+          { name: "⏰ เวลาเข้าใช้งาน", value: data[0].time, inline: true },
+          { name: "🧹 การดูแลความสะอาด", value: data[0].clean ? "✅ ทำความสะอาดห้องเรียบร้อย" : "❌ ยังไม่ได้ทำความสะอาด", inline: true },
+          { name: "📝 วัตถุประสงค์", value: data[0].purpose || "ใช้งานทั่วไป", inline: false }
+        ];
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, fields, null, 'office');
       }
     } catch (err) {
       console.error('Error inserting office usage log:', err);
@@ -54,6 +66,21 @@ export default function OfficePage() {
     }
     setModal(false);
     setForm({ date: '', time: '', by: '', purpose: '', clean: false });
+  };
+
+  const handleDeleteLog = async (id) => {
+    if (!window.confirm('คุณแน่ใจหรือไม่ที่จะลบรายการนี้?')) return;
+    try {
+      const { error } = await supabase
+        .from('office_usage_log')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      setLog(prev => prev.filter(l => l.id !== id));
+    } catch (err) {
+      console.error('Error deleting log:', err);
+      alert('เกิดข้อผิดพลาดในการลบ: ' + err.message);
+    }
   };
 
   return (
@@ -78,6 +105,7 @@ export default function OfficePage() {
                 <th>ผู้ใช้</th>
                 <th>วัตถุประสงค์</th>
                 <th>ทำความสะอาด</th>
+                {canManage && <th>ลบ</th>}
               </tr>
             </thead>
             <tbody>
@@ -93,6 +121,17 @@ export default function OfficePage() {
                       {l.clean ? '✓ เรียบร้อย' : '✗ ยังไม่ได้ทำ'}
                     </span>
                   </td>
+                  {canManage && (
+                    <td>
+                      <button 
+                        className="btn btn-danger btn-sm" 
+                        onClick={() => handleDeleteLog(l.id)}
+                        style={{ padding: '4px 8px' }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

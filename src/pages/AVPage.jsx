@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, X, Save, Edit2, Search } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 const CONTENT_TYPES = ['กราฟิก', 'วิดีโอ', 'Reel', 'ถ่ายภาพ', 'Live Stream', 'อินโฟกราฟิก'];
 const PLATFORMS     = ['Instagram', 'Facebook Page', 'LINE Official', 'ทั้งหมด'];
 const PRIORITY      = ['สูง', 'ปานกลาง', 'ต่ำ'];
-const AV_MEMBERS    = ['บิ๊ก', 'ฝน', 'แบงค์'];
 
 const STATUS_CFG = {
   backlog:     { label: 'คิดคอนเทนต์',   color: '#9e9e9e', bg: '#f5f5f5'  },
@@ -20,7 +20,7 @@ const PRIORITY_BADGE = { สูง: 'badge-red', ปานกลาง: 'badge-y
 
 const INIT_TASKS = [];
 
-const initForm = { title:'', type:CONTENT_TYPES[0], platform:PLATFORMS[0], priority:'ปานกลาง', assignee:AV_MEMBERS[0], dueDate:'', note:'' };
+const initForm = { title:'', type:CONTENT_TYPES[0], platform:PLATFORMS[0], priority:'ปานกลาง', assignee:'', dueDate:'', note:'' };
 
 export default function AVPage() {
   const { user } = useAuth();
@@ -28,6 +28,7 @@ export default function AVPage() {
   const [tab, setTab]       = useState('kanban');
   const [modal, setModal]   = useState(false);
   const [editTask, setEdit] = useState(null);
+  const [avMembers, setAvMembers] = useState([]);
   const [form, setForm]     = useState(initForm);
   const [search, setSearch] = useState('');
 
@@ -56,7 +57,22 @@ export default function AVPage() {
         console.error('Error loading AV tasks:', err);
       }
     }
+    async function loadAVMembers() {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('nickname, name')
+          .eq('dept_id', 9);
+        if (!error && data) {
+          const names = data.map(u => u.nickname || u.name).filter(Boolean);
+          setAvMembers(names);
+        }
+      } catch (err) {
+        console.error('Error loading AV members:', err);
+      }
+    }
     loadTasks();
+    loadAVMembers();
   }, []);
 
   const handleSave = async () => {
@@ -97,6 +113,19 @@ export default function AVPage() {
             note: data[0].note
           };
           setTasks(p => [...p, inserted]);
+
+          // Notify Discord (general)
+          const embedTitle = `🎥 มอบหมายงานฝ่ายโสตทัศนูปกรณ์ (AV Task) ใหม่`;
+          const embedDesc = `ชื่องาน: **${inserted.title}**`;
+          const fields = [
+            { name: "👤 ผู้รับผิดชอบ", value: inserted.assignee || "ไม่ระบุ", inline: true },
+            { name: "🎬 ประเภทงาน", value: inserted.type, inline: true },
+            { name: "📱 แพลตฟอร์ม", value: inserted.platform, inline: true },
+            { name: "🚨 ความสำคัญ", value: inserted.priority, inline: true },
+            { name: "📅 กำหนดส่ง", value: inserted.dueDate, inline: true },
+            { name: "📝 รายละเอียด", value: inserted.note || "ไม่มี", inline: false }
+          ];
+          sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'av');
         }
       }
     } catch (err) {
@@ -112,6 +141,21 @@ export default function AVPage() {
     setModal(true);
   };
 
+  const handleDeleteTask = async (id) => {
+    if (!window.confirm('คุณแน่ใจหรือไม่ที่จะลบงานนี้?')) return;
+    try {
+      const { error } = await supabase
+        .from('av_tasks')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      setTasks(p => p.filter(t => t.id !== id));
+    } catch (err) {
+      console.error('Error deleting AV task:', err);
+      alert('เกิดข้อผิดพลาดในการลบงาน: ' + err.message);
+    }
+  };
+
   const moveStatus = async (id, status) => {
     try {
       const { error } = await supabase
@@ -119,6 +163,21 @@ export default function AVPage() {
         .update({ status })
         .eq('id', id);
       if (error) throw error;
+
+      // Find task details
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        const STATUS_LABELS = { backlog: 'งานเตรียมดำเนินการ', pr_review: 'ส่ง PR ตรวจสอบ', completed: 'เสร็จสิ้นภารกิจ' };
+        const colorMap = { backlog: 9803157, pr_review: 15105570, completed: 3066993 };
+        const embedTitle = `🎥 อัปเดตความคืบหน้างานโสตทัศนูปกรณ์`;
+        const embedDesc = `งาน **${task.title}** ได้ปรับสถานะเป็น **${STATUS_LABELS[status] || status}**`;
+        const fields = [
+          { name: "👤 ผู้รับผิดชอบ", value: task.assignee || "ไม่ระบุ", inline: true }
+        ];
+        const notifyChannel = status === 'pr_review' ? 'pr' : 'av';
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, colorMap[status] || 3066993, fields, null, notifyChannel);
+      }
+
       setTasks(p => p.map(t => t.id===id ? { ...t, status } : t));
     } catch (err) {
       console.error('Error moving AV task status:', err);
@@ -138,7 +197,7 @@ export default function AVPage() {
           <div className="page-title">🎬 ฝ่ายโสตทัศนศึกษา</div>
           <div className="page-subtitle">คิดคอนเทนต์ ทำกราฟิก/วิดีโอ/ถ่ายภาพ และส่งงานให้ฝ่าย PR ใส่แคปชั่น</div>
         </div>
-        <button className="btn btn-primary" onClick={()=>{ setEdit(null); setForm(initForm); setModal(true); }}>
+        <button className="btn btn-primary" onClick={()=>{ setEdit(null); setForm({ title:'', type:CONTENT_TYPES[0], platform:PLATFORMS[0], priority:'ปานกลาง', assignee:avMembers[0] || '', dueDate:'', note:'' }); setModal(true); }}>
           <Plus size={14}/> วางแผนคอนเทนต์
         </button>
       </div>
@@ -245,7 +304,7 @@ export default function AVPage() {
                       <td>
                         <div style={{ display:'flex', gap:5 }}>
                           <button onClick={()=>openEdit(t)} className="btn btn-gray btn-sm"><Edit2 size={12}/></button>
-                          <button onClick={()=>setTasks(p=>p.filter(x=>x.id!==t.id))} className="btn btn-danger btn-sm"><X size={12}/></button>
+                          <button onClick={()=>handleDeleteTask(t.id)} className="btn btn-danger btn-sm"><X size={12}/></button>
                         </div>
                       </td>
                     </tr>
@@ -300,7 +359,13 @@ export default function AVPage() {
                 <div><label className="form-label">ประเภทงาน</label><select className="select-field" value={form.type} onChange={e=>setForm(p=>({...p,type:e.target.value}))}>{CONTENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
                 <div><label className="form-label">แพลตฟอร์ม</label><select className="select-field" value={form.platform} onChange={e=>setForm(p=>({...p,platform:e.target.value}))}>{PLATFORMS.map(t=><option key={t}>{t}</option>)}</select></div>
                 <div><label className="form-label">ความสำคัญ</label><select className="select-field" value={form.priority} onChange={e=>setForm(p=>({...p,priority:e.target.value}))}>{PRIORITY.map(t=><option key={t}>{t}</option>)}</select></div>
-                <div><label className="form-label">ผู้รับผิดชอบ</label><select className="select-field" value={form.assignee} onChange={e=>setForm(p=>({...p,assignee:e.target.value}))}>{AV_MEMBERS.map(m=><option key={m}>{m}</option>)}</select></div>
+                <div>
+                  <label className="form-label">ผู้รับผิดชอบ</label>
+                  <select className="select-field" value={form.assignee} onChange={e=>setForm(p=>({...p,assignee:e.target.value}))}>
+                    {avMembers.length === 0 && <option value="">-- ไม่มีสมาชิกฝ่ายโสต --</option>}
+                    {avMembers.map(m=><option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
               </div>
               <div><label className="form-label">กำหนดเสร็จ *</label><input className="input-field" type="date" value={form.dueDate} onChange={e=>setForm(p=>({...p,dueDate:e.target.value}))}/></div>
               <div><label className="form-label">บรีฟ / หมายเหตุ</label><input className="input-field" placeholder="รายละเอียดงาน..." value={form.note} onChange={e=>setForm(p=>({...p,note:e.target.value}))}/></div>

@@ -232,22 +232,6 @@ export default function MyStats() {
             </div>
           </div>
 
-          <div className="card">
-            <div className="card-header"><span className="card-title">🔐 สิทธิ์การเข้าถึง</span></div>
-            <div style={{ padding:'8px 0' }}>
-              {[
-                { label:'ดูตารางเวรทั้งหมด', ok:true },
-                { label:'แก้ไขตารางเวร', ok: user?.role!=='member' },
-                { label:'บันทึกการหักเงิน', ok: user?.deptId===2 || user?.role==='admin' },
-                { label:'จัดการผู้ใช้งาน', ok: user?.role==='admin' },
-              ].map(p => (
-                <div key={p.label} style={{ display:'flex', justifyContent:'space-between', padding:'8px 16px', borderBottom:'1px solid #f9f9f9', fontSize:13 }}>
-                  <span style={{ color:'#616161' }}>{p.label}</span>
-                  <span>{p.ok ? '✅' : '❌'}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Right column */}

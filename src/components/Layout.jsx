@@ -7,6 +7,7 @@ import {
   Music, FileText, Warehouse, Camera, HandHeart, LogOut, Settings, MapPin, Sparkles, ClipboardList, ChevronDown, User, X, Menu
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import logoUrl from '../assets/logo.png';
 
 const NAV = [
   { section: 'ทั่วไป', items: [
@@ -14,9 +15,10 @@ const NAV = [
     { to: '/checkin',   icon: MapPin,          label: 'เช็คชื่อเข้า รร.' },
     { to: '/my-attendance', icon: ClipboardList, label: 'ประวัติเช็คชื่อ' },
     { to: '/clean-duty',icon: Sparkles,        label: 'ส่งเวรห้องสภา' },
+    { to: '/submit-news', icon: Megaphone,     label: 'ส่งข่าวประชาสัมพันธ์' },
     { to: '/schedules', icon: Calendar,        label: 'ตารางเวร' },
     { to: '/calendar',  icon: Calendar,        label: 'ปฏิทินกิจกรรม' },
-    { to: '/my-fines',  icon: Banknote,        label: 'ชำระค่าปรับ' },
+    { to: '/my-fines',  icon: Banknote,        label: 'ชำระเงิน/ค่าปรับ' },
     { to: '/profile',   icon: UserCircle,      label: 'ประวัติส่วนตัว' },
     { to: '/settings',  icon: Settings,        label: 'ตั้งค่าทั่วไป' },
   ]},
@@ -35,8 +37,8 @@ const NAV = [
 ];
 
 const PAGE_TITLES = {
-  '/dashboard': 'หน้าหลัก', '/checkin': 'เช็คชื่อมาโรงเรียน', '/my-attendance': 'ประวัติเช็คชื่อ', '/clean-duty': 'ส่งเวรห้องสภา', '/schedules': 'ตารางเวร', '/calendar': 'ปฏิทินกิจกรรม',
-  '/my-fines': 'ชำระค่าปรับ',
+  '/dashboard': 'หน้าหลัก', '/checkin': 'เช็คชื่อมาโรงเรียน', '/my-attendance': 'ประวัติเช็คชื่อ', '/clean-duty': 'ส่งเวรห้องสภา', '/submit-news': 'ส่งข่าวประชาสัมพันธ์', '/schedules': 'ตารางเวร', '/calendar': 'ปฏิทินกิจกรรม',
+  '/my-fines': 'ชำระเงินและค่าปรับ',
   '/profile': 'ประวัติส่วนตัว', '/settings': 'ตั้งค่าทั่วไป', '/admin': 'จัดการผู้ใช้งาน',
   '/finance': 'ฝ่ายการเงิน', '/discipline': 'ฝ่ายปกครอง', '/academic': 'ฝ่ายวิชาการ',
   '/office': 'สนง.กรรมการ', '/pr': 'ประชาสัมพันธ์', '/recreation': 'นันทนาการ',
@@ -123,9 +125,9 @@ export default function Layout({ children }) {
       {/* ── Sidebar ── */}
       <aside className={`sidebar ${showSidebar ? 'open' : ''}`}>
         {/* Logo */}
-        <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">ส</div>
-          <div className="sidebar-logo-text">สภานักเรียน<br /><span style={{ fontSize: 10, fontWeight: 400, opacity: 0.7 }}>Student Council</span></div>
+        <div className="sidebar-logo" style={{ gap: '4px', overflow: 'hidden' }}>
+          <img src={logoUrl} alt="SWSC Logo" style={{ width: '70px', height: '70px', objectFit: 'contain', margin: '-15px -15px -15px -20px', flexShrink: 0 }} />
+          <div className="sidebar-logo-text" style={{ marginLeft: '-8px' }}>สภานักเรียน<br /><span style={{ fontSize: 10, fontWeight: 400, opacity: 0.7 }}>Student Council</span></div>
         </div>
 
         {/* User */}

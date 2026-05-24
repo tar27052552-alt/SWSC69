@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logoUrl from '../assets/logo.png';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -25,7 +26,7 @@ export default function LoginPage() {
       <div style={{ width: '100%', maxWidth: 380 }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ width: 60, height: 60, background: '#00bcd4', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: 28, fontWeight: 900, color: 'white' }}>ส</div>
+          <img src={logoUrl} alt="SWSC Logo" style={{ width: 180, height: 180, objectFit: 'contain', margin: '-40px auto -35px', display: 'block' }} />
           <h1 style={{ fontSize: 20, fontWeight: 700, color: '#00838f' }}>สภานักเรียน</h1>
           <p style={{ fontSize: 12, color: '#757575', marginTop: 2 }}>Student Council Internal Portal</p>
         </div>
