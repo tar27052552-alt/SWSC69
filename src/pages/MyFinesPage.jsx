@@ -270,7 +270,7 @@ export default function MyFinesPage() {
         { name: '📋 ชำระค่าธรรมเนียม', value: paidFee.title, inline: true },
         { name: '💵 จำนวนเงิน', value: `${paidFee.amount} บาท`, inline: true }
       ];
-      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, fields, finalSlipUrl, 'finance'); // สีเขียวสำหรับสำเร็จ พร้อมพรีวิวสลิป
+      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, fields, finalSlipUrl, 'discipline_fines'); // สีเขียวสำหรับสำเร็จ พร้อมพรีวิวสลิป
     } catch (err) {
       console.error('Error uploading fee slip:', err);
       alert('เกิดข้อผิดพลาด: ' + err.message);
