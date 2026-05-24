@@ -115,8 +115,14 @@ export default function CheckInPage() {
     setStep(1);
     
     if (!navigator.geolocation) {
-      alert("เบราว์เซอร์ไม่รองรับ GPS");
-      setStep(0); return;
+      if (import.meta.env.DEV) {
+        setDistanceInfo("เบราว์เซอร์ไม่รองรับ GPS (จำลองโหมด Dev)");
+        setTimeout(() => setStep(2), 1500);
+      } else {
+        alert("เบราว์เซอร์ไม่รองรับ GPS");
+        setStep(0);
+      }
+      return;
     }
 
     navigator.geolocation.getCurrentPosition(
@@ -126,7 +132,10 @@ export default function CheckInPage() {
         const schoolLng = 98.57308240750432;
         const dist = getDistance(latitude, longitude, schoolLat, schoolLng);
         
-        if (dist > 300) {
+        if (import.meta.env.DEV) {
+          setDistanceInfo(`ระยะห่างจากโรงเรียน: ${Math.round(dist)} เมตร (จำลองโหมด Dev)`);
+          setTimeout(() => setStep(2), 1500);
+        } else if (dist > 300) {
           alert(`ไม่สามารถเช็คชื่อได้! คุณอยู่ห่างจากโรงเรียน ${Math.round(dist)} เมตร (ต้องไม่เกิน 300 เมตร)`);
           setStep(0);
         } else {
@@ -135,8 +144,13 @@ export default function CheckInPage() {
         }
       },
       (err) => {
-        alert("ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS");
-        setStep(0);
+        if (import.meta.env.DEV) {
+          setDistanceInfo("ดึงพิกัดไม่ได้ (จำลองโหมด Dev)");
+          setTimeout(() => setStep(2), 1500);
+        } else {
+          alert("ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS");
+          setStep(0);
+        }
       }
     );
   };
