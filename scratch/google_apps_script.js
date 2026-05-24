@@ -342,7 +342,7 @@ function sendDiscordEmbed(title, description, colorDecimal, fields, imageUrl, ch
   }
   
   var payload = {
-    "username": "ระบบพอร์ทัลสภา (SWSC)",
+    "username": "SWSC69",
     "avatar_url": "https://tar27052552-alt.github.io/SWSC69/logo.png",
     "embeds": [embedObj]
   };
