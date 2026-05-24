@@ -407,6 +407,28 @@ function getGregorianStr(d) {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
 }
 
+// ฟังก์ชันช่วยแปลงค่าอาเรย์จากฐานข้อมูลที่อาจถูกเก็บเป็น string หรือ array
+function parseArrayOrString(val) {
+  if (!val) return [];
+  if (typeof val === 'object') return val;
+  try {
+    var parsed = JSON.parse(val);
+    if (Array.isArray(parsed)) return parsed;
+    if (typeof parsed === 'string') {
+      return parsed.split(',').map(function(s) { return s.trim(); });
+    }
+  } catch (e) {
+    if (typeof val === 'string') {
+      var cleanVal = val;
+      if (val.indexOf('{') === 0 && val.indexOf('}') === val.length - 1) {
+        cleanVal = val.slice(1, -1);
+      }
+      return cleanVal.split(',').map(function(s) { return s.trim(); });
+    }
+  }
+  return [];
+}
+
 // ----------------------------------------------------------------------------
 // 9. ระบบสรุปรายงานส่งอัตโนมัติ (Trigger Tasks)
 // ----------------------------------------------------------------------------
@@ -426,9 +448,9 @@ function sendAttendanceSummary() {
     
     for (var i = 0; i < settings.length; i++) {
       if (settings[i].key === "enabled_days") {
-        enabledDays = JSON.parse(settings[i].value);
+        enabledDays = parseArrayOrString(settings[i].value);
       } else if (settings[i].key === "disabled_dates") {
-        disabledDates = JSON.parse(settings[i].value);
+        disabledDates = parseArrayOrString(settings[i].value);
       }
     }
     
