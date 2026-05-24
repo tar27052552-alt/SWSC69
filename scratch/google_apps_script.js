@@ -673,3 +673,16 @@ function scheduleForToday() {
              .create();
   }
 }
+
+// ฟังก์ชันสำหรับทดสอบการยิง Webhook ของการเช็คชื่อเข้า Discord โดยตรง
+function testAttendanceWebhook() {
+  var result = sendDiscordEmbed(
+    "🟢 [เช็คชื่อทดสอบ] ทดสอบระบบเช็คชื่อ",
+    "หากคุณเห็นข้อความการ์ดนี้ใน Discord แสดงว่าระบบ Webhook และสิทธิ์การใช้งานใน Apps Script ถูกต้องแล้ว!",
+    3066993,
+    [{ name: "ผลทดสอบ", value: "บอทส่งข้อความสำเร็จ! 🎉", inline: true }],
+    null,
+    "attendance_alerts"
+  );
+  console.log("ผลการรัน: " + JSON.stringify(result));
+}
