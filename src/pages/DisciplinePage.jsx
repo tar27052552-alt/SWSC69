@@ -380,11 +380,13 @@ export default function DisciplinePage() {
     loadAttendance();
     loadCleanChecks();
     loadGreetingChecks();
+    loadExemptionsAndSwaps();
 
     const interval = setInterval(() => {
       loadAttendance();
       loadCleanChecks();
       loadGreetingChecks();
+      loadExemptionsAndSwaps();
     }, 10000);
 
     const channel = supabase
@@ -568,13 +570,15 @@ export default function DisciplinePage() {
 
   // Generate real attendance based on database records
   const attendanceData = users.filter(u => u.role !== 'admin' && u.nickname !== 'แอดมิน').map(u => {
+    const isExempt = dbExemptNicknames.includes(u.nickname);
+
     // 1. Check in database record
     const realRec = dbAttendance.find(d => String(d.user_id) === String(u.id) || d.nickname === u.nickname);
     if (realRec) {
       return {
         ...u,
-        checkInStatus: realRec.status,
-        time: realRec.time,
+        checkInStatus: (isExempt && realRec.status === 'missing') ? 'activity' : realRec.status,
+        time: (isExempt && realRec.status === 'missing') ? 'ทำกิจกรรม' : realRec.time,
         photo: realRec.photo,
         isManual: realRec.is_manual
       };
@@ -592,7 +596,7 @@ export default function DisciplinePage() {
     }
 
     // 3. Check activity exemption
-    if (dbExemptNicknames.includes(u.nickname)) {
+    if (isExempt) {
       return {
         ...u,
         checkInStatus: 'activity',
@@ -1274,7 +1278,7 @@ export default function DisciplinePage() {
                     const realRec = dbCleanChecks.find(c => c.nickname === u.nickname);
                     const isExempt = dbExemptNicknames.includes(u.nickname);
                     const isBeforeStart = cleanDutyStartDate && selectedDate < cleanDutyStartDate;
-                    let status = realRec ? realRec.status : (isExempt || isBeforeStart ? 'not_required' : 'missing');
+                    let status = realRec ? ((isExempt && realRec.status === 'missing') ? 'not_required' : realRec.status) : (isExempt || isBeforeStart ? 'not_required' : 'missing');
                     let photo = realRec ? realRec.photo : null;
                     if (selectedDate === todayStr && user?.id === u.id && cleanDutyState?.photo) {
                       status = 'done';
@@ -1410,7 +1414,7 @@ export default function DisciplinePage() {
                     
                     const isExempt = dbExemptNicknames.includes(m.nickname);
                     const isBeforeStart = greetingDutyStartDate && selectedDate < greetingDutyStartDate;
-                    let greetStatus = greetRec ? greetRec.status : (isExempt || isBeforeStart ? 'not_required' : 'missing');
+                    let greetStatus = greetRec ? ((isExempt && greetRec.status === 'missing') ? 'not_required' : greetRec.status) : (isExempt || isBeforeStart ? 'not_required' : 'missing');
                     let greetPhoto = greetRec ? greetRec.photo : null;
                     
                     // Check if today and self check-in state is active
