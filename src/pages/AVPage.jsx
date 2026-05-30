@@ -93,6 +93,18 @@ export default function AVPage() {
           .update(taskObj)
           .eq('id', editTask.id);
         if (error) throw error;
+
+        // Also update pr_caption_queue if it exists
+        await supabase
+          .from('pr_caption_queue')
+          .update({
+            title: form.title,
+            type: form.type,
+            platform: form.platform,
+            due_date: form.dueDate
+          })
+          .eq('id', editTask.id);
+
         setTasks(p => p.map(t => t.id===editTask.id ? { ...t, ...form } : t));
       } else {
         const { data, error } = await supabase
@@ -144,6 +156,12 @@ export default function AVPage() {
   const handleDeleteTask = async (id) => {
     if (!window.confirm('คุณแน่ใจหรือไม่ที่จะลบงานนี้?')) return;
     try {
+      // Also delete from pr_caption_queue if it exists
+      await supabase
+        .from('pr_caption_queue')
+        .delete()
+        .eq('id', id);
+
       const { error } = await supabase
         .from('av_tasks')
         .delete()

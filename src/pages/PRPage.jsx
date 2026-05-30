@@ -207,6 +207,12 @@ export default function PRPage() {
         })
         .eq('id', id);
       if (error) throw error;
+
+      // Update the corresponding task in av_tasks
+      await supabase
+        .from('av_tasks')
+        .update({ status: isDoneState ? 'done' : 'wait_pr' })
+        .eq('id', id);
       
       setQueue(prev => {
         const target = prev.find(q => q.id === id);
