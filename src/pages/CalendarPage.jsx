@@ -107,6 +107,17 @@ export default function CalendarPage() {
           
         if (error) throw error;
 
+        // Insert into notifications
+        if (insertedEvent) {
+          const typeLabel = TYPE_LABELS[newEv.type] || 'กิจกรรม';
+          await supabase
+            .from('notifications')
+            .insert([{
+              type: 'event',
+              message: `📅 เพิ่ม${typeLabel}ใหม่: "${insertedEvent.title}" ในวันที่ ${new Date(insertedEvent.date).toLocaleDateString('th-TH', {day:'numeric',month:'short',year:'numeric'})}`
+            }]);
+        }
+
         if (selectedParticipants.length > 0 && insertedEvent) {
           const participantRecords = selectedParticipants.map(userId => ({
             event_id: insertedEvent.id,

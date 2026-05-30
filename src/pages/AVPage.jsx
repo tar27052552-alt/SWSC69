@@ -126,6 +126,14 @@ export default function AVPage() {
           };
           setTasks(p => [...p, inserted]);
 
+          // Insert into notifications
+          await supabase
+            .from('notifications')
+            .insert([{
+              type: 'task',
+              message: `📋 มอบหมายงานฝ่ายโสตฯ ใหม่: "${inserted.title}" ให้กับ ${inserted.assignee || 'ไม่ระบุ'} (กำหนดส่ง ${new Date(inserted.dueDate).toLocaleDateString('th-TH', {day:'numeric',month:'short'})})`
+            }]);
+
           // Notify Discord (general)
           const embedTitle = `🎥 มอบหมายงานฝ่ายโสตทัศนูปกรณ์ (AV Task) ใหม่`;
           const embedDesc = `ชื่องาน: **${inserted.title}**`;

@@ -692,6 +692,14 @@ export default function DisciplinePage() {
         };
         setFines(prev => [inserted, ...prev]);
 
+        // Insert into notifications
+        await supabase
+          .from('notifications')
+          .insert([{
+            type: 'fine',
+            message: `💸 บันทึกค่าปรับใหม่: "${inserted.userName} (${inserted.nickname})" - ${inserted.violation} จำนวน ${inserted.amount} บาท`
+          }]);
+
         // Send Discord embed notification
         const embedTitle = `💸 บันทึกค่าปรับใหม่ - ฝ่ายปกครอง`;
         const embedDesc = `มีการออกใบสั่งปรับสมาชิกสภานักเรียนเนื่องจากกระทำความผิดระเบียบ`;
