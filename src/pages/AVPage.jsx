@@ -164,17 +164,55 @@ export default function AVPage() {
         .eq('id', id);
       if (error) throw error;
 
+      // If moving to wait_pr, insert into pr_caption_queue
+      if (status === 'wait_pr') {
+        const task = tasks.find(t => t.id === id);
+        if (task) {
+          const { data: existing } = await supabase
+            .from('pr_caption_queue')
+            .select('id')
+            .eq('id', id);
+          
+          if (!existing || existing.length === 0) {
+            await supabase
+              .from('pr_caption_queue')
+              .insert([{
+                id: id,
+                title: task.title,
+                type: task.type,
+                platform: task.platform,
+                due_date: task.dueDate,
+                status: 'pending'
+              }]);
+          }
+        }
+      }
+
       // Find task details
       const task = tasks.find(t => t.id === id);
       if (task) {
-        const STATUS_LABELS = { backlog: 'งานเตรียมดำเนินการ', pr_review: 'ส่ง PR ตรวจสอบ', completed: 'เสร็จสิ้นภารกิจ' };
-        const colorMap = { backlog: 9803157, pr_review: 15105570, completed: 3066993 };
+        const STATUS_LABELS = {
+          backlog: 'คิดคอนเทนต์',
+          designing: 'กำลังทำกราฟิก',
+          review: 'รอตรวจสอบ',
+          wait_pr: 'รอ PR ใส่แคปชั่น',
+          done: 'เสร็จ/โพสต์แล้ว'
+        };
+        const colorMap = {
+          backlog: 9803157,      // #9e9e9e
+          designing: 1402304,     // #1565c0
+          review: 8279997,        // #7e57c2
+          wait_pr: 16088855,      // #f57f17
+          done: 3046706           // #2e7d32
+        };
         const embedTitle = `🎥 อัปเดตความคืบหน้างานโสตทัศนูปกรณ์`;
         const embedDesc = `งาน **${task.title}** ได้ปรับสถานะเป็น **${STATUS_LABELS[status] || status}**`;
         const fields = [
-          { name: "👤 ผู้รับผิดชอบ", value: task.assignee || "ไม่ระบุ", inline: true }
+          { name: "👤 ผู้รับผิดชอบ", value: task.assignee || "ไม่ระบุ", inline: true },
+          { name: "🎬 ประเภทงาน", value: task.type || "ไม่ระบุ", inline: true },
+          { name: "📱 แพลตฟอร์ม", value: task.platform || "ไม่ระบุ", inline: true }
         ];
-        const notifyChannel = status === 'pr_review' ? 'pr' : 'av';
+        const notifyChannel = status === 'wait_pr' ? 'pr' : 'av';
         sendDiscordEmbedViaGAS(embedTitle, embedDesc, colorMap[status] || 3066993, fields, null, notifyChannel);
       }
 
