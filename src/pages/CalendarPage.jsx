@@ -25,6 +25,7 @@ export default function CalendarPage() {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   
   const [isAdding, setIsAdding] = useState(false);
+  const [editId, setEditId] = useState(null);
   const [newEv, setNewEv] = useState({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', desc: '' });
 
   // อนุญาตให้ แอดมิน, ประธาน (deptId: 1 หรือ isPresident), หรือ เลขานุการ (deptId: 7) สามารถจัดการปฏิทินได้
@@ -36,48 +37,106 @@ export default function CalendarPage() {
     try {
       const color = TYPE_COLORS[newEv.type] || '#43a047';
       
-      const { data: insertedEvent, error } = await supabase
-        .from('events')
-        .insert([{
-          title: newEv.title,
-          date: newEv.date,
-          end_date: newEv.endDate || newEv.date,
-          location_category: newEv.locationCategory || 'internal',
-          type: newEv.type,
-          color: color,
-          description: newEv.desc
-        }])
-        .select()
-        .single();
-        
-      if (error) throw error;
+      if (editId) {
+        // Edit Mode: Update
+        const { error } = await supabase
+          .from('events')
+          .update({
+            title: newEv.title,
+            date: newEv.date,
+            end_date: newEv.endDate || newEv.date,
+            location_category: newEv.locationCategory || 'internal',
+            type: newEv.type,
+            color: color,
+            description: newEv.desc
+          })
+          .eq('id', editId);
+          
+        if (error) throw error;
 
-      if (selectedParticipants.length > 0 && insertedEvent) {
-        const participantRecords = selectedParticipants.map(userId => ({
-          event_id: insertedEvent.id,
-          user_id: userId
-        }));
-        const { error: partErr } = await supabase
+        // Delete existing participants
+        const { error: delErr } = await supabase
           .from('event_participants')
-          .insert(participantRecords);
-        if (partErr) throw partErr;
-      }
+          .delete()
+          .eq('event_id', editId);
+        if (delErr) throw delErr;
 
-      // Notify Discord (pr channel)
-      const typeLabel = TYPE_LABELS[newEv.type] || 'กิจกรรม';
-      const embedTitle = `📅 มีการเพิ่มกิจกรรมลงในปฏิทินสภาใหม่`;
-      const embedDesc = `หัวข้อ: **${newEv.title}** (${typeLabel})`;
-      const locLabel = newEv.locationCategory === 'external' ? 'ภายนอกโรงเรียน (นอกสถานที่)' : 'ภายในโรงเรียน';
-      const fields = [
-        { name: "📆 วันที่จัดกิจกรรม", value: newEv.date === (newEv.endDate || newEv.date) 
-            ? new Date(newEv.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-            : `${new Date(newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${new Date(newEv.endDate || newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`, inline: true },
-        { name: "📍 สถานที่จัดกิจกรรม", value: locLabel, inline: true },
-        { name: "📝 รายละเอียดเพิ่มเติม", value: newEv.desc || "ไม่มี", inline: false }
-      ];
-      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'calendar');
+        // Insert new participants
+        if (selectedParticipants.length > 0) {
+          const participantRecords = selectedParticipants.map(userId => ({
+            event_id: editId,
+            user_id: userId
+          }));
+          const { error: partErr } = await supabase
+            .from('event_participants')
+            .insert(participantRecords);
+          if (partErr) throw partErr;
+        }
+
+        // Notify Discord (pr channel)
+        const typeLabel = TYPE_LABELS[newEv.type] || 'กิจกรรม';
+        const embedTitle = `📅 มีการแก้ไขกิจกรรมในปฏิทินสภา`;
+        const embedDesc = `หัวข้อ: **${newEv.title}** (${typeLabel})`;
+        const locLabel = newEv.locationCategory === 'external' ? 'ภายนอกโรงเรียน (นอกสถานที่)' : 'ภายในโรงเรียน';
+        const fields = [
+          { name: "📆 วันที่จัดกิจกรรม", value: newEv.date === (newEv.endDate || newEv.date) 
+              ? new Date(newEv.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+              : `${new Date(newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${new Date(newEv.endDate || newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`, inline: true },
+          { name: "📍 สถานที่จัดกิจกรรม", value: locLabel, inline: true },
+          { name: "📝 รายละเอียดเพิ่มเติม", value: newEv.desc || "ไม่มี", inline: false }
+        ];
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'calendar');
+
+        alert('แก้ไขกิจกรรมเรียบร้อยแล้ว!');
+
+      } else {
+        // Add Mode: Insert
+        const { data: insertedEvent, error } = await supabase
+          .from('events')
+          .insert([{
+            title: newEv.title,
+            date: newEv.date,
+            end_date: newEv.endDate || newEv.date,
+            location_category: newEv.locationCategory || 'internal',
+            type: newEv.type,
+            color: color,
+            description: newEv.desc
+          }])
+          .select()
+          .single();
+          
+        if (error) throw error;
+
+        if (selectedParticipants.length > 0 && insertedEvent) {
+          const participantRecords = selectedParticipants.map(userId => ({
+            event_id: insertedEvent.id,
+            user_id: userId
+          }));
+          const { error: partErr } = await supabase
+            .from('event_participants')
+            .insert(participantRecords);
+          if (partErr) throw partErr;
+        }
+
+        // Notify Discord (pr channel)
+        const typeLabel = TYPE_LABELS[newEv.type] || 'กิจกรรม';
+        const embedTitle = `📅 มีการเพิ่มกิจกรรมลงในปฏิทินสภาใหม่`;
+        const embedDesc = `หัวข้อ: **${newEv.title}** (${typeLabel})`;
+        const locLabel = newEv.locationCategory === 'external' ? 'ภายนอกโรงเรียน (นอกสถานที่)' : 'ภายในโรงเรียน';
+        const fields = [
+          { name: "📆 วันที่จัดกิจกรรม", value: newEv.date === (newEv.endDate || newEv.date) 
+              ? new Date(newEv.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+              : `${new Date(newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${new Date(newEv.endDate || newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`, inline: true },
+          { name: "📍 สถานที่จัดกิจกรรม", value: locLabel, inline: true },
+          { name: "📝 รายละเอียดเพิ่มเติม", value: newEv.desc || "ไม่มี", inline: false }
+        ];
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'calendar');
+
+        alert('เพิ่มกิจกรรมเรียบร้อยแล้ว!');
+      }
       
       setIsAdding(false);
+      setEditId(null);
       setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', desc: '' });
       setSelectedParticipants([]);
       
@@ -88,9 +147,26 @@ export default function CalendarPage() {
       setParticipants(pData || []);
       
     } catch (err) {
-      console.error('Error adding event:', err);
-      alert('ไม่สามารถเพิ่มกิจกรรมได้: ' + err.message);
+      console.error('Error saving event:', err);
+      alert('ไม่สามารถบันทึกกิจกรรมได้: ' + err.message);
     }
+  };
+
+  const handleEditEvent = (ev) => {
+    setEditId(ev.id);
+    setNewEv({
+      title: ev.title,
+      date: ev.date,
+      endDate: ev.end_date || ev.date,
+      type: ev.type,
+      locationCategory: ev.location_category || 'internal',
+      desc: ev.desc || ev.description || ''
+    });
+    
+    // Find participants for this event
+    const eventParts = participants.filter(p => p.event_id === ev.id).map(p => p.user_id);
+    setSelectedParticipants(eventParts);
+    setIsAdding(true);
   };
 
   const handleDeleteEvent = async (eventId) => {
@@ -181,7 +257,19 @@ export default function CalendarPage() {
           <div className="page-title">📅 ปฏิทินกิจกรรม</div>
           <div className="page-subtitle">โครงการ กิจกรรม และวันสำคัญของสภานักเรียน</div>
         </div>
-        {canManage && <button className="btn btn-primary" onClick={() => setIsAdding(true)}><Plus size={14}/> เพิ่มกิจกรรม</button>}
+        {canManage && (
+          <button 
+            className="btn btn-primary" 
+            onClick={() => { 
+              setEditId(null); 
+              setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', desc: '' }); 
+              setSelectedParticipants([]); 
+              setIsAdding(true); 
+            }}
+          >
+            <Plus size={14}/> เพิ่มกิจกรรม
+          </button>
+        )}
       </div>
 
       <div className="grid-layout" style={{ display:'grid', gridTemplateColumns:'1fr 280px', gap:16 }}>
@@ -298,7 +386,10 @@ export default function CalendarPage() {
                       })()}
 
                       {canManage && (
-                        <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+                        <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                          <button className="btn btn-warning btn-sm" onClick={() => handleEditEvent(ev)} style={{ fontSize: 11, padding: '3px 8px', cursor: 'pointer', background: '#f57c00', border: 'none', color: 'white' }}>
+                            แก้ไขกิจกรรม
+                          </button>
                           <button className="btn btn-danger btn-sm" onClick={() => handleDeleteEvent(ev.id)} style={{ fontSize: 11, padding: '3px 8px', cursor: 'pointer' }}>
                             ลบกิจกรรม
                           </button>
@@ -336,9 +427,9 @@ export default function CalendarPage() {
       {/* Add Modal */}
       {isAdding && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex: 1000 }}>
-          <div className="card" style={{ width:'100%', maxWidth:440, padding: 20 }}>
+          <div className="card" style={{ width:'100%', maxWidth:440, padding: 20, background: 'white' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 16 }}>
-              <span style={{ fontWeight:700, fontSize:16 }}>เพิ่มกิจกรรมใหม่</span>
+              <span style={{ fontWeight:700, fontSize:16 }}>{editId ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรมใหม่'}</span>
               <button onClick={()=>setIsAdding(false)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color: '#9e9e9e' }}>&times;</button>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
