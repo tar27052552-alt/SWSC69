@@ -49,6 +49,23 @@ const PAGE_TITLES = {
 
 const NOTIF_ICONS = { fine: '💸', task: '📋', event: '🎉', meeting: '📅' };
 
+function formatRelativeTime(dateStr) {
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'เมื่อสักครู่';
+  if (diffMins < 60) return `${diffMins} นาทีที่แล้ว`;
+  if (diffHours < 24) return `${diffHours} ชั่วโมงที่แล้ว`;
+  if (diffDays === 1) return 'เมื่อวาน';
+  if (diffDays < 7) return `${diffDays} วันที่แล้ว`;
+  return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+}
+
 export default function Layout({ children }) {
   const { user, logout, isAdmin, isPresident, notifications, setNotifications } = useAuth();
   const navigate = useNavigate();
@@ -229,7 +246,7 @@ export default function Layout({ children }) {
                           <span style={{ fontSize:18, flexShrink:0 }}>{NOTIF_ICONS[n.type] || '📌'}</span>
                           <div style={{ flex:1, minWidth:0, textAlign: 'left' }}>
                             <div style={{ fontSize:13, color: n.read ? '#757575' : '#212121', fontWeight: n.read ? 400 : 600 }}>{n.message}</div>
-                            <div style={{ fontSize:11, color:'#9e9e9e', marginTop:4 }}>{n.time}</div>
+                            <div style={{ fontSize:11, color:'#9e9e9e', marginTop:4 }}>{n.created_at ? formatRelativeTime(n.created_at) : n.time}</div>
                           </div>
                           {!n.read && <div style={{ width:8, height:8, borderRadius:99, background:'var(--primary)', flexShrink:0, marginTop:6 }} />}
                         </div>
