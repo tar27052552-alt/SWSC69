@@ -23,8 +23,38 @@ export default function CheckInPage() {
   const [submitting, setSubmitting] = useState(false);
   const isSubmitting = useRef(false);
   const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [isExemptToday, setIsExemptToday] = useState(false);
+  const [todayEventTitle, setTodayEventTitle] = useState('');
 
   useEffect(() => {
+    async function checkTodayExemption() {
+      if (!user) return;
+      try {
+        const todayStr = toGregorianStr(new Date());
+        const { data: eventsData } = await supabase.from('events').select('*');
+        const { data: partData } = await supabase
+          .from('event_participants')
+          .select('event_id')
+          .eq('user_id', String(user.id));
+        
+        if (eventsData && partData) {
+          const myEventIds = partData.map(p => p.event_id);
+          const myTodayEvents = eventsData.filter(ev => {
+            const start = ev.date;
+            const end = ev.end_date || ev.date;
+            return ev.location_category === 'external' && myEventIds.includes(ev.id) && todayStr >= start && todayStr <= end;
+          });
+
+          if (myTodayEvents.length > 0) {
+            setIsExemptToday(true);
+            setTodayEventTitle(myTodayEvents.map(e => e.title).join(', '));
+          }
+        }
+      } catch (err) {
+        console.error('Error checking today exemption:', err);
+      }
+    }
+    checkTodayExemption();
     async function loadSettings() {
       try {
         const { data, error } = await supabase.from('attendance_settings').select('*');
@@ -119,40 +149,66 @@ export default function CheckInPage() {
         setDistanceInfo("เบราว์เซอร์ไม่รองรับ GPS (จำลองโหมด Dev)");
         setTimeout(() => setStep(2), 1500);
       } else {
-        alert("เบราว์เซอร์ไม่รองรับ GPS");
+        let msg = "เบราว์เซอร์ไม่รองรับระบบระบุพิกัด GPS";
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+          msg += "\nเนื่องจากไม่ได้เชื่อมต่อแบบปลอดภัย (HTTPS) กรุณาเข้าใช้งานผ่านโดเมน HTTPS หลักของระบบ";
+        }
+        alert(msg);
         setStep(0);
       }
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const schoolLat = 16.713227719670115; 
-        const schoolLng = 98.57308240750432;
-        const dist = getDistance(latitude, longitude, schoolLat, schoolLng);
-        
-        if (import.meta.env.DEV) {
-          setDistanceInfo(`ระยะห่างจากโรงเรียน: ${Math.round(dist)} เมตร (จำลองโหมด Dev)`);
-          setTimeout(() => setStep(2), 1500);
-        } else if (dist > 300) {
-          alert(`ไม่สามารถเช็คชื่อได้! คุณอยู่ห่างจากโรงเรียน ${Math.round(dist)} เมตร (ต้องไม่เกิน 300 เมตร)`);
-          setStep(0);
-        } else {
-          setDistanceInfo(`ระยะห่างจากโรงเรียน: ${Math.round(dist)} เมตร`);
-          setTimeout(() => setStep(2), 1500);
-        }
-      },
-      (err) => {
-        if (import.meta.env.DEV) {
-          setDistanceInfo("ดึงพิกัดไม่ได้ (จำลองโหมด Dev)");
-          setTimeout(() => setStep(2), 1500);
-        } else {
-          alert("ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS");
-          setStep(0);
-        }
-      }
-    );
+    const optionsHigh = { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 };
+    const optionsLow = { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 };
+
+    const tryGetPosition = (options, isFallback) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const schoolLat = 16.713227719670115; 
+          const schoolLng = 98.57308240750432;
+          const dist = getDistance(latitude, longitude, schoolLat, schoolLng);
+          
+          if (import.meta.env.DEV) {
+            setDistanceInfo(`ระยะห่างจากโรงเรียน: ${Math.round(dist)} เมตร (จำลองโหมด Dev)`);
+            setTimeout(() => setStep(2), 1500);
+          } else if (dist > 300) {
+            alert(`ไม่สามารถเช็คชื่อได้! คุณอยู่ห่างจากโรงเรียน ${Math.round(dist)} เมตร (ต้องไม่เกิน 300 เมตร)`);
+            setStep(0);
+          } else {
+            setDistanceInfo(`ระยะห่างจากโรงเรียน: ${Math.round(dist)} เมตร`);
+            setTimeout(() => setStep(2), 1500);
+          }
+        },
+        (err) => {
+          if (!isFallback && (err.code === 2 || err.code === 3)) {
+            console.warn("Failed high accuracy location check, retrying with normal accuracy...");
+            tryGetPosition(optionsLow, true);
+            return;
+          }
+
+          if (import.meta.env.DEV) {
+            setDistanceInfo("ดึงพิกัดไม่ได้ (จำลองโหมด Dev)");
+            setTimeout(() => setStep(2), 1500);
+          } else {
+            let msg = "ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS";
+            if (err.code === 1) {
+              msg = "❌ ไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง!\nกรุณาไปที่ 'การตั้งค่าเบราว์เซอร์' หรือ 'การตั้งค่าอุปกรณ์' ของคุณ เพื่ออนุญาตสิทธิ์เข้าถึงตำแหน่ง (Location Access) ให้แก่เว็บไซต์นี้";
+            } else if (err.code === 2) {
+              msg = "❌ สัญญาณพิกัด GPS ไม่พร้อมใช้งาน!\nกรุณาตรวจสอบว่าเปิดระบุตำแหน่งของอุปกรณ์แล้ว และหลีกเลี่ยงการเช็คอินในอาคารทึบ";
+            } else if (err.code === 3) {
+              msg = "❌ ดึงตำแหน่งหมดเวลา (Timeout)!\nกรุณาตรวจสอบสัญญาณเน็ตและ GPS แล้วลองใหม่อีกครั้ง";
+            }
+            alert(msg);
+            setStep(0);
+          }
+        },
+        options
+      );
+    };
+
+    tryGetPosition(optionsHigh, false);
   };
 
   const handleSubmitCheckIn = async () => {
@@ -324,6 +380,28 @@ export default function CheckInPage() {
     );
   }
 
+  if (isExemptToday && (!checkInState || checkInState.status === 'activity')) {
+    return (
+      <div style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
+        <CheckCircle size={64} color="#00bcd4" style={{ margin: '0 auto' }} />
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#00838f', marginTop: 16 }}>
+          วันนี้คุณทำกิจกรรมนอกสถานที่ 🎒
+        </h2>
+        <div style={{ fontSize: 15, fontWeight: 600, color: '#00bcd4', marginTop: 8 }}>
+          {todayEventTitle || 'ค่ายสิ่งแวดล้อม'}
+        </div>
+        <div style={{ fontSize: 14, color: '#757575', marginTop: 8 }}>
+          ระบบได้บันทึกสถานะว่า "ทำกิจกรรม" เรียบร้อยแล้ว คุณไม่จำเป็นต้องเช็คชื่อและไม่ถูกปรับเงินใดๆ ครับ
+        </div>
+        <div style={{ marginTop: 32 }}>
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
+            กลับหน้าหลัก
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (checkInState) {
     let icon = <AlertTriangle size={64} color="#c62828" style={{ margin: '0 auto' }} />;
     let titleText = 'คุณมาสาย!';
@@ -341,6 +419,10 @@ export default function CheckInPage() {
       icon = <AlertTriangle size={64} color="#616161" style={{ margin: '0 auto' }} />;
       titleText = 'คุณขาดแถว!';
       titleColor = '#616161';
+    } else if (checkInState.status === 'activity') {
+      icon = <CheckCircle size={64} color="#00bcd4" style={{ margin: '0 auto' }} />;
+      titleText = 'วันนี้คุณทำกิจกรรมนอกสถานที่ 🎒';
+      titleColor = '#00838f';
     } else if (checkInState.status === 'not_required') {
       icon = <CheckCircle size={64} color="#455a64" style={{ margin: '0 auto' }} />;
       titleText = 'ได้รับการยกเว้น';

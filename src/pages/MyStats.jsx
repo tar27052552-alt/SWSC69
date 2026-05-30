@@ -12,6 +12,7 @@ export default function MyStats() {
   
   const [fines, setFines] = useState([]);
   const [attendanceCount, setAttendanceCount] = useState({ present: 0, total: 0 });
+  const [greetingDutyCount, setGreetingDutyCount] = useState({ done: 0, total: 0 });
   const [cleanCount, setCleanCount] = useState({ done: 0, total: 0 });
   const [meetingCount, setMeetingCount] = useState({ attended: 0, total: 0 });
   const [flagCount, setFlagCount] = useState({ done: 0, total: 0 });
@@ -75,17 +76,56 @@ export default function MyStats() {
           .select('*')
           .eq('type', 'greeting');
         const duties = [];
+        let myGreetingDays = [];
         if (schedData) {
           schedData.forEach(row => {
             const dayData = row.data || {};
             ['gate1', 'gate2', 'gate3'].forEach(gate => {
               if (dayData[gate]?.includes(user.nickname)) {
                 duties.push({ day: row.day, gate, members: dayData[gate] });
+                myGreetingDays.push(row.day);
               }
             });
           });
         }
         setMyDuties(duties);
+
+        // Fetch greeting duty reports
+        const { data: greetChecksData } = await supabase
+          .from('greeting_duty_checks')
+          .select('*')
+          .eq('nickname', user.nickname);
+
+        // Fetch settings for start date
+        const { data: settingsData } = await supabase.from('attendance_settings').select('*');
+        let sysStartDate = '';
+        let greetingStartDate = '';
+        if (settingsData) {
+          sysStartDate = settingsData.find(d => d.key === 'start_date')?.value || '';
+          greetingStartDate = settingsData.find(d => d.key === 'greeting_duty_start_date')?.value || sysStartDate;
+        }
+
+        // Calculate total greeting duties
+        let greetingTotal = 0;
+        let greetingDone = 0;
+        if (myGreetingDays.length > 0) {
+          const start = greetingStartDate ? new Date(greetingStartDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+          const end = new Date();
+          const daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dayTh = daysTh[d.getDay()];
+            if (myGreetingDays.includes(dayTh)) {
+              greetingTotal++;
+              const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+              const hasReport = greetChecksData && greetChecksData.some(c => c.date === dateStr && c.status === 'done');
+              if (hasReport) {
+                greetingDone++;
+              }
+            }
+          }
+        }
+        setGreetingDutyCount({ done: greetingDone, total: greetingTotal });
 
         // 6. Fetch schedules (flag ceremony duty)
         const { data: flagData } = await supabase
@@ -187,7 +227,8 @@ export default function MyStats() {
   };
 
   const stats = [
-    { label: 'เวรยืนไหว้ (เดือนนี้)', value: `${attendanceCount.present}/${attendanceCount.total || 0}`, unit: 'ครั้ง', ok: true },
+    { label: 'มาโรงเรียน (เดือนนี้)', value: `${attendanceCount.present}/${attendanceCount.total || 0}`, unit: 'ครั้ง', ok: true },
+    { label: 'เวรยืนไหว้ (เดือนนี้)', value: `${greetingDutyCount.done}/${greetingDutyCount.total || 0}`, unit: 'ครั้ง', ok: true },
     { label: 'เวรเชิญธง (เดือนนี้)', value: `${flagCount.done}/${flagCount.total || 0}`, unit: 'ครั้ง', ok: true },
     { label: 'เวรทำความสะอาด', value: `${cleanCount.done}/${cleanCount.total || 0}`, unit: 'ครั้ง', ok: true },
     { label: 'เข้าร่วมประชุม', value: `${meetingCount.attended}/${meetingCount.total || 0}`, unit: 'ครั้ง', ok: true },
@@ -237,7 +278,7 @@ export default function MyStats() {
         {/* Right column */}
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
           {/* Stats */}
-          <div className="stats-row" style={{ gridTemplateColumns:'repeat(5, 1fr)' }}>
+          <div className="stats-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))' }}>
             {stats.map(s => (
               <div key={s.label} className="stat-box" style={{ flexDirection:'column', alignItems:'flex-start', gap:4 }}>
                 <div style={{ fontSize:11, color:'#9e9e9e', fontWeight:600 }}>{s.label}</div>

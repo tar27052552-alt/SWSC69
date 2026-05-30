@@ -24,6 +24,11 @@ export default function MyFinesPage() {
 
   const loadMyFines = async () => {
     if (!user) return;
+    if (user.role === 'admin') {
+      setFines([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -58,6 +63,11 @@ export default function MyFinesPage() {
 
   const loadMyFees = async () => {
     if (!user) return;
+    if (user.role === 'admin') {
+      setFees([]);
+      setLoadingFees(false);
+      return;
+    }
     try {
       setLoadingFees(true);
       const { data, error } = await supabase
@@ -95,8 +105,32 @@ export default function MyFinesPage() {
   };
 
   useEffect(() => {
+    if (!user) return;
     loadMyFines();
     loadMyFees();
+
+    const interval = setInterval(() => {
+      loadMyFines();
+      loadMyFees();
+    }, 10000);
+
+    const channel = supabase
+      .channel('my-fines-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'discipline_fines' }, (payload) => {
+        const targetUserId = payload.new ? payload.new.user_id : (payload.old ? payload.old.user_id : null);
+        if (targetUserId && String(targetUserId) === String(user.id)) {
+          loadMyFines();
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_fees' }, () => {
+        loadMyFees();
+      })
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const handleUploadSlip = async () => {

@@ -25,7 +25,7 @@ export default function CleanDutyPage() {
         // Load Settings
         const { data: settingsData, error: settingsError } = await supabase.from('attendance_settings').select('*');
         if (!settingsError && settingsData) {
-          const startD = settingsData.find(d => d.key === 'start_date')?.value;
+          const startD = settingsData.find(d => d.key === 'clean_duty_start_date')?.value || settingsData.find(d => d.key === 'start_date')?.value;
           if (startD) setStartDate(startD);
         }
 

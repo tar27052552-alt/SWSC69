@@ -9,6 +9,7 @@ DROP TABLE IF EXISTS public.finance_fees;
 DROP TABLE IF EXISTS public.discipline_fines;
 DROP TABLE IF EXISTS public.student_attendance;
 DROP TABLE IF EXISTS public.clean_duty_checks;
+DROP TABLE IF EXISTS public.greeting_duty_checks;
 DROP TABLE IF EXISTS public.attendance_settings;
 DROP TABLE IF EXISTS public.academic_projects;
 DROP TABLE IF EXISTS public.academic_docs;
@@ -68,6 +69,10 @@ CREATE TABLE IF NOT EXISTS public.discipline_fines (
   payment_slip text, -- base64 หรือ url ของสลิปการโอนเงิน
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- ป้องกันการลงโทษซ้ำสำหรับเวรทำความสะอาดและเวรยืนไหว้ในวันเดียวกัน
+CREATE UNIQUE INDEX IF NOT EXISTS unique_auto_fines ON public.discipline_fines (nickname, date, violation) 
+WHERE (violation = 'ไม่ทำเวรห้องสภา' OR violation = 'ไม่ปฏิบัติเวรไหว้');
 
 -- Migration: เพิ่มคอลัมน์ payment_status และ payment_slip (สำหรับตารางที่มีอยู่แล้ว)
 DO $$ BEGIN
@@ -280,6 +285,20 @@ CREATE TABLE IF NOT EXISTS public.clean_duty_checks (
   photo text, -- base64 หรือ url
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT clean_duty_checks_nickname_date_unique UNIQUE (nickname, date)
+);
+
+-- ----------------------------------------------------------------------------
+-- 12.1 ตารางบันทึกเวรยืนไหว้ (Greeting Duty Checks)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.greeting_duty_checks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nickname text NOT NULL,
+  date text NOT NULL, -- 'YYYY-MM-DD'
+  gate text NOT NULL, -- 'gate1', 'gate2', 'gate3'
+  status text NOT NULL, -- 'done', 'missing'
+  photo text, -- base64 หรือ url
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT greeting_duty_checks_nickname_date_unique UNIQUE (nickname, date)
 );
 
 -- ----------------------------------------------------------------------------

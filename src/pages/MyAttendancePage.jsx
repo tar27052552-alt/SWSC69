@@ -15,6 +15,7 @@ export default function MyAttendancePage() {
   const [startDate, setStartDate] = useState('');
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [greetingSchedules, setGreetingSchedules] = useState([]);
+  const [dbExemptDates, setDbExemptDates] = useState([]);
 
   useEffect(() => {
     async function loadSettings() {
@@ -73,6 +74,44 @@ export default function MyAttendancePage() {
     loadMyAttendance();
   }, [month, user]);
 
+  useEffect(() => {
+    async function loadExemptDates() {
+      if (!user) return;
+      try {
+        const { data: eventsData } = await supabase.from('events').select('*');
+        const { data: partData } = await supabase
+          .from('event_participants')
+          .select('event_id')
+          .eq('user_id', String(user.id));
+        
+        if (eventsData && partData) {
+          const myEventIds = partData.map(p => p.event_id);
+          const myExtEvents = eventsData.filter(ev => 
+            ev.location_category === 'external' && myEventIds.includes(ev.id)
+          );
+
+          const exemptDates = [];
+          myExtEvents.forEach(ev => {
+            const start = new Date(ev.date);
+            const end = new Date(ev.end_date || ev.date);
+            let current = new Date(start);
+            while (current <= end) {
+              const dStr = toGregorianStr(current);
+              if (!exemptDates.includes(dStr)) {
+                exemptDates.push(dStr);
+              }
+              current.setDate(current.getDate() + 1);
+            }
+          });
+          setDbExemptDates(exemptDates);
+        }
+      } catch (err) {
+        console.error('Error loading exempt dates in MyAttendance:', err);
+      }
+    }
+    loadExemptDates();
+  }, [user, month]);
+
   const STATUS = {
     on_time: { label: 'มาตรงเวลา', color: '#2e7d32', bg: '#e8f5e9', icon: '✅' },
     late:    { label: 'มาสาย',     color: '#c62828', bg: '#ffebee', icon: '⚠️' },
@@ -101,8 +140,9 @@ export default function MyAttendancePage() {
 
     // 1. Check in database record
     const dbRec = dbRecords.find(r => r.date === dateStr);
+    const isExempt = dbExemptDates.includes(dateStr);
 
-    if (!isRequired && !dbRec && (dateStr !== todayStr || !checkInState)) {
+    if (!isRequired && !dbRec && (dateStr !== todayStr || !checkInState) && !isExempt) {
       continue; // skip days with no check-in required and no check-in record
     }
 
@@ -129,21 +169,35 @@ export default function MyAttendancePage() {
     }
 
     // 2. Today: use real check-in state fallback
-    if (dateStr === todayStr && checkInState) {
-      records.push({
-        date: dateStr, dayName, hasGreetingDuty,
-        status: checkInState.status,
-        time: checkInState.time,
-      });
+    if (dateStr === todayStr) {
+      if (checkInState) {
+        records.push({
+          date: dateStr, dayName, hasGreetingDuty,
+          status: checkInState.status,
+          time: checkInState.time,
+        });
+      } else if (isExempt) {
+        records.push({
+          date: dateStr, dayName, hasGreetingDuty,
+          status: 'activity',
+          time: 'ทำกิจกรรม',
+        });
+      } else {
+        records.push({
+          date: dateStr, dayName, hasGreetingDuty,
+          status: 'missing',
+          time: '-',
+        });
+      }
       continue;
     }
 
-    // 3. Past date without database record -> missing
+    // 3. Past date without database record
     if (dateStr < todayStr) {
       records.push({
         date: dateStr, dayName, hasGreetingDuty,
-        status: 'missing',
-        time: '-',
+        status: isExempt ? 'activity' : 'missing',
+        time: isExempt ? 'ทำกิจกรรม' : '-',
       });
     }
   }
@@ -153,6 +207,7 @@ export default function MyAttendancePage() {
     late: records.filter(r => r.status === 'late').length,
     leave: records.filter(r => r.status === 'leave').length,
     missing: records.filter(r => r.status === 'missing').length,
+    activity: records.filter(r => r.status === 'activity').length,
   };
   const total = records.length;
 
@@ -193,6 +248,7 @@ export default function MyAttendancePage() {
           { label: 'มาสาย', value: counts.late, icon: '⚠️', bg: '#ffebee', color: '#c62828' },
           { label: 'ลา', value: counts.leave, icon: '📝', bg: '#fff8e1', color: '#f57f17' },
           { label: 'ขาด', value: counts.missing, icon: '❌', bg: '#f5f5f5', color: '#757575' },
+          { label: 'ทำกิจกรรม', value: counts.activity, icon: '🎒', bg: '#e0f7fa', color: '#00838f' },
           { label: 'รวมทั้งหมด', value: total, icon: '📅', bg: '#e3f2fd', color: '#1565c0' },
         ].map(s => (
           <div key={s.label} className="stat-box">

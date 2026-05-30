@@ -48,73 +48,96 @@ export default function FinancePage() {
   const [usersList, setUsersList] = useState([]);
   const [feeSlipModal, setFeeSlipModal] = useState(null);
 
-  useEffect(() => {
-    async function loadFinanceData() {
-      try {
-        // โหลดสมาชิกจริง - ปรับแต่งลดปริมาณข้อมูล (หลีกเลี่ยงโหลดรูปโปรไฟล์)
-        const { data: uData, error: uErr } = await supabase
-          .from('users')
-          .select('id, name, nickname, student_id, phone, role, dept_id, position, avatar_color');
-        if (!uErr && uData) {
-          setUsersList(uData);
-        }
-
-        // โหลดคำขอเบิกเงิน
-        const { data: reqData, error: reqErr } = await supabase
-          .from('finance_requests')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (!reqErr && reqData) {
-          const mappedReqs = reqData.map(r => ({
-            id: r.id,
-            title: r.title,
-            category: r.category,
-            amount: r.amount,
-            requester: r.requester,
-            deptId: r.dept_id,
-            date: r.date,
-            status: r.status,
-            note: r.note,
-            approvedBy: r.approved_by
-          }));
-          setRequests(mappedReqs);
-        }
-
-        // โหลดรายการเก็บเงิน
-        const { data: feesData, error: feesErr } = await supabase
-          .from('finance_fees')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (!feesErr && feesData) {
-          setFees(feesData);
-        }
-
-        // โหลดค่าปรับ - หลีกเลี่ยงโหลดรูปสลิปทันทีเพื่อเพิ่มความเร็วในการโหลด 100 เท่า!
-        const { data: finesData } = await supabase
-          .from('discipline_fines')
-          .select('id, user_id, user_name, nickname, violation, amount, date, note, by, paid, payment_status')
-          .order('created_at', { ascending: false });
-        if (finesData) {
-          setDfines(finesData.map(d => ({
-            id: d.id,
-            userId: d.user_id,
-            userName: d.user_name,
-            nickname: d.nickname,
-            violation: d.violation,
-            amount: d.amount,
-            date: d.date,
-            note: d.note,
-            by: d.by,
-            paid: d.paid,
-            paymentStatus: d.payment_status || (d.paid ? 'paid' : 'unpaid'),
-            paymentSlip: null, // จะโหลดทางออนไลน์เฉพาะเมื่อคลิก
-          })));
-        }
-      } catch (err) {
-        console.error('Error loading finance data:', err);
+  const loadFinanceData = async () => {
+    try {
+      // โหลดสมาชิกจริง - ปรับแต่งลดปริมาณข้อมูล (หลีกเลี่ยงโหลดรูปโปรไฟล์)
+      const { data: uData, error: uErr } = await supabase
+        .from('users')
+        .select('id, name, nickname, student_id, phone, role, dept_id, position, avatar_color');
+      if (!uErr && uData) {
+        setUsersList(uData);
       }
+
+      // โหลดคำขอเบิกเงิน
+      const { data: reqData, error: reqErr } = await supabase
+        .from('finance_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!reqErr && reqData) {
+        const mappedReqs = reqData.map(r => ({
+          id: r.id,
+          title: r.title,
+          category: r.category,
+          amount: r.amount,
+          requester: r.requester,
+          deptId: r.dept_id,
+          date: r.date,
+          status: r.status,
+          note: r.note,
+          approvedBy: r.approved_by
+        }));
+        setRequests(mappedReqs);
+      }
+
+      // โหลดรายการเก็บเงิน
+      const { data: feesData, error: feesErr } = await supabase
+        .from('finance_fees')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!feesErr && feesData) {
+        setFees(feesData);
+      }
+
+      // โหลดค่าปรับ - หลีกเลี่ยงโหลดรูปสลิปทันทีเพื่อเพิ่มความเร็วในการโหลด 100 เท่า!
+      const { data: finesData } = await supabase
+        .from('discipline_fines')
+        .select('id, user_id, user_name, nickname, violation, amount, date, note, by, paid, payment_status')
+        .order('created_at', { ascending: false });
+      if (finesData) {
+        setDfines(finesData.map(d => ({
+          id: d.id,
+          userId: d.user_id,
+          userName: d.user_name,
+          nickname: d.nickname,
+          violation: d.violation,
+          amount: d.amount,
+          date: d.date,
+          note: d.note,
+          by: d.by,
+          paid: d.paid,
+          paymentStatus: d.payment_status || (d.paid ? 'paid' : 'unpaid'),
+          paymentSlip: null, // จะโหลดทางออนไลน์เฉพาะเมื่อคลิก
+        })));
+      }
+    } catch (err) {
+      console.error('Error loading finance data:', err);
     }
+  };
+
+  useEffect(() => {
     loadFinanceData();
+
+    const interval = setInterval(() => {
+      loadFinanceData();
+    }, 10000);
+
+    const channel = supabase
+      .channel('finance-page-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_requests' }, () => {
+        loadFinanceData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_fees' }, () => {
+        loadFinanceData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'discipline_fines' }, () => {
+        loadFinanceData();
+      })
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filtered = requests.filter(r => {

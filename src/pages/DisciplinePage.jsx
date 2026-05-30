@@ -14,6 +14,7 @@ const VIOLATION_TYPES = [
   'กระทำความผิดตามระเบียบคู่มือนักเรียน',
   'ไม่ทำเวรห้องสภา',
   'ไม่ปฏิบัติเวรไหว้',
+  'ไม่ส่งรูปเช็คชื่อ',
   'มาสาย (นาที)',
   'อื่นๆ (ระบุในหมายเหตุ)',
 ];
@@ -25,7 +26,8 @@ const FINE_AMOUNTS = {
   'ทรงผมไม่เรียบร้อย': 30,
   'กระทำความผิดตามระเบียบคู่มือนักเรียน': 50,
   'ไม่ทำเวรห้องสภา': 30,
-  'ไม่ปฏิบัติเวรไหว้': 30,
+  'ไม่ปฏิบัติเวรไหว้': 100,
+  'ไม่ส่งรูปเช็คชื่อ': 20,
   'มาสาย (นาที)': 5,
   'อื่นๆ (ระบุในหมายเหตุ)': 0,
 };
@@ -77,36 +79,53 @@ export default function DisciplinePage() {
     loadUsers();
   }, []);
 
-  useEffect(() => {
-    async function loadFines() {
-      try {
-        const { data, error } = await supabase
-          .from('discipline_fines')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (error) throw error;
-        if (data) {
-          const mapped = data.map(d => ({
-            id: d.id,
-            userId: d.user_id,
-            userName: d.user_name,
-            nickname: d.nickname,
-            violation: d.violation,
-            amount: d.amount,
-            date: d.date,
-            note: d.note,
-            by: d.by,
-            paid: d.paid,
-            paymentStatus: d.payment_status || (d.paid ? 'paid' : 'unpaid'),
-            paymentSlip: d.payment_slip || null,
-          }));
-          setFines(mapped);
-        }
-      } catch (err) {
-        console.error('Error loading discipline fines:', err);
+  const loadFines = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('discipline_fines')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (data) {
+        const mapped = data.map(d => ({
+          id: d.id,
+          userId: d.user_id,
+          userName: d.user_name,
+          nickname: d.nickname,
+          violation: d.violation,
+          amount: d.amount,
+          date: d.date,
+          note: d.note,
+          by: d.by,
+          paid: d.paid,
+          paymentStatus: d.payment_status || (d.paid ? 'paid' : 'unpaid'),
+          paymentSlip: d.payment_slip || null,
+        }));
+        setFines(mapped);
       }
+    } catch (err) {
+      console.error('Error loading discipline fines:', err);
     }
+  };
+
+  useEffect(() => {
     loadFines();
+
+    const interval = setInterval(() => {
+      loadFines();
+    }, 10000);
+
+    const channel = supabase
+      .channel('discipline-fines-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'discipline_fines' }, () => {
+        loadFines();
+      })
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -116,13 +135,19 @@ export default function DisciplinePage() {
   const [cleanChecks, setCleanChecks] = useState({});
   const [dbAttendance, setDbAttendance] = useState([]);
   const [dbCleanChecks, setDbCleanChecks] = useState([]);
+  const [dbGreetingChecks, setDbGreetingChecks] = useState([]);
   const [enabledDays, setEnabledDays] = useState(["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์"]);
-   const [disabledDates, setDisabledDates] = useState([]);
+  const [disabledDates, setDisabledDates] = useState([]);
   const [newDisabledDate, setNewDisabledDate] = useState('');
   const [startDate, setStartDate] = useState('');
+  const [cleanDutyStartDate, setCleanDutyStartDate] = useState('');
+  const [greetingDutyStartDate, setGreetingDutyStartDate] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [cleanSchedules, setCleanSchedules] = useState([]);
+  const [greetingSchedules, setGreetingSchedules] = useState([]);
   const [viewPhotoUrl, setViewPhotoUrl] = useState(null);
+  const [dbDutySwaps, setDbDutySwaps] = useState([]);
+  const [dbExemptNicknames, setDbExemptNicknames] = useState([]);
 
   useEffect(() => {
     async function loadSettings() {
@@ -133,9 +158,13 @@ export default function DisciplinePage() {
           const days = data.find(d => d.key === 'enabled_days')?.value;
           const dates = data.find(d => d.key === 'disabled_dates')?.value;
           const startD = data.find(d => d.key === 'start_date')?.value;
+          const cleanStartD = data.find(d => d.key === 'clean_duty_start_date')?.value;
+          const greetingStartD = data.find(d => d.key === 'greeting_duty_start_date')?.value;
           if (days) setEnabledDays(days);
           if (dates) setDisabledDates(dates);
           if (startD) setStartDate(startD);
+          if (cleanStartD) setCleanDutyStartDate(cleanStartD);
+          if (greetingStartD) setGreetingDutyStartDate(greetingStartD);
         }
       } catch (err) {
         console.error('Error loading settings:', err);
@@ -154,8 +183,22 @@ export default function DisciplinePage() {
         console.error('Error loading clean schedules:', err);
       }
     }
+    async function loadGreetingSchedules() {
+      try {
+        const { data, error } = await supabase
+          .from('schedules')
+          .select('*')
+          .eq('type', 'greeting');
+        if (!error && data) {
+          setGreetingSchedules(data);
+        }
+      } catch (err) {
+        console.error('Error loading greeting schedules:', err);
+      }
+    }
     loadSettings();
     loadCleanSchedules();
+    loadGreetingSchedules();
   }, []);
 
   const saveStartDate = async (newVal) => {
@@ -167,6 +210,30 @@ export default function DisciplinePage() {
       if (error) throw error;
     } catch (err) {
       console.error('Error saving start date:', err);
+    }
+  };
+
+  const saveCleanDutyStartDate = async (newVal) => {
+    setCleanDutyStartDate(newVal);
+    try {
+      const { error } = await supabase
+        .from('attendance_settings')
+        .upsert([{ key: 'clean_duty_start_date', value: newVal }], { onConflict: 'key' });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error saving clean duty start date:', err);
+    }
+  };
+
+  const saveGreetingDutyStartDate = async (newVal) => {
+    setGreetingDutyStartDate(newVal);
+    try {
+      const { error } = await supabase
+        .from('attendance_settings')
+        .upsert([{ key: 'greeting_duty_start_date', value: newVal }], { onConflict: 'key' });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error saving greeting duty start date:', err);
     }
   };
 
@@ -219,47 +286,133 @@ export default function DisciplinePage() {
 
 
 
-  useEffect(() => {
-    async function loadAttendance() {
-      try {
-        const { data, error } = await supabase
-          .from('student_attendance')
-          .select('*')
-          .eq('date', selectedDate);
-        if (error) throw error;
-        if (data) {
-          setDbAttendance(data);
-        }
-      } catch (err) {
-        console.error('Error loading student attendance:', err);
+  const loadAttendance = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('student_attendance')
+        .select('*')
+        .eq('date', selectedDate);
+      if (error) throw error;
+      if (data) {
+        setDbAttendance(data);
       }
+    } catch (err) {
+      console.error('Error loading student attendance:', err);
     }
-    loadAttendance();
-  }, [selectedDate, checkInState]); // re-fetch เมื่อ checkInState เปลี่ยน (หลังเช็คชื่อ)
+  };
+
+  const loadCleanChecks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('clean_duty_checks')
+        .select('*')
+        .eq('date', selectedDate);
+      if (error) throw error;
+      if (data) {
+        setDbCleanChecks(data);
+      }
+    } catch (err) {
+      console.error('Error loading clean duty checks:', err);
+    }
+  };
+
+  const loadGreetingChecks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('greeting_duty_checks')
+        .select('*')
+        .eq('date', selectedDate);
+      if (error) throw error;
+      if (data) {
+        setDbGreetingChecks(data);
+      }
+    } catch (err) {
+      console.error('Error loading greeting duty checks:', err);
+    }
+  };
+
+  const loadExemptionsAndSwaps = async () => {
+    try {
+      const { data: eventsData, error: eventsErr } = await supabase
+        .from('events')
+        .select('*');
+      if (eventsErr) throw eventsErr;
+
+      const activeExtEventIds = (eventsData || [])
+        .filter(ev => {
+          const start = ev.date;
+          const end = ev.end_date || ev.date;
+          return ev.location_category === 'external' && selectedDate >= start && selectedDate <= end;
+        })
+        .map(ev => ev.id);
+
+      if (activeExtEventIds.length > 0) {
+        const { data: partData, error: partErr } = await supabase
+          .from('event_participants')
+          .select('user_id')
+          .in('event_id', activeExtEventIds);
+        if (partErr) throw partErr;
+
+        const exemptUserIds = (partData || []).map(p => String(p.user_id));
+        const exemptNicks = users
+          .filter(u => exemptUserIds.includes(String(u.id)))
+          .map(u => u.nickname);
+        setDbExemptNicknames(exemptNicks);
+      } else {
+        setDbExemptNicknames([]);
+      }
+
+      const { data: swapData, error: swapErr } = await supabase
+        .from('duty_swaps')
+        .select('*')
+        .eq('date', selectedDate);
+      if (swapErr) throw swapErr;
+      setDbDutySwaps(swapData || []);
+
+    } catch (err) {
+      console.error('Error loading exemptions and swaps:', err);
+    }
+  };
 
   useEffect(() => {
-    async function loadCleanChecks() {
-      try {
-        const { data, error } = await supabase
-          .from('clean_duty_checks')
-          .select('*')
-          .eq('date', selectedDate);
-        if (error) throw error;
-        if (data) {
-          setDbCleanChecks(data);
-        }
-      } catch (err) {
-        console.error('Error loading clean duty checks:', err);
-      }
-    }
+    loadAttendance();
     loadCleanChecks();
-  }, [selectedDate]);
+    loadGreetingChecks();
+
+    const interval = setInterval(() => {
+      loadAttendance();
+      loadCleanChecks();
+      loadGreetingChecks();
+    }, 10000);
+
+    const channel = supabase
+      .channel('discipline-attendance-duty-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_attendance' }, (payload) => {
+        const targetDate = payload.new ? payload.new.date : (payload.old ? payload.old.date : null);
+        if (targetDate === selectedDate) {
+          loadAttendance();
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clean_duty_checks' }, (payload) => {
+        const targetDate = payload.new ? payload.new.date : (payload.old ? payload.old.date : null);
+        if (targetDate === selectedDate) {
+          loadCleanChecks();
+        }
+      })
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+  }, [selectedDate, checkInState, users]);
 
   const STATUS_COLORS = {
     on_time: { bg: '#e8f5e9', col: '#2e7d32', label: 'มา' },
     late:    { bg: '#ffebee', col: '#c62828', label: 'สาย' },
     leave:   { bg: '#fff8e1', col: '#f57f17', label: 'ลา' },
     missing: { bg: '#f5f5f5', col: '#757575', label: 'ขาด' },
+    activity: { bg: '#e0f7fa', col: '#00838f', label: 'ทำกิจกรรม' },
     not_required: { bg: '#f9f9f9', col: '#9e9e9e', label: 'ไม่บังคับ' },
   };
 
@@ -349,6 +502,68 @@ export default function DisciplinePage() {
     }
   };
 
+  const handleGreetingCheck = async (nickname, gate, status) => {
+    if (status === 'reset') {
+      if (!window.confirm('คุณต้องการลบประวัติการรายงานเวรยืนไหว้ของคนนี้หรือไม่?')) return;
+      try {
+        const { error } = await supabase
+          .from('greeting_duty_checks')
+          .delete()
+          .eq('nickname', nickname)
+          .eq('date', selectedDate);
+        if (error) throw error;
+        setDbGreetingChecks(prev => prev.filter(x => x.nickname !== nickname));
+
+        // Delete auto-fine if marked reset
+        const { data: userFound } = await supabase.from('users').select('id').eq('nickname', nickname).maybeSingle();
+        if (userFound) {
+          await supabase.from('discipline_fines')
+            .delete()
+            .eq('user_id', String(userFound.id))
+            .eq('date', selectedDate)
+            .eq('violation', 'ไม่ปฏิบัติเวรไหว้');
+        }
+      } catch (err) {
+        console.error('Error resetting greeting check:', err);
+        alert('เกิดข้อผิดพลาดในการรีเซ็ตสถานะ: ' + err.message);
+      }
+      return;
+    }
+
+    const record = {
+      nickname: nickname,
+      date: selectedDate,
+      gate: gate,
+      status: status
+    };
+
+    try {
+      const { error } = await supabase
+        .from('greeting_duty_checks')
+        .upsert([record], { onConflict: 'nickname,date' });
+      if (error) throw error;
+      setDbGreetingChecks(prev => {
+        const filtered = prev.filter(x => x.nickname !== nickname);
+        return [...filtered, { id: Date.now(), ...record }];
+      });
+
+      // VERY IMPORTANT: If marked as 'done', delete auto-fine for "ไม่ปฏิบัติเวรไหว้"
+      if (status === 'done') {
+        const { data: userFound } = await supabase.from('users').select('id').eq('nickname', nickname).maybeSingle();
+        if (userFound) {
+          await supabase.from('discipline_fines')
+            .delete()
+            .eq('user_id', String(userFound.id))
+            .eq('date', selectedDate)
+            .eq('violation', 'ไม่ปฏิบัติเวรไหว้');
+        }
+      }
+    } catch (err) {
+      console.error('Error updating greeting duty check:', err);
+      alert('เกิดข้อผิดพลาดในการบันทึกเวรยืนไหว้: ' + err.message);
+    }
+  };
+
   // Generate real attendance based on database records
   const attendanceData = users.filter(u => u.role !== 'admin' && u.nickname !== 'แอดมิน').map(u => {
     // 1. Check in database record
@@ -374,7 +589,18 @@ export default function DisciplinePage() {
       };
     }
 
-    // 3. Fallback to blank / clean status (listed as absent until checked)
+    // 3. Check activity exemption
+    if (dbExemptNicknames.includes(u.nickname)) {
+      return {
+        ...u,
+        checkInStatus: 'activity',
+        time: 'ทำกิจกรรม',
+        photo: null,
+        isManual: false
+      };
+    }
+
+    // 4. Fallback to blank / clean status (listed as absent until checked)
     const isBeforeStart = startDate && selectedDate < startDate;
     return {
       ...u,
@@ -600,11 +826,12 @@ export default function DisciplinePage() {
           <button className={`tab ${activeTab==='list'?'active':''}`} onClick={()=>setActiveTab('list')} style={{ padding:'8px 16px', background:activeTab==='list'?'#00bcd4':'#f5f5f5', color:activeTab==='list'?'#fff':'#757575', border:'none', borderRadius:20, fontWeight:600, cursor:'pointer', whiteSpace: 'nowrap' }}>📋 บันทึกทั้งหมด</button>
           <button className={`tab ${activeTab==='summary'?'active':''}`} onClick={()=>setActiveTab('summary')} style={{ padding:'8px 16px', background:activeTab==='summary'?'#00bcd4':'#f5f5f5', color:activeTab==='summary'?'#fff':'#757575', border:'none', borderRadius:20, fontWeight:600, cursor:'pointer', whiteSpace: 'nowrap' }}>📊 สรุปรายบุคคล</button>
           <button className={`tab ${activeTab==='checkin'?'active':''}`} onClick={()=>setActiveTab('checkin')} style={{ padding:'8px 16px', background:activeTab==='checkin'?'#00bcd4':'#f5f5f5', color:activeTab==='checkin'?'#fff':'#757575', border:'none', borderRadius:20, fontWeight:600, cursor:'pointer', whiteSpace: 'nowrap' }}>📍 ตรวจสอบการมา รร.</button>
+          <button className={`tab ${activeTab==='greeting'?'active':''}`} onClick={()=>setActiveTab('greeting')} style={{ padding:'8px 16px', background:activeTab==='greeting'?'#00bcd4':'#f5f5f5', color:activeTab==='greeting'?'#fff':'#757575', border:'none', borderRadius:20, fontWeight:600, cursor:'pointer', whiteSpace: 'nowrap' }}>🙏 ตรวจสอบเวรยืนไหว้</button>
           <button className={`tab ${activeTab==='clean'?'active':''}`} onClick={()=>setActiveTab('clean')} style={{ padding:'8px 16px', background:activeTab==='clean'?'#00bcd4':'#f5f5f5', color:activeTab==='clean'?'#fff':'#757575', border:'none', borderRadius:20, fontWeight:600, cursor:'pointer', whiteSpace: 'nowrap' }}>🧹 ตรวจสอบเวรห้องสภา</button>
         </div>
 
       {/* Settings Panel */}
-      {canManage && (activeTab === 'checkin' || activeTab === 'clean') && (
+      {canManage && (activeTab === 'checkin' || activeTab === 'clean' || activeTab === 'greeting') && (
         <div className="card" style={{ marginBottom: 20, padding: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setShowSettings(!showSettings)}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -620,26 +847,79 @@ export default function DisciplinePage() {
             <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 16, borderTop: '1px solid #eee', paddingTop: 16 }}>
               {/* Start Date Settings */}
               <div>
-                <div style={{ fontWeight: 600, fontSize: 13, color: '#455a64', marginBottom: 8 }}>วันที่เริ่มเช็คชื่อเข้าแถว (วันแรกที่เริ่มบังคับเช็คชื่อ):</div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <input
-                    type="date"
-                    className="input-field"
-                    style={{ padding: '6px 12px', fontSize: 13, width: 200 }}
-                    value={startDate}
-                    onChange={e => saveStartDate(e.target.value)}
-                  />
-                  {startDate ? (
-                    <button
-                      className="btn btn-gray"
-                      style={{ padding: '6px 12px', fontSize: 12 }}
-                      onClick={() => saveStartDate('')}
-                    >
-                      รีเซ็ต (เช็คทั้งหมด)
-                    </button>
-                  ) : (
-                    <span style={{ fontSize: 12, color: '#757575' }}>* ยังไม่ได้กำหนด (ระบบจะเช็คชื่อทุกวันทำการของเดือน)</span>
-                  )}
+                <div style={{ fontWeight: 600, fontSize: 13, color: '#455a64', marginBottom: 12 }}>ตั้งค่าวันเริ่มบังคับใช้ระบบ (แยกรายหมวดหมู่):</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+                  {/* General Check-in */}
+                  <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontWeight: 600, fontSize: 12, color: '#475569', marginBottom: 6 }}>📍 เริ่มบังคับเช็คชื่อเข้าโรงเรียน:</div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input
+                        type="date"
+                        className="input-field"
+                        style={{ padding: '4px 8px', fontSize: 12, flex: 1 }}
+                        value={startDate}
+                        onChange={e => saveStartDate(e.target.value)}
+                      />
+                      {startDate && (
+                        <button
+                          className="btn btn-gray"
+                          style={{ padding: '4px 8px', fontSize: 11 }}
+                          onClick={() => saveStartDate('')}
+                        >
+                          รีเซ็ต
+                        </button>
+                      )}
+                    </div>
+                    {!startDate && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>* เริ่มบังคับทุกวันทำงาน</div>}
+                  </div>
+
+                  {/* Clean Room Duty */}
+                  <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontWeight: 600, fontSize: 12, color: '#475569', marginBottom: 6 }}>🧹 เริ่มบังคับเวรทำความสะอาดห้องสภา:</div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input
+                        type="date"
+                        className="input-field"
+                        style={{ padding: '4px 8px', fontSize: 12, flex: 1 }}
+                        value={cleanDutyStartDate}
+                        onChange={e => saveCleanDutyStartDate(e.target.value)}
+                      />
+                      {cleanDutyStartDate && (
+                        <button
+                          className="btn btn-gray"
+                          style={{ padding: '4px 8px', fontSize: 11 }}
+                          onClick={() => saveCleanDutyStartDate('')}
+                        >
+                          รีเซ็ต
+                        </button>
+                      )}
+                    </div>
+                    {!cleanDutyStartDate && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>* เริ่มบังคับทุกวันทำงาน</div>}
+                  </div>
+
+                  {/* Greeting Duty */}
+                  <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontWeight: 600, fontSize: 12, color: '#475569', marginBottom: 6 }}>🙏 เริ่มบังคับเวรยืนไหว้ต้อนรับ:</div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input
+                        type="date"
+                        className="input-field"
+                        style={{ padding: '4px 8px', fontSize: 12, flex: 1 }}
+                        value={greetingDutyStartDate}
+                        onChange={e => saveGreetingDutyStartDate(e.target.value)}
+                      />
+                      {greetingDutyStartDate && (
+                        <button
+                          className="btn btn-gray"
+                          style={{ padding: '4px 8px', fontSize: 11 }}
+                          onClick={() => saveGreetingDutyStartDate('')}
+                        >
+                          รีเซ็ต
+                        </button>
+                      )}
+                    </div>
+                    {!greetingDutyStartDate && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>* เริ่มบังคับทุกวันทำงาน</div>}
+                  </div>
                 </div>
               </div>
 
@@ -906,6 +1186,7 @@ export default function DisciplinePage() {
                             <option value="late">สาย</option>
                             <option value="leave">ลา</option>
                             <option value="missing">ขาด</option>
+                            <option value="activity">ทำกิจกรรม</option>
                             <option value="reset">รีเซ็ต (ลบประวัติ)</option>
                             {u.checkInStatus === 'not_required' && <option value="not_required">ไม่บังคับ</option>}
                           </select>
@@ -950,10 +1231,10 @@ export default function DisciplinePage() {
               />
             </div>
           </div>
-          {startDate && selectedDate < startDate && (
+          {cleanDutyStartDate && selectedDate < cleanDutyStartDate && (
             <div style={{ background: '#e0f7fa', color: '#006064', padding: '10px 14px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, margin: '0 16px 14px 16px', borderRadius: 8 }}>
               <span>ℹ️</span>
-              <span><strong>วันที่เลือก อยู่ก่อนกำหนดวันเริ่มทำเวรจริง ({new Date(startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })})</strong> ทำให้ไม่มีการบังคับทำเวรหรือหักเงินในวันนี้</span>
+              <span><strong>วันที่เลือก อยู่ก่อนกำหนดวันเริ่มทำเวรจริง ({new Date(cleanDutyStartDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })})</strong> ทำให้ไม่มีการบังคับทำเวรหรือหักเงินในวันนี้</span>
             </div>
           )}
           <div style={{ overflowX:'auto' }}>
@@ -989,8 +1270,9 @@ export default function DisciplinePage() {
                   return usersOnDuty.map((u, i) => {
                     const dept = DEPARTMENTS.find(dept => dept.id === u.deptId);
                     const realRec = dbCleanChecks.find(c => c.nickname === u.nickname);
-                    const isBeforeStart = startDate && selectedDate < startDate;
-                    let status = realRec ? realRec.status : (isBeforeStart ? 'not_required' : 'missing');
+                    const isExempt = dbExemptNicknames.includes(u.nickname);
+                    const isBeforeStart = cleanDutyStartDate && selectedDate < cleanDutyStartDate;
+                    let status = realRec ? realRec.status : (isExempt || isBeforeStart ? 'not_required' : 'missing');
                     let photo = realRec ? realRec.photo : null;
                     if (selectedDate === todayStr && user?.id === u.id && cleanDutyState?.photo) {
                       status = 'done';
@@ -1025,10 +1307,10 @@ export default function DisciplinePage() {
                             </select>
                           ) : (
                             <span className="badge" style={{
-                              background: status==='done'?'#e8f5e9':status==='not_required'?'#f9f9f9':'#ffebee',
-                              color: status==='done'?'#2e7d32':status==='not_required'?'#9e9e9e':'#c62828'
+                              background: status==='done'?'#e8f5e9':(status==='not_required' && isExempt)?'#e0f7fa':status==='not_required'?'#f9f9f9':'#ffebee',
+                              color: status==='done'?'#2e7d32':(status==='not_required' && isExempt)?'#00838f':status==='not_required'?'#9e9e9e':'#c62828'
                             }}>
-                              {status === 'done' ? 'ทำแล้ว' : status === 'not_required' ? 'ไม่บังคับ' : 'ยังไม่ทำ'}
+                              {status === 'done' ? 'ทำแล้ว' : status === 'not_required' ? (isExempt ? 'ทำกิจกรรม (ยกเว้น)' : 'ไม่บังคับ') : 'ยังไม่ทำ'}
                             </span>
                           )}
                         </td>
@@ -1049,6 +1331,161 @@ export default function DisciplinePage() {
         </div>
       )}
 
+      {/* Greeting Duty Check */}
+      {activeTab === 'greeting' && (
+        <div className="card">
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <span className="card-title">ตรวจสอบการปฏิบัติหน้าที่เวรยืนไหว้</span>
+              <div style={{ fontSize: 12, color: '#757575' }}>ข้อมูลวันที่เลือก</div>
+            </div>
+            <div>
+              <input 
+                type="date" 
+                className="input-field" 
+                style={{ padding: '4px 8px', fontSize: 13 }}
+                value={selectedDate} 
+                onChange={(e) => setSelectedDate(e.target.value)} 
+                max={todayStr}
+              />
+            </div>
+          </div>
+          {greetingDutyStartDate && selectedDate < greetingDutyStartDate && (
+            <div style={{ background: '#e0f7fa', color: '#006064', padding: '10px 14px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, margin: '0 16px 14px 16px', borderRadius: 8 }}>
+              <span>ℹ️</span>
+              <span><strong>วันที่เลือก อยู่ก่อนกำหนดวันเริ่มเช็คเวรยืนไหว้จริง ({new Date(greetingDutyStartDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })})</strong> ทำให้ไม่มีการบังคับเวรหรือหักเงินในวันนี้</span>
+            </div>
+          )}
+          <div style={{ overflowX:'auto' }}>
+            <table className="simple-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>สมาชิก</th>
+                  <th>ฝ่าย</th>
+                  <th>ประตูที่ยืนเวร</th>
+                  <th>เช็คชื่อเข้า รร.</th>
+                  <th>สถานะส่งรายงานรูปเวร (ก่อน 07:10 น.)</th>
+                  <th>ภาพถ่ายยืนเวร</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const d = new Date(selectedDate);
+                  const dayName = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'][d.getDay()];
+                  const dutyForDay = greetingSchedules.find(s => s.day === dayName);
+                  const dutyForDayData = dutyForDay?.data || {};
+
+                  // Flatten gate1, gate2, gate3 members
+                  const dutyMembers = [];
+                  ['gate1', 'gate2', 'gate3'].forEach(gate => {
+                    const members = dutyForDayData[gate] || [];
+                    members.forEach(nickname => {
+                      if (nickname && nickname !== '–') {
+                        const swap = dbDutySwaps.find(s => s.date === selectedDate && s.duty_type === `greeting_${gate}` && s.original_nickname === nickname);
+                        if (swap) {
+                          dutyMembers.push({ nickname: swap.substitute_nickname, gate, original: nickname });
+                        } else {
+                          dutyMembers.push({ nickname, gate });
+                        }
+                      }
+                    });
+                  });
+
+                  if (dutyMembers.length === 0) {
+                    return <tr><td colSpan="7" style={{ textAlign:'center', padding:40, color:'#9e9e9e' }}>ไม่มีเวรยืนไหว้ในวันนี้</td></tr>;
+                  }
+
+                  return dutyMembers.map((m, i) => {
+                    const u = users.find(usr => usr.nickname === m.nickname);
+                    const dept = u && u.deptId ? DEPARTMENTS.find(dept => dept.id === u.deptId) : null;
+                    
+                    // Match morning attendance
+                    const attRec = dbAttendance.find(att => att.nickname === m.nickname || (u && String(att.user_id) === String(u.id)));
+                    
+                    // Match greeting check-in photo report
+                    const greetRec = dbGreetingChecks.find(c => c.nickname === m.nickname);
+                    
+                    const isExempt = dbExemptNicknames.includes(m.nickname);
+                    const isBeforeStart = greetingDutyStartDate && selectedDate < greetingDutyStartDate;
+                    let greetStatus = greetRec ? greetRec.status : (isExempt || isBeforeStart ? 'not_required' : 'missing');
+                    let greetPhoto = greetRec ? greetRec.photo : null;
+                    
+                    // Check if today and self check-in state is active
+                    if (selectedDate === todayStr && user?.nickname === m.nickname && greetingDutyState?.photo) {
+                      greetStatus = 'done';
+                      greetPhoto = greetingDutyState.photo;
+                    }
+
+                    const gateLabels = { gate1: '🚪 ประตูไหมไทย', gate2: '🏛️ ประตูอำเภอ', gate3: '🏫 ประตูหน้า รร.' };
+                    const gateLabel = gateLabels[m.gate] || 'ไม่ระบุ';
+
+                    return (
+                      <tr key={m.nickname}>
+                        <td style={{ color:'#9e9e9e', fontSize:12 }}>{i+1}</td>
+                        <td>
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <div className="avatar" style={{ width:28, height:28, fontSize:12, background: (u?.avatarColor || '#9e9e9e')+'22', color: u?.avatarColor || '#9e9e9e' }}>{u?.avatar || m.nickname.charAt(0)}</div>
+                            <div>
+                              <div style={{ fontWeight:600, fontSize:13 }}>{u?.name || `สมาชิก (${m.nickname})`}</div>
+                              <div style={{ fontSize:11, color:'#9e9e9e' }}>"{m.nickname}" {m.original && <span style={{ color: '#f57f17' }}>(แทน {m.original})</span>}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>{dept ? <span className="badge" style={{ background:dept.bg, color:dept.color, borderRadius:3 }}>{dept.short}</span> : '–'}</td>
+                        <td style={{ fontSize:13, fontWeight:600, color:'#00838f' }}>{gateLabel}</td>
+                        <td>
+                          {attRec ? (
+                            <div style={{ fontSize:13 }}>
+                              <span className="badge" style={{ background: STATUS_COLORS[attRec.status].bg, color: STATUS_COLORS[attRec.status].col, marginRight: 6 }}>
+                                {STATUS_COLORS[attRec.status].label}
+                              </span>
+                              {attRec.time}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize:12, color:'#9e9e9e' }}>ยังไม่เช็คชื่อเข้า รร.</span>
+                          )}
+                        </td>
+                        <td style={{ minWidth: 150 }}>
+                          {canManage ? (
+                            <select value={greetStatus} onChange={(e) => handleGreetingCheck(m.nickname, m.gate, e.target.value)}
+                              style={{
+                                background: greetStatus==='done'?'#e8f5e9':greetStatus==='not_required'?'#f9f9f9':'#ffebee',
+                                color: greetStatus==='done'?'#2e7d32':greetStatus==='not_required'?'#9e9e9e':'#c62828',
+                                border:`1px solid ${greetStatus==='done'?'#2e7d32':greetStatus==='not_required'?'#9e9e9e':'#c62828'}44`,
+                                padding:'4px 8px', borderRadius:6, fontSize:12, fontWeight:600, outline:'none', cursor:'pointer', width:'100%'
+                              }}
+                            >
+                              <option value="missing">ขาดเวร (ยังไม่ส่งรูป)</option>
+                              <option value="done">ส่งแล้ว/ปฏิบัติหน้าที่</option>
+                              <option value="reset">รีเซ็ต (ลบประวัติ)</option>
+                              {greetStatus === 'not_required' && <option value="not_required">ไม่บังคับ</option>}
+                            </select>
+                          ) : (
+                            <span className="badge" style={{
+                              background: greetStatus==='done'?'#e8f5e9':(greetStatus==='not_required' && isExempt)?'#e0f7fa':greetStatus==='not_required'?'#f9f9f9':'#ffebee',
+                              color: greetStatus==='done'?'#2e7d32':(greetStatus==='not_required' && isExempt)?'#00838f':greetStatus==='not_required'?'#9e9e9e':'#c62828'
+                            }}>
+                              {greetStatus === 'done' ? 'ส่งรายงานแล้ว' : greetStatus === 'not_required' ? (isExempt ? 'ทำกิจกรรม (ยกเว้น)' : 'ไม่บังคับ') : 'ขาดเวร (ปรับ 100)'}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {greetPhoto ? (
+                             <img src={transformGoogleDriveUrl(greetPhoto)} alt="greeting-proof" style={{ width:36, height:36, objectFit:'cover', borderRadius:4, cursor:'pointer', border:'1px solid #e0e0e0' }} onClick={() => setViewPhotoUrl(transformGoogleDriveUrl(greetPhoto))} />
+                          ) : (
+                            <span style={{ fontSize:11, color:'#bdbdbd' }}>- ไม่มีภาพ -</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Summary per person */}
       {activeTab === 'summary' && (

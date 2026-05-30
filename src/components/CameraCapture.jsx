@@ -16,10 +16,12 @@ export default function CameraCapture({ onCapture, facingMode = 'user', height =
   const [capturedUrl, setCapturedUrl] = useState(null);
   const [camError, setCamError] = useState(null);
   const [currentFacing, setCurrentFacing] = useState(facingMode);
+  const [loadingStream, setLoadingStream] = useState(false);
 
   // Start camera stream
   const startCamera = async (facing = currentFacing) => {
     setCamError(null);
+    setLoadingStream(true);
     try {
       // Stop any existing stream first
       stopCamera();
@@ -32,7 +34,13 @@ export default function CameraCapture({ onCapture, facingMode = 'user', height =
         videoRef.current.srcObject = stream;
       }
       setMode('live');
+      
+      // หน่วงเวลาเล็กน้อยเพื่อให้กล้องปรับรูรับแสง/ความสว่างอัตโนมัติ (Auto-exposure stabilization)
+      setTimeout(() => {
+        setLoadingStream(false);
+      }, 1000);
     } catch (err) {
+      setLoadingStream(false);
       if (err.name === 'NotAllowedError') {
         setCamError('ไม่ได้รับอนุญาตให้ใช้กล้อง กรุณาอนุญาตในเบราว์เซอร์แล้วลองใหม่');
       } else if (err.name === 'NotFoundError') {
@@ -124,6 +132,13 @@ export default function CameraCapture({ onCapture, facingMode = 'user', height =
     reader.readAsDataURL(file);
   };
 
+  // Ensure stream is bound to video element on render (prevents black screen initialization race condition)
+  useEffect(() => {
+    if (mode === 'live' && videoRef.current && streamRef.current && videoRef.current.srcObject !== streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  });
+
   // Cleanup on unmount
   useEffect(() => {
     return () => stopCamera();
@@ -173,7 +188,7 @@ export default function CameraCapture({ onCapture, facingMode = 'user', height =
           }}>
             <Upload size={15} />
             หรืออัปโหลดรูปจากอุปกรณ์
-            <input type="file" accept="image/*" capture={facingMode === 'user' ? 'user' : 'environment'}
+            <input type="file" accept="image/*"
               onChange={handleFileUpload} style={{ display: 'none' }} />
           </label>
         </>
@@ -195,15 +210,34 @@ export default function CameraCapture({ onCapture, facingMode = 'user', height =
                 transform: currentFacing === 'user' ? 'scaleX(-1)' : 'none',
               }}
             />
+            
+            {/* Loading Overlay for Auto-exposure stabilization */}
+            {loadingStream && (
+              <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                background: '#1a1a1a', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 12, color: '#fff', zIndex: 10
+              }}>
+                <div style={{
+                  width: 32, height: 32, border: '3px solid rgba(255,255,255,0.2)',
+                  borderTop: '3px solid #00bcd4', borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                <span style={{ fontSize: 13, color: '#e0e0e0' }}>กำลังปรับความสว่างกล้อง...</span>
+              </div>
+            )}
+
             {/* Flip button */}
             <button
               onClick={flipCamera}
+              disabled={loadingStream}
               style={{
                 position: 'absolute', top: 10, right: 10,
                 background: 'rgba(0,0,0,0.5)', color: '#fff',
                 border: 'none', borderRadius: '50%', width: 38, height: 38,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
+                cursor: loadingStream ? 'not-allowed' : 'pointer',
+                zIndex: 11
               }}
               title="สลับกล้อง"
             >
@@ -218,6 +252,7 @@ export default function CameraCapture({ onCapture, facingMode = 'user', height =
                 border: 'none', borderRadius: '50%', width: 38, height: 38,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
+                zIndex: 11
               }}
             >
               <X size={18} />
@@ -227,10 +262,11 @@ export default function CameraCapture({ onCapture, facingMode = 'user', height =
           {/* Capture button */}
           <button
             onClick={capture}
+            disabled={loadingStream}
             style={{
               width: '100%', padding: '14px 0', fontSize: 16, fontWeight: 700,
-              background: 'linear-gradient(135deg, #00bcd4, #0097a7)',
-              color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer',
+              background: loadingStream ? '#cccccc' : 'linear-gradient(135deg, #00bcd4, #0097a7)',
+              color: '#fff', border: 'none', borderRadius: 10, cursor: loadingStream ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >

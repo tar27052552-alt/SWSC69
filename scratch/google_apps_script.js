@@ -109,9 +109,21 @@ function uploadFileToDrive(fileBase64, fileName, folderCategory) {
   
   var mainFolder = getOrCreateFolder(MAIN_FOLDER_NAME);
   var targetSubFolderName = SUB_FOLDERS[folderCategory] || "เอกสารทั่วไป";
-  var subFolder = getOrCreateFolder(targetSubFolderName, mainFolder);
+  var categoryFolder = getOrCreateFolder(targetSubFolderName, mainFolder);
   
-  var file = subFolder.createFile(blob);
+  var targetFolder = categoryFolder;
+  
+  // สำหรับหมวดหมู่รูปภาพรายวัน (เช็คชื่อ, เวรห้องสภา, สลิปการเงิน) ให้แยกเก็บในโฟลเดอร์ ปี-เดือน และวันที่
+  if (folderCategory === "selfies" || folderCategory === "duties" || folderCategory === "slips") {
+    var now = new Date();
+    var monthFolderName = Utilities.formatDate(now, "GMT+7", "yyyy-MM");
+    var dayFolderName = "วันที่ " + Utilities.formatDate(now, "GMT+7", "dd");
+    
+    var monthFolder = getOrCreateFolder(monthFolderName, categoryFolder);
+    targetFolder = getOrCreateFolder(dayFolderName, monthFolder);
+  }
+  
+  var file = targetFolder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   
   var fileId = file.getId();

@@ -14,6 +14,7 @@ const NAV = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'หน้าหลัก' },
     { to: '/checkin',   icon: MapPin,          label: 'เช็คชื่อเข้า รร.' },
     { to: '/my-attendance', icon: ClipboardList, label: 'ประวัติเช็คชื่อ' },
+    { to: '/greeting-duty', icon: HandHeart,    label: 'ส่งรายงานเวรยืนไหว้' },
     { to: '/clean-duty',icon: Sparkles,        label: 'ส่งเวรห้องสภา' },
     { to: '/submit-news', icon: Megaphone,     label: 'ส่งข่าวประชาสัมพันธ์' },
     { to: '/schedules', icon: Calendar,        label: 'ตารางเวร' },
@@ -37,7 +38,7 @@ const NAV = [
 ];
 
 const PAGE_TITLES = {
-  '/dashboard': 'หน้าหลัก', '/checkin': 'เช็คชื่อมาโรงเรียน', '/my-attendance': 'ประวัติเช็คชื่อ', '/clean-duty': 'ส่งเวรห้องสภา', '/submit-news': 'ส่งข่าวประชาสัมพันธ์', '/schedules': 'ตารางเวร', '/calendar': 'ปฏิทินกิจกรรม',
+  '/dashboard': 'หน้าหลัก', '/checkin': 'เช็คชื่อมาโรงเรียน', '/my-attendance': 'ประวัติเช็คชื่อ', '/greeting-duty': 'ส่งรายงานเวรยืนไหว้', '/clean-duty': 'ส่งเวรห้องสภา', '/submit-news': 'ส่งข่าวประชาสัมพันธ์', '/schedules': 'ตารางเวร', '/calendar': 'ปฏิทินกิจกรรม',
   '/my-fines': 'ชำระเงินและค่าปรับ',
   '/profile': 'ประวัติส่วนตัว', '/settings': 'ตั้งค่าทั่วไป', '/admin': 'จัดการผู้ใช้งาน',
   '/finance': 'ฝ่ายการเงิน', '/discipline': 'ฝ่ายปกครอง', '/academic': 'ฝ่ายวิชาการ',
@@ -157,6 +158,7 @@ export default function Layout({ children }) {
               <div className="nav-section">{sec.section}</div>
               {sec.items.map(item => {
                 if (item.deptId && !isAdmin && !isPresident && user?.deptId !== item.deptId) return null;
+                if (item.to === '/my-fines' && user?.role === 'admin') return null;
                 return (
                   <NavLink key={item.to} to={item.to} className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
                     <item.icon size={15} />

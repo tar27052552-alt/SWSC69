@@ -18,11 +18,14 @@ export default function CalendarPage() {
   const [sel, setSel] = useState(null);
   
   const [events, setEvents] = useState([]);
+  const [usersList, setUsersList] = useState([]);
+  const [participants, setParticipants] = useState([]);
+  const [selectedParticipants, setSelectedParticipants] = useState([]);
 
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   
   const [isAdding, setIsAdding] = useState(false);
-  const [newEv, setNewEv] = useState({ title: '', date: todayStr, type: 'event', desc: '' });
+  const [newEv, setNewEv] = useState({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', desc: '' });
 
   // อนุญาตให้ แอดมิน, ประธาน (deptId: 1 หรือ isPresident), หรือ เลขานุการ (deptId: 7) สามารถจัดการปฏิทินได้
   const canManage = isAdmin || isPresident || user?.deptId === 1 || user?.deptId === 7;
@@ -33,37 +36,78 @@ export default function CalendarPage() {
     try {
       const color = TYPE_COLORS[newEv.type] || '#43a047';
       
-      const { error } = await supabase
+      const { data: insertedEvent, error } = await supabase
         .from('events')
         .insert([{
           title: newEv.title,
           date: newEv.date,
+          end_date: newEv.endDate || newEv.date,
+          location_category: newEv.locationCategory || 'internal',
           type: newEv.type,
           color: color,
           description: newEv.desc
-        }]);
+        }])
+        .select()
+        .single();
         
       if (error) throw error;
+
+      if (selectedParticipants.length > 0 && insertedEvent) {
+        const participantRecords = selectedParticipants.map(userId => ({
+          event_id: insertedEvent.id,
+          user_id: userId
+        }));
+        const { error: partErr } = await supabase
+          .from('event_participants')
+          .insert(participantRecords);
+        if (partErr) throw partErr;
+      }
 
       // Notify Discord (pr channel)
       const typeLabel = TYPE_LABELS[newEv.type] || 'กิจกรรม';
       const embedTitle = `📅 มีการเพิ่มกิจกรรมลงในปฏิทินสภาใหม่`;
       const embedDesc = `หัวข้อ: **${newEv.title}** (${typeLabel})`;
+      const locLabel = newEv.locationCategory === 'external' ? 'ภายนอกโรงเรียน (นอกสถานที่)' : 'ภายในโรงเรียน';
       const fields = [
-        { name: "📆 วันที่จัดกิจกรรม", value: new Date(newEv.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), inline: true },
+        { name: "📆 วันที่จัดกิจกรรม", value: newEv.date === (newEv.endDate || newEv.date) 
+            ? new Date(newEv.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+            : `${new Date(newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${new Date(newEv.endDate || newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`, inline: true },
+        { name: "📍 สถานที่จัดกิจกรรม", value: locLabel, inline: true },
         { name: "📝 รายละเอียดเพิ่มเติม", value: newEv.desc || "ไม่มี", inline: false }
       ];
       sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'calendar');
       
       setIsAdding(false);
-      setNewEv({ title: '', date: todayStr, type: 'event', desc: '' });
+      setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', desc: '' });
+      setSelectedParticipants([]);
       
       const { data } = await supabase.from('events').select('*').order('date', { ascending: true });
       setEvents((data || []).map(e => ({ ...e, desc: e.description || e.desc })));
+
+      const { data: pData } = await supabase.from('event_participants').select('*');
+      setParticipants(pData || []);
       
     } catch (err) {
       console.error('Error adding event:', err);
-      alert('ไม่สามารถเพิ่มกิจกรรมได้');
+      alert('ไม่สามารถเพิ่มกิจกรรมได้: ' + err.message);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm('คุณต้องการลบกิจกรรมนี้ออกจากปฏิทินใช่หรือไม่?')) return;
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId);
+      if (error) throw error;
+      
+      setEvents(prev => prev.filter(e => e.id !== eventId));
+      setParticipants(prev => prev.filter(p => p.event_id !== eventId));
+      alert('ลบกิจกรรมเรียบร้อยแล้ว!');
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      alert('เกิดข้อผิดพลาดในการลบกิจกรรม: ' + err.message);
     }
   };
 
@@ -85,7 +129,24 @@ export default function CalendarPage() {
         console.error('Error loading events:', err);
       }
     }
+    async function loadUsersAndParticipants() {
+      try {
+        const { data: uData } = await supabase
+          .from('users')
+          .select('id, name, nickname')
+          .order('name');
+        setUsersList(uData || []);
+
+        const { data: pData } = await supabase
+          .from('event_participants')
+          .select('*');
+        setParticipants(pData || []);
+      } catch (err) {
+        console.error('Error loading users/participants:', err);
+      }
+    }
     loadEvents();
+    loadUsersAndParticipants();
   }, []);
 
   const firstDay = new Date(yr, mo, 1).getDay();
@@ -96,7 +157,19 @@ export default function CalendarPage() {
 
   const getEvents = (day) => {
     const ds = `${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    return events.filter(e => e.date === ds);
+    return events.filter(e => {
+      const start = e.date;
+      const end = e.end_date || e.date;
+      return ds >= start && ds <= end;
+    });
+  };
+
+  const getEventParticipants = (eventId) => {
+    const eventParts = participants.filter(p => p.event_id === eventId);
+    return eventParts.map(p => {
+      const u = usersList.find(usr => String(usr.id) === String(p.user_id));
+      return u ? u.nickname : null;
+    }).filter(Boolean);
   };
 
   const selEvents = sel ? getEvents(sel) : [];
@@ -197,10 +270,40 @@ export default function CalendarPage() {
                   {selEvents.map(ev=>(
                     <div key={ev.id} style={{ padding:'10px 12px', borderRadius:4, background:ev.color+'11', borderLeft:`3px solid ${ev.color}` }}>
                       <div style={{ fontSize:13, fontWeight:700, color:ev.color }}>{ev.title}</div>
+                      {ev.end_date && ev.end_date !== ev.date && (
+                        <div style={{ fontSize:11, color:'#757575', marginTop:2 }}>📅 {new Date(ev.date).toLocaleDateString('th-TH', {day:'numeric',month:'short'})} - {new Date(ev.end_date).toLocaleDateString('th-TH', {day:'numeric',month:'short',year:'2-digit'})}</div>
+                      )}
                       <div style={{ fontSize:12, color:'#757575', marginTop:4 }}>{ev.desc}</div>
-                      <div style={{ marginTop:8 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
                         <span className={`badge ${TYPE_BADGE[ev.type]}`}>{TYPE_LABELS[ev.type]}</span>
+                        <span className="badge" style={{ background: ev.location_category === 'external' ? '#e0f7fa' : '#f5f5f5', color: ev.location_category === 'external' ? '#00838f' : '#757575' }}>
+                          {ev.location_category === 'external' ? '🎒 นอกสถานที่' : '🏫 ภายในโรงเรียน'}
+                        </span>
                       </div>
+                      
+                      {/* Participants list */}
+                      {(() => {
+                        const parts = getEventParticipants(ev.id);
+                        if (parts.length === 0) return null;
+                        return (
+                          <div style={{ marginTop: 8, borderTop: '1px dashed #e0e0e0', paddingTop: 6 }}>
+                            <div style={{ fontSize: 11, color: '#9e9e9e', fontWeight: 600 }}>ผู้เข้าร่วม ({parts.length} คน):</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 3 }}>
+                              {parts.map(p => (
+                                <span key={p} style={{ fontSize: 10, background: '#f5f5f5', padding: '1px 6px', borderRadius: 4, color: '#616161' }}>{p}</span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {canManage && (
+                        <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+                          <button className="btn btn-danger btn-sm" onClick={() => handleDeleteEvent(ev.id)} style={{ fontSize: 11, padding: '3px 8px', cursor: 'pointer' }}>
+                            ลบกิจกรรม
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -233,7 +336,7 @@ export default function CalendarPage() {
       {/* Add Modal */}
       {isAdding && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex: 1000 }}>
-          <div className="card" style={{ width:'100%', maxWidth:400, padding: 20 }}>
+          <div className="card" style={{ width:'100%', maxWidth:440, padding: 20 }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 16 }}>
               <span style={{ fontWeight:700, fontSize:16 }}>เพิ่มกิจกรรมใหม่</span>
               <button onClick={()=>setIsAdding(false)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color: '#9e9e9e' }}>&times;</button>
@@ -243,9 +346,22 @@ export default function CalendarPage() {
                 <label style={{ fontSize:13, fontWeight:600 }}>ชื่อกิจกรรม</label>
                 <input type="text" className="input-field" placeholder="เช่น ประชุมสภาประจำเดือน" value={newEv.title} onChange={e=>setNewEv({...newEv,title:e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }} />
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize:13, fontWeight:600 }}>วันที่เริ่ม</label>
+                  <input type="date" className="input-field" value={newEv.date} onChange={e=>setNewEv({...newEv,date:e.target.value, endDate: e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize:13, fontWeight:600 }}>วันที่สิ้นสุด</label>
+                  <input type="date" className="input-field" value={newEv.endDate || newEv.date} onChange={e=>setNewEv({...newEv,endDate:e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }} />
+                </div>
+              </div>
               <div>
-                <label style={{ fontSize:13, fontWeight:600 }}>วันที่</label>
-                <input type="date" className="input-field" value={newEv.date} onChange={e=>setNewEv({...newEv,date:e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }} />
+                <label style={{ fontSize:13, fontWeight:600 }}>สถานที่จัดกิจกรรม</label>
+                <select className="select-field" value={newEv.locationCategory || 'internal'} onChange={e=>setNewEv({...newEv,locationCategory:e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}>
+                  <option value="internal">🏫 ภายในโรงเรียน</option>
+                  <option value="external">🎒 ภายนอกโรงเรียน (นอกสถานที่)</option>
+                </select>
               </div>
               <div>
                 <label style={{ fontSize:13, fontWeight:600 }}>ประเภท</label>
@@ -256,8 +372,32 @@ export default function CalendarPage() {
                 </select>
               </div>
               <div>
+                <label style={{ fontSize:13, fontWeight:600 }}>สมาชิกที่เข้าร่วมกิจกรรม</label>
+                <div style={{ maxHeight: 110, overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 6, padding: '6px 10px', marginTop: 4, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  {usersList
+                    .filter(u => u.nickname !== 'แอดมิน')
+                    .map(u => (
+                      <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedParticipants.includes(u.id)}
+                          onChange={() => {
+                            if (selectedParticipants.includes(u.id)) {
+                              setSelectedParticipants(prev => prev.filter(id => id !== u.id));
+                            } else {
+                              setSelectedParticipants(prev => [...prev, u.id]);
+                            }
+                          }}
+                        />
+                        {u.name} ({u.nickname})
+                      </label>
+                    ))
+                  }
+                </div>
+              </div>
+              <div>
                 <label style={{ fontSize:13, fontWeight:600 }}>รายละเอียดเพิ่มเติม</label>
-                <textarea className="input-field" rows="3" placeholder="ระบุรายละเอียด..." value={newEv.desc} onChange={e=>setNewEv({...newEv,desc:e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}></textarea>
+                <textarea className="input-field" rows="2" placeholder="ระบุรายละเอียด..." value={newEv.desc} onChange={e=>setNewEv({...newEv,desc:e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}></textarea>
               </div>
             </div>
             <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>

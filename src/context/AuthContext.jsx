@@ -167,6 +167,7 @@ export function AuthProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [checkInState, setCheckInState] = useState(null);
   const [cleanDutyState, setCleanDutyState] = useState(null);
+  const [greetingDutyState, setGreetingDutyState] = useState(null);
   const [modalAlert, setModalAlert] = useState(null);
 
   useEffect(() => {
@@ -247,7 +248,36 @@ export function AuthProvider({ children }) {
       if (!attError && attData) {
         setCheckInState({ status: attData.status, time: attData.time, photo: attData.photo });
       } else {
-        setCheckInState(null);
+        // Check if user is exempt today (participating in external event)
+        try {
+          const { data: eventsData } = await supabase.from('events').select('*');
+          const { data: partData } = await supabase
+            .from('event_participants')
+            .select('event_id')
+            .eq('user_id', String(user.id));
+
+          let exempt = false;
+          if (eventsData && partData) {
+            const myEventIds = partData.map(p => p.event_id);
+            const myTodayEvents = eventsData.filter(ev => {
+              const start = ev.date;
+              const end = ev.end_date || ev.date;
+              return ev.location_category === 'external' && myEventIds.includes(ev.id) && todayStr >= start && todayStr <= end;
+            });
+            if (myTodayEvents.length > 0) {
+              exempt = true;
+            }
+          }
+
+          if (exempt) {
+            setCheckInState({ status: 'activity', time: 'ทำกิจกรรม', photo: null });
+          } else {
+            setCheckInState(null);
+          }
+        } catch (err) {
+          console.error('Error checking today exemption in AuthContext:', err);
+          setCheckInState(null);
+        }
       }
 
       // 2. Fetch today's clean duty status
@@ -268,6 +298,24 @@ export function AuthProvider({ children }) {
           setCleanDutyState(null);
         }
       }
+      // 3. Fetch today's greeting duty status
+      if (user.nickname) {
+        const { data: gdData, error: gdError } = await supabase
+          .from('greeting_duty_checks')
+          .select('status, photo, created_at')
+          .eq('nickname', user.nickname)
+          .eq('date', todayStr)
+          .maybeSingle();
+
+        if (!gdError && gdData) {
+          const timeStr = gdData.created_at
+            ? new Date(gdData.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
+            : 'ไม่ระบุ';
+          setGreetingDutyState({ status: gdData.status, time: timeStr, photo: gdData.photo });
+        } else {
+          setGreetingDutyState(null);
+        }
+      }
     } catch (err) {
       console.error('Error fetching today states from Supabase:', err);
     }
@@ -277,10 +325,16 @@ export function AuthProvider({ children }) {
     if (!user) {
       setCheckInState(null);
       setCleanDutyState(null);
+      setGreetingDutyState(null);
       return;
     }
 
     loadTodayStates();
+
+    // Polling fallback every 15 seconds
+    const interval = setInterval(() => {
+      loadTodayStates();
+    }, 15000);
 
     // Subscribe to realtime updates for current user's check-in and clean duty status
     const attendanceChannel = supabase
@@ -313,9 +367,26 @@ export function AuthProvider({ children }) {
       )
       .subscribe();
 
+    const greetingDutyChannel = supabase
+      .channel('my-greetingduty-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'greeting_duty_checks' },
+        (payload) => {
+          const targetNickname = payload.new ? payload.new.nickname : (payload.old ? payload.old.nickname : null);
+          const targetDate = payload.new ? payload.new.date : (payload.old ? payload.old.date : null);
+          if (targetNickname && targetNickname === user.nickname && targetDate === currentDateStr) {
+            loadTodayStates();
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
+      clearInterval(interval);
       supabase.removeChannel(attendanceChannel);
       supabase.removeChannel(cleanDutyChannel);
+      supabase.removeChannel(greetingDutyChannel);
     };
   }, [user, currentDateStr]);
 
@@ -349,6 +420,39 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const loginAsUser = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      if (error) throw error;
+      
+      const dept = data.dept_id ? DEPARTMENTS.find((d) => d.id === data.dept_id) : null;
+      const isImg = data.avatar && (data.avatar.startsWith('data:image') || data.avatar.startsWith('http'));
+      const userData = {
+        id: data.id,
+        name: data.name,
+        nickname: data.nickname,
+        studentId: data.student_id,
+        phone: data.phone || '',
+        deptId: data.dept_id,
+        role: data.role,
+        position: data.position,
+        avatar: isImg ? (data.nickname?.substring(0, 1) || data.name?.substring(0, 1) || 'U') : data.avatar,
+        profileImage: isImg ? data.avatar : null,
+        avatarColor: data.avatar_color,
+        dept,
+      };
+      setUser(userData);
+      localStorage.setItem('sc_user', JSON.stringify(userData));
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e?.message || 'สลับบัญชีไม่สำเร็จ' };
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('sc_user');
@@ -376,6 +480,7 @@ export function AuthProvider({ children }) {
         user,
         login,
         logout,
+        loginAsUser,
         updateUser,
         isAdmin,
         isPresident,
@@ -386,6 +491,8 @@ export function AuthProvider({ children }) {
         setCheckInState,
         cleanDutyState,
         setCleanDutyState,
+        greetingDutyState,
+        setGreetingDutyState,
       }}
     >
       {children}

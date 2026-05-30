@@ -9,6 +9,7 @@ import MyStats from './pages/MyStats';
 import SettingsPage from './pages/SettingsPage';
 import CheckInPage from './pages/CheckInPage';
 import CleanDutyPage from './pages/CleanDutyPage';
+import GreetingDutyPage from './pages/GreetingDutyPage';
 import MyAttendancePage from './pages/MyAttendancePage';
 import AdminPage from './pages/AdminPage';
 import DisciplinePage from './pages/DisciplinePage';
@@ -129,6 +130,7 @@ function AppRoutes() {
       <Route path="/calendar"   element={<PrivateRoute><CalendarPage /></PrivateRoute>} />
       <Route path="/checkin"    element={<PrivateRoute><CheckInPage /></PrivateRoute>} />
       <Route path="/clean-duty" element={<PrivateRoute><CleanDutyPage /></PrivateRoute>} />
+      <Route path="/greeting-duty" element={<PrivateRoute><GreetingDutyPage /></PrivateRoute>} />
       <Route path="/my-attendance" element={<PrivateRoute><MyAttendancePage /></PrivateRoute>} />
       <Route path="/profile"    element={<PrivateRoute><MyStats /></PrivateRoute>} />
       <Route path="/settings"   element={<PrivateRoute><SettingsPage /></PrivateRoute>} />

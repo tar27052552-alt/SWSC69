@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DEPARTMENTS, ROLES } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
-import { Search, Plus, Edit2, Trash2, X, Save } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, Save, LogIn } from 'lucide-react';
 import { supabaseDelete, supabaseRpc, supabaseSelect, supabaseUpsert, supabaseUpdate } from '../lib/supabaseRest';
 
 const ROLE_LABELS = { admin: 'ผู้ดูแลระบบ', president: 'ประธานสภาฯ', dept_head: 'หัวหน้าฝ่าย', member: 'สมาชิก' };
@@ -13,7 +14,8 @@ const AVATAR_COLORS = ['#00bcd4','#e91e63','#43a047','#f9a825','#ec407a','#00acc
 const initForm = { name:'', nickname:'', studentId:'', phone:'', password:'', role: ROLES.MEMBER, deptId:'', position:'', profileImage:'' };
 
 export default function AdminPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, loginAsUser, user } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [dbError, setDbError] = useState('');
   const [search, setSearch] = useState('');
@@ -84,6 +86,23 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error('Error fetching user avatar:', err);
+    }
+  };
+
+  const handleLoginAs = async (u) => {
+    if (window.confirm(`ต้องการเข้าสู่ระบบในฐานะ "${u.name} (${u.nickname})" ใช่หรือไม่?`)) {
+      try {
+        setDbError('');
+        const res = await loginAsUser(u.id);
+        if (res.success) {
+          alert(`เข้าสู่ระบบสำเร็จในฐานะ: ${u.name}`);
+          navigate('/dashboard');
+        } else {
+          setDbError(res.error || 'เกิดข้อผิดพลาดในการสลับบัญชี');
+        }
+      } catch (err) {
+        setDbError(err?.message || 'เกิดข้อผิดพลาดในการสลับบัญชี');
+      }
     }
   };
 
@@ -216,6 +235,9 @@ export default function AdminPage() {
                     <td style={{ fontSize:12, color:'#757575' }}>{u.phone || u.email || '–'}</td>
                     <td>
                       <div style={{ display:'flex', gap:6 }}>
+                        {user?.id !== u.id && (
+                          <button onClick={()=>handleLoginAs(u)} className="btn btn-primary btn-sm" title="เข้าสู่ระบบในฐานะ"><LogIn size={13} /></button>
+                        )}
                         <button onClick={()=>openEdit(u)} className="btn btn-gray btn-sm" title="แก้ไข"><Edit2 size={13} /></button>
                         <button onClick={()=>setDelUser(u)} className="btn btn-danger btn-sm" disabled={u.role==='admin'} title="ลบ"><Trash2 size={13} /></button>
                       </div>
