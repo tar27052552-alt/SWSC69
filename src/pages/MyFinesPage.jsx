@@ -35,9 +35,11 @@ export default function MyFinesPage() {
         .from('discipline_fines')
         .select('*')
         .eq('user_id', String(user.id))
+        .order('date', { ascending: false })
         .order('created_at', { ascending: false });
         
       if (error) throw error;
+
       if (data) {
         setFines(data.map(d => ({
           id: d.id,

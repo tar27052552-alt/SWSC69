@@ -84,8 +84,10 @@ export default function DisciplinePage() {
       const { data, error } = await supabase
         .from('discipline_fines')
         .select('*')
+        .order('date', { ascending: false })
         .order('created_at', { ascending: false });
       if (error) throw error;
+
       if (data) {
         const mapped = data.map(d => ({
           id: d.id,
