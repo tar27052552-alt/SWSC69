@@ -390,6 +390,55 @@ export function AuthProvider({ children }) {
     };
   }, [user, currentDateStr]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 hours
+
+    const checkSessionTimeout = () => {
+      const lastActive = localStorage.getItem('sc_last_active');
+      if (lastActive) {
+        const diff = Date.now() - parseInt(lastActive, 10);
+        if (diff > TIMEOUT_MS) {
+          console.log('Session timed out due to inactivity.');
+          logout();
+          window.location.reload(); // Force refresh back to login page
+          return;
+        }
+      }
+      localStorage.setItem('sc_last_active', Date.now().toString());
+    };
+
+    // Run check on mount
+    checkSessionTimeout();
+
+    // Run check when visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkSessionTimeout();
+      } else {
+        localStorage.setItem('sc_last_active', Date.now().toString());
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', checkSessionTimeout);
+
+    // Update active timestamp on user clicks/interactions
+    const updateActiveTime = () => {
+      localStorage.setItem('sc_last_active', Date.now().toString());
+    };
+    window.addEventListener('click', updateActiveTime);
+    window.addEventListener('keydown', updateActiveTime);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', checkSessionTimeout);
+      window.removeEventListener('click', updateActiveTime);
+      window.removeEventListener('keydown', updateActiveTime);
+    };
+  }, [user]);
+
   const login = async (studentId, password) => {
     try {
       const rows = await supabaseRpc('login_student', { p_student_id: studentId, p_password: password });
