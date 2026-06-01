@@ -7,18 +7,21 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const [passwords, setPasswords] = useState({ old: '', new: '', confirm: '' });
 
-  const [pushSupported, setPushSupported] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState('default');
+  const [pushSupported, setPushSupported] = useState('Notification' in window);
+  const [notificationPermission, setNotificationPermission] = useState(
+    'Notification' in window ? Notification.permission : 'default'
+  );
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscriptionId, setSubscriptionId] = useState('');
   const [pushError, setPushError] = useState('');
 
-  const readOneSignalState = (OneSignal) => {
-    setPushSupported(true);
-    if (OneSignal.Notifications) {
-      const perm = OneSignal.Notifications.permissionNative || (OneSignal.Notifications.permission ? 'granted' : 'default');
-      setNotificationPermission(perm);
-    }
+  // Always read native permission - this is the source of truth
+  const getNativePermission = () => {
+    return 'Notification' in window ? Notification.permission : 'default';
+  };
+
+  const readOneSignalSubscription = (OneSignal) => {
+    // Only update subscription info from OneSignal, NOT permission
     if (OneSignal.User?.PushSubscription) {
       setIsSubscribed(OneSignal.User.PushSubscription.optedIn || false);
       setSubscriptionId(OneSignal.User.PushSubscription.id || '');
@@ -26,17 +29,22 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    // Check native permission first as a baseline
-    if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
-    }
+    // Always set permission from native API
+    setNotificationPermission(getNativePermission());
 
     const initOneSignal = async (OneSignal) => {
       try {
-        readOneSignalState(OneSignal);
+        // Re-check native permission (might have changed)
+        setNotificationPermission(getNativePermission());
+        readOneSignalSubscription(OneSignal);
         try {
-          OneSignal.Notifications.addEventListener('permissionChange', () => readOneSignalState(OneSignal));
-          OneSignal.User?.PushSubscription?.addEventListener('change', () => readOneSignalState(OneSignal));
+          OneSignal.Notifications.addEventListener('permissionChange', () => {
+            setNotificationPermission(getNativePermission());
+            readOneSignalSubscription(OneSignal);
+          });
+          OneSignal.User?.PushSubscription?.addEventListener('change', () => {
+            readOneSignalSubscription(OneSignal);
+          });
         } catch (e) { /* listener already added or not supported */ }
       } catch (err) {
         console.error("OneSignal read state error:", err);
@@ -60,7 +68,8 @@ export default function SettingsPage() {
       // Try OneSignal first
       if (window.OneSignal && typeof window.OneSignal.Notifications !== 'undefined') {
         await window.OneSignal.Notifications.requestPermission();
-        readOneSignalState(window.OneSignal);
+        setNotificationPermission(getNativePermission());
+        readOneSignalSubscription(window.OneSignal);
         return;
       }
 
@@ -72,7 +81,7 @@ export default function SettingsPage() {
           // After native grant, push to OneSignal deferred to finalize subscription
           window.OneSignalDeferred = window.OneSignalDeferred || [];
           window.OneSignalDeferred.push(async (OneSignal) => {
-            readOneSignalState(OneSignal);
+            readOneSignalSubscription(OneSignal);
           });
         }
       } else {
