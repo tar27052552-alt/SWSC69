@@ -110,7 +110,7 @@ export default function Dashboard() {
 
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
-  const runAutoGreetingFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, swapsList, serverNow = new Date()) => {
+  const runAutoGreetingFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, swapsList, enabledDays = [], disabledDates = [], serverNow = new Date()) => {
     try {
       const { data: usersData } = await supabase.from('users').select('id, name, nickname, dept_id');
       if (!usersData) return;
@@ -119,6 +119,7 @@ export default function Dashboard() {
       const tzOffset = 7 * 60 * 60 * 1000;
       const todayStr = new Date(now.getTime() + tzOffset).toISOString().split('T')[0];
       const datesToCheck = [];
+      const TH_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
 
       for (let i = 0; i < 7; i++) {
         const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
@@ -129,6 +130,10 @@ export default function Dashboard() {
         const dateObj = new Date(`${dateStr}T00:00:00.000Z`);
         const dayOfWeek = dateObj.getUTCDay(); // 0 = Sunday, 6 = Saturday
         if (dayOfWeek === 0 || dayOfWeek === 6) continue; // Skip weekends
+
+        const dayName = TH_DAYS[dayOfWeek];
+        if (enabledDays.length > 0 && !enabledDays.includes(dayName)) continue;
+        if (disabledDates.includes(dateStr)) continue;
 
         // If it is today, only check if it is past 07:10 AM
         if (dateStr === todayStr) {
@@ -141,8 +146,6 @@ export default function Dashboard() {
 
         datesToCheck.push(dateStr);
       }
-
-      const TH_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
 
       for (const dateStr of datesToCheck) {
         // Find exempt users for this date (external events participants)
@@ -259,7 +262,7 @@ export default function Dashboard() {
     }
   };
 
-  const runAutoCleanFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, serverNow = new Date()) => {
+  const runAutoCleanFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, enabledDays = [], disabledDates = [], serverNow = new Date()) => {
     try {
       const { data: usersData } = await supabase.from('users').select('id, name, nickname, dept_id');
       if (!usersData) return;
@@ -268,6 +271,7 @@ export default function Dashboard() {
       const tzOffset = 7 * 60 * 60 * 1000;
       const todayStr = new Date(now.getTime() + tzOffset).toISOString().split('T')[0];
       const datesToCheck = [];
+      const TH_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
 
       for (let i = 0; i < 7; i++) {
         const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
@@ -279,6 +283,10 @@ export default function Dashboard() {
         const dayOfWeek = dateObj.getUTCDay(); // 0 = Sunday, 6 = Saturday
         if (dayOfWeek === 0 || dayOfWeek === 6) continue; // Skip weekends
 
+        const dayName = TH_DAYS[dayOfWeek];
+        if (enabledDays.length > 0 && !enabledDays.includes(dayName)) continue;
+        if (disabledDates.includes(dateStr)) continue;
+
         // If it is today, only check if it is past 18:00 (6:00 PM)
         if (dateStr === todayStr) {
           const localHours = new Date(now.getTime() + tzOffset).getUTCHours();
@@ -287,8 +295,6 @@ export default function Dashboard() {
 
         datesToCheck.push(dateStr);
       }
-
-      const TH_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
 
       for (const dateStr of datesToCheck) {
         // Find exempt users for this date (external events participants)
@@ -531,6 +537,8 @@ export default function Dashboard() {
         let startD = '';
         let cleanStartD = '';
         let greetingStartD = '';
+        let enabledDays = [];
+        let disabledDates = [];
         const { data: settingsData } = await supabase
           .from('attendance_settings')
           .select('*');
@@ -543,6 +551,19 @@ export default function Dashboard() {
 
           greetingStartD = settingsData.find(d => d.key === 'greeting_duty_start_date')?.value || '';
           setGreetingDutyStartDate(greetingStartD);
+
+          const enabledDaysRow = settingsData.find(d => d.key === 'enabled_days');
+          if (enabledDaysRow) {
+            enabledDays = typeof enabledDaysRow.value === 'string'
+              ? JSON.parse(enabledDaysRow.value)
+              : (enabledDaysRow.value || []);
+          }
+          const disabledDatesRow = settingsData.find(d => d.key === 'disabled_dates');
+          if (disabledDatesRow) {
+            disabledDates = typeof disabledDatesRow.value === 'string'
+              ? JSON.parse(disabledDatesRow.value)
+              : (disabledDatesRow.value || []);
+          }
         }
 
         setEvents(eventsData || []);
@@ -634,10 +655,10 @@ export default function Dashboard() {
         if (user && isAdmin) {
           const serverNow = await fetchServerDate();
           if (cleanData) {
-            await runAutoCleanFinesCheck(cleanData, cleanStartD, eventsData || [], partData || [], serverNow);
+            await runAutoCleanFinesCheck(cleanData, cleanStartD, eventsData || [], partData || [], enabledDays, disabledDates, serverNow);
           }
           if (greetingData) {
-            await runAutoGreetingFinesCheck(greetingData, greetingStartD, eventsData || [], partData || [], swapData || [], serverNow);
+            await runAutoGreetingFinesCheck(greetingData, greetingStartD, eventsData || [], partData || [], swapData || [], enabledDays, disabledDates, serverNow);
           }
           await checkAndDoubleOverdueFines(serverNow);
         }
