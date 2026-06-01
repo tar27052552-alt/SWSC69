@@ -160,16 +160,13 @@ export default function App() {
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       window.OneSignalDeferred.push(async function(OneSignal) {
         const base = import.meta.env.BASE_URL || '/';
-        const isSubdir = base !== '/';
         const initOptions = {
           appId: oneSignalAppId,
-          allowLocalhostAsSecureOrigin: true
+          allowLocalhostAsSecureOrigin: true,
+          serviceWorkerPath: `${base}OneSignalSDKWorker.js`,
+          serviceWorkerParam: { scope: base }
         };
-        if (isSubdir) {
-          const cleanSubdir = base.replace(/^\/|\/$/g, '');
-          initOptions.serviceWorkerPath = `${cleanSubdir}/OneSignalSDKWorker.js`;
-          initOptions.serviceWorkerParam = { scope: base };
-        }
+        console.log('OneSignal init with options:', JSON.stringify(initOptions));
         await OneSignal.init(initOptions);
       });
     }
