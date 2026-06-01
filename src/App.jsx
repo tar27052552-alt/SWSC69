@@ -163,8 +163,10 @@ export default function App() {
         const initOptions = {
           appId: oneSignalAppId,
           allowLocalhostAsSecureOrigin: true,
-          serviceWorkerPath: `${base}OneSignalSDKWorker.js`,
-          serviceWorkerParam: { scope: base }
+          serviceWorker: {
+            path: `${base}OneSignalSDKWorker.js`,
+            scope: base
+          }
         };
         console.log('OneSignal init with options:', JSON.stringify(initOptions));
         await OneSignal.init(initOptions);
