@@ -167,6 +167,56 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    // 1. Get the current active JavaScript file hash
+    let localHash = '';
+    const scripts = Array.from(document.querySelectorAll('script'));
+    const currentScript = scripts.find(s => s.src && s.src.includes('/assets/index-'));
+    if (currentScript) {
+      const match = currentScript.src.match(/\/assets\/index-([^.]+)\.js/);
+      if (match) {
+        localHash = match[1];
+      }
+    }
+
+    // 2. Fetch index.html and compare JS hash to detect new deployments
+    const checkForUpdate = async () => {
+      if (!localHash) return;
+      try {
+        const res = await fetch('./index.html?t=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) return;
+        const text = await res.text();
+        const match = text.match(/src="[^"]*\/assets\/index-([^.]+)\.js"/);
+        if (match && match[1]) {
+          const serverHash = match[1];
+          if (serverHash !== localHash) {
+            console.log("New version detected. Reloading app automatically...");
+            window.location.reload();
+          }
+        }
+      } catch (err) {
+        console.error("Auto-update check failed:", err);
+      }
+    };
+
+    // Check on mount
+    checkForUpdate();
+
+    // Check when user resumes the app (tab focus / visibility)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkForUpdate();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', checkForUpdate);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', checkForUpdate);
+    };
+  }, []);
+
   return (
     <HashRouter>
       <AuthProvider>
