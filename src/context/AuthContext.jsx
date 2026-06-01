@@ -393,7 +393,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!user) return;
 
-    const TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 hours
+    const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
     const checkSessionTimeout = () => {
       const lastActive = localStorage.getItem('sc_last_active');
