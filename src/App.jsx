@@ -159,10 +159,18 @@ export default function App() {
     if (oneSignalAppId) {
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       window.OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
+        const base = import.meta.env.BASE_URL || '/';
+        const isSubdir = base !== '/';
+        const initOptions = {
           appId: oneSignalAppId,
           allowLocalhostAsSecureOrigin: true
-        });
+        };
+        if (isSubdir) {
+          const cleanSubdir = base.replace(/^\/|\/$/g, '');
+          initOptions.serviceWorkerPath = `${cleanSubdir}/OneSignalSDKWorker.js`;
+          initOptions.serviceWorkerParam = { scope: base };
+        }
+        await OneSignal.init(initOptions);
       });
     }
   }, []);
