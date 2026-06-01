@@ -64,6 +64,8 @@ function doPost(e) {
           requestData.imageUrl,
           requestData.channel
         );
+        // ส่ง Push Notification เข้ามือถือผ่าน OneSignal ไปพร้อมกัน
+        sendOneSignalPush(requestData.title, requestData.description);
         break;
       default:
         throw new Error("Unknown action: " + action);
@@ -697,4 +699,49 @@ function testAttendanceWebhook() {
     "attendance_alerts"
   );
   console.log("ผลการรัน: " + JSON.stringify(result));
+}
+
+// ฟังก์ชันส่งการแจ้งเตือน Push Notification ผ่าน OneSignal
+function sendOneSignalPush(title, message) {
+  var properties = PropertiesService.getScriptProperties();
+  var appId = properties.getProperty("ONESIGNAL_APP_ID");
+  var restApiKey = properties.getProperty("ONESIGNAL_REST_API_KEY");
+  
+  if (!appId || !restApiKey) {
+    console.warn("ONESIGNAL_APP_ID or ONESIGNAL_REST_API_KEY is not configured in Script Properties. Skipping push notification.");
+    return { success: false, error: "Missing config" };
+  }
+  
+  var payload = {
+    "app_id": appId,
+    "included_segments": ["All"], // ส่งหาผู้ลงทะเบียนทั้งหมด
+    "headings": { "en": title, "th": title },
+    "contents": { "en": message, "th": message },
+    "url": "https://tar27052552-alt.github.io/SWSC69/" // เปิดเข้าหน้าเว็บพอร์ทัลเมื่อกดคลิก
+  };
+  
+  var options = {
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Basic " + restApiKey
+    },
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+  
+  try {
+    var response = UrlFetchApp.fetch("https://onesignal.com/api/v1/notifications", options);
+    var code = response.getResponseCode();
+    if (code >= 200 && code < 300) {
+      console.log("OneSignal push notification sent successfully: " + response.getContentText());
+      return { success: true };
+    } else {
+      console.error("OneSignal push notification error: " + response.getContentText());
+      return { success: false, error: "Status " + code };
+    }
+  } catch (e) {
+    console.error("Failed to send OneSignal push notification:", e);
+    return { success: false, error: e.toString() };
+  }
 }

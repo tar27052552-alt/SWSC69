@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
@@ -153,6 +154,19 @@ function AppRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const oneSignalAppId = import.meta.env.VITE_ONESIGNAL_APP_ID;
+    if (oneSignalAppId) {
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: oneSignalAppId,
+          allowLocalhostAsSecureOrigin: true
+        });
+      });
+    }
+  }, []);
+
   return (
     <HashRouter>
       <AuthProvider>

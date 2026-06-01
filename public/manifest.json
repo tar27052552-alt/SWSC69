@@ -1,0 +1,17 @@
+{
+  "short_name": "สภานักเรียน",
+  "name": "พอร์ทัลสภานักเรียน SWSC69",
+  "icons": [
+    {
+      "src": "logo.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "background_color": "#f8fafc",
+  "theme_color": "#06b6d4",
+  "display": "standalone",
+  "orientation": "portrait"
+}
