@@ -463,6 +463,7 @@ export function AuthProvider({ children }) {
       };
       setUser(userData);
       localStorage.setItem('sc_user', JSON.stringify(userData));
+      localStorage.setItem('sc_last_active', Date.now().toString()); // Reset last active on successful login
       return { success: true };
     } catch (e) {
       return { success: false, error: e?.message || 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ' };
@@ -496,6 +497,7 @@ export function AuthProvider({ children }) {
       };
       setUser(userData);
       localStorage.setItem('sc_user', JSON.stringify(userData));
+      localStorage.setItem('sc_last_active', Date.now().toString()); // Reset last active on switch user
       return { success: true };
     } catch (e) {
       return { success: false, error: e?.message || 'สลับบัญชีไม่สำเร็จ' };
@@ -505,6 +507,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('sc_user');
+    localStorage.removeItem('sc_last_active'); // Clear last active on logout
   };
 
   const updateUser = (updates) => {
