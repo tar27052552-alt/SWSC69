@@ -377,15 +377,15 @@ export default function AVPage() {
         };
 
         return (
-          <div style={{ background: '#1c1c1e', color: 'white', borderRadius: 12, padding: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', marginBottom: 20 }}>
+          <div style={{ background: '#ffffff', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.03)', marginBottom: 20 }}>
             {/* Legend Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 700 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
                 📅 ปฏิทินคิวงานของทีม
               </div>
               
               {/* Legend Dots */}
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12 }}>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-muted)' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff6b8b' }} />กราฟิก</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ffa726' }} />วิดีโอ</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#29b6f6' }} />ถ่ายภาพ</span>
@@ -397,29 +397,29 @@ export default function AVPage() {
 
             {/* Header Navigation */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{MONTHS_FULL[mo]} {yr + 543}</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--text)' }}>{MONTHS_FULL[mo]} {yr + 543}</h2>
               
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={setMonthToToday} style={{ background: '#2c2c2e', color: 'white', border: '1px solid #3a3a3c', padding: '6px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>วันนี้</button>
-                <button onClick={prevMonth} style={{ background: '#2c2c2e', color: 'white', border: '1px solid #3a3a3c', padding: '6px 12px', borderRadius: 6, cursor: 'pointer' }}>&lt;</button>
-                <button onClick={nextMonth} style={{ background: '#2c2c2e', color: 'white', border: '1px solid #3a3a3c', padding: '6px 12px', borderRadius: 6, cursor: 'pointer' }}>&gt;</button>
+                <button onClick={setMonthToToday} style={{ background: '#f5f5f7', color: '#212121', border: '1px solid #e5e5ea', padding: '6px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>วันนี้</button>
+                <button onClick={prevMonth} style={{ background: '#f5f5f7', color: '#212121', border: '1px solid #e5e5ea', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>&lt;</button>
+                <button onClick={nextMonth} style={{ background: '#f5f5f7', color: '#212121', border: '1px solid #e5e5ea', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>&gt;</button>
               </div>
             </div>
 
             {/* Week Day Titles */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, marginBottom: 8, borderBottom: '1px solid #2c2c2e', paddingBottom: 6 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, marginBottom: 8, borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>
               {['จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์', 'อาทิตย์'].map(day => (
-                <div key={day} style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: '#a1a1a6' }}>
+                <div key={day} style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>
                   {day}
                 </div>
               ))}
             </div>
 
             {/* Grid Cells */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, background: '#2c2c2e', padding: 1, borderRadius: 8, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, background: 'var(--border)', padding: 1, borderRadius: 8, overflow: 'hidden' }}>
               {/* Empty cells before the first day */}
               {Array.from({ length: firstDayAdjusted }).map((_, idx) => (
-                <div key={`empty-${idx}`} style={{ background: '#1c1c1e', minHeight: 110 }} />
+                <div key={`empty-${idx}`} style={{ background: '#f5f5f7', minHeight: 110 }} />
               ))}
 
               {/* Day cells */}
@@ -432,21 +432,21 @@ export default function AVPage() {
 
                 return (
                   <div key={day} style={{
-                    background: '#1c1c1e',
+                    background: '#ffffff',
                     minHeight: 110,
                     padding: 6,
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'flex-start',
-                    border: isToday ? '1.5px solid #ff6b8b' : 'none'
+                    border: isToday ? '1.5px solid var(--primary)' : 'none'
                   }}>
                     {/* Day number */}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
                       <span style={{
                         fontSize: 12,
                         fontWeight: isToday ? 700 : 400,
-                        color: isToday ? '#ff6b8b' : '#a1a1a6',
-                        background: isToday ? 'rgba(255, 107, 139, 0.15)' : 'transparent',
+                        color: isToday ? 'var(--primary)' : '#6e6e73',
+                        background: isToday ? 'var(--primary-light)' : 'transparent',
                         borderRadius: '50%',
                         width: 22,
                         height: 22,
