@@ -693,7 +693,7 @@ export default function FinancePage() {
                       { name: '📋 รายการเรียกเก็บ', value: data[0].title, inline: true },
                       { name: '💵 ยอดเงินเรียกเก็บ', value: `${data[0].amount} บาท`, inline: true },
                       { name: '📅 กำหนดส่ง', value: data[0].date, inline: true },
-                      { name: '💡 คำแนะนำ', value: 'กรุณาเข้าระบบพอร์ทัลสภานักเรียนเพื่อสแกน QR Code ชำระเงินด้วย PromptPay และอัปโหลดสลิป', inline: false }
+                      { name: '💡 คำแนะนำ', value: 'กรุณาเข้าระบบ SWSC69 เพื่อสแกน QR Code ชำระเงินด้วย PromptPay และอัปโหลดสลิป', inline: false }
                     ];
                     sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'finance'); // สีน้ำเงินสำหรับฝ่ายการเงิน
                   }

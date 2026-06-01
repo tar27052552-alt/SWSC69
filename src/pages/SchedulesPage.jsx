@@ -618,7 +618,7 @@ export default function SchedulesPage() {
           pr_news: 'ตารางเวรหาข่าวประชาสัมพันธ์'
         };
         const embedTitle = `📅 มีการอัปเดตตารางเวรปฏิบัติหน้าที่สภานักเรียน`;
-        const embedDesc = `ปรับปรุงตารางเวร: **${typeLabels[typeStr] || typeStr}** เรียบร้อยแล้ว\nกรุณาเข้าสู่ระบบพอร์ทัลสภาเพื่อตรวจสอบหน้าที่และวันปฏิบัติงานของท่านครับ 🏫`;
+        const embedDesc = `ปรับปรุงตารางเวร: **${typeLabels[typeStr] || typeStr}** เรียบร้อยแล้ว\nกรุณาเข้าสู่ระบบ SWSC69 เพื่อตรวจสอบหน้าที่และวันปฏิบัติงานของท่านครับ 🏫`;
         sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15814656, [], null, 'pr');
       } catch (err) {
         console.error('Error saving schedule:', err);
