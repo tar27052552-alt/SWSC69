@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Users, Calendar, Bell, UserCircle,
   Shield, Banknote, BookOpen, Building, Megaphone,
-  Music, FileText, Warehouse, Camera, HandHeart, LogOut, Settings, MapPin, Sparkles, ClipboardList, ChevronDown, User, X, Menu
+  Music, FileText, Warehouse, Camera, HandHeart, LogOut, Settings, MapPin, Sparkles, ClipboardList, ChevronDown, User, X, Menu, RotateCw
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import logoUrl from '../assets/logo.png';
@@ -222,6 +222,25 @@ export default function Layout({ children }) {
             </div>
           </div>
           <div className="topbar-user" style={{ display:'flex', alignItems:'center', gap:12 }}>
+
+            {/* Reload button for PWAs/Standalone mode */}
+            <button 
+              onClick={() => window.location.reload()} 
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                cursor: 'pointer', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                color: 'inherit', 
+                padding: 4,
+                opacity: 0.7 
+              }}
+              title="รีเฟรชหน้าเว็บ"
+            >
+              <RotateCw size={15} />
+            </button>
 
             {/* Bell / Notifications */}
             <div ref={notifRef} style={{ position:'relative' }}>
