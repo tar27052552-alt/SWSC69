@@ -529,6 +529,146 @@ function sendAttendanceSummary() {
   }
 }
 
+// สรุปผลการปฏิบัติเวรยืนไหว้ต้อนรับประจำวัน (เวลา 08:20 น.)
+function sendGreetingDutySummary() {
+  var now = new Date();
+  var todayStr = getGregorianStr(now);
+  var daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+  var todayDayName = daysTh[now.getDay()];
+  
+  try {
+    // 1. ดึงการตั้งค่าเช็คชื่อวันนี้
+    var settings = fetchFromSupabase("attendance_settings", "select=key,value");
+    var enabledDays = [];
+    var disabledDates = [];
+    for (var i = 0; i < settings.length; i++) {
+      if (settings[i].key === "enabled_days") {
+        enabledDays = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "disabled_dates") {
+        disabledDates = parseArrayOrString(settings[i].value);
+      }
+    }
+    
+    if (!enabledDays.includes(todayDayName) || disabledDates.includes(todayStr)) {
+      console.log("Greeting duty summary skipped today (holiday).");
+      return;
+    }
+    
+    // 2. ดึงตารางเวรยืนไหว้ต้อนรับวันนี้
+    var schedules = fetchFromSupabase("schedules", "type=eq.greeting&day=eq." + encodeURIComponent(todayDayName));
+    if (!schedules || schedules.length === 0) {
+      console.log("No greeting duty schedule for today.");
+      return;
+    }
+    
+    var dataObj = {};
+    if (schedules[0].data) {
+      try {
+        dataObj = (typeof schedules[0].data === "string") ? JSON.parse(schedules[0].data) : schedules[0].data;
+      } catch(e) {}
+    }
+    
+    // 3. ดึงสลับเวรวันนี้
+    var swaps = [];
+    try {
+      swaps = fetchFromSupabase("duty_swaps", "date=eq." + todayStr);
+    } catch(e) {}
+    
+    var applySwaps = function(membersList, dutyTypeKey) {
+      if (!membersList || membersList.length === 0) return [];
+      var result = [];
+      for (var i = 0; i < membersList.length; i++) {
+        var member = membersList[i];
+        if (member === "–" || !member) continue;
+        var swapped = false;
+        for (var j = 0; j < swaps.length; j++) {
+          if (swaps[j].duty_type === dutyTypeKey && swaps[j].original_nickname === member) {
+            result.push(swaps[j].substitute_nickname);
+            swapped = true;
+            break;
+          }
+        }
+        if (!swapped) {
+          result.push(member);
+        }
+      }
+      return result;
+    };
+    
+    var gate1Expected = applySwaps(dataObj.gate1 || [], "greeting_gate1");
+    var gate2Expected = applySwaps(dataObj.gate2 || [], "greeting_gate2");
+    var gate3Expected = applySwaps(dataObj.gate3 || [], "greeting_gate3");
+    
+    if (gate1Expected.length === 0 && gate2Expected.length === 0 && gate3Expected.length === 0) {
+      console.log("No greeting duty members today.");
+      return;
+    }
+    
+    // 4. ดึงข้อมูลรายงานผลการส่งเวรวันนี้
+    var checks = fetchFromSupabase("greeting_duty_checks", "date=eq." + todayStr);
+    var doneMap = {};
+    var lastPhoto = "";
+    for (var i = 0; i < checks.length; i++) {
+      doneMap[checks[i].nickname] = checks[i];
+      if (checks[i].photo) {
+        lastPhoto = checks[i].photo;
+      }
+    }
+    
+    var formatGateStatus = function(expectedList) {
+      var lines = [];
+      for (var i = 0; i < expectedList.length; i++) {
+        var m = expectedList[i];
+        var cleanName = m.split(" ")[0]; // ดึงชื่อเล่นจริง
+        var checkRecord = doneMap[cleanName];
+        if (checkRecord) {
+          lines.push("🟢 " + m + " (" + checkRecord.time + " น.)");
+        } else {
+          lines.push("❌ " + m + " (ยังไม่รายงานตัว)");
+        }
+      }
+      return lines.length > 0 ? lines.join("\n") : "(ไม่มีเวร)";
+    };
+    
+    var gate1Status = formatGateStatus(gate1Expected);
+    var gate2Status = formatGateStatus(gate2Expected);
+    var gate3Status = formatGateStatus(gate3Expected);
+    
+    var fields = [
+      { name: "🚪 ประตูไหมไทย", value: gate1Status, inline: false },
+      { name: "🚪 ประตูอำเภอ", value: gate2Status, inline: false },
+      { name: "🚪 ประตูหน้า รร.", value: gate3Status, inline: false }
+    ];
+    
+    // ตรวจสอบว่ามีคนขาดส่งหรือไม่
+    var hasMissing = false;
+    var allLists = [gate1Expected, gate2Expected, gate3Expected];
+    for (var g = 0; g < allLists.length; g++) {
+      for (var mIdx = 0; mIdx < allLists[g].length; mIdx++) {
+        var cleanName = allLists[g][mIdx].split(" ")[0];
+        if (!doneMap[cleanName]) {
+          hasMissing = true;
+          break;
+        }
+      }
+    }
+    
+    var color = hasMissing ? 15158332 : 3066993; // สีแดงถ้าขาดรายงาน, สีเขียวถ้าส่งครบ
+    
+    sendDiscordEmbed(
+      "📊 สรุปการปฏิบัติหน้าที่เวรยืนไหว้ต้อนรับ",
+      "วัน" + todayDayName + "ที่ " + now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }) + " (สรุปข้อมูลเวลา 08:20 น.)",
+      color,
+      fields,
+      lastPhoto || null,
+      "daily_summary"
+    );
+    
+  } catch(err) {
+    console.error("Error sending greeting duty summary:", err);
+  }
+}
+
 // สรุปเวรห้องสภาสภานักเรียน (เวลา 18:00 น.)
 function sendCleanDutySummary() {
   var now = new Date();
@@ -1022,7 +1162,8 @@ function scheduleForToday() {
         handlerName === "sendTomorrowActivities" ||
         handlerName === "sendCheckInReminder" ||
         handlerName === "sendCleanDutyReminder" ||
-        handlerName === "sendTomorrowPRNewsDuty") {
+        handlerName === "sendTomorrowPRNewsDuty" ||
+        handlerName === "sendGreetingDutySummary") {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
@@ -1036,10 +1177,15 @@ function scheduleForToday() {
              .create();
   }
   
-  // 2. สรุปยอดเช็คชื่อเข้าแถวเช้า (08:20 น.)
+  // 2. สรุปยอดเช็คชื่อเข้าแถวเช้า และ สรุปเวรยืนไหว้ต้อนรับ (08:20 น.)
   var time820 = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 20, 0);
   if (time820 > new Date()) {
     ScriptApp.newTrigger("sendAttendanceSummary")
+             .timeBased()
+             .at(time820)
+             .create();
+             
+    ScriptApp.newTrigger("sendGreetingDutySummary")
              .timeBased()
              .at(time820)
              .create();
