@@ -18,6 +18,23 @@ const STATUS_CFG = {
 
 const PRIORITY_BADGE = { สูง: 'badge-red', ปานกลาง: 'badge-yellow', ต่ำ: 'badge-green' };
 
+const MONTHS_FULL = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+const AV_TYPE_COLORS = {
+  'กราฟิก': '#ff6b8b',
+  'อินโฟกราฟิก': '#ff6b8b',
+  'วิดีโอ': '#ffa726',
+  'Reel': '#ffa726',
+  'ถ่ายภาพ': '#29b6f6',
+  'Live Stream': '#29b6f6',
+  'คอนเทนต์': '#66bb6a',
+  'ประชาสัมพันธ์': '#f57c00',
+  'นัดประชุม': '#ab47bc'
+};
+
 const INIT_TASKS = [];
 
 const initForm = { title:'', type:CONTENT_TYPES[0], platform:PLATFORMS[0], priority:'ปานกลาง', assignee:'', dueDate:'', note:'' };
@@ -31,6 +48,9 @@ export default function AVPage() {
   const [avMembers, setAvMembers] = useState([]);
   const [form, setForm]     = useState(initForm);
   const [search, setSearch] = useState('');
+  const today = new Date();
+  const [yr, setYr] = useState(today.getFullYear());
+  const [mo, setMo] = useState(today.getMonth());
 
   useEffect(() => {
     async function loadTasks() {
@@ -284,6 +304,7 @@ export default function AVPage() {
       {/* Tabs */}
       <div className="tab-bar">
         <button className={`tab-btn${tab==='kanban'?' active':''}`} onClick={()=>setTab('kanban')}>🗂 Kanban Board</button>
+        <button className={`tab-btn${tab==='calendar'?' active':''}`} onClick={()=>setTab('calendar')}>📅 ปฏิทินคิวงาน</button>
         <button className={`tab-btn${tab==='list'?' active':''}`} onClick={()=>setTab('list')}>📋 รายการ</button>
         <button className={`tab-btn${tab==='wait_pr'?' active':''}`} onClick={()=>setTab('wait_pr')}>
           📢 รอ PR ใส่แคปชั่น
@@ -335,6 +356,143 @@ export default function AVPage() {
           })}
         </div>
       )}
+
+      {/* Calendar */}
+      {tab === 'calendar' && (() => {
+        const firstDay = new Date(yr, mo, 1).getDay();
+        const firstDayAdjusted = firstDay === 0 ? 6 : firstDay - 1;
+        const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+        const prevMonth = () => { if (mo === 0) { setMo(11); setYr(y => y - 1); } else setMo(m => m - 1); };
+        const nextMonth = () => { if (mo === 11) { setMo(0); setYr(y => y + 1); } else setMo(m => m + 1); };
+        const setMonthToToday = () => {
+          const d = new Date();
+          setYr(d.getFullYear());
+          setMo(d.getMonth());
+        };
+        const getTasksForDate = (dateStr) => {
+          return tasks.filter(t => t.dueDate === dateStr);
+        };
+        const getFormattedDateStr = (day) => {
+          return `${yr}-${String(mo + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        };
+
+        return (
+          <div style={{ background: '#1c1c1e', color: 'white', borderRadius: 12, padding: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', marginBottom: 20 }}>
+            {/* Legend Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 700 }}>
+                📅 ปฏิทินคิวงานของทีม
+              </div>
+              
+              {/* Legend Dots */}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff6b8b' }} />กราฟิก</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ffa726' }} />วิดีโอ</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#29b6f6' }} />ถ่ายภาพ</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#66bb6a' }} />คอนเทนต์</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f57c00' }} />ประชาสัมพันธ์</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ab47bc' }} />นัดประชุม</span>
+              </div>
+            </div>
+
+            {/* Header Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{MONTHS_FULL[mo]} {yr + 543}</h2>
+              
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={setMonthToToday} style={{ background: '#2c2c2e', color: 'white', border: '1px solid #3a3a3c', padding: '6px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>วันนี้</button>
+                <button onClick={prevMonth} style={{ background: '#2c2c2e', color: 'white', border: '1px solid #3a3a3c', padding: '6px 12px', borderRadius: 6, cursor: 'pointer' }}>&lt;</button>
+                <button onClick={nextMonth} style={{ background: '#2c2c2e', color: 'white', border: '1px solid #3a3a3c', padding: '6px 12px', borderRadius: 6, cursor: 'pointer' }}>&gt;</button>
+              </div>
+            </div>
+
+            {/* Week Day Titles */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, marginBottom: 8, borderBottom: '1px solid #2c2c2e', paddingBottom: 6 }}>
+              {['จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์', 'อาทิตย์'].map(day => (
+                <div key={day} style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: '#a1a1a6' }}>
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Grid Cells */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, background: '#2c2c2e', padding: 1, borderRadius: 8, overflow: 'hidden' }}>
+              {/* Empty cells before the first day */}
+              {Array.from({ length: firstDayAdjusted }).map((_, idx) => (
+                <div key={`empty-${idx}`} style={{ background: '#1c1c1e', minHeight: 110 }} />
+              ))}
+
+              {/* Day cells */}
+              {Array.from({ length: daysInMonth }).map((_, idx) => {
+                const day = idx + 1;
+                const formattedDate = getFormattedDateStr(day);
+                const dayTasks = getTasksForDate(formattedDate);
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+                const isToday = formattedDate === todayStr;
+
+                return (
+                  <div key={day} style={{
+                    background: '#1c1c1e',
+                    minHeight: 110,
+                    padding: 6,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-start',
+                    border: isToday ? '1.5px solid #ff6b8b' : 'none'
+                  }}>
+                    {/* Day number */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+                      <span style={{
+                        fontSize: 12,
+                        fontWeight: isToday ? 700 : 400,
+                        color: isToday ? '#ff6b8b' : '#a1a1a6',
+                        background: isToday ? 'rgba(255, 107, 139, 0.15)' : 'transparent',
+                        borderRadius: '50%',
+                        width: 22,
+                        height: 22,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {day}
+                      </span>
+                    </div>
+
+                    {/* Tasks */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto', maxHeight: 80 }}>
+                      {dayTasks.map(t => {
+                        const typeColor = AV_TYPE_COLORS[t.type] || '#ff6b8b';
+                        return (
+                          <div key={t.id} onClick={() => openEdit(t)} style={{
+                            background: typeColor,
+                            color: 'white',
+                            borderRadius: 4,
+                            padding: '4px 6px',
+                            fontSize: 11,
+                            cursor: 'pointer',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                            transition: 'transform 0.1s',
+                            lineHeight: 1.2
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
+                          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                            <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {t.title}
+                            </div>
+                            <div style={{ fontSize: 9, opacity: 0.9, marginTop: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                              👤 {t.assignee || 'ไม่ระบุ'}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* List */}
       {tab === 'list' && (
