@@ -633,6 +633,367 @@ function sendTomorrowActivities() {
 }
 
 // ----------------------------------------------------------------------------
+// 9.5. ระบบการแจ้งเตือนเพิ่มเติม (Check-in, Clean Duty, PR News & Meetings Reminders)
+// ----------------------------------------------------------------------------
+
+// แจ้งเตือนเช็คชื่อ ปฏิบัติเวร และการประชุมตอนเช้า (เวลา 06:30 น.)
+function sendCheckInReminder() {
+  var now = new Date();
+  var todayStr = getGregorianStr(now);
+  var daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+  var todayDayName = daysTh[now.getDay()];
+  
+  try {
+    // 1. ดึงการตั้งค่าเช็คชื่อวันนี้เพื่อข้ามวันหยุด
+    var settings = fetchFromSupabase("attendance_settings", "select=key,value");
+    var enabledDays = [];
+    var disabledDates = [];
+    for (var i = 0; i < settings.length; i++) {
+      if (settings[i].key === "enabled_days") {
+        enabledDays = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "disabled_dates") {
+        disabledDates = parseArrayOrString(settings[i].value);
+      }
+    }
+    
+    if (!enabledDays.includes(todayDayName) || disabledDates.includes(todayStr)) {
+      console.log("Morning reminder skipped today (holiday or disabled day).");
+      return;
+    }
+    
+    // 2. ดึงตารางเวรทั้งหมดของวันนี้
+    var schedules = fetchFromSupabase("schedules", "day=eq." + encodeURIComponent(todayDayName));
+    var schedulesMap = {};
+    for (var i = 0; i < schedules.length; i++) {
+      var row = schedules[i];
+      var dataObj = {};
+      if (row.data) {
+        try {
+          dataObj = (typeof row.data === "string") ? JSON.parse(row.data) : row.data;
+        } catch(e) {
+          console.warn("Could not parse schedule data:", e.toString());
+        }
+      }
+      schedulesMap[row.type] = dataObj;
+    }
+    
+    // 3. ดึงข้อมูลสลับเวรของวันนี้
+    var swaps = [];
+    try {
+      swaps = fetchFromSupabase("duty_swaps", "date=eq." + todayStr);
+    } catch(e) {
+      console.warn("Could not fetch duty_swaps:", e.toString());
+    }
+    
+    var applySwaps = function(membersList, dutyTypeKey) {
+      if (!membersList || membersList.length === 0) return [];
+      var result = [];
+      for (var i = 0; i < membersList.length; i++) {
+        var member = membersList[i];
+        if (member === "–" || !member) continue;
+        var swapped = false;
+        for (var j = 0; j < swaps.length; j++) {
+          if (swaps[j].duty_type === dutyTypeKey && swaps[j].original_nickname === member) {
+            result.push(swaps[j].substitute_nickname + " (แทน " + member + ")");
+            swapped = true;
+            break;
+          }
+        }
+        if (!swapped) {
+          result.push(member);
+        }
+      }
+      return result;
+    };
+    
+    var fields = [];
+    
+    // - เวรยืนไหว้ต้อนรับ
+    var greetingData = schedulesMap["greeting"] || {};
+    var gate1 = applySwaps(greetingData.gate1 || [], "greeting_gate1");
+    var gate2 = applySwaps(greetingData.gate2 || [], "greeting_gate2");
+    var gate3 = applySwaps(greetingData.gate3 || [], "greeting_gate3");
+    
+    if (gate1.length > 0 || gate2.length > 0 || gate3.length > 0) {
+      var greetingLines = [];
+      if (gate1.length > 0) greetingLines.push("• **ประตูไหมไทย**: " + gate1.join(", "));
+      if (gate2.length > 0) greetingLines.push("• **ประตูอำเภอ**: " + gate2.join(", "));
+      if (gate3.length > 0) greetingLines.push("• **ประตูหน้า รร.**: " + gate3.join(", "));
+      
+      fields.push({
+        "name": "🙏 เวรยืนไหว้ต้อนรับ (เข้าจุดก่อน 07:10 น.)",
+        "value": greetingLines.join("\n"),
+        "inline": false
+      });
+    }
+    
+    // - เวรทำความสะอาดห้องสภา
+    var cleanRoomData = schedulesMap["clean_room"] || {};
+    var cleanMembers = applySwaps(cleanRoomData.members || [], "clean_room");
+    if (cleanMembers.length > 0) {
+      fields.push({
+        "name": "🧹 เวรทำความสะอาดห้องสภา",
+        "value": "- " + cleanMembers.join("\n- "),
+        "inline": true
+      });
+    }
+    
+    // - เวรเชิญธงชาติ/ธงสี
+    var nationalFlagData = schedulesMap["national_flag"] || {};
+    var nationalMembers = applySwaps(nationalFlagData.members || [], "national_flag");
+    var colorFlagData = schedulesMap["color_flag"] || {};
+    var colorMembers = applySwaps(colorFlagData.members || [], "color_flag");
+    
+    if (nationalMembers.length > 0 || colorMembers.length > 0) {
+      var flagLines = [];
+      if (nationalMembers.length > 0) flagLines.push("• **เชิญธงชาติ**: " + nationalMembers.join(", "));
+      if (colorMembers.length > 0) flagLines.push("• **เชิญธงสี**: " + colorMembers.join(", "));
+      
+      fields.push({
+        "name": "🚩 เวรเชิญธงเคารพธงชาติ",
+        "value": flagLines.join("\n"),
+        "inline": true
+      });
+    }
+    
+    // 4. ดึงข้อมูลประชุมสภานักเรียนวันนี้จาก Google Sheet
+    var meetings = [];
+    try {
+      meetings = readFromSheet("Secretary_Meetings");
+    } catch(e) {
+      console.warn("Could not read meetings sheet:", e.toString());
+    }
+    
+    var todayMeetings = [];
+    for (var m = 0; m < meetings.length; m++) {
+      var mt = meetings[m];
+      if (mt.date && mt.status !== "cancelled") {
+        var normalizedMeetingDate = "";
+        if (typeof mt.date === "string") {
+          normalizedMeetingDate = mt.date.split("T")[0];
+        } else if (mt.date instanceof Date) {
+          normalizedMeetingDate = getGregorianStr(mt.date);
+        }
+        
+        if (normalizedMeetingDate === todayStr) {
+          todayMeetings.push(mt);
+        }
+      }
+    }
+    
+    if (todayMeetings.length > 0) {
+      var meetingLines = [];
+      for (var n = 0; n < todayMeetings.length; n++) {
+        var mt = todayMeetings[n];
+        meetingLines.push("• 📝 **" + mt.title + "**\n  ⏱️ เวลา: " + (mt.time || "ระบุภายหลัง") + " น. | 📍 สถานที่: " + (mt.location || "ห้องสภา"));
+      }
+      fields.push({
+        "name": "📅 นัดหมายการประชุมสภานักเรียนในวันนี้",
+        "value": meetingLines.join("\n"),
+        "inline": false
+      });
+    }
+    
+    // ส่งการ์ดแจ้งเตือนเช็คชื่อและเวรเข้า Discord
+    sendDiscordEmbed(
+      "⏰ แจ้งเตือนเช็คชื่อและปฏิบัติหน้าที่เวรประจำวัน",
+      "อรุณสวัสดิ์ครับสมาชิกสภานักเรียนทุกท่าน 🏫\nอย่าลืมเช็คชื่อเข้าแถวโรงเรียนปกติให้เรียบร้อยด้วยนะครับ!",
+      15105570, // สีส้มทอง
+      fields,
+      null,
+      "attendance_alerts"
+    );
+    
+    // ส่งแจ้งเตือน Push Notification เข้ามือถือ
+    sendOneSignalPush(
+      "⏰ อย่าลืมเช็คชื่อและปฏิบัติเวรประจำวัน",
+      "อรุณสวัสดิ์ครับ อย่าลืมลงชื่อเข้าโรงเรียนปกติ และตรวจสอบรายชื่อเวรประจำวันของคุณในหน้าพอร์ทัลนะครับ"
+    );
+    
+  } catch (err) {
+    console.error("Error sending morning reminder:", err);
+  }
+}
+
+// แจ้งเตือนติดตามทำความสะอาดห้องสภาตอนบ่าย (เวลา 16:00 น.)
+function sendCleanDutyReminder() {
+  var now = new Date();
+  var todayStr = getGregorianStr(now);
+  var daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+  var todayDayName = daysTh[now.getDay()];
+  
+  try {
+    // 1. ดึงการตั้งค่าเช็คชื่อวันนี้
+    var settings = fetchFromSupabase("attendance_settings", "select=key,value");
+    var enabledDays = [];
+    var disabledDates = [];
+    for (var i = 0; i < settings.length; i++) {
+      if (settings[i].key === "enabled_days") {
+        enabledDays = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "disabled_dates") {
+        disabledDates = parseArrayOrString(settings[i].value);
+      }
+    }
+    
+    if (!enabledDays.includes(todayDayName) || disabledDates.includes(todayStr)) {
+      console.log("Clean duty afternoon reminder skipped (holiday).");
+      return;
+    }
+    
+    // 2. ดึงรายชื่อเวรห้องสภาวันนี้
+    var schedules = fetchFromSupabase("schedules", "type=eq.clean_room&day=eq." + encodeURIComponent(todayDayName));
+    if (!schedules || schedules.length === 0) {
+      console.log("No clean duty schedule for today.");
+      return;
+    }
+    
+    var dataObj = {};
+    if (schedules[0].data) {
+      try {
+        dataObj = (typeof schedules[0].data === "string") ? JSON.parse(schedules[0].data) : schedules[0].data;
+      } catch(e) {}
+    }
+    var members = dataObj.members || [];
+    if (members.length === 0 || members[0] === "–") {
+      console.log("No clean duty members today.");
+      return;
+    }
+    
+    // 3. ดึงสถานะรายงานเวรวันนี้
+    var checks = fetchFromSupabase("clean_duty_checks", "date=eq." + todayStr);
+    var doneMap = {};
+    for (var i = 0; i < checks.length; i++) {
+      if (checks[i].status === "done") {
+        doneMap[checks[i].nickname] = true;
+      }
+    }
+    
+    var pendingMembers = [];
+    for (var j = 0; j < members.length; j++) {
+      var name = members[j];
+      if (name === "–" || !name) continue;
+      if (!doneMap[name]) {
+        pendingMembers.push(name);
+      }
+    }
+    
+    // ถ้าทุกคนส่งหมดแล้ว ไม่ต้องแจ้งเตือน
+    if (pendingMembers.length === 0) {
+      console.log("All members have completed clean duty today.");
+      return;
+    }
+    
+    // แจ้งเตือนคนที่ยังไม่ได้ส่ง
+    sendDiscordEmbed(
+      "🧹 แจ้งเตือนทำความสะอาดห้องสภาและส่งเวรเย็นนี้",
+      "กรุณาเข้าทำความสะอาดห้องสภานักเรียน ถ่ายรูปส่งรายงานในหน้าพอร์ทัลก่อนเวลา 18:00 น. ด้วยครับ 🏫",
+      15158332, // สีแดงส้มเตือนภัย
+      [{ name: "⏳ สมาชิกที่ยังไม่ได้ส่งรายงานเวร", value: "- " + pendingMembers.join("\n- "), inline: false }],
+      null,
+      "attendance_alerts"
+    );
+    
+    sendOneSignalPush(
+      "🧹 แจ้งเตือนทำเวรห้องสภาและส่งรายงาน",
+      "คุณมีหน้าที่เวรห้องสภาเย็นนี้ที่ยังไม่ได้ส่งรายงาน กรุณาปฏิบัติหน้าที่และอัปโหลดรูปให้เสร็จก่อน 18:00 น. ครับ"
+    );
+    
+  } catch (err) {
+    console.error("Error sending clean duty afternoon reminder:", err);
+  }
+}
+
+// แจ้งเตือนเวรหาข่าวประชาสัมพันธ์วันพรุ่งนี้ (เวลา 20:00 น.)
+function sendTomorrowPRNewsDuty() {
+  var tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  var tomorrowStr = getGregorianStr(tomorrow);
+  var daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+  var tomorrowDayName = daysTh[tomorrow.getDay()];
+  
+  try {
+    // 1. ดึงการตั้งค่าเพื่อข้ามวันหยุด
+    var settings = fetchFromSupabase("attendance_settings", "select=key,value");
+    var enabledDays = [];
+    var disabledDates = [];
+    for (var i = 0; i < settings.length; i++) {
+      if (settings[i].key === "enabled_days") {
+        enabledDays = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "disabled_dates") {
+        disabledDates = parseArrayOrString(settings[i].value);
+      }
+    }
+    
+    if (!enabledDays.includes(tomorrowDayName) || disabledDates.includes(tomorrowStr)) {
+      console.log("PR news duty reminder skipped for tomorrow (holiday).");
+      return;
+    }
+    
+    // 2. ดึงตารางเวรหาข่าวประชาสัมพันธ์สำหรับวันพรุ่งนี้
+    var schedules = fetchFromSupabase("schedules", "type=eq.pr_news&day=eq." + encodeURIComponent(tomorrowDayName));
+    if (!schedules || schedules.length === 0) {
+      console.log("No PR news duty schedule for tomorrow.");
+      return;
+    }
+    
+    var dataObj = {};
+    if (schedules[0].data) {
+      try {
+        dataObj = (typeof schedules[0].data === "string") ? JSON.parse(schedules[0].data) : schedules[0].data;
+      } catch(e) {}
+    }
+    
+    var originalMembers = dataObj.members || [];
+    if (originalMembers.length === 0 || originalMembers[0] === "–") {
+      console.log("No PR news members assigned for tomorrow.");
+      return;
+    }
+    
+    // 3. ดึงสลับเวรวันพรุ่งนี้
+    var swaps = [];
+    try {
+      swaps = fetchFromSupabase("duty_swaps", "date=eq." + tomorrowStr);
+    } catch(e) {}
+    
+    var finalMembers = [];
+    for (var k = 0; k < originalMembers.length; k++) {
+      var member = originalMembers[k];
+      if (member === "–" || !member) continue;
+      var swapped = false;
+      for (var j = 0; j < swaps.length; j++) {
+        if (swaps[j].duty_type === "pr_news" && swaps[j].original_nickname === member) {
+          finalMembers.push(swaps[j].substitute_nickname + " (แทน " + member + ")");
+          swapped = true;
+          break;
+        }
+      }
+      if (!swapped) {
+        finalMembers.push(member);
+      }
+    }
+    
+    if (finalMembers.length === 0) return;
+    
+    sendDiscordEmbed(
+      "📣 แจ้งเตือนเวรหาข่าวประชาสัมพันธ์วันพรุ่งนี้",
+      "วัน" + tomorrowDayName + "ที่ " + tomorrow.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }) + "\nกรุณาจัดเตรียมหรือจัดหาข่าวประชาสัมพันธ์สำหรับวันพรุ่งนี้ด้วยนะครับ 🏫",
+      3447003, // สีน้ำเงิน
+      [{ name: "👥 ผู้ปฏิบัติหน้าที่เวรหาข่าว", value: "- " + finalMembers.join("\n- "), inline: false }],
+      null,
+      "pr"
+    );
+    
+    sendOneSignalPush(
+      "📣 แจ้งเตือนเวรหาข่าวประชาสัมพันธ์วันพรุ่งนี้",
+      "คุณมีเวรหาข่าวประชาสัมพันธ์ในวันพรุ่งนี้ (" + tomorrowDayName + ") กรุณาจัดเตรียมข่าวสารให้เรียบร้อยครับ"
+    );
+    
+  } catch (err) {
+    console.error("Error sending tomorrow PR news duty reminder:", err);
+  }
+}
+
+// ----------------------------------------------------------------------------
 // 10. ระบบตั้งค่าและกำหนดรัน Trigger
 // ----------------------------------------------------------------------------
 
@@ -658,11 +1019,24 @@ function scheduleForToday() {
     var handlerName = triggers[i].getHandlerFunction();
     if (handlerName === "sendAttendanceSummary" || 
         handlerName === "sendCleanDutySummary" || 
-        handlerName === "sendTomorrowActivities") {
+        handlerName === "sendTomorrowActivities" ||
+        handlerName === "sendCheckInReminder" ||
+        handlerName === "sendCleanDutyReminder" ||
+        handlerName === "sendTomorrowPRNewsDuty") {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
   
+  // 1. แจ้งเตือนเช็คชื่อและเวรประจำวัน (06:30 น.)
+  var time630 = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 6, 30, 0);
+  if (time630 > new Date()) {
+    ScriptApp.newTrigger("sendCheckInReminder")
+             .timeBased()
+             .at(time630)
+             .create();
+  }
+  
+  // 2. สรุปยอดเช็คชื่อเข้าแถวเช้า (08:20 น.)
   var time820 = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 20, 0);
   if (time820 > new Date()) {
     ScriptApp.newTrigger("sendAttendanceSummary")
@@ -671,6 +1045,16 @@ function scheduleForToday() {
              .create();
   }
   
+  // 3. เตือนส่งเวรทำความสะอาดห้องสภา (16:00 น.)
+  var time1600 = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 16, 0, 0);
+  if (time1600 > new Date()) {
+    ScriptApp.newTrigger("sendCleanDutyReminder")
+             .timeBased()
+             .at(time1600)
+             .create();
+  }
+  
+  // 4. สรุปการส่งเวรห้องสภา (18:00 น.)
   var time1800 = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 18, 0, 0);
   if (time1800 > new Date()) {
     ScriptApp.newTrigger("sendCleanDutySummary")
@@ -679,14 +1063,21 @@ function scheduleForToday() {
              .create();
   }
   
+  // 5. แจ้งเตือนกิจกรรม และเวรหาข่าวประชาสัมพันธ์วันพรุ่งนี้ (20:00 น.)
   var time2000 = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 20, 0, 0);
   if (time2000 > new Date()) {
     ScriptApp.newTrigger("sendTomorrowActivities")
              .timeBased()
              .at(time2000)
              .create();
+             
+    ScriptApp.newTrigger("sendTomorrowPRNewsDuty")
+             .timeBased()
+             .at(time2000)
+             .create();
   }
 }
+
 
 // ฟังก์ชันสำหรับทดสอบการยิง Webhook ของการเช็คชื่อเข้า Discord โดยตรง
 function testAttendanceWebhook() {
