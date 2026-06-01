@@ -10,6 +10,7 @@ export default function SettingsPage() {
   const [pushSupported, setPushSupported] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState('default'); // 'default', 'granted', 'denied'
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscriptionId, setSubscriptionId] = useState('');
 
   useEffect(() => {
     try {
@@ -32,9 +33,11 @@ export default function SettingsPage() {
         
         if (OneSignal.User?.PushSubscription) {
           setIsSubscribed(OneSignal.User.PushSubscription.optedIn || false);
+          setSubscriptionId(OneSignal.User.PushSubscription.id || '');
           try {
             OneSignal.User.PushSubscription.addEventListener('change', (state) => {
               setIsSubscribed(state?.current?.optedIn || false);
+              setSubscriptionId(state?.current?.id || '');
             });
           } catch (e) {
             console.warn("OneSignal subscription change listener error", e);
@@ -57,6 +60,7 @@ export default function SettingsPage() {
         }
         if (OneSignal.User?.PushSubscription) {
           setIsSubscribed(OneSignal.User.PushSubscription.optedIn || false);
+          setSubscriptionId(OneSignal.User.PushSubscription.id || '');
         }
       } catch (err) {
         console.error("Failed to request permission:", err);
@@ -203,7 +207,10 @@ export default function SettingsPage() {
                     {notificationPermission === 'granted' ? (
                       <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         {isSubscribed ? (
-                          <span style={{ color: '#4caf50', fontWeight: 500 }}>อุปกรณ์นี้ลงทะเบียนสำเร็จและพร้อมรับแจ้งเตือนแล้ว ✅</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                            <span style={{ color: '#4caf50', fontWeight: 500 }}>อุปกรณ์นี้ลงทะเบียนสำเร็จและพร้อมรับแจ้งเตือนแล้ว ✅</span>
+                            {subscriptionId && <span style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.4)', fontFamily: 'monospace' }}>ID: {subscriptionId}</span>}
+                          </div>
                         ) : (
                           <button 
                             type="button" 
