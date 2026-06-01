@@ -18,6 +18,7 @@ export default function CheckInPage() {
   const [enabledDays, setEnabledDays] = useState(["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์"]);
   const [disabledDates, setDisabledDates] = useState([]);
   const [startDate, setStartDate] = useState('');
+  const [checkInActive, setCheckInActive] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [greetingSchedules, setGreetingSchedules] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -63,9 +64,11 @@ export default function CheckInPage() {
           const days = data.find(d => d.key === 'enabled_days')?.value;
           const dates = data.find(d => d.key === 'disabled_dates')?.value;
           const startD = data.find(d => d.key === 'start_date')?.value;
+          const checkInAct = data.find(d => d.key === 'check_in_active')?.value;
           if (days) setEnabledDays(days);
           if (dates) setDisabledDates(dates);
           if (startD) setStartDate(startD);
+          if (checkInAct !== undefined) setCheckInActive(checkInAct !== 'false');
         }
       } catch (err) {
         console.error('Error loading settings in CheckInPage:', err);
@@ -370,6 +373,25 @@ export default function CheckInPage() {
         </h2>
         <div style={{ fontSize: 14, color: '#757575', marginTop: 8 }}>
           ในฐานะผู้ดูแลระบบ คุณได้รับการยกเว้นและไม่จำเป็นต้องเช็คชื่อเข้าโรงเรียน
+        </div>
+        <div style={{ marginTop: 32 }}>
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
+            กลับหน้าหลัก
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!checkInActive) {
+    return (
+      <div style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
+        <AlertTriangle size={64} color="#e53935" style={{ margin: '0 auto' }} />
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#37474f', marginTop: 16 }}>
+          ระบบเช็คชื่อปิดให้บริการชั่วคราวโดยผู้ดูแลระบบ
+        </h2>
+        <div style={{ fontSize: 14, color: '#757575', marginTop: 8 }}>
+          ผู้ดูแลระบบได้ปิดใช้งานส่วนนี้ชั่วคราว กรุณาติดตามประกาศหรือติดต่อฝ่ายปกครอง
         </div>
         <div style={{ marginTop: 32 }}>
           <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>

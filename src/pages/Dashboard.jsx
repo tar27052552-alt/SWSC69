@@ -57,6 +57,9 @@ export default function Dashboard() {
   const [startDate, setStartDate] = useState('');
   const [cleanDutyStartDate, setCleanDutyStartDate] = useState('');
   const [greetingDutyStartDate, setGreetingDutyStartDate] = useState('');
+  const [checkInActive, setCheckInActive] = useState(true);
+  const [greetingActive, setGreetingActive] = useState(true);
+  const [cleanActive, setCleanActive] = useState(true);
   const [loading, setLoading] = useState(true);
   const [eventParticipants, setEventParticipants] = useState([]);
   const [dutySwaps, setDutySwaps] = useState([]);
@@ -552,6 +555,14 @@ export default function Dashboard() {
           greetingStartD = settingsData.find(d => d.key === 'greeting_duty_start_date')?.value || '';
           setGreetingDutyStartDate(greetingStartD);
 
+          const checkInAct = settingsData.find(d => d.key === 'check_in_active')?.value;
+          const greetingAct = settingsData.find(d => d.key === 'greeting_duty_active')?.value;
+          const cleanAct = settingsData.find(d => d.key === 'clean_duty_active')?.value;
+
+          setCheckInActive(checkInAct !== 'false');
+          setGreetingActive(greetingAct !== 'false');
+          setCleanActive(cleanAct !== 'false');
+
           const enabledDaysRow = settingsData.find(d => d.key === 'enabled_days');
           if (enabledDaysRow) {
             enabledDays = typeof enabledDaysRow.value === 'string'
@@ -654,10 +665,13 @@ export default function Dashboard() {
 
         if (user && isAdmin) {
           const serverNow = await fetchServerDate();
-          if (cleanData) {
+          const greetingAct = settingsData?.find(d => d.key === 'greeting_duty_active')?.value !== 'false';
+          const cleanAct = settingsData?.find(d => d.key === 'clean_duty_active')?.value !== 'false';
+
+          if (cleanData && cleanAct) {
             await runAutoCleanFinesCheck(cleanData, cleanStartD, eventsData || [], partData || [], enabledDays, disabledDates, serverNow);
           }
-          if (greetingData) {
+          if (greetingData && greetingAct) {
             await runAutoGreetingFinesCheck(greetingData, greetingStartD, eventsData || [], partData || [], swapData || [], enabledDays, disabledDates, serverNow);
           }
           await checkAndDoubleOverdueFines(serverNow);
@@ -737,7 +751,19 @@ export default function Dashboard() {
       ))}
 
       {/* Check-in Banner */}
-      {!checkInState ? (
+      {!checkInActive ? (
+        <div style={{ background: '#eceff1', borderRadius: 8, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, border: '1px solid #cfd8dc' }}>
+          <MapPin size={24} color="#455a64" />
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#455a64' }}>
+              📍 งดการเช็คชื่อเข้าโรงเรียนปกติในวันนี้
+            </div>
+            <div style={{ fontSize: 12, color: '#757575', marginTop: 4 }}>
+              ผู้ดูแลระบบปิดการใช้งานระบบเช็คชื่อชั่วคราว
+            </div>
+          </div>
+        </div>
+      ) : !checkInState ? (
         <div style={{ background: 'linear-gradient(to right, #e0f7fa, #b2ebf2)', borderRadius: 8, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #80deea' }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: '#00838f', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -801,7 +827,19 @@ export default function Dashboard() {
 
       {/* Greeting Duty Banner */}
       {hasGreetingDutyToday && (
-        !greetingDutyState ? (
+        !greetingActive ? (
+          <div style={{ background: '#eceff1', borderRadius: 8, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, border: '1px solid #cfd8dc' }}>
+            <HandHeart size={24} color="#455a64" />
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#455a64' }}>
+                🙏 งดการส่งรายงานเวรยืนไหว้ในวันนี้
+              </div>
+              <div style={{ fontSize: 12, color: '#757575', marginTop: 4 }}>
+                ประตู: {myGreetingGateLabel} | ผู้ดูแลระบบปิดใช้งานระบบเวรยืนไหว้ชั่วคราว
+              </div>
+            </div>
+          </div>
+        ) : !greetingDutyState ? (
           !checkInState ? (
             <div style={{ background: 'linear-gradient(to right, #eceff1, #cfd8dc)', borderRadius: 8, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #b0bec5' }}>
               <div>
@@ -844,7 +882,19 @@ export default function Dashboard() {
 
       {/* Clean Duty Banner */}
       {hasCleanDuty && (
-        !cleanDutyState ? (
+        !cleanActive ? (
+          <div style={{ background: '#eceff1', borderRadius: 8, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, border: '1px solid #cfd8dc' }}>
+            <Sparkles size={24} color="#455a64" />
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#455a64' }}>
+                🧹 งดการส่งรายงานเวรห้องสภาในวันนี้
+              </div>
+              <div style={{ fontSize: 12, color: '#757575', marginTop: 4 }}>
+                ผู้ดูแลระบบปิดใช้งานระบบเวรทำความสะอาดห้องสภาชั่วคราว
+              </div>
+            </div>
+          </div>
+        ) : !cleanDutyState ? (
           <div style={{ background: 'linear-gradient(to right, #fff3e0, #ffe0b2)', borderRadius: 8, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #ffcc80' }}>
             <div>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#e65100', display: 'flex', alignItems: 'center', gap: 6 }}>

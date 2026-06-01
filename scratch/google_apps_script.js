@@ -459,13 +459,21 @@ function sendAttendanceSummary() {
     var settings = fetchFromSupabase("attendance_settings", "select=key,value");
     var enabledDays = [];
     var disabledDates = [];
+    var checkInActive = "true";
     
     for (var i = 0; i < settings.length; i++) {
       if (settings[i].key === "enabled_days") {
         enabledDays = parseArrayOrString(settings[i].value);
       } else if (settings[i].key === "disabled_dates") {
         disabledDates = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "check_in_active") {
+        checkInActive = settings[i].value;
       }
+    }
+    
+    if (checkInActive === "false") {
+      console.log("Attendance summary skipped because check-in system is inactive.");
+      return;
     }
     
     if (!enabledDays.includes(todayDayName) || disabledDates.includes(todayStr)) {
@@ -541,12 +549,20 @@ function sendGreetingDutySummary() {
     var settings = fetchFromSupabase("attendance_settings", "select=key,value");
     var enabledDays = [];
     var disabledDates = [];
+    var greetingActive = "true";
     for (var i = 0; i < settings.length; i++) {
       if (settings[i].key === "enabled_days") {
         enabledDays = parseArrayOrString(settings[i].value);
       } else if (settings[i].key === "disabled_dates") {
         disabledDates = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "greeting_duty_active") {
+        greetingActive = settings[i].value;
       }
+    }
+    
+    if (greetingActive === "false") {
+      console.log("Greeting duty summary skipped because greeting duty system is inactive.");
+      return;
     }
     
     if (!enabledDays.includes(todayDayName) || disabledDates.includes(todayStr)) {
@@ -677,6 +693,31 @@ function sendCleanDutySummary() {
   var todayDayName = daysTh[now.getDay()];
   
   try {
+    // 1. ดึงการตั้งค่าเพื่อตรวจสอบการเปิดใช้งานระบบและวันหยุด
+    var settings = fetchFromSupabase("attendance_settings", "select=key,value");
+    var enabledDays = [];
+    var disabledDates = [];
+    var cleanActive = "true";
+    for (var i = 0; i < settings.length; i++) {
+      if (settings[i].key === "enabled_days") {
+        enabledDays = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "disabled_dates") {
+        disabledDates = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "clean_duty_active") {
+        cleanActive = settings[i].value;
+      }
+    }
+    
+    if (cleanActive === "false") {
+      console.log("Clean duty summary skipped because clean duty system is inactive.");
+      return;
+    }
+    
+    if (!enabledDays.includes(todayDayName) || disabledDates.includes(todayStr)) {
+      console.log("Clean duty summary skipped today (holiday or disabled day).");
+      return;
+    }
+
     var schedules = fetchFromSupabase("schedules", "type=eq.clean_room&day=eq." + todayDayName);
     if (!schedules || schedules.length === 0) {
       console.log("No clean duty schedule for today.");
@@ -784,15 +825,24 @@ function sendCheckInReminder() {
   var todayDayName = daysTh[now.getDay()];
   
   try {
-    // 1. ดึงการตั้งค่าเช็คชื่อวันนี้เพื่อข้ามวันหยุด
+    // 1. ดึงการตั้งค่าเช็คชื่อวันนี้เพื่อข้ามวันหยุดและตรวจสอบระบบย่อย
     var settings = fetchFromSupabase("attendance_settings", "select=key,value");
     var enabledDays = [];
     var disabledDates = [];
+    var checkInActive = "true";
+    var greetingActive = "true";
+    var cleanActive = "true";
     for (var i = 0; i < settings.length; i++) {
       if (settings[i].key === "enabled_days") {
         enabledDays = parseArrayOrString(settings[i].value);
       } else if (settings[i].key === "disabled_dates") {
         disabledDates = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "check_in_active") {
+        checkInActive = settings[i].value;
+      } else if (settings[i].key === "greeting_duty_active") {
+        greetingActive = settings[i].value;
+      } else if (settings[i].key === "clean_duty_active") {
+        cleanActive = settings[i].value;
       }
     }
     
@@ -849,33 +899,37 @@ function sendCheckInReminder() {
     var fields = [];
     
     // - เวรยืนไหว้ต้อนรับ
-    var greetingData = schedulesMap["greeting"] || {};
-    var gate1 = applySwaps(greetingData.gate1 || [], "greeting_gate1");
-    var gate2 = applySwaps(greetingData.gate2 || [], "greeting_gate2");
-    var gate3 = applySwaps(greetingData.gate3 || [], "greeting_gate3");
-    
-    if (gate1.length > 0 || gate2.length > 0 || gate3.length > 0) {
-      var greetingLines = [];
-      if (gate1.length > 0) greetingLines.push("• **ประตูไหมไทย**: " + gate1.join(", "));
-      if (gate2.length > 0) greetingLines.push("• **ประตูอำเภอ**: " + gate2.join(", "));
-      if (gate3.length > 0) greetingLines.push("• **ประตูหน้า รร.**: " + gate3.join(", "));
+    if (greetingActive !== "false") {
+      var greetingData = schedulesMap["greeting"] || {};
+      var gate1 = applySwaps(greetingData.gate1 || [], "greeting_gate1");
+      var gate2 = applySwaps(greetingData.gate2 || [], "greeting_gate2");
+      var gate3 = applySwaps(greetingData.gate3 || [], "greeting_gate3");
       
-      fields.push({
-        "name": "🙏 เวรยืนไหว้ต้อนรับ (เข้าจุดก่อน 07:10 น.)",
-        "value": greetingLines.join("\n"),
-        "inline": false
-      });
+      if (gate1.length > 0 || gate2.length > 0 || gate3.length > 0) {
+        var greetingLines = [];
+        if (gate1.length > 0) greetingLines.push("• **ประตูไหมไทย**: " + gate1.join(", "));
+        if (gate2.length > 0) greetingLines.push("• **ประตูอำเภอ**: " + gate2.join(", "));
+        if (gate3.length > 0) greetingLines.push("• **ประตูหน้า รร.**: " + gate3.join(", "));
+        
+        fields.push({
+          "name": "🙏 เวรยืนไหว้ต้อนรับ (เข้าจุดก่อน 07:10 น.)",
+          "value": greetingLines.join("\n"),
+          "inline": false
+        });
+      }
     }
     
     // - เวรทำความสะอาดห้องสภา
-    var cleanRoomData = schedulesMap["clean_room"] || {};
-    var cleanMembers = applySwaps(cleanRoomData.members || [], "clean_room");
-    if (cleanMembers.length > 0) {
-      fields.push({
-        "name": "🧹 เวรทำความสะอาดห้องสภา",
-        "value": "- " + cleanMembers.join("\n- "),
-        "inline": true
-      });
+    if (cleanActive !== "false") {
+      var cleanRoomData = schedulesMap["clean_room"] || {};
+      var cleanMembers = applySwaps(cleanRoomData.members || [], "clean_room");
+      if (cleanMembers.length > 0) {
+        fields.push({
+          "name": "🧹 เวรทำความสะอาดห้องสภา",
+          "value": "- " + cleanMembers.join("\n- "),
+          "inline": true
+        });
+      }
     }
     
     // - เวรเชิญธงชาติ/ธงสี
@@ -934,10 +988,20 @@ function sendCheckInReminder() {
       });
     }
     
+    var reminderDesc = "อรุณสวัสดิ์ครับสมาชิกสภานักเรียนทุกท่าน 🏫\nอย่าลืมเช็คชื่อเข้าแถวโรงเรียนปกติให้เรียบร้อยด้วยนะครับ!";
+    var pushTitle = "⏰ อย่าลืมเช็คชื่อและปฏิบัติเวรประจำวัน";
+    var pushMsg = "อรุณสวัสดิ์ครับ อย่าลืมลงชื่อเข้าโรงเรียนปกติ และตรวจสอบรายชื่อเวรประจำวันของคุณในหน้าพอร์ทัลนะครับ";
+    
+    if (checkInActive === "false") {
+      reminderDesc = "อรุณสวัสดิ์ครับสมาชิกสภานักเรียนทุกท่าน 🏫\nตรวจสอบกำหนดการปฏิบัติหน้าที่และนัดหมายประจำวันได้ด้านล่างครับ";
+      pushTitle = "⏰ แจ้งเตือนปฏิบัติหน้าที่และนัดหมายประจำวัน";
+      pushMsg = "อรุณสวัสดิ์ครับ ตรวจสอบรายชื่อปฏิบัติหน้าที่และนัดหมายของคุณในหน้าพอร์ทัลประจำวันนี้ครับ";
+    }
+    
     // ส่งการ์ดแจ้งเตือนเช็คชื่อและเวรเข้า Discord
     sendDiscordEmbed(
       "⏰ แจ้งเตือนเช็คชื่อและปฏิบัติหน้าที่เวรประจำวัน",
-      "อรุณสวัสดิ์ครับสมาชิกสภานักเรียนทุกท่าน 🏫\nอย่าลืมเช็คชื่อเข้าแถวโรงเรียนปกติให้เรียบร้อยด้วยนะครับ!",
+      reminderDesc,
       15105570, // สีส้มทอง
       fields,
       null,
@@ -946,8 +1010,8 @@ function sendCheckInReminder() {
     
     // ส่งแจ้งเตือน Push Notification เข้ามือถือ
     sendOneSignalPush(
-      "⏰ อย่าลืมเช็คชื่อและปฏิบัติเวรประจำวัน",
-      "อรุณสวัสดิ์ครับ อย่าลืมลงชื่อเข้าโรงเรียนปกติ และตรวจสอบรายชื่อเวรประจำวันของคุณในหน้าพอร์ทัลนะครับ"
+      pushTitle,
+      pushMsg
     );
     
   } catch (err) {
@@ -967,12 +1031,20 @@ function sendCleanDutyReminder() {
     var settings = fetchFromSupabase("attendance_settings", "select=key,value");
     var enabledDays = [];
     var disabledDates = [];
+    var cleanActive = "true";
     for (var i = 0; i < settings.length; i++) {
       if (settings[i].key === "enabled_days") {
         enabledDays = parseArrayOrString(settings[i].value);
       } else if (settings[i].key === "disabled_dates") {
         disabledDates = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "clean_duty_active") {
+        cleanActive = settings[i].value;
       }
+    }
+    
+    if (cleanActive === "false") {
+      console.log("Clean duty afternoon reminder skipped because clean duty system is inactive.");
+      return;
     }
     
     if (!enabledDays.includes(todayDayName) || disabledDates.includes(todayStr)) {

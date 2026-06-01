@@ -145,6 +145,9 @@ export default function DisciplinePage() {
   const [cleanDutyStartDate, setCleanDutyStartDate] = useState('');
   const [greetingDutyStartDate, setGreetingDutyStartDate] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [checkInActive, setCheckInActive] = useState(true);
+  const [greetingActive, setGreetingActive] = useState(true);
+  const [cleanActive, setCleanActive] = useState(true);
   const [cleanSchedules, setCleanSchedules] = useState([]);
   const [greetingSchedules, setGreetingSchedules] = useState([]);
   const [viewPhotoUrl, setViewPhotoUrl] = useState(null);
@@ -162,11 +165,18 @@ export default function DisciplinePage() {
           const startD = data.find(d => d.key === 'start_date')?.value;
           const cleanStartD = data.find(d => d.key === 'clean_duty_start_date')?.value;
           const greetingStartD = data.find(d => d.key === 'greeting_duty_start_date')?.value;
+          const checkInAct = data.find(d => d.key === 'check_in_active')?.value;
+          const greetingAct = data.find(d => d.key === 'greeting_duty_active')?.value;
+          const cleanAct = data.find(d => d.key === 'clean_duty_active')?.value;
+
           if (days) setEnabledDays(days);
           if (dates) setDisabledDates(dates);
           if (startD) setStartDate(startD);
           if (cleanStartD) setCleanDutyStartDate(cleanStartD);
           if (greetingStartD) setGreetingDutyStartDate(greetingStartD);
+          if (checkInAct !== undefined) setCheckInActive(checkInAct !== 'false');
+          if (greetingAct !== undefined) setGreetingActive(greetingAct !== 'false');
+          if (cleanAct !== undefined) setCleanActive(cleanAct !== 'false');
         }
       } catch (err) {
         console.error('Error loading settings:', err);
@@ -236,6 +246,45 @@ export default function DisciplinePage() {
       if (error) throw error;
     } catch (err) {
       console.error('Error saving greeting duty start date:', err);
+    }
+  };
+
+  const toggleCheckInActive = async () => {
+    const nextVal = !checkInActive;
+    setCheckInActive(nextVal);
+    try {
+      const { error } = await supabase
+        .from('attendance_settings')
+        .upsert([{ key: 'check_in_active', value: String(nextVal) }], { onConflict: 'key' });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error toggling check-in active state:', err);
+    }
+  };
+
+  const toggleGreetingActive = async () => {
+    const nextVal = !greetingActive;
+    setGreetingActive(nextVal);
+    try {
+      const { error } = await supabase
+        .from('attendance_settings')
+        .upsert([{ key: 'greeting_duty_active', value: String(nextVal) }], { onConflict: 'key' });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error toggling greeting active state:', err);
+    }
+  };
+
+  const toggleCleanActive = async () => {
+    const nextVal = !cleanActive;
+    setCleanActive(nextVal);
+    try {
+      const { error } = await supabase
+        .from('attendance_settings')
+        .upsert([{ key: 'clean_duty_active', value: String(nextVal) }], { onConflict: 'key' });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error toggling clean active state:', err);
     }
   };
 
@@ -934,6 +983,75 @@ export default function DisciplinePage() {
                     </div>
                     {!greetingDutyStartDate && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>* เริ่มบังคับทุกวันทำงาน</div>}
                   </div>
+                </div>
+              </div>
+
+              {/* Individual System Toggles */}
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13, color: '#455a64', marginBottom: 8 }}>เปิด/ปิด การใช้งานระบบย่อย (เปิดบริการ / งดชั่วคราว):</div>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={toggleCheckInActive}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      border: `1px solid ${checkInActive ? '#4caf50' : '#e0e0e0'}`,
+                      background: checkInActive ? '#e8f5e9' : '#fafafa',
+                      color: checkInActive ? '#2e7d32' : '#9e9e9e',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    <span>📍</span>
+                    <span>เช็คชื่อเข้าโรงเรียนปกติ: {checkInActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}</span>
+                  </button>
+
+                  <button
+                    onClick={toggleGreetingActive}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      border: `1px solid ${greetingActive ? '#4caf50' : '#e0e0e0'}`,
+                      background: greetingActive ? '#e8f5e9' : '#fafafa',
+                      color: greetingActive ? '#2e7d32' : '#9e9e9e',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    <span>🙏</span>
+                    <span>เวรยืนไหว้ต้อนรับ: {greetingActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}</span>
+                  </button>
+
+                  <button
+                    onClick={toggleCleanActive}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      border: `1px solid ${cleanActive ? '#4caf50' : '#e0e0e0'}`,
+                      background: cleanActive ? '#e8f5e9' : '#fafafa',
+                      color: cleanActive ? '#2e7d32' : '#9e9e9e',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    <span>🧹</span>
+                    <span>เวรทำความสะอาดห้องสภา: {cleanActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}</span>
+                  </button>
                 </div>
               </div>
 

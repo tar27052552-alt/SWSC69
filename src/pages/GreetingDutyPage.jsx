@@ -12,6 +12,7 @@ export default function GreetingDutyPage() {
   const navigate = useNavigate();
   const [photoUrl, setPhotoUrl] = useState(null);
   const [startDate, setStartDate] = useState('');
+  const [greetingActive, setGreetingActive] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [loadingDuty, setLoadingDuty] = useState(true);
   const [hasDutyToday, setHasDutyToday] = useState(false);
@@ -29,6 +30,8 @@ export default function GreetingDutyPage() {
         if (!settingsError && settingsData) {
           const startD = settingsData.find(d => d.key === 'greeting_duty_start_date')?.value || settingsData.find(d => d.key === 'start_date')?.value;
           if (startD) setStartDate(startD);
+          const greetingAct = settingsData.find(d => d.key === 'greeting_duty_active')?.value;
+          if (greetingAct !== undefined) setGreetingActive(greetingAct !== 'false');
         }
 
         // Load today's Greeting Duty
@@ -203,6 +206,25 @@ export default function GreetingDutyPage() {
         </h2>
         <div style={{ fontSize: 14, color: '#757575', marginTop: 8 }}>
           ในฐานะผู้ดูแลระบบ คุณได้รับการยกเว้นและไม่จำเป็นต้องปฏิบัติหรือรายงานเวรยืนไหว้
+        </div>
+        <div style={{ marginTop: 32 }}>
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
+            กลับหน้าหลัก
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!greetingActive) {
+    return (
+      <div style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
+        <AlertTriangle size={64} color="#e53935" style={{ margin: '0 auto' }} />
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#37474f', marginTop: 16 }}>
+          ระบบส่งรายงานเวรยืนไหว้ต้อนรับปิดให้บริการชั่วคราว
+        </h2>
+        <div style={{ fontSize: 14, color: '#757575', marginTop: 8 }}>
+          ผู้ดูแลระบบได้ปิดใช้งานส่วนนี้ชั่วคราว กรุณาติดตามประกาศหรือติดต่อฝ่ายปกครอง
         </div>
         <div style={{ marginTop: 32 }}>
           <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
