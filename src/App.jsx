@@ -123,6 +123,31 @@ const DEPT_PAGES = [
 ];
 
 function AppRoutes() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const oneSignalAppId = import.meta.env.VITE_ONESIGNAL_APP_ID;
+    if (!oneSignalAppId) return;
+
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    if (user) {
+      window.OneSignalDeferred.push(function(OneSignal) {
+        console.log('OneSignal: Logging in user', user.id);
+        OneSignal.login(String(user.id));
+        // Add helpful tags for targeting
+        OneSignal.User.addTag("nickname", user.nickname || "");
+        OneSignal.User.addTag("studentId", user.studentId || "");
+        OneSignal.User.addTag("role", user.role || "");
+        OneSignal.User.addTag("name", user.name || "");
+      });
+    } else {
+      window.OneSignalDeferred.push(function(OneSignal) {
+        console.log('OneSignal: Logging out');
+        OneSignal.logout();
+      });
+    }
+  }, [user]);
+
   return (
     <Routes>
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />

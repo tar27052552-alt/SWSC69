@@ -64,8 +64,7 @@ function doPost(e) {
           requestData.imageUrl,
           requestData.channel
         );
-        // ส่ง Push Notification เข้ามือถือผ่าน OneSignal ไปพร้อมกัน
-        sendOneSignalPush(requestData.title, requestData.description);
+        sendOneSignalPush(requestData.title, requestData.description, requestData.targetUserIds);
         break;
       default:
         throw new Error("Unknown action: " + action);
@@ -1105,10 +1104,14 @@ function sendCleanDutyReminder() {
       "attendance_alerts"
     );
     
-    sendOneSignalPush(
-      "🧹 แจ้งเตือนทำเวรห้องสภาและส่งรายงาน",
-      "คุณมีหน้าที่เวรห้องสภาเย็นนี้ที่ยังไม่ได้ส่งรายงาน กรุณาปฏิบัติหน้าที่และอัปโหลดรูปให้เสร็จก่อน 18:00 น. ครับ"
-    );
+    var pendingUserIds = getUserIdsByNicknames(pendingMembers);
+    if (pendingUserIds.length > 0) {
+      sendOneSignalPush(
+        "🧹 แจ้งเตือนทำเวรห้องสภาและส่งรายงาน",
+        "คุณมีหน้าที่เวรห้องสภาเย็นนี้ที่ยังไม่ได้ส่งรายงาน กรุณาปฏิบัติหน้าที่และอัปโหลดรูปให้เสร็จก่อน 18:00 น. ครับ",
+        pendingUserIds
+      );
+    }
     
   } catch (err) {
     console.error("Error sending clean duty afternoon reminder:", err);
@@ -1195,10 +1198,14 @@ function sendTomorrowPRNewsDuty() {
       "pr"
     );
     
-    sendOneSignalPush(
-      "📣 แจ้งเตือนเวรหาข่าวประชาสัมพันธ์วันพรุ่งนี้",
-      "คุณมีเวรหาข่าวประชาสัมพันธ์ในวันพรุ่งนี้ (" + tomorrowDayName + ") กรุณาจัดเตรียมข่าวสารให้เรียบร้อยครับ"
-    );
+    var prUserIds = getUserIdsByNicknames(finalMembers);
+    if (prUserIds.length > 0) {
+      sendOneSignalPush(
+        "📣 แจ้งเตือนเวรหาข่าวประชาสัมพันธ์วันพรุ่งนี้",
+        "คุณมีเวรหาข่าวประชาสัมพันธ์ในวันพรุ่งนี้ (" + tomorrowDayName + ") กรุณาจัดเตรียมข่าวสารให้เรียบร้อยครับ",
+        prUserIds
+      );
+    }
     
   } catch (err) {
     console.error("Error sending tomorrow PR news duty reminder:", err);
@@ -1310,8 +1317,43 @@ function testAttendanceWebhook() {
   console.log("ผลการรัน: " + JSON.stringify(result));
 }
 
+// ฟังก์ชันดึง User ID จากชื่อเล่นในฐานข้อมูล Supabase เพื่อใช้จัดส่งแจ้งเตือนรายบุคคล
+function getUserIdsByNicknames(nicknames) {
+  if (!nicknames || nicknames.length === 0) return [];
+  
+  // กรองรายชื่อล้างค่าว่างและตัดข้อความส่วนเกิน (เช่น ' (แทน ...)')
+  var cleanNicknames = nicknames.map(function(name) {
+    if (!name) return "";
+    var idx = name.indexOf(" (แทน ");
+    if (idx !== -1) {
+      return name.substring(0, idx).trim();
+    }
+    return name.trim();
+  }).filter(function(name) {
+    return name !== "" && name !== "–";
+  });
+  
+  if (cleanNicknames.length === 0) return [];
+
+  // ดึงข้อมูลผู้ใช้จากตาราง users
+  var encodedNicknames = cleanNicknames.map(function(n) { 
+    return encodeURIComponent(n); 
+  }).join(",");
+  
+  try {
+    var users = fetchFromSupabase("users", "select=id,nickname&nickname=in.(" + encodedNicknames + ")");
+    if (users && users.length > 0) {
+      return users.map(function(u) { return u.id; });
+    }
+  } catch(e) {
+    console.error("Error getting user IDs by nicknames: ", e);
+  }
+  return [];
+}
+
 // ฟังก์ชันส่งการแจ้งเตือน Push Notification ผ่าน OneSignal
-function sendOneSignalPush(title, message) {
+// - targetUserIds (ตัวเลือก): ID ของผู้ใช้ (หรืออาร์เรย์ของ ID) ที่ต้องการส่งเจาะจงรายคน (ถ้าไม่ระบุหรือเป็นค่าว่างจะส่งให้ทุกคน)
+function sendOneSignalPush(title, message, targetUserIds) {
   var properties = PropertiesService.getScriptProperties();
   var appId = properties.getProperty("ONESIGNAL_APP_ID");
   var restApiKey = properties.getProperty("ONESIGNAL_REST_API_KEY");
@@ -1323,11 +1365,25 @@ function sendOneSignalPush(title, message) {
   
   var payload = {
     "app_id": appId,
-    "included_segments": ["All"], // ส่งหาผู้ลงทะเบียนทั้งหมด
     "headings": { "en": title, "th": title },
     "contents": { "en": message, "th": message },
     "url": "https://tar27052552-alt.github.io/SWSC69/" // เปิดเข้าหน้าเว็บพอร์ทัลเมื่อกดคลิก
   };
+
+  // ตรวจสอบและกำหนดเป้าหมายผู้รับ
+  if (targetUserIds) {
+    var ids = Array.isArray(targetUserIds) ? targetUserIds : [targetUserIds];
+    ids = ids.filter(function(id) { return id; }).map(function(id) { return String(id); });
+    
+    if (ids.length > 0) {
+      payload["include_aliases"] = { "external_id": ids };
+      payload["target_channel"] = "push";
+    } else {
+      payload["included_segments"] = ["All"];
+    }
+  } else {
+    payload["included_segments"] = ["All"];
+  }
   
   var options = {
     "method": "POST",
