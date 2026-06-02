@@ -126,6 +126,39 @@ function AppRoutes() {
   const { user } = useAuth();
 
   useEffect(() => {
+    // One-time silent reset of OneSignal local cache to clean up corrupted states from previous builds
+    if (!localStorage.getItem('onesignal_reset_v3')) {
+      console.log('OneSignal: Performing one-time silent reset of local state...');
+      
+      // Clear localStorage OneSignal keys
+      Object.keys(localStorage).forEach(key => {
+        if (key.toLowerCase().includes('onesignal')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // Clear sessionStorage OneSignal keys
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.toLowerCase().includes('onesignal')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+
+      // Delete OneSignal IndexedDB
+      try {
+        window.indexedDB.deleteDatabase("OneSignalSDK");
+      } catch (e) {
+        console.error('OneSignal: Failed to delete IndexedDB:', e);
+      }
+
+      localStorage.setItem('onesignal_reset_v3', 'true');
+      console.log('OneSignal: Reset complete. Reloading page...');
+      window.location.reload();
+      return;
+    }
+  }, []);
+
+  useEffect(() => {
     const oneSignalAppId = import.meta.env.VITE_ONESIGNAL_APP_ID;
     if (!oneSignalAppId) return;
 
