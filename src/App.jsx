@@ -242,6 +242,18 @@ export default function App() {
       
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       window.OneSignalDeferred.push(async function(OneSignal) {
+        // SW Diagnostics
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(regs => {
+            console.log('--- DIAGNOSTIC: Service Worker Registrations ---');
+            console.log('Controller:', navigator.serviceWorker.controller ? navigator.serviceWorker.controller.scriptURL : 'None (Page not controlled!)');
+            regs.forEach((r, idx) => {
+              console.log(`[SW #${idx}] Scope: ${r.scope}, Script: ${r.active ? r.active.scriptURL : (r.installing ? r.installing.scriptURL : 'Waiting/Installing')}`);
+            });
+            console.log('------------------------------------------------');
+          });
+        }
+
         const initOptions = {
           appId: oneSignalAppId,
           allowLocalhostAsSecureOrigin: true,
