@@ -56,7 +56,7 @@ function doPost(e) {
         result = verifySlipWithSlipOK(requestData.branchId, requestData.apiKey, requestData.fileBase64, requestData.amount);
         break;
       case "send_discord_message":
-        result = sendDiscordEmbed(
+        var discordRes = sendDiscordEmbed(
           requestData.title,
           requestData.description,
           requestData.color,
@@ -64,7 +64,8 @@ function doPost(e) {
           requestData.imageUrl,
           requestData.channel
         );
-        sendOneSignalPush(requestData.title, requestData.description, requestData.targetUserIds);
+        var pushRes = sendOneSignalPush(requestData.title, requestData.description, requestData.targetUserIds);
+        result = { discord: discordRes, push: pushRes };
         break;
       default:
         throw new Error("Unknown action: " + action);
