@@ -262,7 +262,17 @@ export default function App() {
           allowLocalhostAsSecureOrigin: true,
           path: base,
           serviceWorkerPath: 'OneSignalSDKWorker.js',
-          serviceWorkerParam: { scope: base }
+          serviceWorkerParam: { scope: base },
+          promptOptions: {
+            slidedown: {
+              prompts: [
+                {
+                  type: 'push',
+                  autoPrompt: false
+                }
+              ]
+            }
+          }
         };
         console.log('OneSignal init with options:', JSON.stringify(initOptions));
         await OneSignal.init(initOptions);
