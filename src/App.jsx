@@ -149,9 +149,11 @@ function AppRoutes() {
           if (OneSignal.User.externalId !== targetId) {
             console.log('OneSignal: Initiating login for user', targetId);
             
-            const handleUserChange = () => {
-              if (OneSignal.User.externalId === targetId) {
-                applyTags();
+            const handleUserChange = (event) => {
+              const currentId = event?.current?.externalId || OneSignal.User.externalId;
+              if (currentId === targetId) {
+                console.log('OneSignal: Identity resolved to', targetId, '- scheduling tag update in 1.5s...');
+                setTimeout(applyTags, 1500);
                 OneSignal.User.removeEventListener('change', handleUserChange);
               }
             };
