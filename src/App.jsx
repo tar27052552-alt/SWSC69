@@ -156,31 +156,23 @@ function AppRoutes() {
 export default function App() {
   useEffect(() => {
     const oneSignalAppId = import.meta.env.VITE_ONESIGNAL_APP_ID;
-    if (oneSignalAppId && 'serviceWorker' in navigator) {
+    if (oneSignalAppId) {
       const base = import.meta.env.BASE_URL || '/';
-      const swPath = `${base}OneSignalSDKWorker.js`;
       
-      // Register service worker manually first, then pass to OneSignal
-      navigator.serviceWorker.register(swPath, { scope: base })
-        .then((registration) => {
-          console.log('Service Worker registered manually at:', swPath, 'scope:', base);
-          window.OneSignalDeferred = window.OneSignalDeferred || [];
-          window.OneSignalDeferred.push(async function(OneSignal) {
-            const initOptions = {
-              appId: oneSignalAppId,
-              allowLocalhostAsSecureOrigin: true,
-              serviceWorker: {
-                path: swPath,
-                scope: base
-              }
-            };
-            console.log('OneSignal init with options:', JSON.stringify(initOptions));
-            await OneSignal.init(initOptions);
-          });
-        })
-        .catch((err) => {
-          console.error('Service Worker registration failed:', err);
-        });
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        // SDK v16 builds worker URL as: path + serviceWorkerPath
+        // SDK v16 uses serviceWorkerParam for registration scope
+        const initOptions = {
+          appId: oneSignalAppId,
+          allowLocalhostAsSecureOrigin: true,
+          path: base,
+          serviceWorkerPath: 'OneSignalSDKWorker.js',
+          serviceWorkerParam: { scope: base }
+        };
+        console.log('OneSignal init with options:', JSON.stringify(initOptions));
+        await OneSignal.init(initOptions);
+      });
     }
   }, []);
 
