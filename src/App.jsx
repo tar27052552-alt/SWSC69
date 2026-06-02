@@ -129,43 +129,55 @@ function AppRoutes() {
     const oneSignalAppId = import.meta.env.VITE_ONESIGNAL_APP_ID;
     if (!oneSignalAppId) return;
 
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    if (user) {
+    const runSync = () => {
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
       window.OneSignalDeferred.push(function(OneSignal) {
-        const targetId = String(user.id);
-        
-        const applyTags = () => {
-          console.log('OneSignal: Setting tags for user', targetId);
-          OneSignal.User.addTags({
-            nickname: user.nickname || "",
-            studentId: user.studentId || "",
-            role: user.role || "",
-            name: user.name || ""
-          });
-        };
-
-        // If not already logged in as this user, login and set tags on change
-        if (OneSignal.User.externalId !== targetId) {
-          console.log('OneSignal: Initiating login for user', targetId);
+        if (user) {
+          const targetId = String(user.id);
           
-          const handleUserChange = () => {
-            if (OneSignal.User.externalId === targetId) {
-              applyTags();
-              OneSignal.User.removeEventListener('change', handleUserChange);
-            }
+          const applyTags = () => {
+            console.log('OneSignal: Setting tags for user', targetId);
+            OneSignal.User.addTags({
+              nickname: user.nickname || "",
+              studentId: user.studentId || "",
+              role: user.role || "",
+              name: user.name || ""
+            });
           };
-          OneSignal.User.addEventListener('change', handleUserChange);
-          OneSignal.login(targetId);
+
+          // If not already logged in as this user, login and set tags on change
+          if (OneSignal.User.externalId !== targetId) {
+            console.log('OneSignal: Initiating login for user', targetId);
+            
+            const handleUserChange = () => {
+              if (OneSignal.User.externalId === targetId) {
+                applyTags();
+                OneSignal.User.removeEventListener('change', handleUserChange);
+              }
+            };
+            OneSignal.User.addEventListener('change', handleUserChange);
+            OneSignal.login(targetId);
+          } else {
+            // Already logged in, set tags directly
+            applyTags();
+          }
         } else {
-          // Already logged in, set tags directly
-          applyTags();
+          console.log('OneSignal: Logging out');
+          OneSignal.logout();
         }
       });
+    };
+
+    if (window.oneSignalInitialized) {
+      runSync();
     } else {
-      window.OneSignalDeferred.push(function(OneSignal) {
-        console.log('OneSignal: Logging out');
-        OneSignal.logout();
-      });
+      const handleInitComplete = () => {
+        runSync();
+      };
+      window.addEventListener('onesignal-init-complete', handleInitComplete);
+      return () => {
+        window.removeEventListener('onesignal-init-complete', handleInitComplete);
+      };
     }
   }, [user]);
 
@@ -237,6 +249,8 @@ export default function App() {
         };
         console.log('OneSignal init with options:', JSON.stringify(initOptions));
         await OneSignal.init(initOptions);
+        window.oneSignalInitialized = true;
+        window.dispatchEvent(new CustomEvent('onesignal-init-complete'));
       });
     }
   }, []);
