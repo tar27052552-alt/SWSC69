@@ -132,13 +132,34 @@ function AppRoutes() {
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     if (user) {
       window.OneSignalDeferred.push(function(OneSignal) {
-        console.log('OneSignal: Logging in user', user.id);
-        OneSignal.login(String(user.id));
-        // Add helpful tags for targeting
-        OneSignal.User.addTag("nickname", user.nickname || "");
-        OneSignal.User.addTag("studentId", user.studentId || "");
-        OneSignal.User.addTag("role", user.role || "");
-        OneSignal.User.addTag("name", user.name || "");
+        const targetId = String(user.id);
+        
+        const applyTags = () => {
+          console.log('OneSignal: Setting tags for user', targetId);
+          OneSignal.User.addTags({
+            nickname: user.nickname || "",
+            studentId: user.studentId || "",
+            role: user.role || "",
+            name: user.name || ""
+          });
+        };
+
+        // If not already logged in as this user, login and set tags on change
+        if (OneSignal.User.externalId !== targetId) {
+          console.log('OneSignal: Initiating login for user', targetId);
+          
+          const handleUserChange = () => {
+            if (OneSignal.User.externalId === targetId) {
+              applyTags();
+              OneSignal.User.removeEventListener('change', handleUserChange);
+            }
+          };
+          OneSignal.User.addEventListener('change', handleUserChange);
+          OneSignal.login(targetId);
+        } else {
+          // Already logged in, set tags directly
+          applyTags();
+        }
       });
     } else {
       window.OneSignalDeferred.push(function(OneSignal) {
