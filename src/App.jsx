@@ -159,10 +159,29 @@ export default function App() {
     if (oneSignalAppId) {
       const base = import.meta.env.BASE_URL || '/';
       
+      // Patch: intercept service worker registration to fix path for subdirectory
+      if (base !== '/' && 'serviceWorker' in navigator) {
+        const originalRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
+        navigator.serviceWorker.register = function(scriptURL, options) {
+          let url = typeof scriptURL === 'string' ? scriptURL : scriptURL.toString();
+          // If OneSignal tries to register at root, redirect to subdirectory
+          if (url.includes('OneSignalSDKWorker.js') && !url.includes(base)) {
+            const urlObj = new URL(url, location.origin);
+            urlObj.pathname = base + 'OneSignalSDKWorker.js';
+            url = urlObj.href;
+            console.log('Patched OneSignal SW path to:', url);
+            // Also fix scope
+            if (options && options.scope && !options.scope.includes(base)) {
+              options = { ...options, scope: base };
+              console.log('Patched OneSignal SW scope to:', base);
+            }
+          }
+          return originalRegister(url, options);
+        };
+      }
+      
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       window.OneSignalDeferred.push(async function(OneSignal) {
-        // SDK v16 builds worker URL as: path + serviceWorkerPath
-        // SDK v16 uses serviceWorkerParam for registration scope
         const initOptions = {
           appId: oneSignalAppId,
           allowLocalhostAsSecureOrigin: true,
