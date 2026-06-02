@@ -195,7 +195,10 @@ export default function FinancePage() {
           { name: '🏛️ ฝ่าย', value: dept, inline: true },
           { name: '📝 หมายเหตุ', value: inserted.note || 'ไม่มี', inline: false }
         ];
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15105570, embedFields, null, 'finance'); // สีส้มสำหรับคำขอใหม่
+        const financeUserIds = usersList
+          .filter(u => u.dept_id === 1 || u.deptId === 1 || u.role === 'admin')
+          .map(u => String(u.id));
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15105570, embedFields, null, 'finance', financeUserIds.length > 0 ? financeUserIds : null); // สีส้มสำหรับคำขอใหม่
       }
     } catch (err) {
       console.error('Error inserting finance request:', err);
@@ -224,7 +227,11 @@ export default function FinancePage() {
           { name: '👤 ผู้ขอ', value: target.requester, inline: true },
           { name: '✍️ อนุมัติโดย', value: user.nickname, inline: true }
         ];
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, embedFields, null, 'finance'); // สีเขียวสำหรับอนุมัติ
+        
+        const requesterUser = usersList.find(u => u.nickname === target.requester);
+        const targetUserId = requesterUser ? String(requesterUser.id) : null;
+        
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, embedFields, null, 'finance', targetUserId ? [targetUserId] : null); // สีเขียวสำหรับอนุมัติ
       }
     } catch (err) {
       console.error('Error approving request:', err);
@@ -252,7 +259,11 @@ export default function FinancePage() {
           { name: '👤 ผู้ขอ', value: target.requester, inline: true },
           { name: '📝 เหตุผลการปฏิเสธ', value: note || 'ไม่ระบุ', inline: false }
         ];
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15158332, embedFields, null, 'finance'); // สีแดงสำหรับปฏิเสธ
+        
+        const requesterUser = usersList.find(u => u.nickname === target.requester);
+        const targetUserId = requesterUser ? String(requesterUser.id) : null;
+        
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15158332, embedFields, null, 'finance', targetUserId ? [targetUserId] : null); // สีแดงสำหรับปฏิเสธ
       }
     } catch (err) {
       console.error('Error rejecting request:', err);

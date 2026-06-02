@@ -759,7 +759,7 @@ export default function DisciplinePage() {
           { name: '📝 หมายเหตุ', value: inserted.note || 'ไม่มี', inline: false },
           { name: '✍️ บันทึกโดย', value: inserted.by, inline: true }
         ];
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15158332, fields, null, 'discipline_fines'); // สีแดงสำหรับค่าปรับ
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15158332, fields, null, 'discipline_fines', [inserted.userId]); // สีแดงสำหรับค่าปรับ
       }
     } catch (err) {
       console.error('Error saving fine:', err);
