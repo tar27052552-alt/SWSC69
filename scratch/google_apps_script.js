@@ -64,7 +64,16 @@ function doPost(e) {
           requestData.imageUrl,
           requestData.channel
         );
-        var pushRes = sendOneSignalPush(requestData.title, requestData.description, requestData.targetUserIds);
+        var fullMessage = requestData.description || "";
+        if (requestData.fields && requestData.fields.length > 0) {
+          var fieldsText = requestData.fields.map(function(f) {
+            var name = String(f.name).replace(/\*\*/g, "");
+            var val = String(f.value).replace(/\*\*/g, "");
+            return name + ": " + val;
+          }).join("\n");
+          fullMessage += "\n\n" + fieldsText;
+        }
+        var pushRes = sendOneSignalPush(requestData.title, fullMessage, requestData.targetUserIds);
         result = { discord: discordRes, push: pushRes };
         break;
       default:
