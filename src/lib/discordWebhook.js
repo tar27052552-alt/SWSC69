@@ -9,7 +9,7 @@ const gasUrl = import.meta.env.VITE_GAS_URL;
  * @param {string} imageUrl - ลิงก์รูปภาพประกอบ (ถ้ามี)
  * @returns {Promise<boolean>} ผลการยิงข้อความ
  */
-export async function sendDiscordEmbedViaGAS(title, description, colorDecimal = 3066993, fields = [], imageUrl = null, channel = 'general') {
+export async function sendDiscordEmbedViaGAS(title, description, colorDecimal = 3066993, fields = [], imageUrl = null, channel = 'general', targetUserIds = null) {
   if (!gasUrl) {
     console.warn("⚠️ [Discord Webhook Helper] Missing VITE_GAS_URL in environment.");
     return false;
@@ -28,7 +28,8 @@ export async function sendDiscordEmbedViaGAS(title, description, colorDecimal = 
         color: colorDecimal,
         fields: fields,
         imageUrl: imageUrl,
-        channel: channel
+        channel: channel,
+        targetUserIds: targetUserIds
       }),
     });
     
