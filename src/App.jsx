@@ -248,7 +248,10 @@ export default function App() {
             console.log('--- DIAGNOSTIC: Service Worker Registrations ---');
             console.log('Controller:', navigator.serviceWorker.controller ? navigator.serviceWorker.controller.scriptURL : 'None (Page not controlled!)');
             regs.forEach((r, idx) => {
-              console.log(`[SW #${idx}] Scope: ${r.scope}, Script: ${r.active ? r.active.scriptURL : (r.installing ? r.installing.scriptURL : 'Waiting/Installing')}`);
+              console.log(`[SW #${idx}] Scope: ${r.scope}`);
+              console.log(`  - Active: ${r.active ? r.active.scriptURL + ' (' + r.active.state + ')' : 'None'}`);
+              console.log(`  - Installing: ${r.installing ? r.installing.scriptURL + ' (' + r.installing.state + ')' : 'None'}`);
+              console.log(`  - Waiting: ${r.waiting ? r.waiting.scriptURL + ' (' + r.waiting.state + ')' : 'None'}`);
             });
             console.log('------------------------------------------------');
           });
