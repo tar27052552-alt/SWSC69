@@ -126,34 +126,61 @@ function AppRoutes() {
   const { user } = useAuth();
 
   useEffect(() => {
-    // One-time silent reset of OneSignal local cache to clean up corrupted states from previous builds
-    if (!localStorage.getItem('onesignal_reset_v3')) {
-      console.log('OneSignal: Performing one-time silent reset of local state...');
+    // Complete automatic silent reset of all Service Workers and OneSignal data to fix corrupted cache
+    if (!localStorage.getItem('onesignal_reset_v4')) {
+      console.log('OneSignal: Initiating complete clear of all storage, cookies, and service workers...');
       
-      // Clear localStorage OneSignal keys
+      // 1. Unregister all service workers
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(r => {
+            console.log('OneSignal: Unregistering Service Worker:', r.scope);
+            r.unregister();
+          });
+        });
+      }
+
+      // 2. Clear localStorage OneSignal keys
       Object.keys(localStorage).forEach(key => {
         if (key.toLowerCase().includes('onesignal')) {
           localStorage.removeItem(key);
         }
       });
       
-      // Clear sessionStorage OneSignal keys
+      // 3. Clear sessionStorage OneSignal keys
       Object.keys(sessionStorage).forEach(key => {
         if (key.toLowerCase().includes('onesignal')) {
           sessionStorage.removeItem(key);
         }
       });
 
-      // Delete OneSignal IndexedDB
+      // 4. Delete IndexedDB
       try {
         window.indexedDB.deleteDatabase("OneSignalSDK");
-      } catch (e) {
-        console.error('OneSignal: Failed to delete IndexedDB:', e);
-      }
+      } catch (e) { /* ignore */ }
 
-      localStorage.setItem('onesignal_reset_v3', 'true');
-      console.log('OneSignal: Reset complete. Reloading page...');
-      window.location.reload();
+      // 5. Clear cookies
+      try {
+        document.cookie.split(";").forEach(c => {
+          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+      } catch (e) { /* ignore */ }
+
+      // Save user session so they don't get logged out!
+      const userSession = localStorage.getItem('sc_user');
+      const lastActive = localStorage.getItem('sc_last_active');
+
+      // Clear all, then restore user session
+      localStorage.clear();
+      if (userSession) localStorage.setItem('sc_user', userSession);
+      if (lastActive) localStorage.setItem('sc_last_active', lastActive);
+
+      localStorage.setItem('onesignal_reset_v4', 'true');
+      
+      console.log('OneSignal: Reset complete. Reloading page in 500ms...');
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
       return;
     }
   }, []);
