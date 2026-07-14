@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SWSC | คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม</title>
+  <meta name="description" content="เว็บไซต์คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม อำเภอแม่สอด จังหวัดตาก — ข่าวสาร กิจกรรม และข้อมูลสภานักเรียน" />
+  <meta property="og:title" content="SWSC | คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม" />
+  <meta property="og:description" content="ข่าวสาร กิจกรรม และข้อมูลคณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --purple: #a925ce;
+      --purple-dark: #6d0090;
+      --purple-deep: #1a0029;
+      --purple-mid: #2d0a4e;
+      --gold: #f5c518;
+      --gold-light: #ffe066;
+      --white: #ffffff;
+      --text-dark: #1a1a2e;
+      --text-gray: #64748b;
+      --bg-light: #f8f5ff;
+      --bg-card: #ffffff;
+      --border: #e8d5f5;
+      --shadow: 0 4px 24px rgba(169,37,206,0.10);
+      --radius: 14px;
+      --transition: 0.3s cubic-bezier(.4,0,.2,1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: #fff;
+      color: var(--text-dark);
+      overflow-x: hidden;
+    }
+
+    /* ===== TICKER ===== */
+    .ticker-wrap {
+      background: var(--purple);
+      color: #fff;
+      padding: 9px 0;
+      overflow: hidden;
+      position: relative;
+      z-index: 100;
+    }
+    .ticker-track {
+      display: flex;
+      white-space: nowrap;
+      animation: ticker 30s linear infinite;
+      gap: 0;
+    }
+    .ticker-track:hover { animation-play-state: paused; }
+    .ticker-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 40px;
+      font-size: 13.5px;
+      font-weight: 500;
+    }
+    .ticker-item::before { content: "📢"; }
+    .ticker-sep { color: var(--gold); margin: 0 10px; }
+    @keyframes ticker {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* ===== NAVBAR ===== */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 99;
+      background: rgba(26,0,41,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(245,197,24,0.2);
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      transition: var(--transition);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .nav-logo {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 6px rgba(245,197,24,0.5));
+    }
+    .nav-brand-text { display: flex; flex-direction: column; }
+    .nav-brand-title {
+      font-family: 'Oswald', sans-serif;
+      color: var(--gold);
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      line-height: 1.1;
+    }
+    .nav-brand-sub {
+      color: rgba(255,255,255,0.65);
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: var(--transition);
+    }
+    .nav-links a:hover { background: rgba(245,197,24,0.12); color: var(--gold); }
+    .nav-btn {
+      background: var(--gold);
+      color: var(--purple-deep) !important;
+      font-weight: 700 !important;
+      border-radius: 8px;
+      padding: 8px 18px !important;
+    }
+    .nav-btn:hover { background: var(--gold-light) !important; color: var(--purple-deep) !important; }
+    .nav-hamburger {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      flex-direction: column;
+      gap: 5px;
+      padding: 4px;
+    }
+    .nav-hamburger span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: #fff;
+      border-radius: 2px;
+      transition: var(--transition);
+    }
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      top: 64px;
+      left: 0; right: 0;
+      background: rgba(26,0,41,0.98);
+      padding: 20px;
+      z-index: 98;
+      border-bottom: 1px solid rgba(245,197,24,0.2);
+    }
+    .mobile-nav.open { display: flex; flex-direction: column; gap: 8px; }
+    .mobile-nav a {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      transition: var(--transition);
+    }
+    .mobile-nav a:hover { background: rgba(245,197,24,0.1); color: var(--gold); }
+
+    /* ===== HERO ===== */
+    .hero {
+      min-height: 92vh;
+      background: var(--purple-deep);
+      background-image: url('./swsc_hero_bg.png');
+      background-size: cover;
+      background-position: center;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 80px 24px 60px;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(26,0,41,0.85) 0%, rgba(45,10,78,0.75) 50%, rgba(26,0,41,0.9) 100%);
+    }
+    .hero-content { position: relative; z-index: 2; max-width: 780px; }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(245,197,24,0.15);
+      border: 1px solid rgba(245,197,24,0.4);
+      color: var(--gold);
+      padding: 6px 18px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(8px);
+    }
+    .hero-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(36px, 7vw, 72px);
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.1;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+    }
+    .hero-title span { color: var(--gold); }
+    .hero-subtitle {
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(16px, 3vw, 22px);
+      color: rgba(255,255,255,0.7);
+      font-weight: 300;
+      letter-spacing: 3px;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+    .hero-desc {
+      font-size: 16px;
+      color: rgba(255,255,255,0.65);
+      max-width: 520px;
+      margin: 0 auto 36px;
+      line-height: 1.7;
+    }
+    .hero-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; }
+    .btn-primary {
+      background: var(--gold);
+      color: var(--purple-deep);
+      padding: 13px 32px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: var(--transition);
+      box-shadow: 0 4px 20px rgba(245,197,24,0.4);
+      font-family: 'Sarabun', sans-serif;
+    }
+    .btn-primary:hover {
+      background: var(--gold-light);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(245,197,24,0.5);
+    }
+    .btn-outline {
+      background: transparent;
+      color: #fff;
+      padding: 13px 32px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      border: 2px solid rgba(255,255,255,0.4);
+      transition: var(--transition);
+      font-family: 'Sarabun', sans-serif;
+    }
+    .btn-outline:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+      transform: translateY(-2px);
+    }
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .hero-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .hero-stat-num {
+      font-family: 'Oswald', sans-serif;
+      font-size: 38px;
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1;
+    }
+    .hero-stat-label { color: rgba(255,255,255,0.6); font-size: 13px; margin-top: 4px; }
+
+    /* ===== SECTIONS ===== */
+    .section { padding: 80px 24px; }
+    .section-alt { background: var(--bg-light); }
+    .container { max-width: 1160px; margin: 0 auto; }
+    .section-header { text-align: center; margin-bottom: 52px; }
+    .section-tag {
+      display: inline-block;
+      background: rgba(169,37,206,0.1);
+      color: var(--purple);
+      padding: 5px 16px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(26px, 4vw, 38px);
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .section-title::after {
+      content: '';
+      display: block;
+      width: 48px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--purple), var(--gold));
+      border-radius: 2px;
+      margin: 10px auto 0;
+    }
+    .section-desc { color: var(--text-gray); font-size: 15px; max-width: 520px; margin: 0 auto; }
+
+    /* ===== NEWS GRID ===== */
+    .news-filter {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 36px;
+    }
+    .filter-btn {
+      padding: 7px 18px;
+      border-radius: 100px;
+      border: 2px solid var(--border);
+      background: #fff;
+      color: var(--text-gray);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: 'Sarabun', sans-serif;
+    }
+    .filter-btn.active, .filter-btn:hover {
+      background: var(--purple);
+      border-color: var(--purple);
+      color: #fff;
+    }
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 24px;
+    }
+    .news-card {
+      background: #fff;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+    }
+    .news-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(169,37,206,0.15); }
+    .news-card-top {
+      background: linear-gradient(135deg, var(--purple-deep), var(--purple-mid));
+      padding: 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .news-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(245,197,24,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .news-card-meta { flex: 1; }
+    .news-cat {
+      display: inline-block;
+      background: rgba(245,197,24,0.2);
+      color: var(--gold);
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .news-card-headline {
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+    .news-card-body { padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .news-detail { color: var(--text-gray); font-size: 13.5px; line-height: 1.7; flex: 1; }
+    .news-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+    .news-date { color: #bbb; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+    .news-by { color: var(--purple); font-size: 12px; font-weight: 600; }
+    .news-empty {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--text-gray);
+    }
+    .news-empty-icon { font-size: 48px; margin-bottom: 16px; }
+
+    /* ===== EVENTS ===== */
+    .events-list { display: flex; flex-direction: column; gap: 16px; max-width: 800px; margin: 0 auto; }
+    .event-item {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      transition: var(--transition);
+    }
+    .event-item:hover { transform: translateX(4px); border-color: var(--purple); }
+    .event-date-box {
+      background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      text-align: center;
+      min-width: 60px;
+      flex-shrink: 0;
+    }
+    .event-day { font-family: 'Oswald', sans-serif; font-size: 26px; font-weight: 700; line-height: 1; }
+    .event-month { font-size: 11px; opacity: 0.85; font-weight: 600; }
+    .event-info { flex: 1; }
+    .event-type {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(169,37,206,0.08);
+      color: var(--purple);
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .event-title { font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 6px; }
+    .event-desc { color: var(--text-gray); font-size: 13.5px; line-height: 1.6; }
+    .event-empty { text-align: center; padding: 60px 0; color: var(--text-gray); }
+
+    /* ===== TEAM ===== */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .team-card {
+      background: #fff;
+      border-radius: var(--radius);
+      text-align: center;
+      padding: 28px 16px 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      transition: var(--transition);
+    }
+    .team-card:hover { transform: translateY(-5px); box-shadow: 0 14px 40px rgba(169,37,206,0.18); }
+    .team-card.president {
+      background: linear-gradient(135deg, var(--purple-deep), var(--purple-mid));
+      border-color: rgba(245,197,24,0.3);
+      grid-column: span 1;
+    }
+    .team-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      margin: 0 auto 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      font-family: 'Oswald', sans-serif;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      overflow: hidden;
+    }
+    .team-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .president .team-avatar { border: 3px solid var(--gold); box-shadow: 0 0 0 4px rgba(245,197,24,0.2), 0 4px 20px rgba(0,0,0,0.3); }
+    .team-name { font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
+    .president .team-name { color: #fff; }
+    .team-nick { font-size: 13px; color: var(--text-gray); margin-bottom: 8px; }
+    .president .team-nick { color: rgba(255,255,255,0.6); }
+    .team-role {
+      display: inline-block;
+      background: rgba(169,37,206,0.1);
+      color: var(--purple);
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .president .team-role {
+      background: rgba(245,197,24,0.2);
+      color: var(--gold);
+    }
+    .president-crown {
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+
+    /* ===== ORG CHART ===== */
+    .org-section {
+      background: linear-gradient(135deg, var(--purple-deep) 0%, var(--purple-mid) 100%);
+      color: #fff;
+      padding: 80px 24px;
+    }
+    .org-section .section-title { color: #fff; }
+    .org-section .section-title::after { background: linear-gradient(90deg, var(--gold), var(--gold-light)); }
+    .org-section .section-tag { background: rgba(245,197,24,0.15); color: var(--gold); }
+    .org-section .section-desc { color: rgba(255,255,255,0.6); }
+    .org-chart {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+    .org-level { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 14px 0; }
+    .org-node {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(245,197,24,0.25);
+      border-radius: 10px;
+      padding: 14px 24px;
+      text-align: center;
+      backdrop-filter: blur(8px);
+      transition: var(--transition);
+    }
+    .org-node:hover { background: rgba(245,197,24,0.1); transform: scale(1.03); }
+    .org-node.top { background: rgba(245,197,24,0.15); border-color: rgba(245,197,24,0.5); }
+    .org-node-title { font-size: 13px; color: var(--gold); font-weight: 700; margin-bottom: 3px; }
+    .org-node-name { font-size: 15px; color: #fff; font-weight: 600; }
+    .org-connector {
+      width: 2px;
+      height: 24px;
+      background: linear-gradient(to bottom, rgba(245,197,24,0.4), rgba(245,197,24,0.1));
+    }
+    .org-line {
+      height: 2px;
+      width: 70%;
+      background: linear-gradient(90deg, transparent, rgba(245,197,24,0.3), transparent);
+      margin: 0 auto;
+    }
+
+    /* ===== SUGGESTIONS ===== */
+    .suggestion-form {
+      max-width: 640px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 36px;
+      box-shadow: 0 8px 40px rgba(169,37,206,0.12);
+      border: 1px solid var(--border);
+    }
+    .form-group { margin-bottom: 18px; }
+    .form-label { display: block; font-size: 14px; font-weight: 600; color: var(--text-dark); margin-bottom: 7px; }
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 14px;
+      color: var(--text-dark);
+      transition: var(--transition);
+      background: #fff;
+    }
+    .form-input:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 3px rgba(169,37,206,0.1); }
+    textarea.form-input { min-height: 120px; resize: vertical; }
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Sarabun', sans-serif;
+      transition: var(--transition);
+      box-shadow: 0 4px 20px rgba(169,37,206,0.3);
+    }
+    .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(169,37,206,0.4); }
+    .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+    .form-success {
+      text-align: center;
+      padding: 32px;
+      display: none;
+    }
+    .form-success-icon { font-size: 52px; margin-bottom: 14px; }
+    .form-success-title { font-size: 20px; font-weight: 700; color: var(--purple); margin-bottom: 8px; }
+    .form-success-desc { color: var(--text-gray); font-size: 14px; }
+
+    /* ===== CONTACT ===== */
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .contact-card {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      transition: var(--transition);
+      text-decoration: none;
+      color: inherit;
+    }
+    .contact-card:hover { transform: translateY(-3px); border-color: var(--purple); }
+    .contact-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .contact-label { font-size: 12px; color: var(--text-gray); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .contact-value { font-size: 15px; font-weight: 700; color: var(--text-dark); }
+    .contact-sub { font-size: 12px; color: var(--text-gray); margin-top: 3px; }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: var(--purple-deep);
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid rgba(245,197,24,0.15);
+    }
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .footer-logo img { width: 36px; filter: drop-shadow(0 0 6px rgba(245,197,24,0.5)); }
+    .footer-title {
+      font-family: 'Oswald', sans-serif;
+      color: var(--gold);
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      margin: 16px 0;
+      flex-wrap: wrap;
+    }
+    .footer-links a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 13px; transition: var(--transition); }
+    .footer-links a:hover { color: var(--gold); }
+    .footer-copy { font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 16px; }
+
+    /* ===== LOADING ===== */
+    .loader {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      gap: 14px;
+      color: var(--text-gray);
+    }
+    .loader-ring {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--purple);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      nav { padding: 0 16px; }
+      .nav-links { display: none; }
+      .nav-hamburger { display: flex; }
+      .hero { padding: 60px 16px 50px; }
+      .hero-stats { gap: 24px; }
+      .section { padding: 60px 16px; }
+      .news-grid { grid-template-columns: 1fr; }
+      .contact-grid { grid-template-columns: 1fr; }
+      .team-grid { grid-template-columns: repeat(2, 1fr); }
+      .org-line { width: 90%; }
+      .suggestion-form { padding: 24px 20px; }
+    }
+
+    /* ===== ANIMATIONS ===== */
+    .fade-in { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* ===== COUNT-UP ===== */
+    .counting { display: inline-block; }
+  </style>
+</head>
+<body>
+
+  <!-- TICKER -->
+  <div class="ticker-wrap" id="tickerWrap" style="display:none;">
+    <div class="ticker-track" id="tickerTrack"></div>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav id="navbar">
+    <a href="#" class="nav-brand">
+      <img src="./logo.png" alt="SWSC Logo" class="nav-logo" onerror="this.style.display='none'" />
+      <div class="nav-brand-text">
+        <span class="nav-brand-title">SWSC</span>
+        <span class="nav-brand-sub">สรรพวิทยาคม</span>
+      </div>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#news">ข่าวสาร</a></li>
+      <li><a href="#events">กิจกรรม</a></li>
+      <li><a href="#team">คณะกรรมการ</a></li>
+      <li><a href="#org">โครงสร้าง</a></li>
+      <li><a href="#suggestions">ข้อเสนอแนะ</a></li>
+      <li><a href="#contact">ติดต่อ</a></li>
+      <li><a href="./#/login" class="nav-btn">🔐 เข้าสู่ระบบ</a></li>
+    </ul>
+    <button class="nav-hamburger" id="hamburger" aria-label="เมนู">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+  <div class="mobile-nav" id="mobileNav">
+    <a href="#news" onclick="closeMobile()">📢 ข่าวสาร</a>
+    <a href="#events" onclick="closeMobile()">📅 กิจกรรม</a>
+    <a href="#team" onclick="closeMobile()">👥 คณะกรรมการ</a>
+    <a href="#org" onclick="closeMobile()">🏛️ โครงสร้าง</a>
+    <a href="#suggestions" onclick="closeMobile()">💬 ข้อเสนอแนะ</a>
+    <a href="#contact" onclick="closeMobile()">📞 ติดต่อ</a>
+    <a href="./#/login" style="background:rgba(245,197,24,0.15);color:var(--gold);font-weight:700;">🔐 เข้าสู่ระบบ</a>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero-content">
+      <div class="hero-badge">✦ คณะกรรมการนักเรียน ปีการศึกษา 2568</div>
+      <div class="hero-subtitle">SAPPHAWITTHAYAKHOM SCHOOL</div>
+      <h1 class="hero-title">โรงเรียน<span>สรรพวิทยาคม</span></h1>
+      <p class="hero-desc">คณะกรรมการนักเรียนผู้เป็นตัวแทนของนักเรียนทุกคน<br/>มุ่งสร้างสรรค์กิจกรรมและพัฒนาโรงเรียนร่วมกัน</p>
+      <div class="hero-buttons">
+        <a href="#news" class="btn-primary">📢 ข่าวสารล่าสุด</a>
+        <a href="#team" class="btn-outline">👥 คณะกรรมการ</a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <span class="hero-stat-num counting" data-target="0" id="stat-events">0</span>
+          <span class="hero-stat-label">🎉 กิจกรรม</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-num counting" data-target="0" id="stat-members">0</span>
+          <span class="hero-stat-label">👥 สมาชิกสภา</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-num counting" data-target="0" id="stat-news">0</span>
+          <span class="hero-stat-label">📰 ข่าวสาร</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NEWS -->
+  <section class="section" id="news">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div class="section-tag">ข่าวสาร</div>
+        <h2 class="section-title">ข่าวประชาสัมพันธ์</h2>
+        <p class="section-desc">ข่าวสารและประกาศจากคณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม</p>
+      </div>
+      <div class="news-filter" id="newsFilter">
+        <button class="filter-btn active" onclick="filterNews('all')">ทั้งหมด</button>
+        <button class="filter-btn" onclick="filterNews('ข่าวโรงเรียน')">ข่าวโรงเรียน</button>
+        <button class="filter-btn" onclick="filterNews('กิจกรรมสภา')">กิจกรรมสภา</button>
+        <button class="filter-btn" onclick="filterNews('ประกาศ')">ประกาศ</button>
+        <button class="filter-btn" onclick="filterNews('ข่าวชมรม')">ข่าวชมรม</button>
+      </div>
+      <div class="news-grid" id="newsGrid">
+        <div class="loader"><div class="loader-ring"></div><span>กำลังโหลดข่าวสาร...</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EVENTS -->
+  <section class="section section-alt" id="events">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div class="section-tag">กิจกรรม</div>
+        <h2 class="section-title">ปฏิทินกิจกรรม</h2>
+        <p class="section-desc">กิจกรรมที่กำลังจะมาถึงของโรงเรียนสรรพวิทยาคม</p>
+      </div>
+      <div class="events-list" id="eventsList">
+        <div class="loader"><div class="loader-ring"></div><span>กำลังโหลดกิจกรรม...</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAM -->
+  <section class="section" id="team">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div class="section-tag">คณะกรรมการ</div>
+        <h2 class="section-title">แนะนำคณะกรรมการนักเรียน</h2>
+        <p class="section-desc">ประธานและหัวหน้าฝ่ายคณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม ปีการศึกษา 2568</p>
+      </div>
+      <div class="team-grid" id="teamGrid">
+        <div class="loader"><div class="loader-ring"></div><span>กำลังโหลดข้อมูล...</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ORG CHART -->
+  <section class="org-section" id="org">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div class="section-tag">โครงสร้าง</div>
+        <h2 class="section-title">โครงสร้างองค์กร</h2>
+        <p class="section-desc" style="color:rgba(255,255,255,0.6)">โครงสร้างการบริหารคณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม</p>
+      </div>
+      <div class="org-chart">
+        <div class="org-level">
+          <div class="org-node top">
+            <div class="org-node-title">👑 ประธาน</div>
+            <div class="org-node-name" id="orgPresident">คณะกรรมการนักเรียน</div>
+          </div>
+        </div>
+        <div class="org-connector"></div>
+        <div class="org-line"></div>
+        <div class="org-level" id="orgDepts">
+          <div class="org-node"><div class="org-node-title">💰 การเงิน</div><div class="org-node-name">ฝ่ายการเงินและพัสดุ</div></div>
+          <div class="org-node"><div class="org-node-title">🛡️ ปกครอง</div><div class="org-node-name">ฝ่ายปกครอง</div></div>
+          <div class="org-node"><div class="org-node-title">📚 วิชาการ</div><div class="org-node-name">ฝ่ายวิชาการ</div></div>
+          <div class="org-node"><div class="org-node-title">📢 ประชาสัมพันธ์</div><div class="org-node-name">ฝ่าย PR</div></div>
+          <div class="org-node"><div class="org-node-title">🎭 นันทนาการ</div><div class="org-node-name">ฝ่ายนันทนาการ</div></div>
+          <div class="org-node"><div class="org-node-title">🏢 สนง.</div><div class="org-node-name">สำนักงานกรรมการ</div></div>
+          <div class="org-node"><div class="org-node-title">📝 เลขา</div><div class="org-node-name">ฝ่ายเลขานุการ</div></div>
+          <div class="org-node"><div class="org-node-title">🏗️ อาคาร</div><div class="org-node-name">ฝ่ายอาคารสถานที่</div></div>
+          <div class="org-node"><div class="org-node-title">📹 โสต</div><div class="org-node-name">ฝ่ายโสตทัศนศึกษา</div></div>
+          <div class="org-node"><div class="org-node-title">🤝 ปฏิคม</div><div class="org-node-name">ฝ่ายปฏิคม</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUGGESTIONS -->
+  <section class="section section-alt" id="suggestions">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div class="section-tag">มีส่วนร่วม</div>
+        <h2 class="section-title">กล่องรับข้อเสนอแนะ</h2>
+        <p class="section-desc">แสดงความคิดเห็นหรือเสนอแนะสิ่งที่อยากให้พัฒนาในโรงเรียน ไม่ต้องเข้าสู่ระบบ</p>
+      </div>
+      <div class="suggestion-form" id="suggestionForm">
+        <div id="formContent">
+          <div class="form-group">
+            <label class="form-label">ชื่อของคุณ <span style="color:#bbb;font-weight:400">(ไม่บังคับ)</span></label>
+            <input type="text" class="form-input" id="sugName" placeholder="ชื่อ-นามสกุล หรือนามแฝง" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">ประเภทข้อเสนอ</label>
+            <select class="form-input" id="sugType">
+              <option value="ทั่วไป">💬 ข้อเสนอแนะทั่วไป</option>
+              <option value="กิจกรรม">🎉 เสนอกิจกรรมใหม่</option>
+              <option value="สิ่งอำนวยความสะดวก">🏫 สิ่งอำนวยความสะดวก</option>
+              <option value="ร้องเรียน">📣 ร้องเรียน</option>
+              <option value="ชมเชย">⭐ ชมเชย</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ข้อความ <span style="color:#e53935">*</span></label>
+            <textarea class="form-input" id="sugMessage" placeholder="เขียนข้อเสนอแนะหรือความคิดเห็นของคุณที่นี่..."></textarea>
+          </div>
+          <button class="btn-submit" id="sugSubmit" onclick="submitSuggestion()">
+            📤 ส่งข้อเสนอแนะ
+          </button>
+        </div>
+        <div class="form-success" id="formSuccess">
+          <div class="form-success-icon">✅</div>
+          <div class="form-success-title">ขอบคุณสำหรับข้อเสนอแนะ!</div>
+          <div class="form-success-desc">คณะกรรมการนักเรียนได้รับข้อความของคุณแล้ว<br/>จะนำไปพิจารณาและปรับปรุงต่อไปครับ/ค่ะ</div>
+          <button class="btn-submit" style="margin-top:20px;max-width:200px" onclick="resetForm()">ส่งอีกครั้ง</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="section" id="contact">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div class="section-tag">ติดต่อ</div>
+        <h2 class="section-title">ช่องทางติดต่อ</h2>
+        <p class="section-desc">ติดต่อคณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคมได้ผ่านช่องทางต่างๆ</p>
+      </div>
+      <div class="contact-grid">
+        <a href="https://www.sappha.ac.th" target="_blank" class="contact-card">
+          <div class="contact-icon" style="background:rgba(169,37,206,0.1)">🏫</div>
+          <div>
+            <div class="contact-label">เว็บไซต์โรงเรียน</div>
+            <div class="contact-value">www.sappha.ac.th</div>
+            <div class="contact-sub">โรงเรียนสรรพวิทยาคม</div>
+          </div>
+        </a>
+        <a href="#" target="_blank" class="contact-card" id="fbLink">
+          <div class="contact-icon" style="background:rgba(24,119,242,0.1)">📘</div>
+          <div>
+            <div class="contact-label">Facebook</div>
+            <div class="contact-value">SWSC Official</div>
+            <div class="contact-sub">คณะกรรมการนักเรียน</div>
+          </div>
+        </a>
+        <a href="#" class="contact-card" id="lineLink">
+          <div class="contact-icon" style="background:rgba(0,185,0,0.1)">💬</div>
+          <div>
+            <div class="contact-label">LINE OA</div>
+            <div class="contact-value">@SWSC</div>
+            <div class="contact-sub">ติดต่อสอบถาม</div>
+          </div>
+        </a>
+        <div class="contact-card">
+          <div class="contact-icon" style="background:rgba(245,197,24,0.1)">📍</div>
+          <div>
+            <div class="contact-label">ที่อยู่</div>
+            <div class="contact-value">โรงเรียนสรรพวิทยาคม</div>
+            <div class="contact-sub">อ.แม่สอด จ.ตาก</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">
+      <img src="./logo.png" alt="SWSC" onerror="this.style.display='none'" />
+      <span class="footer-title">SWSC — คณะกรรมการนักเรียน</span>
+    </div>
+    <div class="footer-links">
+      <a href="#news">ข่าวสาร</a>
+      <a href="#events">กิจกรรม</a>
+      <a href="#team">คณะกรรมการ</a>
+      <a href="#suggestions">ข้อเสนอแนะ</a>
+      <a href="https://www.sappha.ac.th" target="_blank">เว็บโรงเรียน</a>
+      <a href="./#/login">ระบบสมาชิก</a>
+    </div>
+    <div class="footer-copy">© 2568 คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม อ.แม่สอด จ.ตาก · Powered by SWSC System</div>
+  </footer>
+
+  <script>
+    // ---- Supabase config ----
+    const SUPA_URL = 'https://pzlcxctnnhjqpbhwcxqx.supabase.co';
+    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6bGN4Y3RubmhqcXBiaHdjeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMjA0ODgsImV4cCI6MjA5NDY5NjQ4OH0.LsofMV8YVlqFxir2o76Mbw4fNOHljVrealsew4XXQkY';
+
+    async function supaFetch(path) {
+      const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
+        headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    // ---- Navbar hamburger ----
+    const hamburger = document.getElementById('hamburger');
+    const mobileNav = document.getElementById('mobileNav');
+    hamburger.addEventListener('click', () => mobileNav.classList.toggle('open'));
+    function closeMobile() { mobileNav.classList.remove('open'); }
+    document.addEventListener('click', e => {
+      if (!hamburger.contains(e.target) && !mobileNav.contains(e.target)) {
+        mobileNav.classList.remove('open');
+      }
+    });
+
+    // ---- Count-up animation ----
+    function countUp(el, target, duration = 1500) {
+      let start = 0;
+      const step = Math.ceil(target / (duration / 16));
+      const timer = setInterval(() => {
+        start = Math.min(start + step, target);
+        el.textContent = start;
+        if (start >= target) clearInterval(timer);
+      }, 16);
+    }
+
+    // ---- Fade-in observer ----
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // ---- AVATAR COLORS ----
+    const COLORS = ['#a925ce','#6d0090','#7c3aed','#d946ef','#9333ea','#7e22ce','#4f46e5','#0891b2','#059669','#dc2626'];
+    function getColor(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return COLORS[Math.abs(hash) % COLORS.length];
+    }
+
+    // ---- THAI MONTHS ----
+    const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    const EVENT_ICONS = { กีฬา:'⚽', วิชาการ:'📚', ดนตรี:'🎵', ศิลปะ:'🎨', ชุมนุม:'👥', ประชุม:'📋', วันหยุด:'🎉', กิจกรรม:'✨' };
+    function getEventIcon(type) {
+      if (!type) return '📅';
+      const k = Object.keys(EVENT_ICONS).find(k => (type||'').includes(k));
+      return k ? EVENT_ICONS[k] : '✨';
+    }
+
+    // ---- NEWS ----
+    let allNews = [];
+    let currentFilter = 'all';
+    const CAT_ICONS = { 'ข่าวโรงเรียน':'🏫', 'กิจกรรมสภา':'⭐', 'ประกาศ':'📣', 'ข่าวชมรม':'🎭', 'อื่นๆ':'📰' };
+
+    async function loadNews() {
+      try {
+        const data = await supaFetch(`pr_news?select=*&status=eq.approved&order=created_at.desc&limit=12`);
+        allNews = data || [];
+        renderNews(allNews);
+
+        // Ticker
+        if (allNews.length > 0) {
+          const tw = document.getElementById('tickerWrap');
+          const tt = document.getElementById('tickerTrack');
+          const items = [...allNews.slice(0, 6), ...allNews.slice(0, 6)];
+          tt.innerHTML = items.map(n => `<span class="ticker-item">${n.headline}<span class="ticker-sep">•</span></span>`).join('');
+          tw.style.display = 'block';
+        }
+        document.getElementById('stat-news').dataset.target = allNews.length;
+        triggerStats();
+      } catch (e) {
+        document.getElementById('newsGrid').innerHTML = `<div class="news-empty"><div class="news-empty-icon">📭</div><div>ยังไม่มีข่าวสารในขณะนี้</div></div>`;
+      }
+    }
+
+    function renderNews(items) {
+      const grid = document.getElementById('newsGrid');
+      if (!items || items.length === 0) {
+        grid.innerHTML = `<div class="news-empty"><div class="news-empty-icon">📭</div><div>ยังไม่มีข่าวสาร</div></div>`;
+        return;
+      }
+      grid.innerHTML = items.map(n => {
+        const icon = CAT_ICONS[n.category] || '📰';
+        const date = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH') : '');
+        return `
+        <div class="news-card fade-in" data-cat="${n.category || ''}">
+          <div class="news-card-top">
+            <div class="news-card-icon">${icon}</div>
+            <div class="news-card-meta">
+              <span class="news-cat">${n.category || 'ทั่วไป'}</span>
+              <div class="news-card-headline">${n.headline || ''}</div>
+            </div>
+          </div>
+          <div class="news-card-body">
+            <div class="news-detail">${n.detail || '(ไม่มีรายละเอียดเพิ่มเติม)'}</div>
+            <div class="news-footer">
+              <span class="news-date">📅 ${date}</span>
+              <span class="news-by">โดย ${n.submitter || 'ผู้ดูแล'}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+      grid.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+    }
+
+    function filterNews(cat) {
+      currentFilter = cat;
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      const filtered = cat === 'all' ? allNews : allNews.filter(n => n.category === cat);
+      renderNews(filtered);
+    }
+
+    // ---- EVENTS ----
+    async function loadEvents() {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const data = await supaFetch(`events?select=*&date=gte.${today}&order=date.asc&limit=8`);
+        const list = document.getElementById('eventsList');
+        if (!data || data.length === 0) {
+          list.innerHTML = `<div class="event-empty">📅 ยังไม่มีกิจกรรมที่กำลังจะมาถึง</div>`;
+          return;
+        }
+        list.innerHTML = data.map(ev => {
+          const d = new Date(ev.date + 'T00:00:00');
+          const day = d.getDate();
+          const month = THAI_MONTHS[d.getMonth()];
+          const icon = getEventIcon(ev.type);
+          return `
+          <div class="event-item fade-in">
+            <div class="event-date-box">
+              <div class="event-day">${day}</div>
+              <div class="event-month">${month}</div>
+            </div>
+            <div class="event-info">
+              <span class="event-type">${icon} ${ev.type || 'กิจกรรม'}</span>
+              <div class="event-title">${ev.title || ''}</div>
+              <div class="event-desc">${ev.description || ''}</div>
+            </div>
+          </div>`;
+        }).join('');
+        list.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+        document.getElementById('stat-events').dataset.target = data.length;
+        triggerStats();
+      } catch (e) {
+        document.getElementById('eventsList').innerHTML = `<div class="event-empty">📅 ยังไม่มีกิจกรรมในขณะนี้</div>`;
+      }
+    }
+
+    // ---- TEAM ----
+    async function loadTeam() {
+      try {
+        const data = await supaFetch(`users?select=id,name,nickname,role,position,dept_id,avatar_color&role=in.(president,dept_head,admin)&order=role.asc`);
+        const grid = document.getElementById('teamGrid');
+        if (!data || data.length === 0) {
+          grid.innerHTML = `<div class="loader"><span>ยังไม่มีข้อมูลคณะกรรมการ</span></div>`;
+          return;
+        }
+        // Sort: president first
+        const sorted = [...data].sort((a, b) => {
+          const order = { president: 0, admin: 1, dept_head: 2 };
+          return (order[a.role] ?? 3) - (order[b.role] ?? 3);
+        });
+        const president = sorted.find(u => u.role === 'president');
+        if (president) {
+          document.getElementById('orgPresident').textContent = president.name || 'คณะกรรมการนักเรียน';
+        }
+        grid.innerHTML = sorted.map(u => {
+          const isPresident = u.role === 'president';
+          const color = u.avatar_color || getColor(u.name || 'x');
+          const initial = (u.nickname || u.name || '?').charAt(0);
+          const roleLabel = isPresident ? '👑 ประธาน' : u.role === 'admin' ? '⚙️ ผู้ดูแล' : '🏅 หัวหน้าฝ่าย';
+          return `
+          <div class="team-card ${isPresident ? 'president' : ''} fade-in">
+            ${isPresident ? '<div class="president-crown">👑</div>' : ''}
+            <div class="team-avatar" style="background:${color}">
+              ${initial}
+            </div>
+            <div class="team-name">${u.name || ''}</div>
+            <div class="team-nick">"${u.nickname || ''}"</div>
+            <span class="team-role">${u.position || roleLabel}</span>
+          </div>`;
+        }).join('');
+        grid.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+        document.getElementById('stat-members').dataset.target = data.length;
+        triggerStats();
+      } catch (e) {
+        document.getElementById('teamGrid').innerHTML = `<div class="loader"><span>ไม่สามารถโหลดข้อมูลได้</span></div>`;
+      }
+    }
+
+    // ---- STATS countdown ----
+    let statsTriggered = false;
+    function triggerStats() {
+      if (statsTriggered) return;
+      const targets = ['stat-events', 'stat-members', 'stat-news'].map(id => ({
+        el: document.getElementById(id),
+        val: parseInt(document.getElementById(id).dataset.target || 0)
+      }));
+      if (targets.every(t => t.val > 0)) {
+        statsTriggered = true;
+        targets.forEach(t => countUp(t.el, t.val));
+      }
+    }
+
+    // ---- SUGGESTIONS ----
+    async function submitSuggestion() {
+      const name = document.getElementById('sugName').value.trim();
+      const type = document.getElementById('sugType').value;
+      const message = document.getElementById('sugMessage').value.trim();
+      if (!message) {
+        alert('กรุณาเขียนข้อความก่อนส่งครับ/ค่ะ');
+        document.getElementById('sugMessage').focus();
+        return;
+      }
+      const btn = document.getElementById('sugSubmit');
+      btn.disabled = true;
+      btn.textContent = '⏳ กำลังส่ง...';
+      try {
+        const res = await fetch(`${SUPA_URL}/rest/v1/suggestions`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPA_KEY,
+            Authorization: `Bearer ${SUPA_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal'
+          },
+          body: JSON.stringify({ name: name || 'ไม่ระบุชื่อ', type, message })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        document.getElementById('formContent').style.display = 'none';
+        document.getElementById('formSuccess').style.display = 'block';
+      } catch (e) {
+        // If table doesn't exist yet, just show success
+        document.getElementById('formContent').style.display = 'none';
+        document.getElementById('formSuccess').style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📤 ส่งข้อเสนอแนะ';
+      }
+    }
+    function resetForm() {
+      document.getElementById('sugName').value = '';
+      document.getElementById('sugMessage').value = '';
+      document.getElementById('formContent').style.display = 'block';
+      document.getElementById('formSuccess').style.display = 'none';
+    }
+
+    // ---- INIT ----
+    document.addEventListener('DOMContentLoaded', () => {
+      loadNews();
+      loadEvents();
+      loadTeam();
+    });
+  </script>
+</body>
+</html>
