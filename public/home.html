@@ -1214,7 +1214,7 @@
         position: static;
       }
     }
-    body.modal-open {
+    html.modal-open, body.modal-open {
       overflow: hidden !important;
     }
   </style>
@@ -1772,7 +1772,7 @@
     title.innerText = category;
     body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);"><div class="spin" style="margin: 0 auto 15px; border-top-color: var(--purple-600); width: 30px; height: 30px;"></div>กำลังโหลดข้อมูลเอกสาร...</div>';
     overlay.classList.add('show');
-    document.body.classList.add('modal-open');
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
 
     try {
       let sheetName = type === 'sec' ? 'Secretary_Docs' : 'Academic_Docs';
@@ -1820,20 +1820,20 @@
 
   function closeDocModal() {
     document.getElementById('docModalOverlay').classList.remove('show');
-    document.body.classList.remove('modal-open');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
   }
 
   /* ---- CERTIFICATES MODAL ---- */
   function openCertModal() {
     document.getElementById('certModalOverlay').classList.add('show');
-    document.body.classList.add('modal-open');
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
     document.getElementById('certStudentId').value = '';
     document.getElementById('certModalResult').innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500); font-size:14px;">กรุณาระบุเลขประจำตัวและกดค้นหา</div>';
   }
   
   function closeCertModal() {
     document.getElementById('certModalOverlay').classList.remove('show');
-    document.body.classList.remove('modal-open');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
   }
 
   async function searchCertificates() {
@@ -1898,7 +1898,7 @@
     closeNewsPopup();
     closeDocModal();
     closeCertModal();
-    document.body.classList.remove('modal-open');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
     const hash = location.hash || '#/home';
     document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-menu a, .mobile-menu a').forEach(a => a.classList.remove('active'));
@@ -2224,7 +2224,7 @@
       </div>`;
     const pop = document.getElementById('calPopup');
     pop.style.display = 'flex';
-    document.body.classList.add('modal-open');
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
     setTimeout(() => pop.classList.add('show'), 10);
   }
 
@@ -2247,7 +2247,7 @@
   function closeCalPopup() {
     const pop = document.getElementById('calPopup');
     pop.classList.remove('show');
-    document.body.classList.remove('modal-open');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
     setTimeout(() => pop.style.display = 'none', 300);
   }
   document.addEventListener('keydown', e => { 
@@ -2333,7 +2333,7 @@
     let imgHtml = '';
     if (n.image_url) {
       imgHtml = `<div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); max-height: 500px; width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
-        <img id="mainNewsImage" src="${transformGoogleDriveUrl(n.image_url)}?w=800" style="width:100%; max-height:500px; object-fit:cover; border-radius:8px;" />
+        <img id="mainNewsImage" src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; max-height:500px; object-fit:cover; border-radius:8px;" />
       </div>`;
     }
 
@@ -2342,7 +2342,7 @@
     if (n.supporting_images && n.supporting_images.length > 0) {
       const imagesHtml = n.supporting_images.map(imgUrl => `
         <div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); max-height:500px; width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
-          <img src="${transformGoogleDriveUrl(imgUrl)}?w=800" style="width:100%; max-height:500px; object-fit:cover; border-radius:8px;" />
+          <img src="${transformGoogleDriveUrl(imgUrl)}" style="width:100%; max-height:500px; object-fit:cover; border-radius:8px;" />
         </div>
       `).join('');
       
@@ -2408,14 +2408,14 @@
     `;
     const pop = document.getElementById('newsPopup');
     pop.style.display = 'flex';
-    document.body.classList.add('modal-open');
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
     setTimeout(() => pop.classList.add('show'), 10);
   }
 
   function closeNewsPopup() {
     const pop = document.getElementById('newsPopup');
     pop.classList.remove('show');
-    document.body.classList.remove('modal-open');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
     setTimeout(() => pop.style.display = 'none', 300);
   }
 
