@@ -39,7 +39,7 @@ function doPost(e) {
     // แยกแยะตาม Action ที่ได้รับ
     switch (action) {
       case "upload_file":
-        result = uploadFileToDrive(requestData.fileBase64, requestData.fileName, requestData.folderCategory);
+        result = uploadFileToDrive(requestData.fileBase64, requestData.fileName, requestData.folderCategory, requestData.subFolderName);
         break;
       case "sync_folder":
         result = syncDriveFolder(requestData.folderId, requestData.eventName, requestData.uploadedBy);
@@ -233,7 +233,7 @@ function getOrCreateFolder(folderName, parentFolder) {
 }
 
 // 1. ฟังก์ชันบันทึกไฟล์ภาพ/เอกสารลง Google Drive
-function uploadFileToDrive(fileBase64, fileName, folderCategory) {
+function uploadFileToDrive(fileBase64, fileName, folderCategory, subFolderName) {
   var parts = fileBase64.split(";base64,");
   var contentType = parts[0].split(":")[1];
   var rawData = parts[1];
@@ -255,6 +255,9 @@ function uploadFileToDrive(fileBase64, fileName, folderCategory) {
     
     var monthFolder = getOrCreateFolder(monthFolderName, categoryFolder);
     targetFolder = getOrCreateFolder(dayFolderName, monthFolder);
+  } else if (subFolderName) {
+    // ถ้ามีการระบุ subFolderName (เช่น หัวข้อข่าว) ให้สร้างโฟลเดอร์ย่อย
+    targetFolder = getOrCreateFolder(subFolderName, categoryFolder);
   }
   
   var file = targetFolder.createFile(blob);

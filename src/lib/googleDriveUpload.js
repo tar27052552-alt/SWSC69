@@ -38,11 +38,12 @@ async function callGAS(action, payload) {
  * อัปโหลดไฟล์รูปภาพหรือเอกสารไปยัง Google Drive ผ่าน Apps Script
  * @param {string} fileBase64 - ไฟล์ที่เข้ารหัสเป็น Base64 (เช่น "data:image/png;base64,iVBORw...")
  * @param {string} fileName - ชื่อไฟล์ที่ต้องการบันทึก เช่น "selfie.png"
- * @param {string} folderCategory - หมวดหมู่โฟลเดอร์ ('selfies', 'duties', 'slips', 'secretary', 'academic')
+ * @param {string} folderCategory - หมวดหมู่โฟลเดอร์ ('selfies', 'duties', 'slips', 'secretary', 'academic', 'pr', 'obec')
+ * @param {string} subFolderName - (เลือกได้) ชื่อโฟลเดอร์ย่อยในหมวดหมู่หลัก เช่น หัวข้อข่าว
  * @returns {Promise<{fileId: string, url: string, fileName: string}>} ข้อมูลไฟล์ที่อัปโหลดและลิงก์ตรง
  */
-export async function uploadFileToDrive(fileBase64, fileName, folderCategory) {
-  return callGAS("upload_file", { fileBase64, fileName, folderCategory });
+export async function uploadFileToDrive(fileBase64, fileName, folderCategory, subFolderName = null) {
+  return callGAS("upload_file", { fileBase64, fileName, folderCategory, subFolderName });
 }
 
 export async function verifySlipViaGAS(branchId, apiKey, fileBase64, amount) {

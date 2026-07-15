@@ -229,7 +229,7 @@ export default function AVPage() {
         });
         const base64 = await toBase64(obecForm.imageFile);
         const fileName = `obec_${Date.now()}_${obecForm.imageFile.name}`;
-        const uploadResult = await uploadFileToDrive(base64, fileName, 'pr');
+        const uploadResult = await uploadFileToDrive(base64, fileName, 'obec');
         if (uploadResult && uploadResult.url) {
           finalImageUrl = uploadResult.url;
         } else {
@@ -316,7 +316,8 @@ export default function AVPage() {
         
         const base64 = await toBase64(newsForm.imageFile);
         const fileName = `news_${Date.now()}_${newsForm.imageFile.name}`;
-        const uploadResult = await uploadFileToDrive(base64, fileName, 'pr');
+        const subFolderName = newsForm.headline.trim() || 'ข่าวไม่มีหัวข้อ';
+        const uploadResult = await uploadFileToDrive(base64, fileName, 'pr', subFolderName);
         if (uploadResult && uploadResult.url) {
           finalImageUrl = uploadResult.url;
         } else {
@@ -332,12 +333,13 @@ export default function AVPage() {
       // Upload supporting images
       let finalSupportingImages = [];
       if (newsForm.supportingImages && newsForm.supportingImages.length > 0) {
+        const subFolderName = newsForm.headline.trim() || 'ข่าวไม่มีหัวข้อ';
         for (let img of newsForm.supportingImages) {
           if (img.file) {
             // New file selected — upload to Google Drive
             const base64 = await toBase64(img.file);
             const fileName = `news_sub_${Date.now()}_${img.file.name}`;
-            const uploadResult = await uploadFileToDrive(base64, fileName, 'pr');
+            const uploadResult = await uploadFileToDrive(base64, fileName, 'pr', subFolderName);
             if (uploadResult && uploadResult.url) {
               finalSupportingImages.push(uploadResult.url);
             } else {
