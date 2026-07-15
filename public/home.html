@@ -2121,7 +2121,7 @@
         return `<div onclick="showNewsPopup('${n.id}')" style="
           flex-shrink:0; width:100%; cursor:pointer; position:relative; overflow:hidden;
         ">
-          <img src="${img}" style="width:100%;max-height:500px;object-fit:contain;background:#f5f5f5;display:block;"
+          <img src="${img}" style="width:100%;height:auto;object-fit:contain;background:#f5f5f5;display:block;"
             onerror="this.style.objectFit='cover';this.src='${FALLBACK_IMG}'" />
         </div>`;
       }).join('');
@@ -2476,8 +2476,8 @@
     
     let imgHtml = '';
     if (n.image_url) {
-      imgHtml = `<div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); max-height: 500px; width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
-        <img id="mainNewsImage" src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; max-height:500px; object-fit:cover; border-radius:8px;" />
+      imgHtml = `<div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
+        <img id="mainNewsImage" src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
       </div>`;
     }
 
@@ -2485,8 +2485,8 @@
     let galleryHtml = '';
     if (n.supporting_images && n.supporting_images.length > 0) {
       const imagesHtml = n.supporting_images.map(imgUrl => `
-        <div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); max-height:500px; width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
-          <img src="${transformGoogleDriveUrl(imgUrl)}" style="width:100%; max-height:500px; object-fit:cover; border-radius:8px;" />
+        <div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
+          <img src="${transformGoogleDriveUrl(imgUrl)}" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
         </div>
       `).join('');
       
