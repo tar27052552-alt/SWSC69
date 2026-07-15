@@ -1495,15 +1495,20 @@ export default function AVPage() {
                   multiple
                   className="input-field"
                   onChange={e => {
-                    const files = Array.from(e.target.files);
-                    const newImages = files.map(file => ({
-                      file,
-                      preview: URL.createObjectURL(file)
-                    }));
-                    setNewsForm(p => ({ 
-                      ...p, 
-                      supportingImages: [...(p.supportingImages || []), ...newImages] 
-                    }));
+                    try {
+                      const files = Array.from(e.target.files);
+                      const newImages = files.map(file => ({
+                        file,
+                        preview: URL.createObjectURL(file)
+                      }));
+                      setNewsForm(p => ({ 
+                        ...p, 
+                        supportingImages: [...(p.supportingImages || []), ...newImages] 
+                      }));
+                    } catch (err) {
+                      console.error("Error in supporting images onChange:", err);
+                      alert("เกิดข้อผิดพลาดในการอ่านไฟล์ภาพประกอบ: " + err.message);
+                    }
                   }}
                 />
                 
