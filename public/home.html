@@ -1217,6 +1217,12 @@
     html.modal-open, body.modal-open {
       overflow: hidden !important;
     }
+    body.modal-open nav {
+      position: fixed !important;
+      top: 0;
+      left: 0;
+      right: 0;
+    }
   </style>
 </head>
 <body>
@@ -2006,6 +2012,15 @@
 
   /* ---- NEWS ---- */
   let allNews = [];
+  let allUsers = [];
+
+  async function loadUsers() {
+    try {
+      allUsers = await sbFetch('users?select=name,nickname') || [];
+    } catch (e) {
+      console.error('Failed to load users for mapping:', e);
+    }
+  }
 
   async function loadNews() {
     try {
@@ -2474,6 +2489,10 @@
     const m = catMeta(n.category);
     const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '');
     
+    // Map submitter nickname to real name
+    const foundUser = allUsers.find(u => u.nickname === n.submitter || u.name === n.submitter);
+    const submitterName = foundUser ? foundUser.name : (n.submitter || 'ผู้ดูแล');
+
     let imgHtml = '';
     if (n.image_url) {
       imgHtml = `<div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
@@ -2530,7 +2549,7 @@
             ${n.headline || ''}
           </h1>
           <div style="font-size:12.5px; color:#6b7280; margin-bottom:20px; border-bottom:1px solid #e5e7eb; padding-bottom:12px;">
-            👤 ผู้เขียน: ${n.submitter || 'ผู้ดูแล'} • 📅 ${d}
+            👤 ผู้เขียน: ${submitterName} • 📅 ${d}
           </div>
           ${imgHtml}
           <div style="font-size:15px; line-height:1.8; color:#374151; white-space:pre-line; word-break:break-word; margin-top:20px;">
@@ -2590,6 +2609,7 @@
 
   /* ---- INIT ---- */
   document.addEventListener('DOMContentLoaded', () => {
+    loadUsers();
     loadNews();
     loadAnnouncements();
     loadObecLine();
