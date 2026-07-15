@@ -59,7 +59,7 @@ export default function AnnouncementsPage() {
       }
 
       const data = {
-        headline: annForm.title.trim() || null,
+        headline: annForm.title.trim() || '-',
         image_url: finalImageUrl,
         detail: annForm.link_url.trim() || null,
         category: annForm.is_active ? 'ประกาศ' : 'ประกาศ_ซ่อน',
