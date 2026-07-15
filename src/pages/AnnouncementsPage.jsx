@@ -172,6 +172,7 @@ export default function AnnouncementsPage() {
                   <img
                     src={annForm.imageFile ? annForm.imagePreview : transformGoogleDriveUrl(annForm.imagePreview)}
                     alt="preview"
+                    referrerPolicy="no-referrer"
                     style={{ width: 240, height: 130, objectFit: 'contain', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f9fafb' }}
                   />
                   <button
@@ -243,6 +244,7 @@ export default function AnnouncementsPage() {
                       <img
                         src={transformGoogleDriveUrl(ann.image_url)}
                         alt="announcement"
+                        referrerPolicy="no-referrer"
                         style={{ width: 100, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', flexShrink: 0 }}
                       />
                     )}
