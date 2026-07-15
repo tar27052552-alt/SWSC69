@@ -329,6 +329,7 @@ export default function AVPage() {
 
       // Upload supporting images
       let finalSupportingImages = [];
+      alert("จำนวนไฟล์ภาพประกอบที่จะอัปโหลด: " + (newsForm.supportingImages ? newsForm.supportingImages.length : 0));
       if (newsForm.supportingImages && newsForm.supportingImages.length > 0) {
         for (let img of newsForm.supportingImages) {
           if (img.file) {
@@ -1520,6 +1521,7 @@ export default function AVPage() {
                   onChange={e => {
                     try {
                       const files = Array.from(e.target.files);
+                      alert("เลือกไฟล์จำนวน: " + files.length + " ไฟล์");
                       const newImages = files.map(file => ({
                         file,
                         preview: URL.createObjectURL(file)
