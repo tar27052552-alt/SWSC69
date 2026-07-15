@@ -1508,9 +1508,9 @@ export default function AVPage() {
                 />
                 
                 {newsForm.supportingImages && newsForm.supportingImages.length > 0 && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8, marginTop: 12 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
                     {newsForm.supportingImages.map((img, idx) => (
-                      <div key={idx} style={{ position: 'relative', width: '100%', aspectRatio: '1', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--gray-200)' }}>
+                      <div key={idx} style={{ position: 'relative', width: 80, height: 80, borderRadius: 6, overflow: 'hidden', border: '1px solid #ccc' }}>
                         <img 
                           src={transformGoogleDriveUrl(img.preview)} 
                           alt="preview" 
@@ -1530,7 +1530,8 @@ export default function AVPage() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: 11
+                            fontSize: 11,
+                            lineHeight: 1
                           }}
                           onClick={() => {
                             setNewsForm(p => ({
