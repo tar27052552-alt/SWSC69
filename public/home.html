@@ -1744,15 +1744,7 @@
   function transformGoogleDriveUrl(url) {
     if (!url) return "";
     if (typeof url !== "string") return url;
-    if (url.startsWith("data:") || url.startsWith("blob:")) {
-      return url;
-    }
-    if (url.startsWith("https://lh3.googleusercontent.com/")) {
-      const segments = url.split('/');
-      const fileId = segments[segments.length - 1];
-      if (fileId && fileId.length > 20) {
-        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1200`;
-      }
+    if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("https://lh3.googleusercontent.com/")) {
       return url;
     }
     if (!url.includes("drive.google.com")) {
@@ -1760,11 +1752,11 @@
     }
     let match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (match && match[1]) {
-      return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1200`;
+      return `https://lh3.googleusercontent.com/d/${match[1]}`;
     }
     match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
     if (match && match[1]) {
-      return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1200`;
+      return `https://lh3.googleusercontent.com/d/${match[1]}`;
     }
     return url;
   }
