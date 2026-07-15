@@ -126,6 +126,14 @@ export default function AVPage() {
   const [obecForm, setObecForm] = useState({ title: '', imagePreview: null, imageFile: null });
   const [editingObecId, setEditingObecId] = useState(null);
 
+  // Announcement (Carousel) states
+  const [announcements, setAnnouncements] = useState([]);
+  const [loadingAnn, setLoadingAnn] = useState(false);
+  const [submittingAnn, setSubmittingAnn] = useState(false);
+  const [annForm, setAnnForm] = useState({ title: '', imagePreview: null, imageFile: null, link_url: '', is_active: true });
+  const [editingAnnId, setEditingAnnId] = useState(null);
+
+
   const loadNewsList = async () => {
     setLoadingNews(true);
     try {
@@ -194,6 +202,23 @@ export default function AVPage() {
     }
   };
 
+  const loadAnnouncements = async () => {
+    setLoadingAnn(true);
+    try {
+      const { data, error } = await supabase
+        .from('web_announcements')
+        .select('*')
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setAnnouncements(data || []);
+    } catch (err) {
+      console.error('Failed to load announcements:', err);
+    } finally {
+      setLoadingAnn(false);
+    }
+  };
+
   useEffect(() => {
     if (tab === 'certificates') {
       loadCertHistory();
@@ -204,7 +229,11 @@ export default function AVPage() {
     if (tab === 'obec') {
       loadObecList();
     }
+    if (tab === 'announcements') {
+      loadAnnouncements();
+    }
   }, [tab]);
+
 
   const handleSubmitObec = async (e) => {
     e.preventDefault();
@@ -1272,6 +1301,7 @@ export default function AVPage() {
         <button className={`tab-btn${tab==='certificates'?' active':''}`} onClick={()=>setTab('certificates')}>🎓 อัปโหลดเกียรติบัตร</button>
         <button className={`tab-btn${tab==='news'?' active':''}`} onClick={()=>setTab('news')}>📰 ส่งข่าวประชาสัมพันธ์</button>
         <button className={`tab-btn${tab==='obec'?' active':''}`} onClick={()=>setTab('obec')}>📚 จัดการ Obec Line</button>
+        <button className={`tab-btn${tab==='announcements'?' active':''}`} onClick={()=>setTab('announcements')}>📢 จัดการประกาศ</button>
       </div>
 
       {/* Kanban */}
@@ -1797,8 +1827,230 @@ export default function AVPage() {
         </div>
       )}
 
+      {/* Announcements Tab */}
+      {tab === 'announcements' && (() => {
+        const toBase64 = (file) => new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = reject;
+        });
+
+        const handleSubmitAnn = async (e) => {
+          e.preventDefault();
+          if (!editingAnnId && !annForm.imageFile) {
+            alert('กรุณาเลือกรูปภาพประกาศด้วยครับ');
+            return;
+          }
+          setSubmittingAnn(true);
+          try {
+            let finalImageUrl = annForm.imagePreview || '';
+
+            if (annForm.imageFile) {
+              const base64 = await toBase64(annForm.imageFile);
+              const fileName = `announcement_${Date.now()}_${annForm.imageFile.name}`;
+              const result = await uploadFileToDrive(base64, fileName, 'pr');
+              if (!result?.url) throw new Error('อัปโหลดรูปภาพไม่สำเร็จ');
+              finalImageUrl = result.url;
+            }
+
+            const data = {
+              title: annForm.title.trim() || null,
+              image_url: finalImageUrl,
+              link_url: annForm.link_url.trim() || null,
+              is_active: annForm.is_active,
+              created_by: user?.nickname || user?.name || 'แอดมิน',
+            };
+
+            if (editingAnnId) {
+              const { error } = await supabase.from('web_announcements').update(data).eq('id', editingAnnId);
+              if (error) throw error;
+              alert('แก้ไขประกาศสำเร็จ!');
+            } else {
+              const { error } = await supabase.from('web_announcements').insert([data]);
+              if (error) throw error;
+              alert('เพิ่มประกาศสำเร็จ!');
+            }
+
+            setAnnForm({ title: '', imagePreview: null, imageFile: null, link_url: '', is_active: true });
+            setEditingAnnId(null);
+            loadAnnouncements();
+          } catch (err) {
+            console.error(err);
+            alert('เกิดข้อผิดพลาด: ' + err.message);
+          } finally {
+            setSubmittingAnn(false);
+          }
+        };
+
+        const handleDeleteAnn = async (id) => {
+          if (!confirm('ลบประกาศนี้?')) return;
+          const { error } = await supabase.from('web_announcements').delete().eq('id', id);
+          if (error) { alert('ลบไม่สำเร็จ: ' + error.message); return; }
+          loadAnnouncements();
+        };
+
+        const handleEditAnn = (ann) => {
+          setEditingAnnId(ann.id);
+          setAnnForm({
+            title: ann.title || '',
+            imagePreview: ann.image_url,
+            imageFile: null,
+            link_url: ann.link_url || '',
+            is_active: ann.is_active,
+          });
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        const handleToggleActive = async (ann) => {
+          const { error } = await supabase.from('web_announcements').update({ is_active: !ann.is_active }).eq('id', ann.id);
+          if (error) { alert('เกิดข้อผิดพลาด'); return; }
+          loadAnnouncements();
+        };
+
+        return (
+          <div>
+            {/* Form */}
+            <div className="card" style={{ marginBottom: 24 }}>
+              <div className="card-header">
+                <span className="card-title">{editingAnnId ? '✏️ แก้ไขประกาศ' : '➕ เพิ่มประกาศใหม่'}</span>
+                {editingAnnId && (
+                  <button
+                    style={{ fontSize: 12, padding: '4px 12px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, cursor: 'pointer' }}
+                    onClick={() => { setEditingAnnId(null); setAnnForm({ title: '', imagePreview: null, imageFile: null, link_url: '', is_active: true }); }}
+                  >ยกเลิกการแก้ไข</button>
+                )}
+              </div>
+              <form onSubmit={handleSubmitAnn} style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>ชื่อประกาศ (ไม่บังคับ)</label>
+                    <input
+                      type="text"
+                      className="form-ctrl"
+                      placeholder="เช่น ประกาศหยุดเรียน, กำหนดการสอบ"
+                      value={annForm.title}
+                      onChange={e => setAnnForm(p => ({ ...p, title: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>ลิงก์เพิ่มเติม (ไม่บังคับ)</label>
+                    <input
+                      type="url"
+                      className="form-ctrl"
+                      placeholder="https://..."
+                      value={annForm.link_url}
+                      onChange={e => setAnnForm(p => ({ ...p, link_url: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Image upload */}
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>
+                    รูปภาพประกาศ {!editingAnnId && <span style={{ color: '#ef4444' }}>*</span>}
+                  </label>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                    {annForm.imagePreview && (
+                      <div style={{ position: 'relative' }}>
+                        <img
+                          src={annForm.imageFile ? annForm.imagePreview : transformGoogleDriveUrl(annForm.imagePreview)}
+                          alt="preview"
+                          style={{ width: 160, height: 100, objectFit: 'contain', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f9fafb' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setAnnForm(p => ({ ...p, imagePreview: null, imageFile: null }))}
+                          style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >×</button>
+                      </div>
+                    )}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: '#f3f4f6', border: '1px dashed #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#374151' }}>
+                      📁 เลือกรูปภาพ
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          const file = e.target.files[0];
+                          if (file) setAnnForm(p => ({ ...p, imageFile: file, imagePreview: URL.createObjectURL(file) }));
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    id="annIsActive"
+                    checked={annForm.is_active}
+                    onChange={e => setAnnForm(p => ({ ...p, is_active: e.target.checked }))}
+                    style={{ width: 16, height: 16, cursor: 'pointer' }}
+                  />
+                  <label htmlFor="annIsActive" style={{ fontSize: 13, color: '#374151', cursor: 'pointer' }}>แสดงในหน้าเว็บ (Active)</label>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingAnn}
+                  style={{ alignSelf: 'flex-start', padding: '10px 24px', background: 'var(--purple-600)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 14, opacity: submittingAnn ? 0.7 : 1 }}
+                >
+                  {submittingAnn ? '⏳ กำลังบันทึก...' : editingAnnId ? '💾 บันทึกการแก้ไข' : '➕ เพิ่มประกาศ'}
+                </button>
+              </form>
+            </div>
+
+            {/* List */}
+            <div className="card">
+              <div className="card-header">
+                <span className="card-title">📋 ประกาศทั้งหมด ({announcements.length} รายการ)</span>
+              </div>
+              <div style={{ padding: '16px 20px' }}>
+                {loadingAnn ? (
+                  <div style={{ color: 'var(--gray-500)', fontSize: 14 }}>กำลังโหลด...</div>
+                ) : announcements.length === 0 ? (
+                  <div style={{ color: 'var(--gray-500)', fontSize: 14 }}>ยังไม่มีประกาศ กรุณาเพิ่มด้านบน</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {announcements.map((ann, idx) => (
+                      <div key={ann.id} style={{ display: 'flex', gap: 14, background: ann.is_active ? '#f0fdf4' : '#f9fafb', border: `1px solid ${ann.is_active ? '#bbf7d0' : '#e5e7eb'}`, borderRadius: 10, padding: 12, alignItems: 'center' }}>
+                        <div style={{ width: 30, height: 30, background: '#e5e7eb', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#6b7280', flexShrink: 0 }}>{idx + 1}</div>
+                        {ann.image_url && (
+                          <img
+                            src={transformGoogleDriveUrl(ann.image_url)}
+                            alt="announcement"
+                            style={{ width: 80, height: 52, objectFit: 'contain', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', flexShrink: 0 }}
+                          />
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>{ann.title || '(ไม่มีชื่อ)'}</div>
+                          {ann.link_url && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>🔗 {ann.link_url}</div>}
+                          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>โดย {ann.created_by || '-'}</div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
+                          <button
+                            onClick={() => handleToggleActive(ann)}
+                            style={{ padding: '4px 12px', background: ann.is_active ? '#dcfce7' : '#f3f4f6', color: ann.is_active ? '#16a34a' : '#6b7280', border: `1px solid ${ann.is_active ? '#bbf7d0' : '#d1d5db'}`, borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                          >{ann.is_active ? '✅ แสดงอยู่' : '⬜ ซ่อนอยู่'}</button>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button onClick={() => handleEditAnn(ann)} style={{ padding: '4px 10px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>✏️ แก้ไข</button>
+                            <button onClick={() => handleDeleteAnn(ann.id)} style={{ padding: '4px 10px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>🗑 ลบ</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Calendar */}
       {tab === 'calendar' && (() => {
+
         const firstDay = new Date(yr, mo, 1).getDay();
         const firstDayAdjusted = firstDay === 0 ? 6 : firstDay - 1;
         const daysInMonth = new Date(yr, mo + 1, 0).getDate();

@@ -2012,7 +2012,6 @@
       allNews = await sbFetch(`web_news?select=*&order=created_at.desc&limit=15`) || [];
       renderHomeNews(allNews.slice(0, 5));
       renderNews(allNews, 'fullNewsGrid');
-      renderCarousel(allNews.slice(0, 10));
 
       const count = allNews.length;
       const hNews = document.getElementById('hStatNews');
@@ -2023,6 +2022,18 @@
         const el = document.getElementById(id);
         if(el) el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>ยังไม่มีข่าวสาร</div>'; 
       });
+    }
+  }
+
+  async function loadAnnouncements() {
+    try {
+      const anns = await sbFetch(`web_announcements?select=*&is_active=eq.true&order=sort_order.asc,created_at.desc`) || [];
+      renderCarousel(anns);
+    } catch (e) {
+      console.warn('Could not load announcements:', e);
+      // Hide carousel if failed
+      const wrap = document.getElementById('announcementCarouselWrap');
+      if (wrap) wrap.style.display = 'none';
     }
   }
 
@@ -2583,6 +2594,7 @@
   /* ---- INIT ---- */
   document.addEventListener('DOMContentLoaded', () => {
     loadNews();
+    loadAnnouncements();
     loadObecLine();
     loadEvents();
     loadTeam();
