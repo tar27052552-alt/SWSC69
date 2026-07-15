@@ -66,7 +66,7 @@ export default function AnnouncementsPage() {
         category: annForm.is_active ? 'ประกาศ' : 'ประกาศ_ซ่อน',
         for_date: '-',
         for_day: '-',
-        submitter: user?.nickname || user?.name || 'แอดมิน',
+        submitter: user?.name || user?.nickname || 'แอดมิน',
       };
 
       if (editingAnnId) {

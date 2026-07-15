@@ -362,7 +362,7 @@ export default function AVPage() {
         for_date: thaiDateStr,
         image_url: finalImageUrl,
         supporting_images: finalSupportingImages,
-        submitter: user?.nickname || user?.name || 'ฝ่ายโสตฯ'
+        submitter: user?.name || user?.nickname || 'ฝ่ายโสตฯ'
       };
 
       if (editingNewsId) {

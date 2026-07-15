@@ -145,7 +145,7 @@ export default function SubmitNewsPage() {
     setSubmitting(true);
     const nowT = new Date();
     const subStr = nowT.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
-    const nicknameOrName = user?.nickname || user?.name || 'ไม่ระบุ';
+    const nicknameOrName = user?.name || user?.nickname || 'ไม่ระบุ';
     
     const newNews = {
       for_day: tomorrowKey,
@@ -205,7 +205,7 @@ export default function SubmitNewsPage() {
     }
   };
 
-  const nicknameOrName = user?.nickname || user?.name || '';
+  const nicknameOrName = user?.name || user?.nickname || '';
   const mySubmissions = news.filter(item => item.submitter === nicknameOrName);
   const tomorrowSubmissions = news.filter(item => item.date === tomorrowDateStr);
 

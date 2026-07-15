@@ -302,7 +302,7 @@ export default function PRPage() {
     const newNews = {
       for_day: tomorrowKey,
       for_date: tomorrowDateStr,
-      submitter: user?.nickname || user?.name || 'ไม่ระบุ',
+      submitter: user?.name || user?.nickname || 'ไม่ระบุ',
       category: newsForm.category,
       headline: newsForm.headline.trim(),
       detail: newsForm.detail.trim(),
