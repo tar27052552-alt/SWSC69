@@ -1494,16 +1494,11 @@ export default function AVPage() {
                   accept="image/*"
                   multiple
                   className="input-field"
-                  onChange={async e => {
+                  onChange={e => {
                     const files = Array.from(e.target.files);
-                    const newImages = await Promise.all(files.map(file => {
-                      return new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          resolve({ file, preview: reader.result });
-                        };
-                        reader.readAsDataURL(file);
-                      });
+                    const newImages = files.map(file => ({
+                      file,
+                      preview: URL.createObjectURL(file)
                     }));
                     setNewsForm(p => ({ 
                       ...p, 
