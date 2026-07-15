@@ -2333,7 +2333,7 @@
     let imgHtml = '';
     if (n.image_url) {
       imgHtml = `<div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); max-height: 500px; width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
-        <img id="mainNewsImage" src="${transformGoogleDriveUrl(n.image_url)}?t=${Date.now()}" style="width:100%; max-height:500px; object-fit:cover; border-radius:8px;" />
+        <img id="mainNewsImage" src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; max-height:500px; object-fit:cover; border-radius:8px;" />
       </div>`;
     }
 
@@ -2342,7 +2342,7 @@
     if (n.supporting_images && n.supporting_images.length > 0) {
       const imagesHtml = n.supporting_images.map(imgUrl => `
         <div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); max-height:500px; width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
-          <img src="${transformGoogleDriveUrl(imgUrl)}?t=${Date.now()}" style="width:100%; max-height:500px; object-fit:cover; border-radius:8px;" />
+          <img src="${transformGoogleDriveUrl(imgUrl)}" style="width:100%; max-height:500px; object-fit:cover; border-radius:8px;" />
         </div>
       `).join('');
       
