@@ -976,13 +976,12 @@
       z-index: 9999;
       background: var(--white);
       display: none;
-      align-items: stretch;
-      justify-content: stretch;
+      overflow-y: auto;
       opacity: 0;
       transition: opacity 0.3s ease;
     }
     .cal-popup.show {
-      display: flex;
+      display: block;
       opacity: 1;
     }
     .cal-popup-inner {
@@ -991,15 +990,11 @@
       padding: 40px;
       max-width: 100vw;
       width: 100%;
-      height: 100vh;
-      max-height: 100vh;
+      min-height: 100vh;
       position: relative;
       box-shadow: none;
       transform: translateY(100%);
       transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
     }
     .cal-popup.show .cal-popup-inner {
       transform: translateY(0);
@@ -1122,23 +1117,23 @@
     .public-modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: var(--white);
-      z-index: 9999; display: none; align-items: stretch; justify-content: stretch;
+      z-index: 9999; display: none;
+      overflow-y: auto;
       opacity: 0; transition: opacity 0.3s ease;
     }
-    .public-modal-overlay.show { display: flex; opacity: 1; }
+    .public-modal-overlay.show { display: block; opacity: 1; }
     .public-modal-content {
       background: var(--white); width: 100%; max-width: 100vw;
-      height: 100vh; max-height: 100vh;
+      min-height: 100vh;
       border-radius: 0; padding: 40px; box-shadow: none;
       transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      display: flex; flex-direction: column;
     }
     .public-modal-overlay.show .public-modal-content { transform: translateY(0); }
     .public-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--gray-200); padding-bottom: 16px; flex-shrink: 0; width: 100%; max-width: 800px; margin: 0 auto 24px; }
     .public-modal-title { font-size: 22px; font-weight: 800; color: var(--gray-900); }
     .public-modal-close { background: var(--gray-100); border: none; font-size: 22px; cursor: pointer; color: var(--gray-500); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: .2s; }
     .public-modal-close:hover { background: var(--gray-200); color: var(--gray-900); }
-    .public-modal-body { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; flex: 1; width: 100%; max-width: 800px; margin: 0 auto; }
+    .public-modal-body { display: block; width: 100%; max-width: 800px; margin: 0 auto; }
     @media (max-width: 768px) {
       .public-modal-content { padding: 20px; }
       .public-modal-header { margin-bottom: 16px; padding-bottom: 12px; }
