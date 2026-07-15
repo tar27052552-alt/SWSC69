@@ -1948,7 +1948,7 @@
     const mainImg = main.image_url ? transformGoogleDriveUrl(main.image_url) : imgs[0];
 
     let html = `
-      <div class="pr-main" onclick="showNewsPopup(${main.id})" style="cursor:pointer;">
+      <div class="pr-main" onclick="showNewsPopup('${main.id}')" style="cursor:pointer;">
         <img src="${mainImg}" alt="Main News" />
         <div class="pr-tag">${main.category || 'ข่าวประชาสัมพันธ์'}</div>
         <h3>${main.headline || ''}</h3>
@@ -1962,7 +1962,7 @@
     side.forEach((n, idx) => {
       const sideImg = n.image_url ? transformGoogleDriveUrl(n.image_url) : imgs[idx+1];
       html += `
-        <div class="pr-item" onclick="showNewsPopup(${n.id})" style="cursor:pointer;">
+        <div class="pr-item" onclick="showNewsPopup('${n.id}')" style="cursor:pointer;">
           <img src="${sideImg}" alt="News Thumb" />
           <div class="pr-item-info">
             <div class="pr-tag" style="font-size:11px;">${n.category || 'ข่าวประชาสัมพันธ์'}</div>
@@ -1986,7 +1986,7 @@
       const thumbHtml = n.image_url 
         ? `<img src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; height:100%; object-fit:cover;" />` 
         : m.icon;
-      return `<div class="news-card" onclick="showNewsPopup(${n.id})">
+      return `<div class="news-card" onclick="showNewsPopup('${n.id}')">
         <div class="news-card-thumb" style="background:${n.image_url ? 'none' : m.bg}">
           <span class="cat-dot ${m.pill}">${n.category || 'ทั่วไป'}</span>
           ${thumbHtml}
@@ -2251,7 +2251,7 @@
 
   /* ---- NEWS POPUP SYSTEM ---- */
   function showNewsPopup(id) {
-    const n = allNews.find(item => item.id === id);
+    const n = allNews.find(item => item.id == id);
     if (!n) return;
     const m = catMeta(n.category);
     const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '');
