@@ -1129,11 +1129,11 @@
       transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .public-modal-overlay.show .public-modal-content { transform: translateY(0); }
-    .public-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--gray-200); padding-bottom: 16px; flex-shrink: 0; width: 100%; max-width: 800px; margin: 0 auto 24px; }
+    .public-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--gray-200); padding-bottom: 16px; flex-shrink: 0; width: 100%; max-width: 1100px; margin: 0 auto 24px; }
     .public-modal-title { font-size: 22px; font-weight: 800; color: var(--gray-900); }
     .public-modal-close { background: var(--gray-100); border: none; font-size: 22px; cursor: pointer; color: var(--gray-500); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: .2s; }
     .public-modal-close:hover { background: var(--gray-200); color: var(--gray-900); }
-    .public-modal-body { display: block; width: 100%; max-width: 800px; margin: 0 auto; }
+    .public-modal-body { display: block; width: 100%; max-width: 1100px; margin: 0 auto; }
     @media (max-width: 768px) {
       .public-modal-content { padding: 20px; }
       .public-modal-header { margin-bottom: 16px; padding-bottom: 12px; }
@@ -1186,6 +1186,33 @@
     .reveal-on-scroll.active-reveal {
       opacity: 1;
       transform: translateY(0);
+    }
+
+    /* TWO COLUMN NEWS DETAIL LAYOUT */
+    .news-detail-layout {
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      gap: 30px;
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .news-detail-main {
+      background: #fff;
+    }
+    .news-detail-sidebar {
+      position: sticky;
+      top: 20px;
+      align-self: start;
+    }
+    @media (max-width: 900px) {
+      .news-detail-layout {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+      .news-detail-sidebar {
+        position: static;
+      }
     }
   </style>
 </head>
@@ -2284,24 +2311,61 @@
     
     let imgHtml = '';
     if (n.image_url) {
-      imgHtml = `<div style="text-align:center; margin-bottom:20px; border-radius:12px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); max-height: 450px; display: flex; justify-content: center; align-items: center; background: #fbfbfe; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
-        <img src="${transformGoogleDriveUrl(n.image_url)}" style="max-width:100%; max-height:450px; object-fit:contain; border-radius:12px;" />
+      imgHtml = `<div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); max-height: 500px; width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
+        <img src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; max-height:500px; object-fit:cover; border-radius:8px;" />
       </div>`;
     }
 
+    // Generate latest news list for sidebar
+    const latestNews = allNews.slice(0, 5);
+    const sidebarHtml = latestNews.map(item => {
+      const itemImg = item.image_url 
+        ? transformGoogleDriveUrl(item.image_url) 
+        : 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=200';
+      const isActive = item.id == id;
+      return `
+        <div onclick="showNewsPopup('${item.id}')" style="display:flex; gap:10px; cursor:pointer; padding:10px 0; border-bottom:1px solid #f3f4f6; transition:opacity 0.2s; opacity:${isActive ? 0.5 : 1}; pointer-events:${isActive ? 'none' : 'auto'};" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=${isActive ? 0.5 : 1}">
+          <img src="${itemImg}" style="width:80px; height:58px; object-fit:cover; border-radius:4px; flex-shrink:0;" />
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:12px; font-weight:700; color:${isActive ? 'var(--purple-700)' : '#111827'}; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.3; margin-bottom:4px;">
+              ${item.headline || ''}
+            </div>
+            <div style="font-size:10.5px; color:#9ca3af;">
+              📅 ${item.for_date || (item.created_at ? new Date(item.created_at).toLocaleDateString('th-TH') : '')}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
     document.getElementById('newsPopupContent').innerHTML = `
-      ${imgHtml}
-      <div style="font-size:11px; font-weight:700; color:var(--purple-700); background:var(--purple-100); padding:3px 10px; border-radius:100px; display:inline-block; margin-bottom:10px;">
-        ${n.category || 'ข่าวประชาสัมพันธ์'}
-      </div>
-      <h3 style="font-size:18px; font-weight:800; color:var(--gray-900); margin-bottom:10px; line-height:1.4;">
-        ${n.headline || ''}
-      </h3>
-      <div style="font-size:12px; color:var(--gray-500); margin-bottom:15px; border-bottom:1px dashed var(--gray-200); padding-bottom:10px;">
-        👤 ผู้เขียน: ${n.submitter || 'ผู้ดูแล'} • 📅 ${d}
-      </div>
-      <div style="font-size:14px; line-height:1.7; color:var(--gray-800); white-space:pre-line; word-break:break-word;">
-        ${n.detail || ''}
+      <div class="news-detail-layout">
+        <!-- LEFT COLUMN: Main News -->
+        <div class="news-detail-main">
+          <div style="font-size:11px; font-weight:800; color:var(--purple-700); background:var(--purple-100); padding:3px 10px; border-radius:100px; display:inline-block; margin-bottom:12px;">
+            ${n.category || 'ข่าวประชาสัมพันธ์'}
+          </div>
+          <h1 style="font-size:24px; font-weight:800; color:#111827; margin:0 0 10px 0; line-height:1.4;">
+            ${n.headline || ''}
+          </h1>
+          <div style="font-size:12.5px; color:#6b7280; margin-bottom:20px; border-bottom:1px solid #e5e7eb; padding-bottom:12px;">
+            👤 ผู้เขียน: ${n.submitter || 'ผู้ดูแล'} • 📅 ${d}
+          </div>
+          ${imgHtml}
+          <div style="font-size:15px; line-height:1.8; color:#374151; white-space:pre-line; word-break:break-word; margin-top:20px;">
+            ${n.detail || ''}
+          </div>
+        </div>
+        
+        <!-- RIGHT COLUMN: Sidebar -->
+        <div class="news-detail-sidebar">
+          <div style="background:#5b3a6e; color:white; padding:8px 12px; font-size:14px; font-weight:700; border-radius:4px 4px 0 0; display:flex; align-items:center; gap:8px;">
+            📰 ข่าวสารล่าสุด
+          </div>
+          <div style="border:1px solid #e5e7eb; border-top:none; padding:15px; background:#fff; border-radius:0 0 4px 4px; display:flex; flex-direction:column; gap:10px;">
+            ${sidebarHtml}
+          </div>
+        </div>
       </div>
     `;
     const pop = document.getElementById('newsPopup');
