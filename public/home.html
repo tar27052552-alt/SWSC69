@@ -1908,6 +1908,7 @@
       const count = allNews.length;
       const hNews = document.getElementById('hStatNews');
       if (hNews) hNews.textContent = count;
+      initScrollReveal();
     } catch { 
       ['homeNewsContainer','fullNewsGrid'].forEach(id => { 
         const el = document.getElementById(id);
@@ -2134,6 +2135,7 @@
 
     const hEvents = document.getElementById('hStatEvents');
     if (hEvents) hEvents.textContent = calEvents.length;
+    initScrollReveal();
   }
 
   function showCalPopup(ev) {
@@ -2205,6 +2207,7 @@
 
       const hMembers = document.getElementById('hStatMembers');
       if (hMembers) hMembers.textContent = data.length;
+      initScrollReveal();
     } catch {
       document.getElementById('teamGrid').innerHTML = '<div class="empty"><div>โหลดไม่สำเร็จ</div></div>';
     }
@@ -2222,7 +2225,7 @@
   }, { threshold: 0.05 });
 
   function initScrollReveal() {
-    document.querySelectorAll('.reveal-on-scroll').forEach(el => {
+    document.querySelectorAll('.reveal-on-scroll:not(.active-reveal)').forEach(el => {
       revealObserver.observe(el);
     });
   }
