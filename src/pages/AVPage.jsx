@@ -208,10 +208,7 @@ export default function AVPage() {
 
   const handleSubmitObec = async (e) => {
     e.preventDefault();
-    if (!obecForm.title.trim()) {
-      alert("กรุณากรอกหัวข้อ/ฉบับที่ด้วยครับ");
-      return;
-    }
+    
     if (!editingObecId && !obecForm.imageFile) {
       alert("กรุณาเลือกรูปภาพหน้าปกวารสารด้วยครับ");
       return;
