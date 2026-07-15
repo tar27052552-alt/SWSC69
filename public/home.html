@@ -2009,7 +2009,7 @@
 
   async function loadNews() {
     try {
-      allNews = await sbFetch(`web_news?select=*&order=created_at.desc&limit=15`) || [];
+      allNews = await sbFetch(`web_news?select=*&category=eq.ข่าวโรงเรียน&order=created_at.desc&limit=15`) || [];
       renderHomeNews(allNews.slice(0, 5));
       renderNews(allNews, 'fullNewsGrid');
 
@@ -2027,7 +2027,7 @@
 
   async function loadAnnouncements() {
     try {
-      const anns = await sbFetch(`web_announcements?select=*&is_active=eq.true&order=sort_order.asc,created_at.desc`) || [];
+      const anns = await sbFetch(`web_news?select=*&category=eq.ประกาศ&order=created_at.desc`) || [];
       renderCarousel(anns);
     } catch (e) {
       console.warn('Could not load announcements:', e);

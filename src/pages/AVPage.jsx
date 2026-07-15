@@ -206,9 +206,9 @@ export default function AVPage() {
     setLoadingAnn(true);
     try {
       const { data, error } = await supabase
-        .from('web_announcements')
+        .from('web_news')
         .select('*')
-        .order('sort_order', { ascending: true })
+        .in('category', ['ประกาศ', 'ประกาศ_ซ่อน'])
         .order('created_at', { ascending: false });
       if (error) throw error;
       setAnnouncements(data || []);
@@ -1855,19 +1855,19 @@ export default function AVPage() {
             }
 
             const data = {
-              title: annForm.title.trim() || null,
+              headline: annForm.title.trim() || null,
               image_url: finalImageUrl,
-              link_url: annForm.link_url.trim() || null,
-              is_active: annForm.is_active,
-              created_by: user?.nickname || user?.name || 'แอดมิน',
+              detail: annForm.link_url.trim() || null,
+              category: annForm.is_active ? 'ประกาศ' : 'ประกาศ_ซ่อน',
+              submitter: user?.nickname || user?.name || 'แอดมิน',
             };
 
             if (editingAnnId) {
-              const { error } = await supabase.from('web_announcements').update(data).eq('id', editingAnnId);
+              const { error } = await supabase.from('web_news').update(data).eq('id', editingAnnId);
               if (error) throw error;
               alert('แก้ไขประกาศสำเร็จ!');
             } else {
-              const { error } = await supabase.from('web_announcements').insert([data]);
+              const { error } = await supabase.from('web_news').insert([data]);
               if (error) throw error;
               alert('เพิ่มประกาศสำเร็จ!');
             }
@@ -1885,7 +1885,7 @@ export default function AVPage() {
 
         const handleDeleteAnn = async (id) => {
           if (!confirm('ลบประกาศนี้?')) return;
-          const { error } = await supabase.from('web_announcements').delete().eq('id', id);
+          const { error } = await supabase.from('web_news').delete().eq('id', id);
           if (error) { alert('ลบไม่สำเร็จ: ' + error.message); return; }
           loadAnnouncements();
         };
@@ -1893,17 +1893,18 @@ export default function AVPage() {
         const handleEditAnn = (ann) => {
           setEditingAnnId(ann.id);
           setAnnForm({
-            title: ann.title || '',
+            title: ann.headline || '',
             imagePreview: ann.image_url,
             imageFile: null,
-            link_url: ann.link_url || '',
-            is_active: ann.is_active,
+            link_url: ann.detail || '',
+            is_active: ann.category === 'ประกาศ',
           });
           window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         const handleToggleActive = async (ann) => {
-          const { error } = await supabase.from('web_announcements').update({ is_active: !ann.is_active }).eq('id', ann.id);
+          const newStatus = ann.category === 'ประกาศ' ? 'ประกาศ_ซ่อน' : 'ประกาศ';
+          const { error } = await supabase.from('web_news').update({ category: newStatus }).eq('id', ann.id);
           if (error) { alert('เกิดข้อผิดพลาด'); return; }
           loadAnnouncements();
         };
@@ -2013,8 +2014,10 @@ export default function AVPage() {
                   <div style={{ color: 'var(--gray-500)', fontSize: 14 }}>ยังไม่มีประกาศ กรุณาเพิ่มด้านบน</div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {announcements.map((ann, idx) => (
-                      <div key={ann.id} style={{ display: 'flex', gap: 14, background: ann.is_active ? '#f0fdf4' : '#f9fafb', border: `1px solid ${ann.is_active ? '#bbf7d0' : '#e5e7eb'}`, borderRadius: 10, padding: 12, alignItems: 'center' }}>
+                    {announcements.map((ann, idx) => {
+                      const isActive = ann.category === 'ประกาศ';
+                      return (
+                      <div key={ann.id} style={{ display: 'flex', gap: 14, background: isActive ? '#f0fdf4' : '#f9fafb', border: `1px solid ${isActive ? '#bbf7d0' : '#e5e7eb'}`, borderRadius: 10, padding: 12, alignItems: 'center' }}>
                         <div style={{ width: 30, height: 30, background: '#e5e7eb', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#6b7280', flexShrink: 0 }}>{idx + 1}</div>
                         {ann.image_url && (
                           <img
@@ -2024,22 +2027,22 @@ export default function AVPage() {
                           />
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>{ann.title || '(ไม่มีชื่อ)'}</div>
-                          {ann.link_url && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>🔗 {ann.link_url}</div>}
-                          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>โดย {ann.created_by || '-'}</div>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>{ann.headline || '(ไม่มีชื่อ)'}</div>
+                          {ann.detail && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>🔗 {ann.detail}</div>}
+                          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>โดย {ann.submitter || '-'}</div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
                           <button
                             onClick={() => handleToggleActive(ann)}
-                            style={{ padding: '4px 12px', background: ann.is_active ? '#dcfce7' : '#f3f4f6', color: ann.is_active ? '#16a34a' : '#6b7280', border: `1px solid ${ann.is_active ? '#bbf7d0' : '#d1d5db'}`, borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
-                          >{ann.is_active ? '✅ แสดงอยู่' : '⬜ ซ่อนอยู่'}</button>
+                            style={{ padding: '4px 12px', background: isActive ? '#dcfce7' : '#f3f4f6', color: isActive ? '#16a34a' : '#6b7280', border: `1px solid ${isActive ? '#bbf7d0' : '#d1d5db'}`, borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                          >{isActive ? '✅ แสดงอยู่' : '⬜ ซ่อนอยู่'}</button>
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button onClick={() => handleEditAnn(ann)} style={{ padding: '4px 10px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>✏️ แก้ไข</button>
                             <button onClick={() => handleDeleteAnn(ann.id)} style={{ padding: '4px 10px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>🗑 ลบ</button>
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 )}
               </div>
