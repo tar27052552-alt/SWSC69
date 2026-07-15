@@ -207,8 +207,9 @@ export default function AnnouncementsPage() {
 
           <button
             type="submit"
+            className="btn btn-primary"
             disabled={submittingAnn}
-            style={{ alignSelf: 'flex-start', padding: '10px 24px', background: 'var(--purple-600)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 14, opacity: submittingAnn ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 8 }}
+            style={{ alignSelf: 'flex-start', padding: '10px 24px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 14, opacity: submittingAnn ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}
           >
             {submittingAnn ? <span className="spin" style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%' }} /> : (editingAnnId ? <Save size={16} /> : <Plus size={16} />)}
             {submittingAnn ? 'กำลังบันทึก...' : editingAnnId ? 'บันทึกการแก้ไข' : 'เพิ่มประกาศ'}
