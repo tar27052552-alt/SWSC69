@@ -1631,6 +1631,17 @@
     </div>
   </footer>
 
+  <!-- News Modal -->
+  <div class="public-modal-overlay" id="newsPopup" onclick="if(event.target===this) closeNewsPopup()">
+    <div class="public-modal-content" style="max-width: 650px;">
+      <div class="public-modal-header">
+        <div class="public-modal-title">รายละเอียดข่าวประชาสัมพันธ์</div>
+        <button class="public-modal-close" onclick="closeNewsPopup()">&times;</button>
+      </div>
+      <div class="public-modal-body" id="newsPopupContent"></div>
+    </div>
+  </div>
+
   <!-- Document Modal -->
   <div class="public-modal-overlay" id="docModalOverlay" onclick="if(event.target===this) closeDocModal()">
     <div class="public-modal-content">
@@ -1937,28 +1948,28 @@
     const mainImg = main.image_url ? transformGoogleDriveUrl(main.image_url) : imgs[0];
 
     let html = `
-      <a href="#/news" class="pr-main">
+      <div class="pr-main" onclick="showNewsPopup(${main.id})" style="cursor:pointer;">
         <img src="${mainImg}" alt="Main News" />
         <div class="pr-tag">${main.category || 'ข่าวประชาสัมพันธ์'}</div>
         <h3>${main.headline || ''}</h3>
         <div class="pr-meta">${main.submitter || 'ผู้ดูแล'} • ${formatD(main)}</div>
         <div class="pr-excerpt">${(main.detail || '').substring(0, 100)}...</div>
         <div class="pr-btn">อ่านเพิ่มเติม</div>
-      </a>
+      </div>
       <div class="pr-side">
     `;
     
     side.forEach((n, idx) => {
       const sideImg = n.image_url ? transformGoogleDriveUrl(n.image_url) : imgs[idx+1];
       html += `
-        <a href="#/news" class="pr-item">
+        <div class="pr-item" onclick="showNewsPopup(${n.id})" style="cursor:pointer;">
           <img src="${sideImg}" alt="News Thumb" />
           <div class="pr-item-info">
             <div class="pr-tag" style="font-size:11px;">${n.category || 'ข่าวประชาสัมพันธ์'}</div>
             <h4>${n.headline || ''}</h4>
             <div class="pr-meta">${n.submitter || 'ผู้ดูแล'} • ${formatD(n)}</div>
           </div>
-        </a>
+        </div>
       `;
     });
     
@@ -1975,7 +1986,7 @@
       const thumbHtml = n.image_url 
         ? `<img src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; height:100%; object-fit:cover;" />` 
         : m.icon;
-      return `<div class="news-card">
+      return `<div class="news-card" onclick="showNewsPopup(${n.id})">
         <div class="news-card-thumb" style="background:${n.image_url ? 'none' : m.bg}">
           <span class="cat-dot ${m.pill}">${n.category || 'ทั่วไป'}</span>
           ${thumbHtml}
@@ -2172,7 +2183,14 @@
   }
 
   function closeCalPopup() { document.getElementById('calPopup').style.display = 'none'; }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCalPopup(); });
+  document.addEventListener('keydown', e => { 
+    if (e.key === 'Escape') {
+      closeCalPopup();
+      closeNewsPopup();
+      closeDocModal();
+      closeCertModal();
+    }
+  });
 
   async function loadEvents() {
     const t = new Date();
@@ -2228,6 +2246,47 @@
     document.querySelectorAll('.reveal-on-scroll:not(.active-reveal)').forEach(el => {
       revealObserver.observe(el);
     });
+  }
+
+
+  /* ---- NEWS POPUP SYSTEM ---- */
+  function showNewsPopup(id) {
+    const n = allNews.find(item => item.id === id);
+    if (!n) return;
+    const m = catMeta(n.category);
+    const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '');
+    
+    let imgHtml = '';
+    if (n.image_url) {
+      imgHtml = `<div style="text-align:center; margin-bottom:15px; border-radius:8px; overflow:hidden; border:1px solid var(--gray-200); max-height: 400px; display: flex; justify-content: center; align-items: center; background: #000;">
+        <img src="${transformGoogleDriveUrl(n.image_url)}" style="max-width:100%; max-height:400px; object-fit:contain;" />
+      </div>`;
+    }
+
+    document.getElementById('newsPopupContent').innerHTML = `
+      ${imgHtml}
+      <div style="font-size:11px; font-weight:700; color:var(--purple-700); background:var(--purple-100); padding:3px 10px; border-radius:100px; display:inline-block; margin-bottom:10px;">
+        ${n.category || 'ข่าวประชาสัมพันธ์'}
+      </div>
+      <h3 style="font-size:18px; font-weight:800; color:var(--gray-900); margin-bottom:10px; line-height:1.4;">
+        ${n.headline || ''}
+      </h3>
+      <div style="font-size:12px; color:var(--gray-500); margin-bottom:15px; border-bottom:1px dashed var(--gray-200); padding-bottom:10px;">
+        👤 ผู้เขียน: ${n.submitter || 'ผู้ดูแล'} • 📅 ${d}
+      </div>
+      <div style="font-size:14px; line-height:1.7; color:var(--gray-800); white-space:pre-line; word-break:break-word;">
+        ${n.detail || ''}
+      </div>
+    `;
+    const pop = document.getElementById('newsPopup');
+    pop.style.display = 'flex';
+    setTimeout(() => pop.classList.add('show'), 10);
+  }
+
+  function closeNewsPopup() {
+    const pop = document.getElementById('newsPopup');
+    pop.classList.remove('show');
+    setTimeout(() => pop.style.display = 'none', 300);
   }
 
   /* ---- SUGGESTIONS ---- */
