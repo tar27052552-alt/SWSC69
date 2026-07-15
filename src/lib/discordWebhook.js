@@ -38,6 +38,10 @@ export async function sendDiscordEmbedViaGAS(title, description, colorDecimal = 
     }
     
     const result = await response.json();
+    if (result.success && result.data?.discord && result.data.discord.success === false) {
+      console.warn("⚠️ Discord webhook failed to send:", result.data.discord.error);
+      return false;
+    }
     return result.success;
   } catch (error) {
     console.error("❌ Failed to send Discord embed via GAS:", error);

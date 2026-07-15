@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { CheckCircle, XCircle, AlertTriangle, Clock, CalendarDays } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
+const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 export default function MyAttendancePage() {
   const { user, checkInState } = useAuth();
   const [month, setMonth] = useState(() => {
@@ -87,7 +89,7 @@ export default function MyAttendancePage() {
         if (eventsData && partData) {
           const myEventIds = partData.map(p => p.event_id);
           const myExtEvents = eventsData.filter(ev => 
-            ev.location_category === 'external' && myEventIds.includes(ev.id)
+            !ev.check_attendance && ev.location_category === 'external' && myEventIds.includes(ev.id)
           );
 
           const exemptDates = [];
@@ -122,7 +124,6 @@ export default function MyAttendancePage() {
   // Generate attendance for all weekdays in the selected month
   const [year, mon] = month.split('-').map(Number);
   const daysInMonth = new Date(year, mon, 0).getDate();
-  const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const todayStr = toGregorianStr();
   const daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
 

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Plus, X, Save } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 const MOCK_GUESTS = [];
 
 export default function ReceptionPage() {
   const [guests, setGuests] = useState(MOCK_GUESTS);
+  const [usersList, setUsersList] = useState([]);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ name: '', role: 'วิทยากร', org: '', event: '', date: '', gift: false, meal: false });
 
@@ -19,6 +21,12 @@ export default function ReceptionPage() {
           .order('created_at', { ascending: false });
         if (!gErr && gData) {
           setGuests(gData);
+        }
+
+        // โหลดข้อมูลผู้ใช้งาน
+        const { data: uData } = await supabase.from('users').select('id, nickname, name, dept_id, role');
+        if (uData) {
+          setUsersList(uData);
         }
       } catch (err) {
         console.error('Error loading reception data:', err);
@@ -46,6 +54,33 @@ export default function ReceptionPage() {
       if (error) throw error;
       if (data && data[0]) {
         setGuests(prev => [data[0], ...prev]);
+
+        // ส่งการแจ้งเตือน
+        const embedTitle = `🤝 มีการลงทะเบียนแขก/วิทยากรใหม่`;
+        const embedDesc = `ฝ่ายปฏิคมได้เพิ่มข้อมูลแขก/วิทยากรสำหรับกิจกรรมสภานักเรียน`;
+        const fields = [
+          { name: '👤 ชื่อ-นามสกุล', value: data[0].name || '-', inline: true },
+          { name: '👔 บทบาท', value: data[0].role || '-', inline: true },
+          { name: '🏢 หน่วยงาน/สังกัด', value: data[0].org || '-', inline: true },
+          { name: '📋 กิจกรรม', value: data[0].event || '-', inline: true },
+          { name: '📅 วันที่เข้าร่วม', value: new Date(data[0].date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }), inline: true },
+          { name: '🎁 ของที่ระลึก', value: data[0].gift ? 'ต้องเตรียมของที่ระลึก 🎁' : 'ไม่ต้องมีของที่ระลึก', inline: true },
+          { name: '🍽️ มื้ออาหาร/เบรค', value: data[0].meal ? 'ต้องจัดเตรียมอาหาร/เครื่องดื่ม 🍽️' : 'ไม่ต้องจัดเตรียมอาหาร', inline: true }
+        ];
+
+        const targetUserIds = usersList
+          .filter(u => u.role === 'admin' || u.dept_id === 10)
+          .map(u => String(u.id));
+
+        sendDiscordEmbedViaGAS(
+          embedTitle,
+          embedDesc,
+          1357990, // สีฟ้าอมเขียว (reception color)
+          fields,
+          null,
+          'reception',
+          targetUserIds.length > 0 ? targetUserIds : null
+        );
       }
     } catch (err) {
       console.error('Error inserting reception guest:', err);

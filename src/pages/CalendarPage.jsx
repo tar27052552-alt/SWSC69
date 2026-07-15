@@ -26,7 +26,7 @@ export default function CalendarPage() {
   
   const [isAdding, setIsAdding] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [newEv, setNewEv] = useState({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', desc: '' });
+  const [newEv, setNewEv] = useState({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', checkAttendance: false, attendanceStartTime: '07:00', attendanceLimitTime: '08:00', desc: '' });
 
   // อนุญาตให้ แอดมิน, ประธาน (deptId: 1 หรือ isPresident), หรือ เลขานุการ (deptId: 7) สามารถจัดการปฏิทินได้
   const canManage = isAdmin || isPresident || user?.deptId === 1 || user?.deptId === 7;
@@ -36,6 +36,9 @@ export default function CalendarPage() {
     
     try {
       const color = TYPE_COLORS[newEv.type] || '#43a047';
+      const isCheckAttendance = newEv.locationCategory === 'external' ? false : (newEv.checkAttendance || false);
+      const startTime = newEv.attendanceStartTime || '07:00';
+      const limitTime = newEv.attendanceLimitTime || '08:00';
       
       if (editId) {
         // Edit Mode: Update
@@ -46,6 +49,9 @@ export default function CalendarPage() {
             date: newEv.date,
             end_date: newEv.endDate || newEv.date,
             location_category: newEv.locationCategory || 'internal',
+            check_attendance: isCheckAttendance,
+            attendance_start_time: startTime,
+            attendance_limit_time: limitTime,
             type: newEv.type,
             color: color,
             description: newEv.desc
@@ -83,9 +89,11 @@ export default function CalendarPage() {
               ? new Date(newEv.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
               : `${new Date(newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${new Date(newEv.endDate || newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`, inline: true },
           { name: "📍 สถานที่จัดกิจกรรม", value: locLabel, inline: true },
+          { name: "📋 เช็คชื่อ / ยกเว้นเข้าแถว", value: isCheckAttendance ? `เช็คชื่อในกิจกรรม (${startTime} - ${limitTime} น.) (ยกเว้นการเข้าแถวปกติ)` : "ไม่ต้องเช็คชื่อ (ไม่ส่งผลต่อการเข้าแถวปกติ)", inline: false },
           { name: "📝 รายละเอียดเพิ่มเติม", value: newEv.desc || "ไม่มี", inline: false }
         ];
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'calendar');
+        const targetUserIds = usersList.map(u => String(u.id));
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'calendar', targetUserIds.length > 0 ? targetUserIds : null);
 
         alert('แก้ไขกิจกรรมเรียบร้อยแล้ว!');
 
@@ -98,6 +106,9 @@ export default function CalendarPage() {
             date: newEv.date,
             end_date: newEv.endDate || newEv.date,
             location_category: newEv.locationCategory || 'internal',
+            check_attendance: isCheckAttendance,
+            attendance_start_time: startTime,
+            attendance_limit_time: limitTime,
             type: newEv.type,
             color: color,
             description: newEv.desc
@@ -139,16 +150,18 @@ export default function CalendarPage() {
               ? new Date(newEv.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
               : `${new Date(newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${new Date(newEv.endDate || newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`, inline: true },
           { name: "📍 สถานที่จัดกิจกรรม", value: locLabel, inline: true },
+          { name: "📋 เช็คชื่อ / ยกเว้นเข้าแถว", value: isCheckAttendance ? `เช็คชื่อในกิจกรรม (${startTime} - ${limitTime} น.) (ยกเว้นการเข้าแถวปกติ)` : "ไม่ต้องเช็คชื่อ (ไม่ส่งผลต่อการเข้าแถวปกติ)", inline: false },
           { name: "📝 รายละเอียดเพิ่มเติม", value: newEv.desc || "ไม่มี", inline: false }
         ];
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'calendar');
+        const targetUserIds = usersList.map(u => String(u.id));
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'calendar', targetUserIds.length > 0 ? targetUserIds : null);
 
         alert('เพิ่มกิจกรรมเรียบร้อยแล้ว!');
       }
       
       setIsAdding(false);
       setEditId(null);
-      setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', desc: '' });
+      setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', checkAttendance: false, attendanceStartTime: '07:00', attendanceLimitTime: '08:00', desc: '' });
       setSelectedParticipants([]);
       
       const { data } = await supabase.from('events').select('*').order('date', { ascending: true });
@@ -171,6 +184,9 @@ export default function CalendarPage() {
       endDate: ev.end_date || ev.date,
       type: ev.type,
       locationCategory: ev.location_category || 'internal',
+      checkAttendance: ev.check_attendance || false,
+      attendanceStartTime: ev.attendance_start_time || '07:00',
+      attendanceLimitTime: ev.attendance_limit_time || '08:00',
       desc: ev.desc || ev.description || ''
     });
     
@@ -304,8 +320,8 @@ export default function CalendarPage() {
             </div>
 
             {/* Cells */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2 }}>
-              {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`}/>)}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gridAutoRows:'120px', gap:2 }}>
+              {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`} style={{ minHeight:'120px' }} />)}
               {Array.from({length:daysInMonth}).map((_,i)=>{
                 const day = i+1;
                 const evs = getEvents(day);
@@ -314,17 +330,18 @@ export default function CalendarPage() {
                 const isSel   = sel === day;
                 return (
                   <div key={day} onClick={()=>setSel(day)} style={{
-                    minHeight:52, padding:'4px', borderRadius:4, cursor:'pointer',
+                    height:'100%', padding:'4px', borderRadius:4, cursor:'pointer',
                     border:`1px solid ${isSel?'#00bcd4': isToday?'#80deea':'#f0f0f0'}`,
                     background: isSel?'#e0f7fa': isToday?'#f3f4ff':'white',
+                    overflow: 'hidden', display: 'flex', flexDirection: 'column'
                   }}>
                     <div style={{
                       fontSize:12, fontWeight: isToday?700:400,
-                      color: isToday?'#00bcd4':'#212121',
                       width:22, height:22, borderRadius:'50%',
                       background: isToday?'#00bcd4':'transparent',
                       color: isToday?'white':'#212121',
                       display:'flex', alignItems:'center', justifyContent:'center',
+                      flexShrink: 0
                     }}>{day}</div>
                     <div style={{ display:'flex', flexDirection:'column', gap:1, marginTop:2 }}>
                       {evs.slice(0,2).map(ev=>(
@@ -378,6 +395,11 @@ export default function CalendarPage() {
                         <span className="badge" style={{ background: ev.location_category === 'external' ? '#e0f7fa' : '#f5f5f5', color: ev.location_category === 'external' ? '#00838f' : '#757575' }}>
                           {ev.location_category === 'external' ? '🎒 นอกสถานที่' : '🏫 ภายในโรงเรียน'}
                         </span>
+                        {ev.check_attendance && (
+                          <span className="badge" style={{ background: '#e8f5e9', color: '#2e7d32', border: '1px solid #c8e6c9', fontWeight: 600 }}>
+                            📋 เช็คชื่อ ({ev.attendance_start_time || '07:00'} - {ev.attendance_limit_time || '08:00'})
+                          </span>
+                        )}
                       </div>
                       
                       {/* Participants list */}
@@ -438,7 +460,7 @@ export default function CalendarPage() {
       {/* Add Modal */}
       {isAdding && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex: 1000 }}>
-          <div className="card" style={{ width:'100%', maxWidth:440, padding: 20, background: 'white' }}>
+          <div className="card" style={{ width:'100%', maxWidth: 480, padding: 20, background: 'white', maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 16 }}>
               <span style={{ fontWeight:700, fontSize:16 }}>{editId ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรมใหม่'}</span>
               <button onClick={()=>setIsAdding(false)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color: '#9e9e9e' }}>&times;</button>
@@ -464,6 +486,54 @@ export default function CalendarPage() {
                   <option value="internal">🏫 ภายในโรงเรียน</option>
                   <option value="external">🎒 ภายนอกโรงเรียน (นอกสถานที่)</option>
                 </select>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 8, padding: '6px 10px', background: '#f5f5f5', borderRadius: 6, border: '1px solid #e0e0e0' }}>
+                  <input 
+                    type="checkbox" 
+                    id="chkAttendance"
+                    checked={newEv.locationCategory === 'external' ? false : (newEv.checkAttendance || false)} 
+                    disabled={newEv.locationCategory === 'external'}
+                    onChange={e => setNewEv({ ...newEv, checkAttendance: e.target.checked })}
+                    style={{ cursor: newEv.locationCategory === 'external' ? 'not-allowed' : 'pointer', marginTop: 3 }}
+                  />
+                  <label htmlFor="chkAttendance" style={{ fontSize: 12, fontWeight: 600, color: '#424242', cursor: newEv.locationCategory === 'external' ? 'not-allowed' : 'pointer', userSelect: 'none', lineHeight: '1.4' }}>
+                    📋 เปิดระบบเช็คชื่อสำหรับกิจกรรมนี้
+                    {newEv.locationCategory === 'external' ? (
+                      <span style={{ fontSize: 11, color: '#00838f', marginLeft: 4, fontWeight: 'normal', display: 'block', marginTop: 2 }}>
+                        *กิจกรรมนอกสถานที่ได้รับการยกเว้นแถวปกติโดยอัตโนมัติ (ผู้เข้าร่วมไม่ต้องกดเช็คชื่อ)
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11, color: '#757575', marginLeft: 4, fontWeight: 'normal', display: 'block', marginTop: 2 }}>
+                        (ผู้ร่วมกิจกรรมต้องกดลงชื่อด้วยตนเองในระบบ | หากเป็นวันเรียนปกติจะยกเว้นการเข้าแถวเช้าให้อัตโนมัติ)
+                      </span>
+                    )}
+                  </label>
+                </div>
+              </div>
+              <div>
+                {newEv.locationCategory !== 'external' && newEv.checkAttendance && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8, padding: '8px 10px', border: '1px dashed #b2dfdb', borderRadius: 6, background: '#e0f2f1' }}>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: '#00695c' }}>🕒 เริ่มเช็คชื่อ</label>
+                      <input 
+                        type="time" 
+                        className="input-field" 
+                        value={newEv.attendanceStartTime || '07:00'} 
+                        onChange={e => setNewEv({ ...newEv, attendanceStartTime: e.target.value })} 
+                        style={{ width: '100%', marginTop: 4, padding: '4px 8px', fontSize: 12, border: '1px solid #b2dfdb', borderRadius: 4, background: 'white', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: '#00695c' }}>🕒 จำกัดเวลาสาย</label>
+                      <input 
+                        type="time" 
+                        className="input-field" 
+                        value={newEv.attendanceLimitTime || '08:00'} 
+                        onChange={e => setNewEv({ ...newEv, attendanceLimitTime: e.target.value })} 
+                        style={{ width: '100%', marginTop: 4, padding: '4px 8px', fontSize: 12, border: '1px solid #b2dfdb', borderRadius: 4, background: 'white', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <label style={{ fontSize:13, fontWeight:600 }}>ประเภท</label>
@@ -474,7 +544,26 @@ export default function CalendarPage() {
                 </select>
               </div>
               <div>
-                <label style={{ fontSize:13, fontWeight:600 }}>สมาชิกที่เข้าร่วมกิจกรรม</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                  <label style={{ fontSize:13, fontWeight:600 }}>สมาชิกที่เข้าร่วมกิจกรรม</label>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setSelectedParticipants(usersList.filter(u => u.nickname !== 'แอดมิน').map(u => u.id))} 
+                      style={{ background: 'none', border: 'none', color: 'var(--primary, #00bcd4)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                    >
+                      เลือกทุกคน
+                    </button>
+                    <span style={{ color: '#ccc', fontSize: 11 }}>|</span>
+                    <button 
+                      type="button" 
+                      onClick={() => setSelectedParticipants([])} 
+                      style={{ background: 'none', border: 'none', color: '#ef5350', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                    >
+                      ล้างทั้งหมด
+                    </button>
+                  </div>
+                </div>
                 <div style={{ maxHeight: 110, overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 6, padding: '6px 10px', marginTop: 4, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                   {usersList
                     .filter(u => u.nickname !== 'แอดมิน')

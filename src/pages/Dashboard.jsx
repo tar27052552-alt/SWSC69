@@ -10,6 +10,22 @@ const TYPE_BADGE = { meeting: 'badge-purple', event: 'badge-green', deadline: 'b
 const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const DAYS_TH = ['อา','จ','อ','พ','พฤ','ศ','ส'];
 
+const getScheduleForDate = (typeStr, dayName, dateStr, currentSchedules, history) => {
+  if (history && history.length > 0) {
+    const match = history.find(h => 
+      h.type === typeStr && 
+      h.day === dayName && 
+      dateStr >= h.start_date && 
+      (h.end_date === null || dateStr <= h.end_date)
+    );
+    if (match) {
+      return match.data || {};
+    }
+  }
+  const current = currentSchedules.find(s => s.day === dayName);
+  return current?.data || {};
+};
+
 async function fetchServerDate() {
   try {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -17,7 +33,10 @@ async function fetchServerDate() {
     if (supabaseUrl && supabaseKey) {
       const res = await fetch(`${supabaseUrl}/rest/v1/`, {
         method: 'HEAD',
-        headers: { apikey: supabaseKey }
+        headers: { 
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`
+        }
       });
       const serverDateStr = res.headers.get('date');
       if (serverDateStr) return new Date(serverDateStr);
@@ -47,9 +66,11 @@ function formatRelativeTime(dateStr) {
 
 export default function Dashboard() {
   const { user, isAdmin, checkInState, cleanDutyState, greetingDutyState } = useAuth();
+  const isDiscipline = user?.deptId === 2 || user?.dept_id === 2;
   
   const [events, setEvents] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [selectedNotification, setSelectedNotification] = useState(null);
   const [usersCount, setUsersCount] = useState(0);
   const [deptsCount, setDeptsCount] = useState(0);
   const [cleanSchedules, setCleanSchedules] = useState([]);
@@ -113,7 +134,7 @@ export default function Dashboard() {
 
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
-  const runAutoGreetingFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, swapsList, enabledDays = [], disabledDates = [], serverNow = new Date()) => {
+  const runAutoGreetingFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, swapsList, enabledDays = [], disabledDates = [], serverNow = new Date(), schedulesHistory = []) => {
     try {
       const { data: usersData } = await supabase.from('users').select('id, name, nickname, dept_id');
       if (!usersData) return;
@@ -156,7 +177,7 @@ export default function Dashboard() {
           .filter(ev => {
             const start = ev.date;
             const end = ev.end_date || ev.date;
-            return ev.location_category === 'external' && dateStr >= start && dateStr <= end;
+            return (ev.check_attendance || ev.location_category === 'external') && dateStr >= start && dateStr <= end;
           })
           .map(ev => ev.id);
         
@@ -167,10 +188,7 @@ export default function Dashboard() {
         const dateObj = new Date(`${dateStr}T00:00:00.000Z`);
         const dayName = TH_DAYS[dateObj.getUTCDay()];
 
-        const schedule = schedulesList.find(s => s.day === dayName);
-        if (!schedule) continue;
-
-        const scheduleData = schedule.data || {};
+        const scheduleData = getScheduleForDate('greeting', dayName, dateStr, schedulesList, schedulesHistory);
         const dutyMembers = [];
         ['gate1', 'gate2', 'gate3'].forEach(gate => {
           const members = scheduleData[gate] || [];
@@ -206,9 +224,23 @@ export default function Dashboard() {
 
         const finedNicknames = (existingFines || []).map(f => f.nickname);
 
+        // Find users who are marked as "leave" on this date
+        const { data: attendanceData } = await supabase
+          .from('student_attendance')
+          .select('user_id')
+          .eq('date', dateStr)
+          .eq('status', 'leave');
+        const leaveUserIds = (attendanceData || []).map(att => String(att.user_id));
+
         for (const { nickname, gate } of dutyMembers) {
           const u = usersData.find(usr => usr.nickname === nickname);
           if (!u) continue;
+
+          // Skip fine if on leave
+          if (leaveUserIds.includes(String(u.id))) {
+            console.log(`Exempting ${nickname} from greeting fine on ${dateStr} due to leave`);
+            continue;
+          }
 
           // Exempt if traveling to external event
           if (exemptUserIds.includes(String(u.id))) {
@@ -256,7 +288,15 @@ export default function Dashboard() {
             // Notify Discord (discipline_fines channel)
             const embedTitle = `🔴 [ปรับอัตโนมัติ] ${nickname} ขาดรายงานเวรยืนไหว้`;
             const embedDesc = `โดนปรับเงิน **${finalAmount}** บาท เนื่องจากไม่รายงานตัว/ส่งรูปปฏิบัติหน้าที่เวรยืนไหว้ ณ **${gateTh}** ประจำวันที่ **${dateStr}** ภายในเวลา 07:10 น.`;
-            sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15158332, [], null, 'discipline_fines');
+            
+            const targetUserIds = [String(u.id)];
+            usersData
+              .filter(usr => usr.dept_id === 2 || usr.role === 'admin')
+              .forEach(usr => {
+                const uid = String(usr.id);
+                if (!targetUserIds.includes(uid)) targetUserIds.push(uid);
+              });
+            sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15158332, [], null, 'discipline_fines', targetUserIds.length > 0 ? targetUserIds : null);
           }
         }
       }
@@ -265,7 +305,7 @@ export default function Dashboard() {
     }
   };
 
-  const runAutoCleanFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, enabledDays = [], disabledDates = [], serverNow = new Date()) => {
+  const runAutoCleanFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, enabledDays = [], disabledDates = [], serverNow = new Date(), schedulesHistory = []) => {
     try {
       const { data: usersData } = await supabase.from('users').select('id, name, nickname, dept_id');
       if (!usersData) return;
@@ -305,7 +345,7 @@ export default function Dashboard() {
           .filter(ev => {
             const start = ev.date;
             const end = ev.end_date || ev.date;
-            return ev.location_category === 'external' && dateStr >= start && dateStr <= end;
+            return (ev.check_attendance || ev.location_category === 'external') && dateStr >= start && dateStr <= end;
           })
           .map(ev => ev.id);
         
@@ -316,10 +356,8 @@ export default function Dashboard() {
         const dateObj = new Date(`${dateStr}T00:00:00.000Z`);
         const dayName = TH_DAYS[dateObj.getUTCDay()];
 
-        const schedule = schedulesList.find(s => s.day === dayName);
-        if (!schedule) continue;
-
-        const dutyMembers = schedule.data?.members || [];
+        const scheduleData = getScheduleForDate('clean_room', dayName, dateStr, schedulesList, schedulesHistory);
+        const dutyMembers = scheduleData.members || [];
         if (dutyMembers.length === 0 || dutyMembers[0] === '–') continue;
 
         const { data: checks } = await supabase
@@ -337,11 +375,25 @@ export default function Dashboard() {
 
         const finedNicknames = (existingFines || []).map(f => f.nickname);
 
+        // Find users who are marked as "leave" on this date
+        const { data: attendanceData } = await supabase
+          .from('student_attendance')
+          .select('user_id')
+          .eq('date', dateStr)
+          .eq('status', 'leave');
+        const leaveUserIds = (attendanceData || []).map(att => String(att.user_id));
+
         for (const nickname of dutyMembers) {
           if (nickname === '–') continue;
 
           const u = usersData.find(usr => usr.nickname === nickname);
           if (!u) continue;
+
+          // Skip fine if on leave
+          if (leaveUserIds.includes(String(u.id))) {
+            console.log(`Exempting ${nickname} from clean fine on ${dateStr} due to leave`);
+            continue;
+          }
 
           // Exempt if traveling to external event
           if (exemptUserIds.includes(String(u.id))) {
@@ -390,93 +442,7 @@ export default function Dashboard() {
     }
   };
 
-  const checkAndDoubleOverdueFines = async (serverNow = new Date()) => {
-    try {
-      const { data: unpaidFines, error } = await supabase
-        .from('discipline_fines')
-        .select('*')
-        .eq('payment_status', 'unpaid');
 
-      if (error) throw error;
-      if (!unpaidFines || unpaidFines.length === 0) return;
-
-      const tzOffset = 7 * 60 * 60 * 1000;
-      const todayStr = new Date(serverNow.getTime() + tzOffset).toISOString().split('T')[0];
-      const updates = [];
-
-      for (const fine of unpaidFines) {
-        if (!fine.date) continue;
-        
-        // Parse dates in UTC to avoid local timezone skew/fluctuation
-        const d1 = new Date(`${todayStr}T00:00:00.000Z`);
-        const d2 = new Date(`${fine.date}T00:00:00.000Z`);
-        const diffDays = Math.floor((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
-
-        const expectedDoubledCount = Math.floor(diffDays / 7);
-        if (expectedDoubledCount <= 0) continue;
-
-        let currentDoubledCount = 0;
-        const noteStr = fine.note || '';
-        const match = noteStr.match(/\[คูณ 2 ครั้งที่ (\d+)\]/);
-        if (match) {
-          currentDoubledCount = parseInt(match[1], 10);
-        } else if (noteStr.includes('ปรับคูณ 2 เนื่องจากค้างชำระเกิน 7 วัน') || noteStr.includes('(ปรับคูณ 2)')) {
-          currentDoubledCount = 1;
-        }
-
-        if (expectedDoubledCount > currentDoubledCount) {
-          const multiplier = Math.pow(2, expectedDoubledCount - currentDoubledCount);
-          const doubledAmount = fine.amount * multiplier;
-          
-          let updatedNote = noteStr
-            .replace(/\s*\(ปรับคูณ 2 เนื่องจากค้างชำระเกิน 7 วัน\)/g, '')
-            .replace(/\s*\(ปรับคูณ 2\)/g, '')
-            .replace(/\s*\[คูณ 2 ครั้งที่ \d+\]/g, '');
-            
-          updatedNote = updatedNote ? `${updatedNote} [คูณ 2 ครั้งที่ ${expectedDoubledCount}]` : `[คูณ 2 ครั้งที่ ${expectedDoubledCount}]`;
-          
-          updates.push({
-            id: fine.id,
-            amount: doubledAmount,
-            note: updatedNote,
-            fine: fine,
-            doubledAmount: doubledAmount,
-            expectedDoubledCount: expectedDoubledCount
-          });
-        }
-      }
-
-      for (const update of updates) {
-        const { data: updatedRows, error: updateError } = await supabase
-          .from('discipline_fines')
-          .update({ amount: update.amount, note: update.note })
-          .eq('id', update.id)
-          .not('note', 'like', `%[คูณ 2 ครั้งที่ ${update.expectedDoubledCount}]%`)
-          .select();
-        
-        if (updateError) {
-          console.error(`Failed to double fine ${update.id}:`, updateError);
-        } else if (!updatedRows || updatedRows.length === 0) {
-          console.log(`Fine ${update.id} was already updated by another session.`);
-        } else {
-          console.log(`Successfully doubled fine ${update.id} to ${update.amount}`);
-          
-          // Send Discord notification
-          const embedTitle = `⚠️ ค่าปรับเพิ่มขึ้นเป็น 2 เท่า (ครั้งที่ ${update.expectedDoubledCount})`;
-          const embedDesc = `สมาชิกสภานักเรียนค้างชำระค่าปรับเกินกำหนด ${update.expectedDoubledCount * 7} วัน ระบบจึงทำการปรับคูณ 2 อัตโนมัติ (ครั้งที่ ${update.expectedDoubledCount})`;
-          const fields = [
-            { name: '👤 สมาชิก', value: `${update.fine.user_name || 'ไม่ระบุ'} (${update.fine.nickname})`, inline: true },
-            { name: '⚖️ ข้อหาความผิด', value: update.fine.violation, inline: true },
-            { name: '💰 ยอดค่าปรับใหม่', value: `~~${update.fine.amount} บาท~~ ➡️ **${update.doubledAmount} บาท**`, inline: true },
-            { name: '📅 วันที่บันทึกความผิด', value: update.fine.date, inline: true }
-          ];
-          sendDiscordEmbedViaGAS(embedTitle, embedDesc, 16711680, fields, null, 'discipline_fines');
-        }
-      }
-    } catch (err) {
-      console.error('Error in checkAndDoubleOverdueFines:', err);
-    }
-  };
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -542,6 +508,7 @@ export default function Dashboard() {
         let greetingStartD = '';
         let enabledDays = [];
         let disabledDates = [];
+        let schedulesHistory = [];
         const { data: settingsData } = await supabase
           .from('attendance_settings')
           .select('*');
@@ -575,6 +542,14 @@ export default function Dashboard() {
               ? JSON.parse(disabledDatesRow.value)
               : (disabledDatesRow.value || []);
           }
+          const historyRow = settingsData.find(d => d.key === 'schedules_history');
+          if (historyRow?.value) {
+            try {
+              schedulesHistory = JSON.parse(historyRow.value);
+            } catch (e) {
+              console.error('Error parsing schedules_history in Dashboard:', e);
+            }
+          }
         }
 
         setEvents(eventsData || []);
@@ -598,7 +573,7 @@ export default function Dashboard() {
             if (!tUser.nickname) return;
 
             const myEventIds = (partData || []).filter(p => String(p.user_id) === String(tUser.id)).map(p => p.event_id);
-            const myExtEvents = (eventsData || []).filter(ev => ev.location_category === 'external' && myEventIds.includes(ev.id));
+            const myExtEvents = (eventsData || []).filter(ev => (ev.check_attendance || ev.location_category === 'external') && myEventIds.includes(ev.id));
 
             for (let i = 0; i < 14; i++) {
               const d = new Date(today.getTime() + i * 24 * 60 * 60 * 1000);
@@ -669,12 +644,11 @@ export default function Dashboard() {
           const cleanAct = settingsData?.find(d => d.key === 'clean_duty_active')?.value !== 'false';
 
           if (cleanData && cleanAct) {
-            await runAutoCleanFinesCheck(cleanData, cleanStartD, eventsData || [], partData || [], enabledDays, disabledDates, serverNow);
+            await runAutoCleanFinesCheck(cleanData, cleanStartD, eventsData || [], partData || [], enabledDays, disabledDates, serverNow, schedulesHistory);
           }
           if (greetingData && greetingAct) {
-            await runAutoGreetingFinesCheck(greetingData, greetingStartD, eventsData || [], partData || [], swapData || [], enabledDays, disabledDates, serverNow);
+            await runAutoGreetingFinesCheck(greetingData, greetingStartD, eventsData || [], partData || [], swapData || [], enabledDays, disabledDates, serverNow, schedulesHistory);
           }
-          await checkAndDoubleOverdueFines(serverNow);
         }
       } catch (e) {
         console.error('Error loading dashboard data:', e);
@@ -691,6 +665,22 @@ export default function Dashboard() {
     .map(e => ({ ...e, desc: e.description || e.desc }));
     
   const unread = notifications.filter(n => !n.read);
+  const handleNotificationClick = async (n) => {
+    setSelectedNotification(n);
+    if (!n.read) {
+      try {
+        const { error } = await supabase
+          .from('notifications')
+          .update({ read: true })
+          .eq('id', n.id);
+        if (!error) {
+          setNotifications(prev => prev.map(notif => notif.id === n.id ? { ...notif, read: true } : notif));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
   const hour = today.getHours();
   const greet = hour < 12 ? 'อรุณสวัสดิ์' : hour < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น';
 
@@ -973,13 +963,20 @@ export default function Dashboard() {
           </div>
           <div>
             {notifications.map((n, i) => (
-              <div key={n.id} style={{
-                display: 'flex', gap: 12, padding: '10px 16px',
-                borderBottom: i < notifications.length - 1 ? '1px solid #f0f0f0' : 'none',
-                background: n.read ? 'white' : '#f3f4ff',
-              }}>
+              <div key={n.id} 
+                onClick={() => handleNotificationClick(n)}
+                onMouseEnter={e => e.currentTarget.style.background = n.read ? '#f9f9fb' : 'rgba(0,188,212,0.06)'}
+                onMouseLeave={e => e.currentTarget.style.background = n.read ? 'white' : '#f3f4ff'}
+                style={{
+                  display: 'flex', gap: 12, padding: '10px 16px',
+                  borderBottom: i < notifications.length - 1 ? '1px solid #f0f0f0' : 'none',
+                  background: n.read ? 'white' : '#f3f4ff',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s'
+                }}
+              >
                 <span style={{ fontSize: 16, flexShrink: 0 }}>
-                  {n.type === 'fine' ? '💸' : n.type === 'task' ? '📋' : n.type === 'event' ? '📅' : '🔔'}
+                  {n.type === 'fine' ? '💸' : n.type === 'task' ? '📋' : n.type === 'event' ? '📅' : n.type === 'announcement' ? '📢' : '🔔'}
                 </span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12, lineHeight: 1.5 }}>{n.message}</div>
@@ -1093,6 +1090,53 @@ export default function Dashboard() {
             <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
               <button className="btn btn-gray" onClick={()=>setConflictModal(null)}>ยกเลิก</button>
               <button className="btn btn-primary" onClick={handleSaveSwap} disabled={!selectedSub} style={{ background: '#e65100', border: 'none' }}>บันทึกการสลับเวร</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Selected Notification View Modal */}
+      {selectedNotification && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000, padding: 16
+        }}>
+          <div className="card" style={{ maxWidth: 450, width: '100%', margin: 0, background: '#fff', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid #e5e5ea', background: '#f5f5f7' }}>
+              <span className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 15 }}>
+                {selectedNotification.type === 'announcement' ? '📢 ประกาศด่วน' :
+                 selectedNotification.type === 'fine' ? '💸 ใบสั่งค่าปรับ' :
+                 selectedNotification.type === 'task' ? '📋 การมอบหมายงาน' :
+                 selectedNotification.type === 'event' ? '📅 กิจกรรม' : '🔔 การแจ้งเตือน'}
+              </span>
+              <button 
+                className="btn btn-gray" 
+                style={{ padding: '4px 8px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center' }} 
+                onClick={() => setSelectedNotification(null)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="card-body" style={{ padding: '24px 20px' }}>
+              <p style={{ fontSize: 13, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', color: '#212121', textAlign: 'left' }}>
+                {selectedNotification.message}
+              </p>
+              
+              {selectedNotification.created_at && (
+                <div style={{ fontSize: 11, color: '#9e9e9e', marginTop: 20, textAlign: 'right' }}>
+                  ส่งเมื่อ: {new Date(selectedNotification.created_at).toLocaleString('th-TH')}
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 16px', background: '#f5f5f7', borderTop: '1px solid #e5e5ea' }}>
+              <button 
+                className="btn btn-primary" 
+                style={{ background: 'var(--primary, #00bcd4)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => setSelectedNotification(null)}
+              >
+                ปิดหน้าต่าง
+              </button>
             </div>
           </div>
         </div>

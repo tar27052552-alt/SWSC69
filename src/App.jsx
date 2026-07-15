@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
@@ -122,12 +122,15 @@ const DEPT_PAGES = [
   },
 ];
 
+// Global module-level cache to persist across React Strict Mode remounts in development
+let globalLastOneSignalUser = null;
+
 function AppRoutes() {
   const { user } = useAuth();
 
   useEffect(() => {
     // Complete automatic silent reset of all Service Workers and OneSignal data to fix corrupted cache
-    if (!localStorage.getItem('onesignal_reset_v4')) {
+    if (!localStorage.getItem('onesignal_reset_v6')) {
       console.log('OneSignal: Initiating complete clear of all storage, cookies, and service workers...');
       
       // 1. Unregister all service workers
@@ -175,7 +178,7 @@ function AppRoutes() {
       if (userSession) localStorage.setItem('sc_user', userSession);
       if (lastActive) localStorage.setItem('sc_last_active', lastActive);
 
-      localStorage.setItem('onesignal_reset_v4', 'true');
+      localStorage.setItem('onesignal_reset_v6', 'true');
       
       console.log('OneSignal: Reset complete. Reloading page in 500ms...');
       setTimeout(() => {
@@ -189,43 +192,43 @@ function AppRoutes() {
     const oneSignalAppId = import.meta.env.VITE_ONESIGNAL_APP_ID;
     if (!oneSignalAppId) return;
 
+    if (!user) {
+      if (globalLastOneSignalUser !== null) {
+        globalLastOneSignalUser = null;
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async function(OneSignal) {
+          console.log('OneSignal: User logged out. Clearing external ID');
+          try {
+            await OneSignal.logout();
+          } catch (e) {
+            console.error('OneSignal logout error:', e);
+          }
+        });
+      }
+      return;
+    }
+
+    const targetId = String(user.id);
+
+    // Skip synchronization if already logged in as target user
+    if (globalLastOneSignalUser === targetId) {
+      return;
+    }
+
+    // Lock immediately to prevent duplicate runs from React Strict Mode remounts
+    globalLastOneSignalUser = targetId;
+
     const runSync = () => {
       window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(function(OneSignal) {
-        if (user) {
-          const targetId = String(user.id);
-          
-          const applyTags = () => {
-            console.log('OneSignal: Setting tags for user', targetId);
-            OneSignal.User.addTags({
-              nickname: user.nickname || "",
-              studentId: user.studentId || "",
-              role: user.role || "",
-              name: user.name || ""
-            });
-          };
-
-          // If not already logged in as this user, login and set tags on change
-          if (OneSignal.User.externalId !== targetId) {
-            console.log('OneSignal: Initiating login for user', targetId);
-            
-            const handleUserChange = (event) => {
-              const currentId = event?.current?.externalId || OneSignal.User.externalId;
-              if (currentId === targetId) {
-                console.log('OneSignal: Identity resolved to', targetId, '- scheduling tag update in 1.5s...');
-                setTimeout(applyTags, 1500);
-                OneSignal.User.removeEventListener('change', handleUserChange);
-              }
-            };
-            OneSignal.User.addEventListener('change', handleUserChange);
-            OneSignal.login(targetId);
-          } else {
-            // Already logged in, set tags directly
-            applyTags();
-          }
-        } else {
-          console.log('OneSignal: Logging out');
-          OneSignal.logout();
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        try {
+          const currentExternalId = OneSignal.User.externalId;
+          console.log('OneSignal: Aligning external ID to:', targetId, '(current local ID:', currentExternalId, ')');
+          await OneSignal.login(targetId);
+          console.log('OneSignal: Login call completed successfully for user:', targetId);
+        } catch (err) {
+          console.error('OneSignal login error:', err);
+          globalLastOneSignalUser = null;
         }
       });
     };
@@ -297,6 +300,16 @@ export default function App() {
             }
           }
           return originalRegister(url, options);
+        };
+
+        const originalGetRegistration = navigator.serviceWorker.getRegistration.bind(navigator.serviceWorker);
+        navigator.serviceWorker.getRegistration = function(scope) {
+          const scopeStr = typeof scope === 'string' ? scope : '';
+          // If OneSignal checks for registration scope at root, redirect to the subdirectory base scope
+          if (scopeStr === '/' || (scopeStr && !scopeStr.includes(base))) {
+            return originalGetRegistration(base);
+          }
+          return originalGetRegistration(scope);
         };
       }
       

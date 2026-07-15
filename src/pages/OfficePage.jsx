@@ -10,6 +10,7 @@ export default function OfficePage() {
   const { user, isAdmin } = useAuth();
   const canManage = isAdmin || user?.deptId === 4;
   const [log, setLog] = useState(MOCK_USAGE_LOG);
+  const [usersList, setUsersList] = useState([]);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ date: '', time: '', by: '', purpose: '', clean: false });
 
@@ -23,6 +24,11 @@ export default function OfficePage() {
         if (error) throw error;
         if (data) {
           setLog(data);
+        }
+        // โหลดรายชื่อผู้ใช้
+        const { data: uData } = await supabase.from('users').select('id, nickname, name, dept_id, role');
+        if (uData) {
+          setUsersList(uData);
         }
       } catch (err) {
         console.error('Error loading usage logs:', err);
@@ -58,7 +64,10 @@ export default function OfficePage() {
           { name: "🧹 การดูแลความสะอาด", value: data[0].clean ? "✅ ทำความสะอาดห้องเรียบร้อย" : "❌ ยังไม่ได้ทำความสะอาด", inline: true },
           { name: "📝 วัตถุประสงค์", value: data[0].purpose || "ใช้งานทั่วไป", inline: false }
         ];
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, fields, null, 'office');
+        const targetUserIds = usersList
+          .filter(u => u.dept_id === 4 || u.role === 'admin')
+          .map(u => String(u.id));
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, fields, null, 'office', targetUserIds.length > 0 ? targetUserIds : null);
       }
     } catch (err) {
       console.error('Error inserting office usage log:', err);

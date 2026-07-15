@@ -170,6 +170,12 @@ export function AuthProvider({ children }) {
   const [greetingDutyState, setGreetingDutyState] = useState(null);
   const [modalAlert, setModalAlert] = useState(null);
 
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('sc_user');
+    localStorage.removeItem('sc_last_active'); // Clear last active on logout
+  };
+
   useEffect(() => {
     window.alert = (message) => {
       let type = 'info';
@@ -235,6 +241,23 @@ export function AuthProvider({ children }) {
   const loadTodayStates = async () => {
     if (!user) return;
     try {
+      // Check if user is banned
+      try {
+        const { data: userCheck } = await supabase
+          .from('users')
+          .select('banned')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (userCheck && userCheck.banned) {
+          console.log('User is banned. Logging out...');
+          logout();
+          window.location.reload();
+          return;
+        }
+      } catch (err) {
+        console.error('Error verifying banned status:', err);
+      }
+
       const todayStr = currentDateStr;
 
       // 1. Fetch today's check-in status
@@ -259,13 +282,21 @@ export function AuthProvider({ children }) {
           let exempt = false;
           if (eventsData && partData) {
             const myEventIds = partData.map(p => p.event_id);
-            const myTodayEvents = eventsData.filter(ev => {
+            const hasCheckinEvent = eventsData.some(ev => {
               const start = ev.date;
               const end = ev.end_date || ev.date;
-              return ev.location_category === 'external' && myEventIds.includes(ev.id) && todayStr >= start && todayStr <= end;
+              return ev.check_attendance && myEventIds.includes(ev.id) && todayStr >= start && todayStr <= end;
             });
-            if (myTodayEvents.length > 0) {
-              exempt = true;
+
+            if (!hasCheckinEvent) {
+              const myTodayEvents = eventsData.filter(ev => {
+                const start = ev.date;
+                const end = ev.end_date || ev.date;
+                return ev.location_category === 'external' && myEventIds.includes(ev.id) && todayStr >= start && todayStr <= end;
+              });
+              if (myTodayEvents.length > 0) {
+                exempt = true;
+              }
             }
           }
 
@@ -445,6 +476,20 @@ export function AuthProvider({ children }) {
       const found = Array.isArray(rows) ? rows[0] : null;
       if (!found) return { success: false, error: 'รหัสนักเรียนหรือรหัสผ่านไม่ถูกต้อง' };
 
+      // Double-check if the user is banned
+      try {
+        const { data: userCheck } = await supabase
+          .from('users')
+          .select('banned')
+          .eq('id', found.id)
+          .maybeSingle();
+        if (userCheck && userCheck.banned) {
+          return { success: false, error: 'บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อแอดมิน' };
+        }
+      } catch (err) {
+        console.error('Error checking banned status:', err);
+      }
+
       const dept = found.dept_id ? DEPARTMENTS.find((d) => d.id === found.dept_id) : null;
       const isImg = found.avatar && (found.avatar.startsWith('data:image') || found.avatar.startsWith('http'));
       const userData = {
@@ -502,12 +547,6 @@ export function AuthProvider({ children }) {
     } catch (e) {
       return { success: false, error: e?.message || 'สลับบัญชีไม่สำเร็จ' };
     }
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('sc_user');
-    localStorage.removeItem('sc_last_active'); // Clear last active on logout
   };
 
   const updateUser = (updates) => {

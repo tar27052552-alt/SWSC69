@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DEPARTMENTS } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Search, X, Save, AlertTriangle } from 'lucide-react';
+import { Plus, Search, X, Save, AlertTriangle, Edit2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
@@ -35,13 +35,14 @@ const FINE_AMOUNTS = {
 const MOCK_FINES = [];
 
 export default function DisciplinePage() {
-  const { user, isDeptHead, isAdmin, checkInState, cleanDutyState } = useAuth();
+  const { user, isDeptHead, isAdmin, checkInState, cleanDutyState, greetingDutyState } = useAuth();
   const canManage = isAdmin || user?.deptId === 2;
   const [activeTab, setActiveTab] = useState('list');
   const [fines, setFines] = useState(MOCK_FINES);
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(false);
+  const [editingFineId, setEditingFineId] = useState(null);
   const [form, setForm] = useState({ userId:'', violation: VIOLATION_TYPES[0], multiplier: 1, amount:20, date:'', note:'' });
   const [paymentModal, setPaymentModal] = useState(null); // fine object being paid
   const [slipPreview, setSlipPreview] = useState(null);
@@ -666,7 +667,10 @@ export default function DisciplinePage() {
     };
   });
 
-  const initForm = () => setForm({ userId:'', violation: VIOLATION_TYPES[0], multiplier: 1, amount:20, date: todayStr, note:'' });
+  const initForm = () => {
+    setForm({ userId:'', violation: VIOLATION_TYPES[0], multiplier: 1, amount:20, date: todayStr, note:'' });
+    setEditingFineId(null);
+  };
 
   const calculateAmount = (userId, violation, multiplier) => {
     let base = FINE_AMOUNTS[violation] || 0;
@@ -709,6 +713,52 @@ export default function DisciplinePage() {
       alert('กรุณาเลือกวันที่เกิดเหตุด้วยครับ');
       return;
     }
+
+    if (editingFineId) {
+      const updatedFine = {
+        user_id: String(member.id),
+        user_name: member.name,
+        nickname: member.nickname,
+        violation: form.violation,
+        amount: parseInt(form.amount),
+        date: form.date,
+        note: form.note,
+        by: user?.nickname || 'ไม่ระบุ'
+      };
+      try {
+        const { data, error } = await supabase
+          .from('discipline_fines')
+          .update(updatedFine)
+          .eq('id', editingFineId)
+          .select();
+        if (error) throw error;
+        if (data && data[0]) {
+          const updated = {
+            id: data[0].id,
+            userId: data[0].user_id,
+            userName: data[0].user_name,
+            nickname: data[0].nickname,
+            violation: data[0].violation,
+            amount: data[0].amount,
+            date: data[0].date,
+            note: data[0].note,
+            by: data[0].by,
+            paid: data[0].paid,
+            paymentStatus: data[0].payment_status || (data[0].paid ? 'paid' : 'unpaid'),
+            paymentSlip: data[0].payment_slip || null
+          };
+          setFines(prev => prev.map(f => f.id === editingFineId ? updated : f));
+          alert('แก้ไขข้อมูลค่าปรับเรียบร้อยแล้ว!');
+        }
+      } catch (err) {
+        console.error('Error updating fine:', err);
+        alert('เกิดข้อผิดพลาดในการแก้ไขความผิด: ' + err.message);
+      }
+      setModal(false);
+      initForm();
+      return;
+    }
+
     const newFine = {
       user_id: String(member.id),
       user_name: member.name,
@@ -737,7 +787,9 @@ export default function DisciplinePage() {
           date: data[0].date,
           note: data[0].note,
           by: data[0].by,
-          paid: data[0].paid
+          paid: data[0].paid,
+          paymentStatus: data[0].payment_status || (data[0].paid ? 'paid' : 'unpaid'),
+          paymentSlip: data[0].payment_slip || null
         };
         setFines(prev => [inserted, ...prev]);
 
@@ -766,6 +818,19 @@ export default function DisciplinePage() {
       alert('เกิดข้อผิดพลาดในการบันทึกความผิด: ' + err.message);
     }
     setModal(false); initForm();
+  };
+
+  const handleEditClick = (f) => {
+    setEditingFineId(f.id);
+    setForm({
+      userId: f.userId,
+      violation: f.violation,
+      multiplier: 1,
+      amount: f.amount,
+      date: f.date,
+      note: f.note || ''
+    });
+    setModal(true);
   };
 
   const togglePaid = async (id) => {
@@ -1230,6 +1295,13 @@ export default function DisciplinePage() {
                                 👁️ สลิป
                               </button>
                             )}
+                            <button 
+                              className="btn btn-outline btn-sm" 
+                              style={{ padding: '4px 8px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}
+                              onClick={() => handleEditClick(f)}
+                            >
+                              <Edit2 size={11}/> แก้ไข
+                            </button>
                             <button 
                               className="btn btn-danger btn-sm" 
                               style={{ padding: '4px 8px', fontSize: 11, background: '#d32f2f' }}
@@ -1764,7 +1836,7 @@ export default function DisciplinePage() {
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(false)}>
           <div className="modal-box">
             <div className="modal-header">
-              <span style={{ fontWeight:700, fontSize:15, display:'flex', alignItems:'center', gap:8 }}><AlertTriangle size={16} color="#e53935"/> บันทึกความผิด</span>
+              <span style={{ fontWeight:700, fontSize:15, display:'flex', alignItems:'center', gap:8 }}><AlertTriangle size={16} color="#e53935"/> {editingFineId ? 'แก้ไขบันทึกความผิด' : 'บันทึกความผิด'}</span>
               <button onClick={()=>setModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#9e9e9e' }}><X size={18}/></button>
             </div>
             <div className="modal-body" style={{ display:'flex', flexDirection:'column', gap:14 }}>
@@ -1811,7 +1883,7 @@ export default function DisciplinePage() {
             <div className="modal-footer">
               <button className="btn btn-gray" onClick={()=>setModal(false)}>ยกเลิก</button>
               <button className="btn btn-danger" onClick={handleSave} disabled={!form.userId||!form.date}>
-                <Save size={14}/> บันทึกความผิด
+                <Save size={14}/> {editingFineId ? 'บันทึกการแก้ไข' : 'บันทึกความผิด'}
               </button>
             </div>
           </div>

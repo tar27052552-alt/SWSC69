@@ -325,6 +325,10 @@ export default function SchedulesPage() {
   const [cleanRoom,    setCleanRoom]    = useState(BLANK_SIMPLE);
   const [prNews,       setPRNews]       = useState(BLANK_PR);
   const [swaps,        setSwaps]        = useState([]);
+  const [usersList,    setUsersList]    = useState([]);
+  const [startDate, setStartDate] = useState('');
+  const [cleanDutyStartDate, setCleanDutyStartDate] = useState('');
+  const [greetingDutyStartDate, setGreetingDutyStartDate] = useState('');
 
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [newSwap, setNewSwap] = useState({ date: '', duty_type: 'greeting_gate1', original_nickname: '', substitute_nickname: '' });
@@ -370,13 +374,14 @@ export default function SchedulesPage() {
   useEffect(() => {
     async function loadSchedules() {
       try {
-        // โหลดรายชื่อเล่นทั้งหมดจากตาราง users ใน Supabase เพื่อใช้ในดรอปดาวน์เลือกเวร
+        // โหลดข้อมูลผู้ใช้จากตาราง users ใน Supabase
         const { data: usersData, error: usersErr } = await supabase
           .from('users')
-          .select('nickname, role');
+          .select('id, nickname, name, dept_id, role');
         if (usersErr) throw usersErr;
         
         if (usersData && usersData.length > 0) {
+          setUsersList(usersData);
           const nicknames = usersData
             .filter(u => u.role !== 'admin' && u.nickname !== 'แอดมิน')
             .map(u => u.nickname)
@@ -432,6 +437,19 @@ export default function SchedulesPage() {
           }
         } catch (swapsTableErr) {
           console.log("duty_swaps table not found or error loading swaps:", swapsTableErr);
+        }
+
+        // โหลดข้อมูลค่าเริ่มต้นสำหรับวันทำเวร
+        const { data: settingsData } = await supabase
+          .from('attendance_settings')
+          .select('*');
+        if (settingsData) {
+          const startD = settingsData.find(d => d.key === 'start_date')?.value || '';
+          const cleanStartD = settingsData.find(d => d.key === 'clean_duty_start_date')?.value || '';
+          const greetingStartD = settingsData.find(d => d.key === 'greeting_duty_start_date')?.value || '';
+          setStartDate(startD);
+          setCleanDutyStartDate(cleanStartD);
+          setGreetingDutyStartDate(greetingStartD);
         }
       } catch (err) {
         console.error('Error loading schedules:', err);
@@ -544,7 +562,20 @@ export default function SchedulesPage() {
       const formattedDate = new Date(newSwap.date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
       const embedDesc = `วันที่: **${formattedDate}**\nเวร: **${dutyLabels[newSwap.duty_type] || newSwap.duty_type}**\n**${newSwap.original_nickname}** ➡️ ให้ **${newSwap.substitute_nickname}** ปฏิบัติหน้าที่แทน\nบันทึกโดย: **${user?.nickname || user?.name || 'ระบบ'}** 📝`;
       
-      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, [], null, 'attendance_alerts');
+      let targetUserIds = [];
+      const origUser = usersList.find(u => u.nickname === newSwap.original_nickname);
+      const subUser = usersList.find(u => u.nickname === newSwap.substitute_nickname);
+      if (origUser) targetUserIds.push(String(origUser.id));
+      if (subUser) targetUserIds.push(String(subUser.id));
+      
+      usersList
+        .filter(u => u.dept_id === 2 || u.role === 'admin')
+        .forEach(u => {
+          const uid = String(u.id);
+          if (!targetUserIds.includes(uid)) targetUserIds.push(uid);
+        });
+        
+      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, [], null, 'attendance_alerts', targetUserIds.length > 0 ? targetUserIds : null);
 
       // Reload swaps
       const { data: swapsData } = await supabase
@@ -597,8 +628,84 @@ export default function SchedulesPage() {
         else if (tab === 'clean_room') { currentData = cleanRoom; typeStr = 'clean_room'; }
         else if (tab === 'pr_news') { currentData = prNews; typeStr = 'pr_news'; }
 
+        // 1. Fetch current schedule from DB to detect differences
+        const { data: dbSchedules } = await supabase
+          .from('schedules')
+          .select('*')
+          .eq('type', typeStr);
+
+        // 2. Load schedules history from settings
+        const { data: settingsData } = await supabase
+          .from('attendance_settings')
+          .select('*');
+        
+        const historyRow = settingsData?.find(d => d.key === 'schedules_history');
+        let history = [];
+        if (historyRow?.value) {
+          try {
+            history = JSON.parse(historyRow.value);
+          } catch (e) {
+            console.error('Error parsing schedules_history:', e);
+          }
+        }
+
+        const tzOffset = 7 * 60 * 60 * 1000;
+        const todayStr = new Date(Date.now() + tzOffset).toISOString().split('T')[0];
+        const yesterdayStr = new Date(Date.now() + tzOffset - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+        let defaultStart = startDate || '2026-05-01';
+        if (typeStr === 'clean_room' && cleanDutyStartDate) defaultStart = cleanDutyStartDate;
+        if (typeStr === 'greeting' && greetingDutyStartDate) defaultStart = greetingDutyStartDate;
+
+        let historyChanged = false;
+
         for (const row of currentData) {
           const { day, ...restData } = row;
+          const oldRow = dbSchedules?.find(s => s.day === day);
+          const oldData = oldRow?.data;
+          const newData = restData;
+
+          // Check if data changed
+          if (oldData && JSON.stringify(oldData) !== JSON.stringify(newData)) {
+            // Find latest active history entry for this type and day
+            const lastHistIdx = history.findIndex(h => h.type === typeStr && h.day === day && h.end_date === null);
+            
+            let oldStart = defaultStart;
+            if (lastHistIdx !== -1) {
+              oldStart = history[lastHistIdx].start_date;
+              history[lastHistIdx].end_date = yesterdayStr;
+            } else {
+              // Archive the old version
+              history.push({
+                type: typeStr,
+                day: day,
+                data: oldData,
+                start_date: oldStart,
+                end_date: yesterdayStr
+              });
+            }
+
+            // Push the new version starting today
+            history.push({
+              type: typeStr,
+              day: day,
+              data: newData,
+              start_date: todayStr,
+              end_date: null
+            });
+            historyChanged = true;
+          } else if (!oldData) {
+            // No old data, register the first history entry
+            history.push({
+              type: typeStr,
+              day: day,
+              data: newData,
+              start_date: defaultStart,
+              end_date: null
+            });
+            historyChanged = true;
+          }
+
           const { error } = await supabase
             .from('schedules')
             .upsert({
@@ -607,6 +714,13 @@ export default function SchedulesPage() {
               data: restData
             }, { onConflict: 'type,day' });
           if (error) throw error;
+        }
+
+        if (historyChanged) {
+          const { error: histErr } = await supabase
+            .from('attendance_settings')
+            .upsert([{ key: 'schedules_history', value: JSON.stringify(history) }], { onConflict: 'key' });
+          if (histErr) throw histErr;
         }
 
         // Notify Discord (pr channel)
@@ -619,7 +733,9 @@ export default function SchedulesPage() {
         };
         const embedTitle = `📅 มีการอัปเดตตารางเวรปฏิบัติหน้าที่สภานักเรียน`;
         const embedDesc = `ปรับปรุงตารางเวร: **${typeLabels[typeStr] || typeStr}** เรียบร้อยแล้ว\nกรุณาเข้าสู่ระบบ SWSC69 เพื่อตรวจสอบหน้าที่และวันปฏิบัติงานของท่านครับ 🏫`;
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15814656, [], null, 'pr');
+        
+        const targetUserIds = usersList.map(u => String(u.id));
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15814656, [], null, 'pr', targetUserIds.length > 0 ? targetUserIds : null);
       } catch (err) {
         console.error('Error saving schedule:', err);
         alert('บันทึกตารางลงฐานข้อมูลล้มเหลว: ' + err.message);

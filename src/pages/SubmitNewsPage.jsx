@@ -56,6 +56,7 @@ export default function SubmitNewsPage() {
   const [newsForm, setNewsForm] = useState({ headline:'', detail:'', category:'ข่าวโรงเรียน' });
   const [newsFormError, setNewsFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [usersList, setUsersList] = useState([]);
 
   useEffect(() => {
     async function loadDuty() {
@@ -103,6 +104,12 @@ export default function SubmitNewsPage() {
           status: d.status,
           submittedAt: d.submitted_at
         })));
+      }
+      
+      // โหลดรายชื่อผู้ใช้
+      const { data: uData } = await supabase.from('users').select('id, nickname, name, dept_id, role');
+      if (uData) {
+        setUsersList(uData);
       }
     } catch (err) {
       console.error('Error loading PR news:', err);
@@ -159,13 +166,17 @@ export default function SubmitNewsPage() {
       
       // Notify Discord (pr channel)
       const embedTitle = `📝 มีการเสนอข่าวประชาสัมพันธ์ใหม่`;
-      const embedDesc = `ส่งข่าวโดย **${nicknameOrName}** เพื่อประกาศในวัน**${tomorrowKey}** (${tomorrowDateStr})`;
+      const embedDesc = `ส่งข่าวโดย **${nicknameOrName}** เพื่อประกาศ in วัน**${tomorrowKey}** (${tomorrowDateStr})`;
       const fields = [
         { name: "หัวข่าว", value: newsForm.headline.trim(), inline: false },
         { name: "หมวดหมู่", value: newsForm.category, inline: true },
         { name: "รายละเอียด", value: newsForm.detail.trim() || "(ไม่มีรายละเอียด)", inline: false }
       ];
-      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'pr');
+      
+      const targetUserIds = usersList
+        .filter(u => u.dept_id === 5 || u.role === 'admin')
+        .map(u => String(u.id));
+      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'pr', targetUserIds.length > 0 ? targetUserIds : null);
       
       alert('ส่งข่าวประชาสัมพันธ์เรียบร้อยแล้ว');
       setNewsForm({ headline:'', detail:'', category:'ข่าวโรงเรียน' });

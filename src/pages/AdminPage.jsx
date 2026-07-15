@@ -11,7 +11,7 @@ const DEPT_COLORS = { 1:'#e8f5e9',2:'#fce4ec',3:'#e0f7fa',4:'#fff8e1',5:'#fce4ec
 const DEPT_TEXT   = { 1:'#2e7d32',2:'#880e4f',3:'#00838f',4:'#f57f17',5:'#880e4f',6:'#006064',7:'#4527a0',8:'#558b2f',9:'#e65100',10:'#004d40' };
 const AVATAR_COLORS = ['#00bcd4','#e91e63','#43a047','#f9a825','#ec407a','#00acc1','#7e57c2','#7cb342','#fb8c00','#26a69a'];
 
-const initForm = { name:'', nickname:'', studentId:'', phone:'', password:'', role: ROLES.MEMBER, deptId:'', position:'', profileImage:'' };
+const initForm = { name:'', nickname:'', studentId:'', phone:'', password:'', role: ROLES.MEMBER, deptId:'', position:'', profileImage:'', banned: false };
 
 export default function AdminPage() {
   const { isAdmin, loginAsUser, user } = useAuth();
@@ -25,13 +25,7 @@ export default function AdminPage() {
   const [delUser, setDelUser] = useState(null);
   const [form, setForm] = useState(initForm);
 
-  if (!isAdmin) return (
-    <div style={{ textAlign:'center', padding:'80px 0', color:'#9e9e9e' }}>
-      <div style={{ fontSize:48, marginBottom:12 }}>🚫</div>
-      <div style={{ fontWeight:700, fontSize:16 }}>ไม่มีสิทธิ์เข้าถึง</div>
-    </div>
- 
-  );
+
 
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
@@ -45,7 +39,7 @@ export default function AdminPage() {
     try {
       setDbError('');
       // หลีกเลี่ยงดึงคอลัมน์ avatar (ซึ่งเก็บรูปโปรไฟล์ Base64 ขนาดใหญ่) ในการโหลดครั้งแรกเพื่อให้หน้าจอแสดงผลได้รวดเร็วทันที!
-      const rows = await supabaseSelect('users', '?select=id,name,nickname,student_id,phone,dept_id,role,position,avatar_color&order=created_at.asc');
+      const rows = await supabaseSelect('users', '?select=id,name,nickname,student_id,phone,dept_id,role,position,avatar_color,banned&order=created_at.asc');
       const mapped = (rows || []).map(r => {
         return {
           id: r.id,
@@ -59,6 +53,7 @@ export default function AdminPage() {
           avatar: r.nickname?.substring(0, 1) || r.name?.charAt(0) || 'U',
           profileImage: null, // จะโหลดภาพโปรไฟล์ทีหลังเฉพาะเมื่อกดแก้ไขแบบ On-Demand
           avatarColor: r.avatar_color || AVATAR_COLORS[0],
+          banned: r.banned || false,
         };
       });
       setUsers(mapped);
@@ -68,14 +63,23 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    loadUsers();
+    if (isAdmin) {
+      loadUsers();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAdmin]);
+
+  if (!isAdmin) return (
+    <div style={{ textAlign:'center', padding:'80px 0', color:'#9e9e9e' }}>
+      <div style={{ fontSize:48, marginBottom:12 }}>🚫</div>
+      <div style={{ fontWeight:700, fontSize:16 }}>ไม่มีสิทธิ์เข้าถึง</div>
+    </div>
+  );
 
   const openAdd = () => { setEditUser(null); setForm(initForm); setModal(true); };
   const openEdit = async u => {
     setEditUser(u);
-    setForm({ name:u.name, nickname:u.nickname, studentId:u.studentId, phone:u.phone||'', password:'', role:u.role, deptId:u.deptId||'', position:u.position, profileImage: '' });
+    setForm({ name:u.name, nickname:u.nickname, studentId:u.studentId, phone:u.phone||'', password:'', role:u.role, deptId:u.deptId||'', position:u.position, profileImage: '', banned: u.banned || false });
     setModal(true);
     
     try {
@@ -122,6 +126,7 @@ export default function AdminPage() {
         position: form.position,
         avatar: hasImage ? form.profileImage : (editUser?.profileImage ? editUser.profileImage : (form.nickname?.substring(0, 1) || form.name?.charAt(0) || 'U')),
         avatar_color: editUser?.avatarColor || AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
+        banned: form.banned || false,
         ...(editUser ? {} : { password_hash: '' }),
       };
 
@@ -231,7 +236,12 @@ export default function AdminPage() {
                              : <span style={{ color:'#bdbdbd', fontSize:12 }}>–</span>}
                     </td>
                     <td style={{ fontSize:13 }}>{u.position}</td>
-                    <td><span className={`badge ${ROLE_BADGE[u.role]}`}>{ROLE_LABELS[u.role]}</span></td>
+                    <td>
+                      <div style={{ display:'flex', flexDirection:'column', gap:4, alignItems:'flex-start' }}>
+                        <span className={`badge ${ROLE_BADGE[u.role]}`}>{ROLE_LABELS[u.role]}</span>
+                        {u.banned && <span className="badge badge-red" style={{ fontSize: 10, padding: '2px 6px' }}>🚫 ถูกระงับ</span>}
+                      </div>
+                    </td>
                     <td style={{ fontSize:12, color:'#757575' }}>{u.phone || u.email || '–'}</td>
                     <td>
                       <div style={{ display:'flex', gap:6 }}>
@@ -239,6 +249,27 @@ export default function AdminPage() {
                           <button onClick={()=>handleLoginAs(u)} className="btn btn-primary btn-sm" title="เข้าสู่ระบบในฐานะ"><LogIn size={13} /></button>
                         )}
                         <button onClick={()=>openEdit(u)} className="btn btn-gray btn-sm" title="แก้ไข"><Edit2 size={13} /></button>
+                        {user?.id !== u.id && (
+                          <button 
+                            onClick={async () => {
+                              const actionName = u.banned ? 'ปลดระงับ' : 'ระงับการใช้งาน';
+                              if (confirm(`ต้องการ${actionName}บัญชี "${u.name} (${u.nickname})" ใช่หรือไม่?`)) {
+                                try {
+                                  await supabaseUpdate('users', { banned: !u.banned }, `?id=eq.${u.id}`);
+                                  await loadUsers();
+                                  alert(`${actionName}สำเร็จ!`);
+                                } catch (err) {
+                                  alert(`เกิดข้อผิดพลาด: ${err.message}`);
+                                }
+                              }
+                            }} 
+                            className={`btn ${u.banned ? 'btn-outline' : 'btn-danger'} btn-sm`} 
+                            style={{ padding: '4px 8px', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title={u.banned ? 'ปลดแบน' : 'แบน'}
+                          >
+                            {u.banned ? 'ปลดแบน' : 'แบน'}
+                          </button>
+                        )}
                         <button onClick={()=>setDelUser(u)} className="btn btn-danger btn-sm" disabled={u.role==='admin'} title="ลบ"><Trash2 size={13} /></button>
                       </div>
                     </td>
@@ -334,6 +365,18 @@ export default function AdminPage() {
                     <option value="">– ไม่ระบุ –</option>
                     {DEPARTMENTS.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
+                </div>
+                <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                  <input 
+                    type="checkbox" 
+                    id="user-banned-checkbox"
+                    checked={form.banned || false} 
+                    onChange={e=>setForm(p=>({...p, banned: e.target.checked}))} 
+                    style={{ width: 16, height: 16, cursor: 'pointer' }}
+                  />
+                  <label htmlFor="user-banned-checkbox" style={{ fontWeight: 600, fontSize: 13, color: '#d32f2f', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    🚫 ระงับการใช้งานบัญชีนี้ (แบน)
+                  </label>
                 </div>
               </div>
             </div>

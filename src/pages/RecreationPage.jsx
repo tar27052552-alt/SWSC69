@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, X, Save } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 const MOCK_EVENTS = [];
 
@@ -9,6 +10,7 @@ export default function RecreationPage() {
   const { user, isAdmin } = useAuth();
   const canManage = isAdmin || user?.deptId === 6;
   const [events, setEvents] = useState(MOCK_EVENTS);
+  const [usersList, setUsersList] = useState([]);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ title: '', date: '', host: '', games: '' });
 
@@ -22,6 +24,12 @@ export default function RecreationPage() {
         if (error) throw error;
         if (data) {
           setEvents(data);
+        }
+
+        // โหลดรายชื่อผู้ใช้
+        const { data: uData } = await supabase.from('users').select('id, nickname, name, dept_id, role');
+        if (uData) {
+          setUsersList(uData);
         }
       } catch (err) {
         console.error('Error loading recreation events:', err);
@@ -48,6 +56,30 @@ export default function RecreationPage() {
       if (error) throw error;
       if (data && data[0]) {
         setEvents(prev => [data[0], ...prev]);
+
+        // ส่งการแจ้งเตือน
+        const embedTitle = `🎮 มีการวางแผนกิจกรรมสันทนาการใหม่`;
+        const embedDesc = `ฝ่ายนันทนาการและเครือข่ายชุมชนได้เพิ่มแผนการจัดสันทนาการของสภานักเรียน`;
+        const fields = [
+          { name: '📋 กิจกรรม', value: data[0].title || '-', inline: true },
+          { name: '📅 วันที่จัด', value: new Date(data[0].date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }), inline: true },
+          { name: '👤 ผู้นำกิจกรรม', value: data[0].host || '-', inline: true },
+          { name: '🎯 เกมที่เลือกใช้', value: data[0].games && data[0].games.length > 0 ? data[0].games.join(', ') : 'ไม่มี', inline: false }
+        ];
+
+        const targetUserIds = usersList
+          .filter(u => u.role === 'admin' || u.dept_id === 6)
+          .map(u => String(u.id));
+
+        sendDiscordEmbedViaGAS(
+          embedTitle,
+          embedDesc,
+          439924, // สีฟ้านันทนาการ (recreation color)
+          fields,
+          null,
+          'recreation',
+          targetUserIds.length > 0 ? targetUserIds : null
+        );
       }
     } catch (err) {
       console.error('Error inserting recreation event:', err);

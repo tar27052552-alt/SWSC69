@@ -8,6 +8,7 @@ import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUp
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 const TH_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
+const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export default function CheckInPage() {
   const { user, checkInState, setCheckInState } = useAuth();
@@ -128,7 +129,6 @@ export default function CheckInPage() {
     };
   }, []);
 
-  const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const todayStr = toGregorianStr(currentDate);
   const todayDayName = TH_DAYS[currentDate.getDay()];
   const isBeforeStart = startDate && todayStr < startDate;

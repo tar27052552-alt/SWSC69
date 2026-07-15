@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { DEPARTMENTS } from '../data/mockData';
-import { Plus, X, Save, Search, CheckCircle, Clock, XCircle, Eye } from 'lucide-react';
+import { Plus, X, Save, Search, CheckCircle, Clock, XCircle, Eye, Camera } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
+import logoUrl from '../assets/logo.png';
+
 
 const EXPENSE_CATEGORIES = [
   'ค่าวัสดุอุปกรณ์', 'ค่าอาหารและเครื่องดื่ม', 'ค่าสถานที่',
@@ -306,6 +308,18 @@ export default function FinancePage() {
       if (error) throw error;
       setDfines(prev => prev.map(f => f.id === fine.id ? { ...f, paid: true, paymentStatus: 'paid' } : f));
       setSlipViewModal(null);
+
+      // ส่งการแจ้งเตือน
+      const embedTitle = `✅ อนุมัติการชำระค่าปรับสำเร็จ - สภานักเรียน`;
+      const embedDesc = `การชำระค่าปรับข้อหา **${fine.violation}** ได้รับการยืนยันแล้ว`;
+      const fields = [
+        { name: '👤 ผู้ชำระ', value: `${fine.userName || 'ไม่ระบุ'} (${fine.nickname || ''})`, inline: true },
+        { name: '⚖️ ข้อหาความผิด', value: fine.violation, inline: true },
+        { name: '💵 ยอดเงิน', value: `${fine.amount} บาท`, inline: true },
+        { name: '✍️ ยืนยันโดย', value: user?.nickname || 'ฝ่ายการเงิน', inline: true }
+      ];
+      const targetUserId = fine.userId ? String(fine.userId) : null;
+      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, fields, null, 'discipline_fines', targetUserId ? [targetUserId] : null);
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message);
     }
@@ -315,11 +329,50 @@ export default function FinancePage() {
     try {
       const { error } = await supabase
         .from('discipline_fines')
-        .update({ payment_status: 'unpaid', payment_slip: null })
+        .update({ paid: false, payment_status: 'unpaid', payment_slip: null })
         .eq('id', fine.id);
       if (error) throw error;
-      setDfines(prev => prev.map(f => f.id === fine.id ? { ...f, paymentStatus: 'unpaid', paymentSlip: null } : f));
+      setDfines(prev => prev.map(f => f.id === fine.id ? { ...f, paid: false, paymentStatus: 'unpaid', paymentSlip: null } : f));
       setSlipViewModal(null);
+
+      // ส่งการแจ้งเตือน
+      const embedTitle = `❌ ปฏิเสธสลิปการชำระค่าปรับ - สภานักเรียน`;
+      const embedDesc = `สลิปที่อัปโหลดสำหรับค่าปรับข้อหา **${fine.violation}** ไม่ถูกต้อง กรุณาอัปโหลดสลิปที่ถูกต้องอีกครั้ง`;
+      const fields = [
+        { name: '👤 ผู้ชำระ', value: `${fine.userName || 'ไม่ระบุ'} (${fine.nickname || ''})`, inline: true },
+        { name: '⚖️ ข้อหาความผิด', value: fine.violation, inline: true },
+        { name: '💵 ยอดเงิน', value: `${fine.amount} บาท`, inline: true },
+        { name: '✍️ ตรวจสอบโดย', value: user?.nickname || 'ฝ่ายการเงิน', inline: true }
+      ];
+      const targetUserId = fine.userId ? String(fine.userId) : null;
+      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15158332, fields, null, 'discipline_fines', targetUserId ? [targetUserId] : null);
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+    }
+  };
+
+  const revertFineUnpaid = async (fine) => {
+    if (!confirm('ต้องการเปลี่ยนสถานะรายการนี้เป็น "ยังไม่ชำระเงิน" ใช่หรือไม่? (หลักฐานการชำระเงิน/สลิปจะถูกลบ)')) return;
+    try {
+      const { error } = await supabase
+        .from('discipline_fines')
+        .update({ paid: false, payment_status: 'unpaid', payment_slip: null })
+        .eq('id', fine.id);
+      if (error) throw error;
+      setDfines(prev => prev.map(f => f.id === fine.id ? { ...f, paid: false, paymentStatus: 'unpaid', paymentSlip: null } : f));
+
+      // ส่งการแจ้งเตือน
+      const embedTitle = `⚠️ ปรับสถานะค่าปรับกลับเป็นยังไม่ชำระ - สภานักเรียน`;
+      const embedDesc = `ค่าปรับข้อหา **${fine.violation}** ถูกปรับสถานะกลับเป็น **ยังไม่ชำระเงิน**`;
+      const fields = [
+        { name: '👤 ผู้ชำระ', value: `${fine.userName || 'ไม่ระบุ'} (${fine.nickname || ''})`, inline: true },
+        { name: '⚖️ ข้อหาความผิด', value: fine.violation, inline: true },
+        { name: '💵 ยอดเงิน', value: `${fine.amount} บาท`, inline: true },
+        { name: '✍️ ดำเนินการโดย', value: user?.nickname || 'ฝ่ายการเงิน', inline: true }
+      ];
+      const targetUserId = fine.userId ? String(fine.userId) : null;
+      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15158332, fields, null, 'discipline_fines', targetUserId ? [targetUserId] : null);
+      alert('เปลี่ยนสถานะเป็นยังไม่ชำระเงินสำเร็จ');
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message);
     }
@@ -333,11 +386,445 @@ export default function FinancePage() {
         .eq('id', fineId);
       if (error) throw error;
       setDfines(prev => prev.map(f => f.id === fineId ? { ...f, paid: true, paymentStatus: 'paid' } : f));
+
+      // ส่งการแจ้งเตือน
+      const fine = dfines.find(f => f.id === fineId);
+      if (fine) {
+        const embedTitle = `💵 ชำระค่าปรับด้วยเงินสดสำเร็จ - สภานักเรียน`;
+        const embedDesc = `ได้รับการบันทึกยืนยันชำระค่าปรับด้วยเงินสดข้อหา **${fine.violation}** เรียบร้อยแล้ว`;
+        const fields = [
+          { name: '👤 ผู้ชำระ', value: `${fine.userName || 'ไม่ระบุ'} (${fine.nickname || ''})`, inline: true },
+          { name: '⚖️ ข้อหาความผิด', value: fine.violation, inline: true },
+          { name: '💵 ยอดเงิน', value: `${fine.amount} บาท`, inline: true },
+          { name: '✍️ บันทึกโดย', value: user?.nickname || 'ฝ่ายการเงิน', inline: true }
+        ];
+        const targetUserId = fine.userId ? String(fine.userId) : null;
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, fields, null, 'discipline_fines', targetUserId ? [targetUserId] : null);
+      }
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message);
     }
   };
 
+  const exportFeeSummaryPNG = (fee) => {
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.src = logoUrl;
+    logoImg.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const members = usersList.filter(u => u.role !== 'admin');
+      
+      const paidCount = members.filter(u => {
+        const p = fee.payments?.[u.id];
+        if (!p) return false;
+        if (typeof p === 'object') return p.paid === true;
+        return p === true;
+      }).length;
+      const totalCollected = paidCount * fee.amount;
+      const totalExpected = members.length * fee.amount;
+      const percent = members.length > 0 ? Math.round((paidCount / members.length) * 100) : 0;
+
+      const width = 800;
+      const headerHeight = 255;
+      const statsHeight = 110;
+      const progressHeight = 60;
+      const tableHeaderHeight = 50;
+      const rowHeight = 50;
+      const footerHeight = 80;
+      const totalRows = members.length === 0 ? 1 : members.length;
+      const height = headerHeight + statsHeight + progressHeight + tableHeaderHeight + (totalRows * rowHeight) + footerHeight;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const drawRoundRect = (x, y, w, h, r) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      };
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      const gradient = ctx.createLinearGradient(0, 0, width, headerHeight);
+      gradient.addColorStop(0, '#00838f');
+      gradient.addColorStop(1, '#0097a7');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, headerHeight);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.beginPath(); ctx.arc(width - 50, 50, 150, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(50, headerHeight, 100, 0, Math.PI * 2); ctx.fill();
+
+      // App Logo circle (Replace with real logo)
+      ctx.drawImage(logoImg, 35, 35, 135, 135);
+
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 20px "Noto Sans Thai", sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('สภานักเรียนโรงเรียน (ฝ่ายการเงิน)', 190, 85);
+      ctx.font = 'normal 12px "Noto Sans Thai", sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.fillText('รายงานติดตามสถานะการชำระเงินสะสม / ค่าเก็บเงินสภาฯ', 190, 110);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px "Noto Sans Thai", sans-serif';
+      ctx.fillText(fee.title, 35, 220);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.font = 'bold 14px "Noto Sans Thai", sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(`จำนวนเงินที่เรียกเก็บ: ${fee.amount} บาท/คน`, width - 35, 85);
+      ctx.font = 'normal 12px "Noto Sans Thai", sans-serif';
+      ctx.fillText(`กำหนดส่งวันที่: ${fee.date}`, width - 35, 110);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = 'normal 11px "Noto Sans Thai", sans-serif';
+      const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      ctx.fillText(`ออกรายงาน ณ: ${dateStr} น.`, width - 35, 135);
+
+      const statsY = headerHeight + 15;
+      ctx.strokeStyle = '#e0e0e0';
+      ctx.lineWidth = 1;
+      drawRoundRect(35, statsY, width - 70, 75, 10);
+      ctx.stroke();
+      ctx.fillStyle = '#fafafa';
+      ctx.fill();
+
+      const colW = (width - 70) / 3;
+      const stats = [
+        { label: 'เก็บเงินสะสมได้แล้ว', val: `${totalCollected.toLocaleString()} บ.`, col: '#2e7d32' },
+        { label: 'ยอดรอการเก็บ (ค้างชำระ)', val: `${(totalExpected - totalCollected).toLocaleString()} บ.`, col: '#c62828' },
+        { label: 'จำนวนผู้ชำระเงินแล้ว', val: `${paidCount} / ${members.length} คน`, col: '#00838f' }
+      ];
+      stats.forEach((s, idx) => {
+        const startX = 35 + (idx * colW);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#757575';
+        ctx.font = 'normal 11px "Noto Sans Thai", sans-serif';
+        ctx.fillText(s.label, startX + colW/2, statsY + 30);
+        ctx.fillStyle = s.col;
+        ctx.font = 'bold 18px "Noto Sans Thai", sans-serif';
+        ctx.fillText(s.val, startX + colW/2, statsY + 54);
+
+        if (idx < 2) {
+          ctx.strokeStyle = '#e0e0e0';
+          ctx.beginPath();
+          ctx.moveTo(startX + colW, statsY + 15);
+          ctx.lineTo(startX + colW, statsY + 60);
+          ctx.stroke();
+        }
+      });
+
+      const progY = statsY + 90;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#616161';
+      ctx.font = 'bold 12px "Noto Sans Thai", sans-serif';
+      ctx.fillText(`ความคืบหน้าการเก็บเงินสะสม: ${percent}%`, 35, progY + 12);
+      
+      ctx.fillStyle = '#f0f0f0';
+      drawRoundRect(35, progY + 24, width - 70, 16, 8);
+      ctx.fill();
+      
+      if (percent > 0) {
+        ctx.fillStyle = '#00bcd4';
+        drawRoundRect(35, progY + 24, (width - 70) * (percent / 100), 16, 8);
+        ctx.fill();
+      }
+
+      const tableY = progY + 60;
+      ctx.fillStyle = '#f5f5f5';
+      drawRoundRect(35, tableY, width - 70, tableHeaderHeight, 6);
+      ctx.fill();
+
+      ctx.fillStyle = '#616161';
+      ctx.font = 'bold 12px "Noto Sans Thai", sans-serif';
+      ctx.textBaseline = 'middle';
+
+      ctx.textAlign = 'left';
+      ctx.fillText('#', 55, tableY + tableHeaderHeight/2);
+      ctx.fillText('รายชื่อสมาชิกสภานักเรียน', 95, tableY + tableHeaderHeight/2);
+      ctx.fillText('ฝ่ายงาน', 450, tableY + tableHeaderHeight/2);
+      ctx.textAlign = 'center';
+      ctx.fillText('สถานะการชำระเงิน', 680, tableY + tableHeaderHeight/2);
+
+      let currentY = tableY + tableHeaderHeight;
+      ctx.textBaseline = 'middle';
+
+      members.forEach((u, idx) => {
+        const dept = DEPARTMENTS.find(d => d.id === u.deptId);
+        const paymentInfo = fee.payments?.[u.id];
+        const paid = typeof paymentInfo === 'object' ? paymentInfo.paid : !!paymentInfo;
+
+        if (idx % 2 === 1) {
+          ctx.fillStyle = '#fafafa';
+          ctx.fillRect(35, currentY, width - 70, rowHeight);
+        }
+
+        ctx.strokeStyle = '#f0f0f0';
+        ctx.beginPath();
+        ctx.moveTo(35, currentY + rowHeight);
+        ctx.lineTo(width - 35, currentY + rowHeight);
+        ctx.stroke();
+
+        ctx.fillStyle = '#757575';
+        ctx.textAlign = 'left';
+        ctx.font = 'normal 13px "Noto Sans Thai", sans-serif';
+        ctx.fillText(`${idx + 1}`, 55, currentY + rowHeight/2);
+
+        ctx.fillStyle = '#212121';
+        ctx.font = 'bold 13px "Noto Sans Thai", sans-serif';
+        ctx.fillText(u.name || '', 95, currentY + rowHeight/2);
+
+        ctx.fillStyle = '#616161';
+        ctx.font = 'normal 12px "Noto Sans Thai", sans-serif';
+        ctx.fillText(dept ? dept.name : '–', 450, currentY + rowHeight/2);
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = paid ? '#e8f5e9' : '#ffebee';
+        drawRoundRect(630, currentY + rowHeight/2 - 12, 100, 24, 12);
+        ctx.fill();
+
+        ctx.fillStyle = paid ? '#2e7d32' : '#c62828';
+        ctx.font = 'bold 11px "Noto Sans Thai", sans-serif';
+        ctx.fillText(paid ? 'จ่ายแล้ว' : 'ยังไม่จ่าย', 680, currentY + rowHeight/2);
+
+        currentY += rowHeight;
+      });
+
+      const footerY = height - 50;
+      ctx.strokeStyle = '#e0e0e0';
+      ctx.beginPath(); ctx.moveTo(35, footerY - 15); ctx.lineTo(width - 35, footerY - 15); ctx.stroke();
+
+      ctx.fillStyle = '#9e9e9e';
+      ctx.font = 'normal 11px "Noto Sans Thai", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('สภานักเรียนโรงเรียน | Student Council Portal SWSC69', 35, footerY + 10);
+      ctx.textAlign = 'right';
+      ctx.fillText('เอกสารฝ่ายการเงิน - ใช้เพื่อตรวจสอบภายในสภาฯ เท่านั้น', width - 35, footerY + 10);
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `fee_summary_${fee.title.replace(/\s+/g, '_')}.png`;
+      link.href = dataUrl;
+      link.click();
+    };
+  };
+
+  const exportAllUnpaidFinesPNG = () => {
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.src = logoUrl;
+    logoImg.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      const unpaidList = dfines.filter(f => f.paymentStatus !== 'paid');
+      const totalAmount = unpaidList.reduce((sum, f) => sum + f.amount, 0);
+
+      const width = 800;
+      const headerHeight = 255;
+      const statsHeight = 110;
+      const tableHeaderHeight = 50;
+      const rowHeight = 55;
+      const footerHeight = 80;
+      const totalRows = unpaidList.length === 0 ? 1 : unpaidList.length;
+      const height = headerHeight + statsHeight + tableHeaderHeight + (totalRows * rowHeight) + footerHeight;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const drawRoundRect = (x, y, w, h, r) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      };
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      const gradient = ctx.createLinearGradient(0, 0, width, headerHeight);
+      gradient.addColorStop(0, '#e53935');
+      gradient.addColorStop(1, '#ef5350');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, headerHeight);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.beginPath(); ctx.arc(width - 50, 50, 150, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(50, headerHeight, 100, 0, Math.PI * 2); ctx.fill();
+
+      // App Logo circle (Replace with real logo)
+      ctx.drawImage(logoImg, 35, 35, 135, 135);
+
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 20px "Noto Sans Thai", sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('สภานักเรียนโรงเรียน (ฝ่ายปกครอง/ฝ่ายการเงิน)', 190, 85);
+      ctx.font = 'normal 12px "Noto Sans Thai", sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.fillText('รายงานติดตามทวงถามยอดค้างชำระค่าปรับวินัยสภานักเรียน', 190, 110);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px "Noto Sans Thai", sans-serif';
+      ctx.fillText('รายงานรวมยอดค้างชำระค่าปรับรายบุคคล', 35, 220);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = 'normal 11px "Noto Sans Thai", sans-serif';
+      ctx.textAlign = 'right';
+      const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      ctx.fillText(`ออกรายงาน ณ: ${dateStr} น.`, width - 35, 220);
+
+      const statsY = headerHeight + 15;
+      ctx.strokeStyle = '#e0e0e0';
+      ctx.lineWidth = 1;
+      drawRoundRect(35, statsY, width - 70, 75, 10);
+      ctx.stroke();
+      ctx.fillStyle = '#fafafa';
+      ctx.fill();
+
+      const colW = (width - 70) / 3;
+      const stats = [
+        { label: 'ยอดเงินค้างชำระรวม', val: `${totalAmount.toLocaleString()} บาท`, col: '#c62828' },
+        { label: 'จำนวนรายการที่ค้าง', val: `${unpaidList.length} รายการ`, col: '#e65100' },
+        { label: 'จำนวนผู้มีประวัติค้าง', val: `${new Set(unpaidList.map(x=>x.userId)).size} คน`, col: '#00838f' }
+      ];
+      stats.forEach((s, idx) => {
+        const startX = 35 + (idx * colW);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#757575';
+        ctx.font = 'normal 11px "Noto Sans Thai", sans-serif';
+        ctx.fillText(s.label, startX + colW/2, statsY + 30);
+        ctx.fillStyle = s.col;
+        ctx.font = 'bold 18px "Noto Sans Thai", sans-serif';
+        ctx.fillText(s.val, startX + colW/2, statsY + 54);
+
+        if (idx < 2) {
+          ctx.strokeStyle = '#e0e0e0';
+          ctx.beginPath();
+          ctx.moveTo(startX + colW, statsY + 15);
+          ctx.lineTo(startX + colW, statsY + 60);
+          ctx.stroke();
+        }
+      });
+
+      const tableY = statsY + 105;
+      ctx.fillStyle = '#f5f5f5';
+      drawRoundRect(35, tableY, width - 70, tableHeaderHeight, 6);
+      ctx.fill();
+
+      ctx.fillStyle = '#616161';
+      ctx.font = 'bold 12px "Noto Sans Thai", sans-serif';
+      ctx.textBaseline = 'middle';
+
+      ctx.textAlign = 'left';
+      ctx.fillText('#', 55, tableY + tableHeaderHeight/2);
+      ctx.fillText('ชื่อสมาชิก', 95, tableY + tableHeaderHeight/2);
+      ctx.fillText('ข้อหาความผิดวินัยสภาฯ', 300, tableY + tableHeaderHeight/2);
+      ctx.textAlign = 'right';
+      ctx.fillText('ยอดเงินค่าปรับ', 560, tableY + tableHeaderHeight/2);
+      ctx.fillText('วันที่แจ้งเตือน', 670, tableY + tableHeaderHeight/2);
+      ctx.textAlign = 'center';
+      ctx.fillText('สถานะ', 740, tableY + tableHeaderHeight/2);
+
+      let currentY = tableY + tableHeaderHeight;
+      ctx.textBaseline = 'middle';
+
+      if (unpaidList.length === 0) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#2e7d32';
+        ctx.font = 'bold 14px "Noto Sans Thai", sans-serif';
+        ctx.fillText('🎉 ยินดีด้วย! ไม่มีสมาชิกคนใดค้างชำระค่าปรับเลยในขณะนี้', width/2, currentY + rowHeight/2);
+      } else {
+        unpaidList.forEach((item, idx) => {
+          if (idx % 2 === 1) {
+            ctx.fillStyle = '#fafafa';
+            ctx.fillRect(35, currentY, width - 70, rowHeight);
+          }
+
+          ctx.strokeStyle = '#f0f0f0';
+          ctx.beginPath();
+          ctx.moveTo(35, currentY + rowHeight);
+          ctx.lineTo(width - 35, currentY + rowHeight);
+          ctx.stroke();
+
+          ctx.fillStyle = '#757575';
+          ctx.textAlign = 'left';
+          ctx.font = 'normal 12px "Noto Sans Thai", sans-serif';
+          ctx.fillText(`${idx + 1}`, 55, currentY + rowHeight/2);
+
+          ctx.fillStyle = '#212121';
+          ctx.font = 'bold 13px "Noto Sans Thai", sans-serif';
+          ctx.fillText(item.userName || '', 95, currentY + rowHeight/2);
+
+          ctx.fillStyle = '#e53935';
+          ctx.font = 'normal 12px "Noto Sans Thai", sans-serif';
+          let displayViolation = item.violation;
+          if (ctx.measureText(displayViolation).width > 240) {
+            while (ctx.measureText(displayViolation + '...').width > 240) {
+              displayViolation = displayViolation.slice(0, -1);
+            }
+            displayViolation += '...';
+          }
+          ctx.fillText(displayViolation, 300, currentY + rowHeight/2);
+
+          ctx.textAlign = 'right';
+          ctx.fillStyle = '#c62828';
+          ctx.font = 'bold 13px "Noto Sans Thai", sans-serif';
+          ctx.fillText(`${item.amount} บ.`, 560, currentY + rowHeight/2);
+
+          ctx.fillStyle = '#616161';
+          ctx.font = 'normal 12px "Noto Sans Thai", sans-serif';
+          ctx.fillText(item.date, 670, currentY + rowHeight/2);
+
+          ctx.textAlign = 'center';
+          const isSlip = item.paymentStatus === 'slip_uploaded';
+          ctx.fillStyle = isSlip ? '#fff8e1' : '#ffebee';
+          drawRoundRect(705, currentY + rowHeight/2 - 11, 70, 22, 11);
+          ctx.fill();
+
+          ctx.fillStyle = isSlip ? '#f57f17' : '#c62828';
+          ctx.font = 'bold 10px "Noto Sans Thai", sans-serif';
+          ctx.fillText(isSlip ? 'รอตรวจสลิป' : 'ค้างชำระ', 740, currentY + rowHeight/2);
+
+          currentY += rowHeight;
+        });
+      }
+
+      const footerY = height - 50;
+      ctx.strokeStyle = '#e0e0e0';
+      ctx.beginPath(); ctx.moveTo(35, footerY - 15); ctx.lineTo(width - 35, footerY - 15); ctx.stroke();
+
+      ctx.fillStyle = '#9e9e9e';
+      ctx.font = 'normal 11px "Noto Sans Thai", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('สภานักเรียนโรงเรียน | Student Council Portal SWSC69', 35, footerY + 10);
+      ctx.textAlign = 'right';
+      ctx.fillText('บิลนี้เป็นความลับใช้แจ้งทวงภายในกลุ่มปฏิบัติการสภาฯ เท่านั้น', width - 35, footerY + 10);
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `unpaid_fines_summary_${new Date().toISOString().split('T')[0]}.png`;
+      link.href = dataUrl;
+      link.click();
+    };
+  };
+  
   return (
     <div>
       <div className="page-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
@@ -484,12 +971,15 @@ export default function FinancePage() {
                 </div>
 
                 {isFinance && (
-                  <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+                  <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap: 'wrap' }}>
                     <button className="btn btn-primary btn-sm" onClick={() => { setCollectModal(fee.id); setCollectMode('individual'); setCollectUserId(''); }}>
                       👤 เก็บรายบุคคล
                     </button>
                     <button className="btn btn-success btn-sm" onClick={() => { setCollectModal(fee.id); setCollectMode('all'); }}>
                       👥 เก็บทั้งหมด
+                    </button>
+                    <button className="btn btn-outline btn-sm" onClick={() => exportFeeSummaryPNG(fee)} style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
+                      <Camera size={12} /> 📸 สรุปภาพรวม (PNG)
                     </button>
                   </div>
                 )}
@@ -723,9 +1213,14 @@ export default function FinancePage() {
 
       {tab === 'fines' && (
         <div className="card">
-          <div className="card-header">
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <span className="card-title">💸 ตรวจสอบการชำระค่าปรับ</span>
-            <div style={{ fontSize:12, color:'#757575' }}>รอตรวจสลิป: {dfines.filter(f=>f.paymentStatus==='slip_uploaded').length} รายการ</div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button className="btn btn-outline btn-sm" onClick={exportAllUnpaidFinesPNG} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Camera size={12} /> 📸 สรุปยอดค้างชำระสภาฯ (PNG)
+              </button>
+              <div style={{ fontSize:12, color:'#757575', marginLeft: 6 }}>รอตรวจสลิป: {dfines.filter(f=>f.paymentStatus==='slip_uploaded').length} รายการ</div>
+            </div>
           </div>
           <div style={{ overflowX:'auto' }}>
             <table className="simple-table">
@@ -763,6 +1258,9 @@ export default function FinancePage() {
                         )}
                         {f.paymentStatus === 'unpaid' && (
                           <button className="btn btn-gray btn-sm" style={{ fontSize:11 }} onClick={() => markFineCash(f.id)}>💵 เงินสด</button>
+                        )}
+                        {f.paymentStatus === 'paid' && (
+                          <button className="btn btn-gray btn-sm" style={{ fontSize:11, color: '#d32f2f' }} onClick={() => revertFineUnpaid(f)}>💵 ยังไม่ชำระ</button>
                         )}
                       </td>
                     )}

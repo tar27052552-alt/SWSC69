@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Plus, Edit2, Check, Clock, Trash2, CheckCircle, XCircle, Info, Calendar, Sparkles, Save, X, Music, Send } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
-
+import { transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 // ----------------------------------------------------------------
 // Tab 1: Caption Queue (งานกราฟิกจากโสตฯ รอใส่แคปชั่น)
 // ----------------------------------------------------------------
@@ -40,6 +40,26 @@ const STATUS_MAP = {
   pending:  { label:'รอตรวจสอบ', badge:'badge-yellow', icon:'⏳' },
   approved: { label:'อนุมัติแล้ว', badge:'badge-green',  icon:'✅' },
   rejected: { label:'ไม่ผ่าน',    badge:'badge-red',    icon:'❌' },
+};
+
+const isVideo = (url) => {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.mkv') || lower.includes('_video_') || url.startsWith('data:video/');
+};
+
+const getDrivePreviewUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('data:')) return url;
+  let match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return `https://drive.google.com/file/d/${match[1]}/preview`;
+  }
+  match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return `https://drive.google.com/file/d/${match[1]}/preview`;
+  }
+  return url;
 };
 
 // ================================================================
@@ -91,6 +111,7 @@ export default function PRPage() {
   const [showNewsForm, setShowNewsForm] = useState(false);
   const [newsForm, setNewsForm] = useState({ headline:'', detail:'', category:'ข่าวโรงเรียน' });
   const [newsFormError, setNewsFormError] = useState('');
+  const [usersList, setUsersList] = useState([]);
 
   const loadPRData = async () => {
     try {
@@ -99,12 +120,31 @@ export default function PRPage() {
         .from('pr_caption_queue')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // โหลด av_tasks เพื่อดึงลิงก์รูปภาพกราฟิก
+      const { data: avData } = await supabase
+        .from('av_tasks')
+        .select('id, note');
+      
+      const graphicMap = {};
+      if (avData) {
+        avData.forEach(task => {
+          const note = task.note || '';
+          const match = note.match(/\[Graphic\]:\s*(https?:\/\/\S+)/);
+          if (match) {
+            graphicMap[task.id] = match[1];
+          }
+        });
+      }
+
       if (!cErr && cData) {
         const mappedQueue = cData.filter(d => d.status === 'pending').map(d => ({
-          id: d.id, title: d.title, type: d.type, platform: d.platform, dueDate: d.due_date, caption: d.caption, song: d.song, status: d.status
+          id: d.id, title: d.title, type: d.type, platform: d.platform, dueDate: d.due_date, caption: d.caption, song: d.song, status: d.status,
+          graphicUrl: graphicMap[d.id] || null
         }));
         const mappedDone = cData.filter(d => d.status === 'done').map(d => ({
-          id: d.id, title: d.title, type: d.type, platform: d.platform, dueDate: d.due_date, caption: d.caption, song: d.song, status: d.status
+          id: d.id, title: d.title, type: d.type, platform: d.platform, dueDate: d.due_date, caption: d.caption, song: d.song, status: d.status,
+          graphicUrl: graphicMap[d.id] || null
         }));
         setQueue(mappedQueue);
         setDone(mappedDone);
@@ -127,6 +167,12 @@ export default function PRPage() {
           status: d.status,
           submittedAt: d.submitted_at
         })));
+      }
+
+      // โหลดรายชื่อผู้ใช้
+      const { data: uData } = await supabase.from('users').select('id, nickname, name, dept_id, role');
+      if (uData) {
+        setUsersList(uData);
       }
     } catch (err) {
       console.error('Error loading PR data:', err);
@@ -234,7 +280,12 @@ export default function PRPage() {
         if (form.song) {
           fields.push({ name: "เพลงประกอบ", value: form.song, inline: true });
         }
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15105570, fields, null, 'pr');
+        
+        const targetUserIds = usersList
+          .filter(u => u.dept_id === 5 || u.dept_id === 9 || u.role === 'admin')
+          .map(u => String(u.id));
+        const imageEmbedUrl = (item.graphicUrl && !isVideo(item.graphicUrl)) ? transformGoogleDriveUrl(item.graphicUrl) : null;
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15105570, fields, imageEmbedUrl, 'pr', targetUserIds.length > 0 ? targetUserIds : null);
       }
     } catch (err) {
       console.error('Error updating caption queue:', err);
@@ -308,7 +359,21 @@ export default function PRPage() {
           { name: "หมวดหมู่", value: newsItem.category, inline: true },
           { name: "รายละเอียด", value: newsItem.detail || "(ไม่มีรายละเอียด)", inline: false }
         ];
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, color, fields, null, 'pr');
+        
+        let targetUserIds = [];
+        if (newsItem.submitter) {
+          const foundUser = usersList.find(u => u.nickname === newsItem.submitter || u.name === newsItem.submitter);
+          if (foundUser) {
+            targetUserIds.push(String(foundUser.id));
+          }
+        }
+        usersList
+          .filter(u => u.dept_id === 5 || u.role === 'admin')
+          .forEach(u => {
+            const uid = String(u.id);
+            if (!targetUserIds.includes(uid)) targetUserIds.push(uid);
+          });
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, color, fields, null, 'pr', targetUserIds.length > 0 ? targetUserIds : null);
       }
 
       setNews(prev => prev.map(n => n.id===id ? { ...n, status } : n));
@@ -386,6 +451,38 @@ export default function PRPage() {
                   <div key={item.id} style={{ borderBottom: i<queue.length-1?'1px solid #f0f0f0':'none' }}>
                     <div style={{ padding:'14px 18px', display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
                       <div style={{ fontSize:22 }}>{item.type==='Reel'?'🎞️':item.type==='วิดีโอ'?'🎬':'🖼️'}</div>
+                      {item.graphicUrl && (
+                        <div>
+                          {isVideo(item.graphicUrl) ? (
+                            <div 
+                              style={{ 
+                                width:42, 
+                                height:42, 
+                                borderRadius:4, 
+                                display:'flex', 
+                                alignItems:'center', 
+                                justifyContent:'center', 
+                                background:'#efebe9', 
+                                border:'1px solid #d7ccc8', 
+                                cursor:'pointer',
+                                fontSize:18
+                              }}
+                              onClick={() => window.open(item.graphicUrl, '_blank')}
+                              title="คลิกเพื่อดูวิดีโอบน Google Drive"
+                            >
+                              🎬
+                            </div>
+                          ) : (
+                            <img 
+                              src={transformGoogleDriveUrl(item.graphicUrl)} 
+                              alt="graphic preview" 
+                              style={{ width:42, height:42, borderRadius:4, objectFit:'cover', border:'1px solid #e0e0e0', cursor:'pointer' }}
+                              onClick={() => window.open(item.graphicUrl, '_blank')}
+                              title="คลิกเพื่อดูรูปภาพขนาดเต็ม"
+                            />
+                          )}
+                        </div>
+                      )}
                       <div style={{ flex:1, minWidth:200 }}>
                         <div style={{ fontWeight:700, fontSize:14 }}>{item.title}</div>
                         <div style={{ fontSize:12, color:'#9e9e9e', marginTop:2 }}>
@@ -401,7 +498,27 @@ export default function PRPage() {
                       </button>
                     </div>
                     {editing === item.id && (
-                      <div style={{ padding:'0 18px 16px', display:'flex', flexDirection:'column', gap:12, background:'#fafafa', borderTop:'1px solid #f0f0f0' }}>
+                      <div style={{ padding:'16px 18px', display:'flex', flexDirection:'column', gap:12, background:'#fafafa', borderTop:'1px solid #f0f0f0' }}>
+                        {item.graphicUrl && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <span style={{ fontWeight: 600, fontSize: 13, color: '#424242' }}>🎬 พรีวิวสื่อประกอบ:</span>
+                            <div style={{ display: 'flex', justifyContent: 'center', background: '#eaeaea', borderRadius: 8, padding: 8, border: '1px solid #ddd' }}>
+                              {isVideo(item.graphicUrl) ? (
+                                <iframe 
+                                  src={getDrivePreviewUrl(item.graphicUrl)} 
+                                  style={{ width: '100%', maxWidth: 480, height: 270, border: 'none', borderRadius: 6 }} 
+                                  allow="autoplay" 
+                                />
+                              ) : (
+                                <img 
+                                  src={transformGoogleDriveUrl(item.graphicUrl)} 
+                                  alt="Content Preview" 
+                                  style={{ maxWidth: '100%', maxHeight: 250, borderRadius: 6, objectFit: 'contain' }} 
+                                />
+                              )}
+                            </div>
+                          </div>
+                        )}
                         <div>
                           <label className="form-label">✍️ แคปชั่น *</label>
                           <textarea
@@ -444,11 +561,40 @@ export default function PRPage() {
             </div>
             <div style={{ overflowX:'auto' }}>
               <table className="simple-table">
-                <thead><tr><th>#</th><th>คอนเทนต์</th><th>แพลตฟอร์ม</th><th>แคปชั่น</th><th>เพลง</th><th>กำหนด</th></tr></thead>
+                <thead><tr><th>#</th><th>รูป</th><th>คอนเทนต์</th><th>แพลตฟอร์ม</th><th>แคปชั่น</th><th>เพลง</th><th>กำหนด</th></tr></thead>
                 <tbody>
                   {done.map((item,i) => (
                     <tr key={item.id}>
                       <td style={{ color:'#9e9e9e', fontSize:12 }}>{i+1}</td>
+                      <td>
+                        {item.graphicUrl ? (
+                          isVideo(item.graphicUrl) ? (
+                            <span 
+                              style={{ 
+                                cursor:'pointer', 
+                                fontSize:16,
+                                display:'inline-block',
+                                padding:'2px 6px',
+                                background:'#efebe9',
+                                border:'1px solid #d7ccc8',
+                                borderRadius:4
+                              }}
+                              onClick={() => window.open(item.graphicUrl, '_blank')}
+                              title="คลิกเพื่อดูวิดีโอบน Google Drive"
+                            >
+                              🎬 วิดีโอ
+                            </span>
+                          ) : (
+                            <img 
+                              src={transformGoogleDriveUrl(item.graphicUrl)} 
+                              alt="graphic" 
+                              style={{ width:30, height:30, borderRadius:4, objectFit:'cover', border:'1px solid #e0e0e0', cursor:'pointer' }}
+                              onClick={() => window.open(item.graphicUrl, '_blank')}
+                              title="คลิกเพื่อดูรูปภาพขนาดเต็ม"
+                            />
+                          )
+                        ) : '-'}
+                      </td>
                       <td style={{ fontWeight:600, fontSize:13 }}>{item.title}</td>
                       <td style={{ fontSize:12 }}>{item.platform}</td>
                       <td style={{ fontSize:12, color:'#424242', maxWidth:250 }}>

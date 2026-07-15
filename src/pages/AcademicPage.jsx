@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Plus, X, Save, Search, FileText, Upload, Download, Loader, AlertTriangle } from 'lucide-react';
 import { readSheet, writeSheet, updateSheet, uploadFileToDrive, deleteSheet } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
+import { supabase } from '../supabaseClient';
 
 const PROJECT_STATUS = {
   planning:    { label:'วางแผน',        badge:'badge-gray'   },
@@ -17,6 +18,7 @@ export default function AcademicPage() {
   const canManage = isAdmin || user?.deptId === 3;
   const [projects, setProjects] = useState([]);
   const [docs, setDocs] = useState([]);
+  const [usersList, setUsersList] = useState([]);
   const [tab, setTab] = useState('projects');
   const [search, setSearch] = useState('');
   
@@ -32,7 +34,7 @@ export default function AcademicPage() {
 
   // Forms
   const [projForm, setProjForm] = useState({ title: '', category: 'กิจกรรม', owner: '', budget: '', dueDate: '', desc: '' });
-  const [docForm, setDocForm] = useState({ title: '', file: null, fileName: '', fileBase64: '' });
+  const [docForm, setDocForm] = useState({ title: '', category: 'ใบขอเวลาเรียน', file: null, fileName: '', fileBase64: '' });
 
   const loadAcademicData = async () => {
     try {
@@ -60,12 +62,19 @@ export default function AcademicPage() {
         setDocs(sortedDocs.map(d => ({
           id: d.id,
           title: d.title,
+          category: d.category || 'อื่นๆ',
           type: d.type,
           size: d.size,
           uploadedBy: d.uploaded_by,
           date: d.date,
           fileUrl: d.file_url
         })));
+      }
+
+      // โหลดรายชื่อผู้ใช้
+      const { data: uData } = await supabase.from('users').select('id, nickname, name, dept_id, role');
+      if (uData) {
+        setUsersList(uData);
       }
     } catch (err) {
       console.error('Error loading academic data from Sheets:', err);
@@ -126,7 +135,12 @@ export default function AcademicPage() {
           { name: "📅 กำหนดแล้วเสร็จ", value: inserted.dueDate, inline: true },
           { name: "📝 รายละเอียด", value: inserted.desc || "ไม่มี", inline: false }
         ];
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 10181046, fields, null, 'academic');
+        
+        const targetUserIds = usersList
+          .filter(u => u.dept_id === 3 || u.role === 'admin')
+          .map(u => String(u.id));
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 10181046, fields, null, 'academic', targetUserIds.length > 0 ? targetUserIds : null);
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 10181046, fields, null, 'general', targetUserIds.length > 0 ? targetUserIds : null);
       }
     } catch (err) {
       console.error('Error saving academic project:', err);
@@ -147,7 +161,22 @@ export default function AcademicPage() {
         const colorMap = { planning: 9803157, in_progress: 3447003, completed: 3066993, review: 15105570 };
         const embedTitle = `📚 อัปเดตสถานะโครงการฝ่ายวิชาการ`;
         const embedDesc = `โครงการ **${targetProj.title}** ได้เปลี่ยนสถานะเป็น **${statusLabels[status] || status}**`;
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, colorMap[status] || 3066993, [], null, 'academic');
+        
+        let targetUserIds = [];
+        if (targetProj.owner) {
+          const foundUser = usersList.find(u => u.nickname === targetProj.owner || u.name === targetProj.owner);
+          if (foundUser) {
+            targetUserIds.push(String(foundUser.id));
+          }
+        }
+        usersList
+          .filter(u => u.dept_id === 3 || u.role === 'admin')
+          .forEach(u => {
+            const uid = String(u.id);
+            if (!targetUserIds.includes(uid)) targetUserIds.push(uid);
+          });
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, colorMap[status] || 3066993, [], null, 'academic', targetUserIds.length > 0 ? targetUserIds : null);
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, colorMap[status] || 3066993, [], null, 'general', targetUserIds.length > 0 ? targetUserIds : null);
       }
 
       setProjects(prev => prev.map(x => x.id === id ? { ...x, status } : x));
@@ -195,10 +224,10 @@ export default function AcademicPage() {
       // 1. Upload file to Google Drive
       const uploadResult = await uploadFileToDrive(docForm.fileBase64, docForm.fileName, 'academic');
       
-      // 2. Write metadata to Google Sheet
       if (uploadResult && uploadResult.url) {
         const docMeta = {
           title: docForm.title || file.name,
+          category: docForm.category || 'อื่นๆ',
           type: ['PDF', 'DOCX', 'XLSX', 'PNG', 'JPG', 'PPTX'].includes(fileExt) ? fileExt : 'default',
           size: fileSizeStr,
           uploaded_by: user?.name || user?.nickname || 'ฝ่ายวิชาการ',
@@ -211,6 +240,7 @@ export default function AcademicPage() {
           setDocs(prev => [{
             id: savedDoc.id,
             title: savedDoc.title,
+            category: savedDoc.category,
             type: savedDoc.type,
             size: savedDoc.size,
             uploadedBy: savedDoc.uploaded_by,
@@ -219,7 +249,7 @@ export default function AcademicPage() {
           }, ...prev]);
           
           setDocModal(false);
-          setDocForm({ title: '', file: null, fileName: '', fileBase64: '' });
+          setDocForm({ title: '', category: 'ใบขอเวลาเรียน', file: null, fileName: '', fileBase64: '' });
           alert("อัปโหลดเอกสารแผนงานวิชาการสำเร็จ!");
 
           // Notify Discord (general channel)
@@ -231,7 +261,12 @@ export default function AcademicPage() {
             { name: "📦 ขนาดไฟล์", value: savedDoc.size, inline: true },
             { name: "📅 วันที่บันทึก", value: savedDoc.date, inline: true }
           ];
-          sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'academic');
+          
+          const targetUserIds = usersList
+            .filter(u => u.dept_id === 3 || u.role === 'admin')
+            .map(u => String(u.id));
+          sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'academic', targetUserIds.length > 0 ? targetUserIds : null);
+          sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'general', targetUserIds.length > 0 ? targetUserIds : null);
         }
       }
     } catch (err) {
@@ -413,7 +448,7 @@ export default function AcademicPage() {
               ) : (
                 <div style={{ overflowX: 'auto' }}>
                   <table className="simple-table">
-                    <thead><tr><th>#</th><th>ชื่อเอกสารวิชาการ</th><th>ประเภท</th><th>ขนาด</th><th>อัปโหลดโดย</th><th>วันที่อัปโหลด</th><th>เปิดไฟล์</th></tr></thead>
+                    <thead><tr><th>#</th><th>ชื่อเอกสาร</th><th>หมวดหมู่</th><th>ประเภท</th><th>ขนาด</th><th>อัปโหลดโดย</th><th>วันที่อัปโหลด</th><th>ดาวน์โหลด</th></tr></thead>
                     <tbody>
                       {docs.map((d, i) => (
                         <tr key={d.id}>
@@ -424,6 +459,7 @@ export default function AcademicPage() {
                               <span style={{ fontWeight: 600, fontSize: 13 }}>{d.title}</span>
                             </div>
                           </td>
+                          <td><span className="badge badge-gray" style={{ fontSize: 11, background: '#f5f5f5', color: '#616161' }}>{d.category || 'อื่นๆ'}</span></td>
                           <td><span className="badge badge-gray" style={{ fontSize: 11 }}>{d.type}</span></td>
                           <td style={{ fontSize: 12, color: '#9e9e9e' }}>{d.size || '–'}</td>
                           <td style={{ fontSize: 13 }}>{d.uploadedBy}</td>
@@ -524,8 +560,17 @@ export default function AcademicPage() {
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label className="form-label">ชื่อเอกสาร / คลังวิชาการ *</label>
-                <input className="input-field" placeholder="เช่น แผนงานกิจกรรมและโครงการวิชาการสภา 2568" value={docForm.title} onChange={e => setDocForm(p => ({ ...p, title: e.target.value }))} />
+                <label className="form-label">ชื่อเอกสาร *</label>
+                <input className="input-field" placeholder="เช่น แบบฟอร์มขอเวลาเรียน ปพ.1" value={docForm.title} onChange={e => setDocForm(p => ({ ...p, title: e.target.value }))} />
+              </div>
+
+              <div>
+                <label className="form-label">หมวดหมู่เอกสาร *</label>
+                <select className="input-field" value={docForm.category} onChange={e => setDocForm(p => ({ ...p, category: e.target.value }))}>
+                  <option value="ใบขอเวลาเรียน">🕒 ใบขอเวลาเรียน</option>
+                  <option value="เอกสารโครงการ">📄 เอกสารโครงการ</option>
+                  <option value="อื่นๆ">📁 อื่นๆ</option>
+                </select>
               </div>
               
               <div>

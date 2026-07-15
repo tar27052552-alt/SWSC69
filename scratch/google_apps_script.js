@@ -21,7 +21,8 @@ const SUB_FOLDERS = {
   duties: "รูปตรวจเวรห้องสภา",
   slips: "สลิปการเงิน",
   secretary: "เอกสารฝ่ายเลขา",
-  academic: "เอกสารฝ่ายวิชาการ"
+  academic: "เอกสารฝ่ายวิชาการ",
+  pr: "รูปข่าวประชาสัมพันธ์"
 };
 
 // ฟังก์ชันหลักรับ POST Request จากแอป React
@@ -39,6 +40,15 @@ function doPost(e) {
     switch (action) {
       case "upload_file":
         result = uploadFileToDrive(requestData.fileBase64, requestData.fileName, requestData.folderCategory);
+        break;
+      case "sync_folder":
+        result = syncDriveFolder(requestData.folderId, requestData.eventName, requestData.uploadedBy);
+        break;
+      case "rename_cert_group":
+        result = renameCertGroup(requestData.oldName, requestData.newName);
+        break;
+      case "delete_cert_group":
+        result = deleteCertGroup(requestData.eventName);
         break;
       case "read_sheet":
         result = readFromSheet(requestData.sheetName);
@@ -86,6 +96,119 @@ function doPost(e) {
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ฟังก์ชันซิงค์ไฟล์จากโฟลเดอร์ Google Drive เข้าฐานข้อมูลเกียรติบัตร
+function syncDriveFolder(folderId, eventName, uploadedBy) {
+  try {
+    var folder = DriveApp.getFolderById(folderId);
+    var files = folder.getFiles();
+    var sheet = getSheetAndInit("Academic_Docs");
+    var count = 0;
+    
+    // ดึงข้อมูลเก่ามาเช็คซ้ำ (ถ้ามี) จะได้ไม่เพิ่มซ้ำ
+    var existingData = readFromSheet("Academic_Docs");
+    var existingUrls = {};
+    for (var i = 0; i < existingData.length; i++) {
+      existingUrls[existingData[i].file_url] = true;
+    }
+    
+    var newRows = [];
+    
+    while (files.hasNext()) {
+      var file = files.next();
+      var fileUrl = "https://drive.google.com/file/d/" + file.getId() + "/view?usp=drivesdk";
+      
+      if (existingUrls[fileUrl]) continue; // ข้ามถ้ามีอยู่แล้ว
+      
+      var fileName = file.getName();
+      // ดึงเฉพาะตัวเลขด้านหน้ามาเป็นรหัสนักเรียน (เช่น 12345.pdf -> 12345)
+      var match = fileName.match(/^(\d+)/);
+      var studentId = match ? match[1] : fileName.split('.')[0];
+      
+      var sizeStr = (file.getSize() / 1024 / 1024).toFixed(2) + ' MB';
+      
+      var rowObj = {
+        id: Utilities.getUuid(),
+        title: studentId,
+        type: "เกียรติบัตร|" + eventName,
+        size: sizeStr,
+        uploaded_by: uploadedBy || "ระบบซิงค์",
+        date: Utilities.formatDate(new Date(), "GMT+7", "d MMM yyyy"),
+        file_url: fileUrl,
+        created_at: new Date().toISOString()
+      };
+      
+      newRows.push(rowObj);
+      count++;
+    }
+    
+    // บันทึกลง Sheet ทีละแถว
+    for (var r = 0; r < newRows.length; r++) {
+      writeToSheet("Academic_Docs", newRows[r]);
+    }
+    
+    return { synced_count: count };
+  } catch (e) {
+    throw new Error("Sync failed: " + e.toString());
+  }
+}
+
+// ฟังก์ชันเปลี่ยนชื่อกลุ่มกิจกรรมเกียรติบัตร
+function renameCertGroup(oldName, newName) {
+  try {
+    var sheet = getSheetAndInit("Academic_Docs");
+    var data = sheet.getDataRange().getValues();
+    var typeCol = -1;
+    for(var c = 0; c < data[0].length; c++) {
+      if(data[0][c] === 'type') typeCol = c;
+    }
+    if(typeCol === -1) throw new Error("ไม่พบคอลัมน์ type ในตาราง");
+    
+    var oldType = "เกียรติบัตร|" + oldName;
+    var newType = "เกียรติบัตร|" + newName;
+    var count = 0;
+    
+    for (var r = 1; r < data.length; r++) {
+      if (data[r][typeCol] === oldType) {
+        sheet.getRange(r + 1, typeCol + 1).setValue(newType);
+        count++;
+      }
+    }
+    return { updated_count: count };
+  } catch (e) {
+    throw new Error("Rename failed: " + e.toString());
+  }
+}
+
+// ฟังก์ชันลบกลุ่มกิจกรรมเกียรติบัตรทั้งหมด
+function deleteCertGroup(eventName) {
+  try {
+    var sheet = getSheetAndInit("Academic_Docs");
+    var data = sheet.getDataRange().getValues();
+    var typeCol = -1;
+    for(var c = 0; c < data[0].length; c++) {
+      if(data[0][c] === 'type') typeCol = c;
+    }
+    if(typeCol === -1) throw new Error("ไม่พบคอลัมน์ type ในตาราง");
+    
+    var targetType = "เกียรติบัตร|" + eventName;
+    var rowsToDelete = [];
+    
+    for (var r = 1; r < data.length; r++) {
+      if (data[r][typeCol] === targetType) {
+        rowsToDelete.push(r + 1); // getRange/deleteRow ใช้ 1-based index
+      }
+    }
+    
+    // สำคัญ: ต้องลบจากแถวล่างขึ้นบน เพื่อไม่ให้ index เลื่อน
+    for (var i = rowsToDelete.length - 1; i >= 0; i--) {
+      sheet.deleteRow(rowsToDelete[i]);
+    }
+    return { deleted_count: rowsToDelete.length };
+  } catch (e) {
+    throw new Error("Delete failed: " + e.toString());
   }
 }
 
@@ -1238,6 +1361,18 @@ function setDailyTriggers() {
            .atHour(1)
            .nearMinute(0)
            .create();
+
+  // 2. morning periodic reminders running every 10 minutes
+  ScriptApp.newTrigger("runMorningPeriodicReminders")
+           .timeBased()
+           .everyMinutes(10)
+           .create();
+           
+  // 3. afternoon periodic reminders running every 15 minutes (changed from 20 to comply with GAS rules)
+  ScriptApp.newTrigger("runAfternoonPeriodicReminders")
+           .timeBased()
+           .everyMinutes(15)
+           .create();
 }
 
 function scheduleForToday() {
@@ -1386,7 +1521,10 @@ function sendOneSignalPush(title, message, targetUserIds) {
     ids = ids.filter(function(id) { return id; }).map(function(id) { return String(id); });
     
     if (ids.length > 0) {
-      payload["include_aliases"] = { "external_id": ids };
+      // ใช้ include_aliases ค้นหาด้วย external_id ของ OneSignal (UUID)
+      payload["include_aliases"] = {
+        "external_id": ids
+      };
       payload["target_channel"] = "push";
     } else {
       payload["included_segments"] = ["All"];
@@ -1418,5 +1556,319 @@ function sendOneSignalPush(title, message, targetUserIds) {
   } catch (e) {
     console.error("Failed to send OneSignal push notification:", e);
     return { success: false, error: e.toString() };
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 11. ระบบการเช็คและส่งแจ้งเตือนย้ำเตือนระหว่างวัน (Periodic Reminders)
+// ----------------------------------------------------------------------------
+
+// 1. ตรวจสอบการเช็คชื่อเข้าแถวและส่งเวรยืนไหว้วันนี้ (รันทุก 10 นาที ช่วง 06:40 - 08:00 น.)
+function runMorningPeriodicReminders() {
+  var now = new Date();
+  var h = now.getHours();
+  var m = now.getMinutes();
+  
+  var todayStr = getGregorianStr(now);
+  var daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+  var todayDayName = daysTh[now.getDay()];
+  
+  try {
+    var settings = fetchFromSupabase("attendance_settings", "select=key,value");
+    var enabledDays = [];
+    var disabledDates = [];
+    var checkInActive = "true";
+    var greetingActive = "true";
+    for (var i = 0; i < settings.length; i++) {
+      if (settings[i].key === "enabled_days") {
+        enabledDays = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "disabled_dates") {
+        disabledDates = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "check_in_active") {
+        checkInActive = settings[i].value;
+      } else if (settings[i].key === "greeting_duty_active") {
+        greetingActive = settings[i].value;
+      }
+    }
+    
+    if (checkInActive === "false" || !enabledDays.includes(todayDayName) || disabledDates.includes(todayStr)) {
+      return; // ปิดใช้งาน หรือเป็นวันหยุด
+    }
+    
+    // ตรวจสอบช่วงเวลา (06:35 - 08:05 น.) เพื่อให้ครอบคลุมรอบเริ่มเตือน 06:40 ถึง 08:00
+    var currentTimeInMinutes = h * 60 + m;
+    var startLimit = 6 * 60 + 35; // 06:35 น.
+    var endLimit = 8 * 60 + 5;   // 08:05 น.
+    if (currentTimeInMinutes < startLimit || currentTimeInMinutes > endLimit) {
+      return;
+    }
+    
+    // ดึงตารางเวรยืนไหว้วันนี้
+    var schedules = fetchFromSupabase("schedules", "day=eq." + encodeURIComponent(todayDayName));
+    var schedulesMap = {};
+    for (var i = 0; i < schedules.length; i++) {
+      var row = schedules[i];
+      var dataObj = {};
+      if (row.data) {
+        try {
+          dataObj = (typeof row.data === "string") ? JSON.parse(row.data) : row.data;
+        } catch(e) { }
+      }
+      schedulesMap[row.type] = dataObj;
+    }
+    
+    var swaps = [];
+    try {
+      swaps = fetchFromSupabase("duty_swaps", "date=eq." + todayStr);
+    } catch(e) { }
+    
+    var applySwaps = function(membersList, dutyTypeKey) {
+      if (!membersList || membersList.length === 0) return [];
+      var result = [];
+      for (var i = 0; i < membersList.length; i++) {
+        var member = membersList[i];
+        if (member === "–" || !member) continue;
+        var swapped = false;
+        for (var j = 0; j < swaps.length; j++) {
+          if (swaps[j].duty_type === dutyTypeKey && swaps[j].original_nickname === member) {
+            result.push(swaps[j].substitute_nickname);
+            swapped = true;
+            break;
+          }
+        }
+        if (!swapped) result.push(member);
+      }
+      return result;
+    };
+    
+    var greetingData = schedulesMap["greeting"] || {};
+    var gate1 = applySwaps(greetingData.gate1 || [], "greeting_gate1");
+    var gate2 = applySwaps(greetingData.gate2 || [], "greeting_gate2");
+    var gate3 = applySwaps(greetingData.gate3 || [], "greeting_gate3");
+    
+    var greetingNicknames = gate1.concat(gate2).concat(gate3).filter(function(n) { return n && n !== "–"; });
+    
+    // ดึงคนเช็คชื่อวันนี้แล้ว
+    var checkedInRecords = fetchFromSupabase("student_attendance", "date=eq." + todayStr + "&select=user_id,nickname");
+    var checkedInUserIds = checkedInRecords.map(function(r) { return String(r.user_id); });
+    
+    // ดึงคนที่ส่งรูปเวรยืนไหว้วันนี้แล้ว
+    var greetingCheckedRecords = fetchFromSupabase("greeting_duty_checks", "date=eq." + todayStr + "&select=nickname");
+    var greetingCheckedNicknames = greetingCheckedRecords.map(function(r) { return r.nickname; });
+    
+    // ----------------------------------------------------
+    // ช่วงที่ 1: 06:40 - 07:20 น. (เน้นเตือนเฉพาะคนมีเวรไหว้ต้อนรับ)
+    // ----------------------------------------------------
+    if (currentTimeInMinutes >= (6 * 60 + 38) && currentTimeInMinutes < (7 * 60 + 20)) {
+      if (greetingActive !== "false" && greetingNicknames.length > 0) {
+        var encodedNicknames = greetingNicknames.map(encodeURIComponent).join(",");
+        var greetingUsers = fetchFromSupabase("users", "select=id,nickname&nickname=in.(" + encodedNicknames + ")");
+        
+        var uncheckGreetingIds = [];
+        var remindPhotoNicknames = [];
+        
+        for (var u = 0; u < greetingUsers.length; u++) {
+          var userObj = greetingUsers[u];
+          var uidStr = String(userObj.id);
+          var uNickname = userObj.nickname;
+          
+          if (!checkedInUserIds.includes(uidStr)) {
+            uncheckGreetingIds.push(uidStr);
+          } else {
+            if (!greetingCheckedNicknames.includes(uNickname)) {
+              remindPhotoNicknames.push(uNickname);
+            }
+          }
+        }
+        
+        // ส่งข้อความหาคนเป็นเวรไหว้แต่ยังไม่ได้ลงชื่อ
+        if (uncheckGreetingIds.length > 0) {
+          sendOneSignalPush(
+            "⏰ ด่วน! วันนี้คุณมีเวรยืนไหว้",
+            "วันนี้คุณมีเวรยืนไหว้ต้อนรับหน้าประตู กรุณาเช็คชื่อเข้าโรงเรียนโดยด่วนครับ (เข้าเวรก่อน 07:10 น.)",
+            uncheckGreetingIds
+          );
+        }
+        
+        // ส่งข้อความหาคนเช็คชื่อแล้วแต่ยังไม่ส่งรูปเวรยืนไหว้
+        if (remindPhotoNicknames.length > 0) {
+          var remindPhotoIds = getUserIdsByNicknames(remindPhotoNicknames);
+          if (remindPhotoIds.length > 0) {
+            sendOneSignalPush(
+              "🙏 ด่วน! อย่าลืมส่งรูปปฏิบัติหน้าที่เวรยืนไหว้",
+              "คุณเช็คชื่อเรียบร้อยแล้ว กรุณาถ่ายรูปรายงานปฏิบัติหน้าที่เวรยืนไหว้ต้อนรับเข้าระบบด้วยครับ",
+              remindPhotoIds
+            );
+          }
+        }
+      }
+    }
+    
+    // ----------------------------------------------------
+    // ช่วงที่ 2: 07:20 - 08:00 น. (เตือนทุกคนที่ยังไม่เช็คชื่อ + เตือนเวรไหว้ส่งรูป)
+    // ----------------------------------------------------
+    if (currentTimeInMinutes >= (7 * 60 + 18) && currentTimeInMinutes <= (8 * 60)) {
+      // ดึงผู้ใช้ทั้งหมดยกเว้นแอดมิน
+      var allUsers = fetchFromSupabase("users", "select=id,nickname,role&role=neq.admin");
+      var uncheckUserIds = [];
+      
+      for (var u = 0; u < allUsers.length; u++) {
+        var userObj = allUsers[u];
+        var uidStr = String(userObj.id);
+        var uNickname = userObj.nickname;
+        
+        if (uNickname === "แอดมิน") continue;
+        
+        if (!checkedInUserIds.includes(uidStr)) {
+          uncheckUserIds.push(uidStr);
+        }
+      }
+      
+      // เตือนทุกคนที่ยังไม่เช็คชื่อ
+      if (uncheckUserIds.length > 0) {
+        sendOneSignalPush(
+          "⏰ แจ้งเตือน! คุณยังไม่ได้เช็คชื่อ",
+          "ใกล้ถึงเวลาเข้าแถวแล้ว (07:35 น.) หากคุณถึงโรงเรียนแล้ว กรุณากดเช็คชื่อเข้าแถวด้วยครับ!",
+          uncheckUserIds
+        );
+      }
+      
+      // เตือนคนเป็นเวรไหว้แต่ยังไม่ได้อัปโหลดรูป
+      if (greetingActive !== "false" && greetingNicknames.length > 0) {
+        var remindPhotoNicknames = [];
+        for (var i = 0; i < greetingNicknames.length; i++) {
+          var nick = greetingNicknames[i];
+          if (!greetingCheckedNicknames.includes(nick)) {
+            remindPhotoNicknames.push(nick);
+          }
+        }
+        
+        if (remindPhotoNicknames.length > 0) {
+          var remindPhotoIds = getUserIdsByNicknames(remindPhotoNicknames);
+          if (remindPhotoIds.length > 0) {
+            sendOneSignalPush(
+              "🙏 ด่วน! อย่าลืมส่งรูปปฏิบัติหน้าที่เวรยืนไหว้",
+              "กรุณาอัปโหลดรูปภาพยืนยันการปฏิบัติหน้าที่เวรยืนไหว้ต้อนรับประจำวันนี้ในระบบด้วยครับ",
+              remindPhotoIds
+            );
+          }
+        }
+      }
+    }
+    
+  } catch (err) {
+    console.error("Error in runMorningPeriodicReminders: ", err);
+  }
+}
+
+// 2. ตรวจสอบการทำความสะอาดเวรห้องสภา (รันทุก 20 นาที ช่วง 16:20 - 18:00 น.)
+function runAfternoonPeriodicReminders() {
+  var now = new Date();
+  var h = now.getHours();
+  var m = now.getMinutes();
+  
+  var todayStr = getGregorianStr(now);
+  var daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+  var todayDayName = daysTh[now.getDay()];
+  
+  try {
+    var settings = fetchFromSupabase("attendance_settings", "select=key,value");
+    var enabledDays = [];
+    var disabledDates = [];
+    var cleanActive = "true";
+    for (var i = 0; i < settings.length; i++) {
+      if (settings[i].key === "enabled_days") {
+        enabledDays = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "disabled_dates") {
+        disabledDates = parseArrayOrString(settings[i].value);
+      } else if (settings[i].key === "clean_duty_active") {
+        cleanActive = settings[i].value;
+      }
+    }
+    
+    if (cleanActive === "false" || !enabledDays.includes(todayDayName) || disabledDates.includes(todayStr)) {
+      return; // ปิดใช้งาน หรือเป็นวันหยุด
+    }
+    
+    // ตรวจสอบช่วงเวลา (16:15 - 18:05 น.) เพื่อให้ครอบคลุมรอบเริ่มเตือน 16:20 ถึง 18:00
+    var currentTimeInMinutes = h * 60 + m;
+    var startLimit = 16 * 60 + 15; // 16:15 น.
+    var endLimit = 18 * 60 + 5;   // 18:05 น.
+    if (currentTimeInMinutes < startLimit || currentTimeInMinutes > endLimit) {
+      return;
+    }
+    
+    // ดึงตารางเวรทำความสะอาดห้องสภาวันนี้
+    var schedules = fetchFromSupabase("schedules", "day=eq." + encodeURIComponent(todayDayName));
+    var schedulesMap = {};
+    for (var i = 0; i < schedules.length; i++) {
+      var row = schedules[i];
+      var dataObj = {};
+      if (row.data) {
+        try {
+          dataObj = (typeof row.data === "string") ? JSON.parse(row.data) : row.data;
+        } catch(e) { }
+      }
+      schedulesMap[row.type] = dataObj;
+    }
+    
+    var swaps = [];
+    try {
+      swaps = fetchFromSupabase("duty_swaps", "date=eq." + todayStr);
+    } catch(e) { }
+    
+    var applySwaps = function(membersList, dutyTypeKey) {
+      if (!membersList || membersList.length === 0) return [];
+      var result = [];
+      for (var i = 0; i < membersList.length; i++) {
+        var member = membersList[i];
+        if (member === "–" || !member) continue;
+        var swapped = false;
+        for (var j = 0; j < swaps.length; j++) {
+          if (swaps[j].duty_type === dutyTypeKey && swaps[j].original_nickname === member) {
+            result.push(swaps[j].substitute_nickname);
+            swapped = true;
+            break;
+          }
+        }
+        if (!swapped) result.push(member);
+      }
+      return result;
+    };
+    
+    var cleanRoomData = schedulesMap["clean_room"] || {};
+    var cleanMembers = applySwaps(cleanRoomData.members || [], "clean_room");
+    var cleanDutyNicknames = cleanMembers.filter(function(n) { return n && n !== "–"; });
+    
+    if (cleanDutyNicknames.length === 0) {
+      return;
+    }
+    
+    // ดึงคนที่ส่งเวรทำความสะอาดวันนี้แล้ว
+    var cleanCheckedRecords = fetchFromSupabase("clean_duty_checks", "date=eq." + todayStr + "&select=nickname");
+    var cleanCheckedNicknames = cleanCheckedRecords.map(function(r) { return r.nickname; });
+    
+    // หาคนมีเวรแต่ยังไม่ส่งรูปรายงานเวรห้องสภา
+    var pendingMembers = [];
+    for (var i = 0; i < cleanDutyNicknames.length; i++) {
+      var name = cleanDutyNicknames[i];
+      if (!cleanCheckedNicknames.includes(name)) {
+        pendingMembers.push(name);
+      }
+    }
+    
+    if (pendingMembers.length > 0) {
+      var pendingUserIds = getUserIdsByNicknames(pendingMembers);
+      if (pendingUserIds.length > 0) {
+        sendOneSignalPush(
+          "🧹 แจ้งเตือน! อย่าลืมส่งรายงานเวรห้องสภา",
+          "คุณมีเวรทำความสะอาดห้องสภานักเรียนวันนี้ที่ยังไม่ได้ส่งรูปหลักฐาน กรุณาปฏิบัติหน้าที่และอัปโหลดรูปด่วนครับ",
+          pendingUserIds
+        );
+      }
+    }
+    
+  } catch (err) {
+    console.error("Error in runAfternoonPeriodicReminders: ", err);
   }
 }

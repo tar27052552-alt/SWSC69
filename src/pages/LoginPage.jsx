@@ -28,7 +28,7 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <img src={logoUrl} alt="SWSC Logo" style={{ width: 180, height: 180, objectFit: 'contain', margin: '-40px auto -35px', display: 'block' }} />
           <h1 style={{ fontSize: 20, fontWeight: 700, color: '#00838f' }}>สภานักเรียน</h1>
-          <p style={{ fontSize: 12, color: '#757575', marginTop: 2 }}>Student Council Internal Portal</p>
+          <p style={{ fontSize: 12, color: '#757575', marginTop: 2 }}>Student Council</p>
         </div>
 
         {/* Card */}

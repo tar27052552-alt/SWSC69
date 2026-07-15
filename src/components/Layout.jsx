@@ -47,7 +47,7 @@ const PAGE_TITLES = {
   '/reception': 'ปฏิคม',
 };
 
-const NOTIF_ICONS = { fine: '💸', task: '📋', event: '🎉', meeting: '📅' };
+const NOTIF_ICONS = { fine: '💸', task: '📋', event: '🎉', meeting: '📅', announcement: '📢' };
 
 function formatRelativeTime(dateStr) {
   if (!dateStr) return '';
@@ -76,6 +76,7 @@ export default function Layout({ children }) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState(null);
   const userMenuRef = useRef(null);
   const notifRef = useRef(null);
 
@@ -174,7 +175,8 @@ export default function Layout({ children }) {
             <div key={sec.section}>
               <div className="nav-section">{sec.section}</div>
               {sec.items.map(item => {
-                if (item.deptId && !isAdmin && !isPresident && user?.deptId !== item.deptId) return null;
+                const isSecretaryOrAcademic = item.to === '/secretary' || item.to === '/academic';
+                if (item.deptId && !isAdmin && !isPresident && user?.deptId !== item.deptId && !isSecretaryOrAcademic) return null;
                 if (item.to === '/my-fines' && user?.role === 'admin') return null;
                 return (
                   <NavLink key={item.to} to={item.to} className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
@@ -261,7 +263,37 @@ export default function Layout({ children }) {
                       {notifs.length === 0 ? (
                         <div style={{ padding:32, textAlign:'center', color:'#9e9e9e', fontSize:14 }}>ไม่มีการแจ้งเตือน</div>
                       ) : notifs.map(n => (
-                        <div key={n.id} style={{ padding:'12px 16px', borderBottom:'1px solid rgba(0,0,0,0.02)', background: n.read ? '#fff' : 'var(--primary-light)', display:'flex', gap:10, alignItems:'flex-start' }}>
+                        <div key={n.id} 
+                          onClick={async () => {
+                            setSelectedNotification(n);
+                            setShowNotifs(false);
+                            if (!n.read) {
+                              try {
+                                const { error } = await supabase
+                                  .from('notifications')
+                                  .update({ read: true })
+                                  .eq('id', n.id);
+                                if (!error) {
+                                  setNotifications(prev => (prev || []).map(notif => notif.id === n.id ? { ...notif, read: true } : notif));
+                                }
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = n.read ? '#f9f9fb' : 'rgba(0,188,212,0.06)'}
+                          onMouseLeave={e => e.currentTarget.style.background = n.read ? '#fff' : 'var(--primary-light)'}
+                          style={{ 
+                            padding:'12px 16px', 
+                            borderBottom:'1px solid rgba(0,0,0,0.02)', 
+                            background: n.read ? '#fff' : 'var(--primary-light)', 
+                            display:'flex', 
+                            gap:10, 
+                            alignItems:'flex-start',
+                            cursor: 'pointer',
+                            transition: 'background 0.15s'
+                          }}
+                        >
                           <span style={{ fontSize:18, flexShrink:0 }}>{NOTIF_ICONS[n.type] || '📌'}</span>
                           <div style={{ flex:1, minWidth:0, textAlign: 'left' }}>
                             <div style={{ fontSize:13, color: n.read ? '#757575' : '#212121', fontWeight: n.read ? 400 : 600 }}>{n.message}</div>
@@ -319,6 +351,53 @@ export default function Layout({ children }) {
           {children}
         </main>
       </div>
+
+      {/* Selected Notification View Modal */}
+      {selectedNotification && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000, padding: 16
+        }}>
+          <div className="card" style={{ maxWidth: 450, width: '100%', margin: 0, background: '#fff', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid #e5e5ea', background: '#f5f5f7' }}>
+              <span className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 15 }}>
+                {selectedNotification.type === 'announcement' ? '📢 ประกาศด่วน' :
+                 selectedNotification.type === 'fine' ? '💸 ใบสั่งค่าปรับ' :
+                 selectedNotification.type === 'task' ? '📋 การมอบหมายงาน' :
+                 selectedNotification.type === 'event' ? '📅 กิจกรรม' : '🔔 การแจ้งเตือน'}
+              </span>
+              <button 
+                className="btn btn-gray" 
+                style={{ padding: '4px 8px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center' }} 
+                onClick={() => setSelectedNotification(null)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="card-body" style={{ padding: '24px 20px' }}>
+              <p style={{ fontSize: 13, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', color: '#212121', textAlign: 'left' }}>
+                {selectedNotification.message}
+              </p>
+              
+              {selectedNotification.created_at && (
+                <div style={{ fontSize: 11, color: '#9e9e9e', marginTop: 20, textAlign: 'right' }}>
+                  ส่งเมื่อ: {new Date(selectedNotification.created_at).toLocaleString('th-TH')}
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 16px', background: '#f5f5f7', borderTop: '1px solid #e5e5ea' }}>
+              <button 
+                className="btn btn-primary" 
+                style={{ background: 'var(--primary, #00bcd4)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => setSelectedNotification(null)}
+              >
+                ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

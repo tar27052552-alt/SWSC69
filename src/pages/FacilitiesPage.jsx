@@ -8,6 +8,7 @@ const MOCK_REQUESTS = [];
 
 export default function FacilitiesPage() {
   const [requests, setRequests] = useState(MOCK_REQUESTS);
+  const [usersList, setUsersList] = useState([]);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ title: '', requester: '', eventDate: '', time: '', chairs: '', tables: '', other: '' });
 
@@ -32,6 +33,11 @@ export default function FacilitiesPage() {
             status: d.status
           })));
         }
+        // โหลดรายชื่อผู้ใช้
+        const { data: uData } = await supabase.from('users').select('id, nickname, name, dept_id, role');
+        if (uData) {
+          setUsersList(uData);
+        }
       } catch (err) {
         console.error('Error loading facilities data:', err);
       }
@@ -54,7 +60,21 @@ export default function FacilitiesPage() {
         const colorMap = { pending: 15105570, approved: 3066993, rejected: 15158332, done: 3066993 };
         const embedTitle = `🏫 อัปเดตสถานะใบคำขอจัดเตรียมสถานที่ / ยืมอุปกรณ์`;
         const embedDesc = `คำขอ **${req.title}** (โดย ${req.requester}) ได้รับการเปลี่ยนสถานะเป็น **${statusLabels[status] || status}**`;
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, colorMap[status] || 3066993, [], null, 'general');
+        
+        let targetUserIds = [];
+        if (req.requester) {
+          const foundUser = usersList.find(u => u.nickname === req.requester || u.name === req.requester);
+          if (foundUser) {
+            targetUserIds.push(String(foundUser.id));
+          }
+        }
+        usersList
+          .filter(u => u.dept_id === 8 || u.role === 'admin')
+          .forEach(u => {
+            const uid = String(u.id);
+            if (!targetUserIds.includes(uid)) targetUserIds.push(uid);
+          });
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, colorMap[status] || 3066993, [], null, 'general', targetUserIds.length > 0 ? targetUserIds : null);
       }
 
       setRequests(p => p.map(x => x.id === id ? { ...x, status } : x));
@@ -124,7 +144,11 @@ export default function FacilitiesPage() {
           { name: "🧱 โต๊ะ", value: `${inserted.tables} ตัว`, inline: true },
           { name: "📎 อุปกรณ์อื่นๆ", value: inserted.other || "ไม่มี", inline: false }
         ];
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15105570, fields, null, 'general');
+        
+        const targetUserIds = usersList
+          .filter(u => u.dept_id === 8 || u.role === 'admin')
+          .map(u => String(u.id));
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15105570, fields, null, 'general', targetUserIds.length > 0 ? targetUserIds : null);
       }
     } catch (err) {
       console.error('Error inserting facility request:', err);

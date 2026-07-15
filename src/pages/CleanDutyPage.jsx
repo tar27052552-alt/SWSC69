@@ -18,6 +18,7 @@ export default function CleanDutyPage() {
   const [dutyMembers, setDutyMembers] = useState([]);
   const [hasDutyToday, setHasDutyToday] = useState(false);
   const [isMyDutyToday, setIsMyDutyToday] = useState(false);
+  const [usersList, setUsersList] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -31,6 +32,10 @@ export default function CleanDutyPage() {
           const cleanAct = settingsData.find(d => d.key === 'clean_duty_active')?.value;
           if (cleanAct !== undefined) setCleanActive(cleanAct !== 'false');
         }
+
+        // Load Users
+        const { data: uData } = await supabase.from('users').select('id, nickname, name, dept_id, role');
+        if (uData) setUsersList(uData);
 
         // Load today's Clean Room Duty
         const DAY_MAP = { 0:'อาทิตย์', 1:'จันทร์', 2:'อังคาร', 3:'พุธ', 4:'พฤหัส', 5:'ศุกร์', 6:'เสาร์' };
@@ -48,12 +53,20 @@ export default function CleanDutyPage() {
           members = rowData.members || [];
         }
         
-        setDutyMembers(members);
-        const hasDuty = members.length > 0 && members[0] !== '–';
-        setHasDutyToday(hasDuty);
-        
+        let hasDuty = members.length > 0 && members[0] !== '–';
         const myNickname = user?.nickname || '';
-        const isMyDuty = hasDuty && members.some(n => n === myNickname);
+        let isMyDuty = hasDuty && members.some(n => n === myNickname);
+
+        if (import.meta.env.DEV) {
+          isMyDuty = true;
+          if (members.length === 0 || members[0] === '–') {
+            members = [myNickname, 'ตูน', 'เป้'];
+            hasDuty = true;
+          }
+        }
+
+        setDutyMembers(members);
+        setHasDutyToday(hasDuty);
         setIsMyDutyToday(isMyDuty);
       } catch (err) {
         console.error('Error in CleanDutyPage init:', err);
@@ -114,7 +127,27 @@ export default function CleanDutyPage() {
         // Notify Discord (attendance channel)
         const embedTitle = `🧹 [เวรห้องสภา] ${user.nickname} ส่งรายงานเวรเรียบร้อย`;
         const embedDesc = `ส่งรายงานการทำความสะอาดห้องสภานักเรียนประจำวันที่ **${todayFormatted}** เวลา **${timeStr}**`;
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, [], finalPhotoUrl, 'attendance_alerts');
+        
+        const targetUserIds = [String(user.id)];
+        usersList
+          .filter(u => u.dept_id === 2 || u.role === 'admin')
+          .forEach(u => {
+            const uid = String(u.id);
+            if (!targetUserIds.includes(uid)) targetUserIds.push(uid);
+          });
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, [], finalPhotoUrl, 'attendance_alerts', targetUserIds.length > 0 ? targetUserIds : null);
+
+        // Record in Supabase notifications table
+        try {
+          await supabase
+            .from('notifications')
+            .insert([{
+              type: 'event',
+              message: `🧹 [เวรห้องสภา] ${user.name} (${user.nickname}) ส่งรายงานเวรห้องสภาสำเร็จ เวลา ${timeStr}`
+            }]);
+        } catch (errDb) {
+          console.error('Failed to save clean duty notification in DB:', errDb);
+        }
         
         // Update local state with Google Drive URL
         setCleanDutyState({ status: 'done', time: timeStr, photo: finalPhotoUrl });
