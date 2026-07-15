@@ -116,7 +116,7 @@ export default function AVPage() {
   const [newsList, setNewsList] = useState([]);
   const [loadingNews, setLoadingNews] = useState(false);
   const [submittingNews, setSubmittingNews] = useState(false);
-  const [newsForm, setNewsForm] = useState({ headline: '', detail: '', category: 'ข่าวโรงเรียน', forDate: '', imagePreview: null, imageFile: null });
+  const [newsForm, setNewsForm] = useState({ headline: '', detail: '', category: 'ข่าวโรงเรียน', forDate: '', imagePreview: null, imageFile: null, supportingImages: [] });
   const [editingNewsId, setEditingNewsId] = useState(null);
 
   // Obec Line states
@@ -350,7 +350,7 @@ export default function AVPage() {
         alert("เพิ่มข่าวสารหน้าเว็บสำเร็จแล้ว!");
       }
 
-      setNewsForm({ headline: '', detail: '', category: 'ข่าวโรงเรียน', forDate: '', imagePreview: null, imageFile: null });
+      setNewsForm({ headline: '', detail: '', category: 'ข่าวโรงเรียน', forDate: '', imagePreview: null, imageFile: null, supportingImages: [] });
       setEditingNewsId(null);
       loadNewsList();
     } catch (err) {
@@ -1486,6 +1486,72 @@ export default function AVPage() {
                 )}
               </div>
 
+              {/* Supporting Images */}
+              <div style={{ marginTop: 20 }}>
+                <label className="form-label">📸 รูปภาพประกอบเพิ่มเติม (รูปประกอบ - เลือกได้หลายรูปพร้อมกัน)</label>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  multiple
+                  className="input-field"
+                  onChange={async e => {
+                    const files = Array.from(e.target.files);
+                    const newImages = await Promise.all(files.map(file => {
+                      return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          resolve({ file, preview: reader.result });
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                    }));
+                    setNewsForm(p => ({ 
+                      ...p, 
+                      supportingImages: [...(p.supportingImages || []), ...newImages] 
+                    }));
+                  }}
+                />
+                
+                {newsForm.supportingImages && newsForm.supportingImages.length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8, marginTop: 12 }}>
+                    {newsForm.supportingImages.map((img, idx) => (
+                      <div key={idx} style={{ position: 'relative', width: '100%', aspectRatio: '1', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--gray-200)' }}>
+                        <img 
+                          src={transformGoogleDriveUrl(img.preview)} 
+                          alt="preview" 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                        <button 
+                          type="button" 
+                          style={{ 
+                            position: 'absolute', 
+                            top: 2, right: 2, 
+                            background: 'rgba(229, 57, 53, 0.9)', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '50%', 
+                            width: 18, height: 18, 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 11
+                          }}
+                          onClick={() => {
+                            setNewsForm(p => ({
+                              ...p,
+                              supportingImages: p.supportingImages.filter((_, i) => i !== idx)
+                            }));
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
                 {editingNewsId && (
                   <button 
@@ -1493,7 +1559,7 @@ export default function AVPage() {
                     className="btn btn-gray"
                     onClick={() => {
                       setEditingNewsId(null);
-                      setNewsForm({ headline: '', detail: '', category: 'ข่าวโรงเรียน', forDate: '', imagePreview: null, imageFile: null });
+                      setNewsForm({ headline: '', detail: '', category: 'ข่าวโรงเรียน', forDate: '', imagePreview: null, imageFile: null, supportingImages: [] });
                     }}
                     style={{ flex: 1 }}
                   >
