@@ -301,15 +301,17 @@ export default function AVPage() {
 
     setSubmittingNews(true);
     try {
+      const toBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+
       let finalImageUrl = newsForm.imagePreview || '';
 
       if (newsForm.imageFile) {
-        const toBase64 = (file) => new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = error => reject(error);
-        });
+        
         const base64 = await toBase64(newsForm.imageFile);
         const fileName = `news_${Date.now()}_${newsForm.imageFile.name}`;
         const uploadResult = await uploadFileToDrive(base64, fileName, 'pr');
