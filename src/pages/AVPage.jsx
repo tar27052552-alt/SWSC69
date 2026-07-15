@@ -329,10 +329,10 @@ export default function AVPage() {
 
       // Upload supporting images
       let finalSupportingImages = [];
-      alert("จำนวนไฟล์ภาพประกอบที่จะอัปโหลด: " + (newsForm.supportingImages ? newsForm.supportingImages.length : 0));
       if (newsForm.supportingImages && newsForm.supportingImages.length > 0) {
         for (let img of newsForm.supportingImages) {
           if (img.file) {
+            // New file selected — upload to Google Drive
             const base64 = await toBase64(img.file);
             const fileName = `news_sub_${Date.now()}_${img.file.name}`;
             const uploadResult = await uploadFileToDrive(base64, fileName, 'pr');
@@ -341,9 +341,12 @@ export default function AVPage() {
             } else {
               throw new Error("อัปโหลดรูปภาพประกอบเข้า Google Drive ไม่สำเร็จ");
             }
-          } else if (img.preview) {
+          } else if (img.preview && !img.preview.startsWith('blob:')) {
+            // Existing Drive URL (from editing) — keep as-is, but skip blob: URLs
             finalSupportingImages.push(img.preview);
           }
+          // If img.file is null and img.preview is a blob: URL, skip it
+          // (blob URLs are only valid in the current browser session)
         }
       }
 
@@ -1521,7 +1524,6 @@ export default function AVPage() {
                   onChange={e => {
                     try {
                       const files = Array.from(e.target.files);
-                      alert("เลือกไฟล์จำนวน: " + files.length + " ไฟล์");
                       const newImages = files.map(file => ({
                         file,
                         preview: URL.createObjectURL(file)
