@@ -17,6 +17,7 @@ import DisciplinePage from './pages/DisciplinePage';
 import MyFinesPage from './pages/MyFinesPage';
 import FinancePage from './pages/FinancePage';
 import PRPage from './pages/PRPage';
+import AnnouncementsPage from './pages/AnnouncementsPage';
 import AVPage from './pages/AVPage';
 import SecretaryPage from './pages/SecretaryPage';
 import AcademicPage from './pages/AcademicPage';
@@ -260,6 +261,7 @@ function AppRoutes() {
       <Route path="/settings"   element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
       <Route path="/submit-news" element={<PrivateRoute><SubmitNewsPage /></PrivateRoute>} />
       <Route path="/admin"      element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+      <Route path="/admin-announcements" element={<PrivateRoute><AnnouncementsPage /></PrivateRoute>} />
       <Route path="/discipline" element={<PrivateRoute><DisciplinePage /></PrivateRoute>} />
       <Route path="/my-fines"   element={<PrivateRoute><MyFinesPage /></PrivateRoute>} />
       <Route path="/finance"    element={<PrivateRoute><FinancePage /></PrivateRoute>} />

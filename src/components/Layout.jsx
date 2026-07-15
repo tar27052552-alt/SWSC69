@@ -195,6 +195,10 @@ export default function Layout({ children }) {
                 <Shield size={15} />
                 <span>จัดการผู้ใช้งาน</span>
               </NavLink>
+              <NavLink to="/admin-announcements" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
+                <Megaphone size={15} />
+                <span>จัดการประกาศหน้าเว็บ</span>
+              </NavLink>
             </div>
           )}
         </nav>
