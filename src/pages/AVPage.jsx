@@ -1728,16 +1728,7 @@ export default function AVPage() {
             </h2>
             <form onSubmit={handleSubmitObec} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
 
-              <div>
-                <label className="form-label">📝 หัวข้อวารสาร Obec Line (ถ้าว่างจะใช้ชื่อไฟล์)</label>
-                <input 
-                  type="text" 
-                  className="input-field" 
-                  placeholder={editingObecId ? "เช่น วารสาร OBEC Line ฉบับที่ 1" : "เว้นว่างไว้เพื่อใช้ชื่อไฟล์ (อัปโหลดหลายไฟล์จะรันเลขต่อท้าย)"}
-                  value={obecForm.title} 
-                  onChange={e => setObecForm(p => ({ ...p, title: e.target.value }))}
-                />
-              </div>
+
 
               <div>
                 <label className="form-label">🖼️ รูปภาพวารสาร Obec Line * (แนะนำสัดส่วน A4 แนวตั้ง)</label>
