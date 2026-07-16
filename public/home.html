@@ -347,6 +347,7 @@
     }
     .obec-card {
       text-decoration: none;
+      cursor: pointer;
     }
     .obec-card img {
       width: 100%;
@@ -361,6 +362,83 @@
       transform: translateY(-8px) scale(1.03); 
       box-shadow: 0 20px 40px rgba(107, 33, 168, 0.15); 
     }
+
+    /* Obec Line Viewer Modal */
+    #obecViewer {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 99999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #obecViewer.open { display: flex; }
+    #obecViewerImg {
+      max-width: min(700px, 95vw);
+      max-height: 85vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+      display: block;
+    }
+    #obecViewerTitle {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-align: center;
+      font-family: 'Noto Sans Thai', sans-serif;
+    }
+    #obecViewerCounter {
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+      margin-top: 14px;
+    }
+    .obecViewer-nav {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.12);
+      border: none;
+      color: #fff;
+      font-size: 28px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      z-index: 100000;
+    }
+    .obecViewer-nav:hover { background: rgba(255,255,255,0.25); }
+    #obecViewerPrev { left: 16px; }
+    #obecViewerNext { right: 16px; }
+    #obecViewerClose {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: #fff;
+      font-size: 22px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      z-index: 100000;
+    }
+    #obecViewerClose:hover { background: rgba(255,0,0,0.4); }
     .obec-footer-links {
       display: flex;
       justify-content: space-between;
@@ -2256,12 +2334,53 @@
       grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:20px; color:var(--gray-500);">ยังไม่มี Obec Line ในระบบ</div>';
       return;
     }
-    grid.innerHTML = items.map(item => `
-      <a href="${item.file_url}" target="_blank" class="obec-card">
+    // Store items globally for modal navigation
+    window._obecItems = items;
+    grid.innerHTML = items.map((item, idx) => `
+      <div class="obec-card" onclick="openObecViewer(${idx})">
         <img src="${transformGoogleDriveUrl(item.image_url)}" alt="${item.title}" />
-      </a>
+        <div style="text-align:center; font-size:12px; color:#6b7280; margin-top:6px; font-weight:600;">${item.title}</div>
+      </div>
     `).join('');
   }
+
+  // Obec Line Viewer
+  let _obecCurrentIdx = 0;
+  function openObecViewer(idx) {
+    const items = window._obecItems || [];
+    if (!items.length) return;
+    _obecCurrentIdx = idx;
+    const item = items[idx];
+    document.getElementById('obecViewerImg').src = transformGoogleDriveUrl(item.image_url);
+    document.getElementById('obecViewerTitle').textContent = item.title;
+    document.getElementById('obecViewerCounter').textContent = `${idx + 1} / ${items.length}`;
+    document.getElementById('obecViewerPrev').style.display = items.length > 1 ? 'flex' : 'none';
+    document.getElementById('obecViewerNext').style.display = items.length > 1 ? 'flex' : 'none';
+    document.getElementById('obecViewer').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeObecViewer() {
+    document.getElementById('obecViewer').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function prevObec() {
+    const items = window._obecItems || [];
+    _obecCurrentIdx = (_obecCurrentIdx - 1 + items.length) % items.length;
+    openObecViewer(_obecCurrentIdx);
+  }
+  function nextObec() {
+    const items = window._obecItems || [];
+    _obecCurrentIdx = (_obecCurrentIdx + 1) % items.length;
+    openObecViewer(_obecCurrentIdx);
+  }
+  // Keyboard support for obec viewer
+  document.addEventListener('keydown', (e) => {
+    const v = document.getElementById('obecViewer');
+    if (!v || !v.classList.contains('open')) return;
+    if (e.key === 'Escape') closeObecViewer();
+    if (e.key === 'ArrowLeft') prevObec();
+    if (e.key === 'ArrowRight') nextObec();
+  });
 
   /* ---- EVENTS ---- */
   /* ---- CALENDAR ENGINE ---- */
@@ -2625,5 +2744,16 @@
     setTimeout(initScrollReveal, 300);
   });
 </script>
+
+<!-- Obec Line Viewer Modal -->
+<div id="obecViewer" onclick="if(event.target===this) closeObecViewer()">
+  <button id="obecViewerClose" onclick="closeObecViewer()" title="ปิด">✕</button>
+  <button id="obecViewerPrev" class="obecViewer-nav" onclick="prevObec()">&#8249;</button>
+  <div id="obecViewerTitle"></div>
+  <img id="obecViewerImg" src="" alt="Obec Line" />
+  <div id="obecViewerCounter"></div>
+  <button id="obecViewerNext" class="obecViewer-nav" onclick="nextObec()">&#8250;</button>
+</div>
+
 </body>
 </html>
