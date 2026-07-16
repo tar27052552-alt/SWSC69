@@ -2327,6 +2327,35 @@
     }
   }
 
+  // Obec image retry queue
+  const _obecRetrySet = new Set();
+  function _obecRetryLoop() {
+    if (_obecRetrySet.size === 0) return;
+    _obecRetrySet.forEach(img => {
+      const src = img.getAttribute('data-src');
+      if (!src) { _obecRetrySet.delete(img); return; }
+      // Replace img node to bypass browser cache for this URL
+      const clone = img.cloneNode(false);
+      clone.setAttribute('data-src', src);
+      clone.setAttribute('data-retries', parseInt(img.getAttribute('data-retries') || '0') + 1);
+      clone.onerror = function() { _obecImgError(this); };
+      clone.onload  = function() { this.style.opacity = '1'; this.style.filter = ''; };
+      img.parentNode && img.parentNode.replaceChild(clone, img);
+      _obecRetrySet.delete(img);
+      // Set src AFTER replacing so browser sees it as a fresh element
+      setTimeout(() => { clone.src = src; }, 50);
+    });
+  }
+  setInterval(_obecRetryLoop, 20000); // retry every 20 seconds
+
+  function _obecImgError(img) {
+    const retries = parseInt(img.getAttribute('data-retries') || '0');
+    if (retries >= 10) return; // give up after 10 tries (~3 min)
+    img.style.opacity = '0.25';
+    img.style.filter = 'grayscale(1)';
+    _obecRetrySet.add(img);
+  }
+
   function renderObecLine(items) {
     const grid = document.querySelector('.obec-grid');
     if (!grid) return;
@@ -2338,7 +2367,13 @@
     window._obecItems = items;
     grid.innerHTML = items.map((item, idx) => `
       <div class="obec-card" onclick="openObecViewer(${idx})">
-        <img src="${transformGoogleDriveUrl(item.image_url)}" alt="${item.title}" />
+        <img src="${transformGoogleDriveUrl(item.image_url)}"
+             data-src="${transformGoogleDriveUrl(item.image_url)}"
+             data-retries="0"
+             alt="${item.title}"
+             onerror="_obecImgError(this)"
+             onload="this.style.opacity='1';this.style.filter=''"
+             style="opacity:0.5; transition: opacity 0.4s;" />
         <div style="text-align:center; font-size:12px; color:#6b7280; margin-top:6px; font-weight:600;">${item.title}</div>
       </div>
     `).join('');
