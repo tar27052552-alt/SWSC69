@@ -2251,7 +2251,8 @@
 
     let html = `
       <div class="pr-main" onclick="showNewsPopup('${main.id}')" style="cursor:pointer;">
-        <img src="${mainImg}" alt="Main News" />
+        <img src="${mainImg}" data-src="${mainImg}" data-retries="0" alt="Main News"
+             onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="opacity:0.5;transition:opacity 0.4s;" />
         <div class="pr-tag">${main.category || 'ข่าวประชาสัมพันธ์'}</div>
         <h3>${main.headline || ''}</h3>
         <div class="pr-meta">${mainAuthor} • ${formatD(main)}</div>
@@ -2266,7 +2267,8 @@
       const sideAuthor = getAuthorName(n.submitter);
       html += `
         <div class="pr-item" onclick="showNewsPopup('${n.id}')" style="cursor:pointer;">
-          <img src="${sideImg}" alt="News Thumb" />
+          <img src="${sideImg}" data-src="${sideImg}" data-retries="0" alt="News Thumb"
+               onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="opacity:0.5;transition:opacity 0.4s;" />
           <div class="pr-item-info">
             <div class="pr-tag" style="font-size:11px;">${n.category || 'ข่าวประชาสัมพันธ์'}</div>
             <h4>${n.headline || ''}</h4>
@@ -2288,7 +2290,8 @@
       const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH') : '');
       const author = getAuthorName(n.submitter);
       const thumbHtml = n.image_url 
-        ? `<img src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; height:100%; object-fit:cover;" />` 
+        ? `<img src="${transformGoogleDriveUrl(n.image_url)}" data-src="${transformGoogleDriveUrl(n.image_url)}" data-retries="0"
+               onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="width:100%; height:100%; object-fit:cover; opacity:0.5; transition:opacity 0.4s;" />` 
         : m.icon;
       return `<div class="news-card" onclick="showNewsPopup('${n.id}')">
         <div class="news-card-thumb" style="background:${n.image_url ? 'none' : m.bg}">
@@ -2354,6 +2357,33 @@
     img.style.opacity = '0.25';
     img.style.filter = 'grayscale(1)';
     _obecRetrySet.add(img);
+  }
+
+  // News image retry (same mechanism as obec)
+  const _newsRetrySet = new Set();
+  function _newsRetryLoop() {
+    if (_newsRetrySet.size === 0) return;
+    _newsRetrySet.forEach(img => {
+      const src = img.getAttribute('data-src');
+      if (!src) { _newsRetrySet.delete(img); return; }
+      const clone = img.cloneNode(false);
+      clone.setAttribute('data-src', src);
+      clone.setAttribute('data-retries', parseInt(img.getAttribute('data-retries') || '0') + 1);
+      clone.onerror = function() { _newsImgError(this); };
+      clone.onload  = function() { this.style.opacity = '1'; this.style.filter = ''; };
+      img.parentNode && img.parentNode.replaceChild(clone, img);
+      _newsRetrySet.delete(img);
+      setTimeout(() => { clone.src = src; }, 50);
+    });
+  }
+  setInterval(_newsRetryLoop, 20000);
+
+  function _newsImgError(img) {
+    const retries = parseInt(img.getAttribute('data-retries') || '0');
+    if (retries >= 10) return;
+    img.style.opacity = '0.25';
+    img.style.filter = 'grayscale(1)';
+    _newsRetrySet.add(img);
   }
 
   function renderObecLine(items) {
