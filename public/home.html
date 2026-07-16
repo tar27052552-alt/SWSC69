@@ -2022,6 +2022,12 @@
     }
   }
 
+  function getAuthorName(submitter) {
+    if (!submitter) return 'ผู้ดูแล';
+    const foundUser = allUsers.find(u => u.nickname === submitter || u.name === submitter);
+    return foundUser ? foundUser.name : submitter;
+  }
+
   async function loadNews() {
     try {
       allNews = await sbFetch(`web_news?select=*&category=eq.${encodeURIComponent('ข่าวโรงเรียน')}&order=created_at.desc&limit=15`) || [];
@@ -2164,13 +2170,14 @@
     ];
 
     const mainImg = main.image_url ? transformGoogleDriveUrl(main.image_url) : imgs[0];
+    const mainAuthor = getAuthorName(main.submitter);
 
     let html = `
       <div class="pr-main" onclick="showNewsPopup('${main.id}')" style="cursor:pointer;">
         <img src="${mainImg}" alt="Main News" />
         <div class="pr-tag">${main.category || 'ข่าวประชาสัมพันธ์'}</div>
         <h3>${main.headline || ''}</h3>
-        <div class="pr-meta">${main.submitter || 'ผู้ดูแล'} • ${formatD(main)}</div>
+        <div class="pr-meta">${mainAuthor} • ${formatD(main)}</div>
         <div class="pr-excerpt">${(main.detail || '').substring(0, 100)}...</div>
         <div class="pr-btn">อ่านเพิ่มเติม</div>
       </div>
@@ -2179,13 +2186,14 @@
     
     side.forEach((n, idx) => {
       const sideImg = n.image_url ? transformGoogleDriveUrl(n.image_url) : imgs[idx+1];
+      const sideAuthor = getAuthorName(n.submitter);
       html += `
         <div class="pr-item" onclick="showNewsPopup('${n.id}')" style="cursor:pointer;">
           <img src="${sideImg}" alt="News Thumb" />
           <div class="pr-item-info">
             <div class="pr-tag" style="font-size:11px;">${n.category || 'ข่าวประชาสัมพันธ์'}</div>
             <h4>${n.headline || ''}</h4>
-            <div class="pr-meta">${n.submitter || 'ผู้ดูแล'} • ${formatD(n)}</div>
+            <div class="pr-meta">${sideAuthor} • ${formatD(n)}</div>
           </div>
         </div>
       `;
@@ -2201,6 +2209,7 @@
     el.innerHTML = items.map(n => {
       const m = catMeta(n.category);
       const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH') : '');
+      const author = getAuthorName(n.submitter);
       const thumbHtml = n.image_url 
         ? `<img src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; height:100%; object-fit:cover;" />` 
         : m.icon;
@@ -2214,7 +2223,7 @@
           <div class="news-excerpt">${n.detail || '(ไม่มีรายละเอียด)'}</div>
           <div class="news-footer">
             <span class="news-date">📅 ${d}</span>
-            <span class="news-author">${n.submitter || 'ผู้ดูแล'}</span>
+            <span class="news-author">${author}</span>
           </div>
         </div>
       </div>`;
@@ -2490,8 +2499,7 @@
     const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '');
     
     // Map submitter nickname to real name
-    const foundUser = allUsers.find(u => u.nickname === n.submitter || u.name === n.submitter);
-    const submitterName = foundUser ? foundUser.name : (n.submitter || 'ผู้ดูแล');
+    const submitterName = getAuthorName(n.submitter);
 
     let imgHtml = '';
     if (n.image_url) {
@@ -2608,8 +2616,8 @@
   }
 
   /* ---- INIT ---- */
-  document.addEventListener('DOMContentLoaded', () => {
-    loadUsers();
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadUsers();
     loadNews();
     loadAnnouncements();
     loadObecLine();
