@@ -123,7 +123,7 @@ export default function AVPage() {
   const [obecList, setObecList] = useState([]);
   const [loadingObec, setLoadingObec] = useState(false);
   const [submittingObec, setSubmittingObec] = useState(false);
-  const [obecForm, setObecForm] = useState({ title: '', imagePreview: null, imageFile: null });
+  const [obecForm, setObecForm] = useState({ title: '', imagePreviews: [], imageFiles: [] });
   const [editingObecId, setEditingObecId] = useState(null);
 
 
@@ -211,39 +211,41 @@ export default function AVPage() {
   const handleSubmitObec = async (e) => {
     e.preventDefault();
     
-    if (!editingObecId && !obecForm.imageFile) {
-      alert("กรุณาเลือกรูปภาพหน้าปกวารสารด้วยครับ");
+    if (!editingObecId && (!obecForm.imageFiles || obecForm.imageFiles.length === 0)) {
+      alert("กรุณาเลือกรูปภาพอย่างน้อย 1 รูปครับ");
       return;
     }
 
     setSubmittingObec(true);
     try {
-      let finalImageUrl = obecForm.imagePreview || '';
-
-      if (obecForm.imageFile) {
-        const toBase64 = (file) => new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = error => reject(error);
-        });
-        const base64 = await toBase64(obecForm.imageFile);
-        const fileName = `obec_${Date.now()}_${obecForm.imageFile.name}`;
-        const uploadResult = await uploadFileToDrive(base64, fileName, 'obec');
-        if (uploadResult && uploadResult.url) {
-          finalImageUrl = uploadResult.url;
-        } else {
-          throw new Error("อัปโหลดรูปภาพหน้าปกเข้า Google Drive ไม่สำเร็จ");
-        }
-      }
-
-      const obecData = {
-        title: obecForm.title.trim(),
-        file_url: finalImageUrl,
-        image_url: finalImageUrl
-      };
+      const toBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
 
       if (editingObecId) {
+        let finalImageUrl = obecForm.imagePreviews[0] || '';
+
+        if (obecForm.imageFiles && obecForm.imageFiles.length > 0) {
+          const file = obecForm.imageFiles[0];
+          const base64 = await toBase64(file);
+          const fileName = `obec_${Date.now()}_${file.name}`;
+          const uploadResult = await uploadFileToDrive(base64, fileName, 'obec');
+          if (uploadResult && uploadResult.url) {
+            finalImageUrl = uploadResult.url;
+          } else {
+            throw new Error("อัปโหลดรูปภาพหน้าปกเข้า Google Drive ไม่สำเร็จ");
+          }
+        }
+
+        const obecData = {
+          title: obecForm.title.trim() || 'Obec Line',
+          file_url: finalImageUrl,
+          image_url: finalImageUrl
+        };
+
         const { error } = await supabase
           .from('obec_line')
           .update(obecData)
@@ -251,15 +253,39 @@ export default function AVPage() {
         if (error) throw error;
         alert("แก้ไข Obec Line สำเร็จแล้ว!");
       } else {
-        const { error } = await supabase
-          .from('obec_line')
-          .insert([obecData]);
-        if (error) throw error;
-        alert("เพิ่ม Obec Line สำเร็จแล้ว!");
+        // Create mode: upload all selected files
+        for (let i = 0; i < obecForm.imageFiles.length; i++) {
+          const file = obecForm.imageFiles[i];
+          const base64 = await toBase64(file);
+          const fileName = `obec_${Date.now()}_${file.name}`;
+          const uploadResult = await uploadFileToDrive(base64, fileName, 'obec');
+          if (uploadResult && uploadResult.url) {
+            // If user provided a title, append file index for multiple files
+            let itemTitle = obecForm.title.trim();
+            if (!itemTitle) {
+              itemTitle = file.name.split('.').slice(0, -1).join('.');
+            } else if (obecForm.imageFiles.length > 1) {
+              itemTitle = `${obecForm.title} (รูปที่ ${i + 1})`;
+            }
+
+            const obecData = {
+              title: itemTitle,
+              file_url: uploadResult.url,
+              image_url: uploadResult.url
+            };
+            const { error } = await supabase
+              .from('obec_line')
+              .insert([obecData]);
+            if (error) throw error;
+          } else {
+            throw new Error(`อัปโหลดรูปภาพที่ ${i+1} (${file.name}) เข้า Google Drive ไม่สำเร็จ`);
+          }
+        }
+        alert(`เพิ่ม Obec Line ทั้งหมด ${obecForm.imageFiles.length} รายการสำเร็จแล้ว!`);
       }
 
-      setObecForm({ title: '', imagePreview: null, imageFile: null });
       setEditingObecId(null);
+      setObecForm({ title: '', imagePreviews: [], imageFiles: [] });
       loadObecList();
     } catch (err) {
       console.error(err);
@@ -268,6 +294,7 @@ export default function AVPage() {
       setSubmittingObec(false);
     }
   };
+
 
   const handleDeleteObec = async (id) => {
     if (!confirm("คุณแน่ใจหรือไม่ที่จะลบ Obec Line รายการนี้?")) return;
@@ -288,9 +315,9 @@ export default function AVPage() {
   const handleEditObec = (item) => {
     setEditingObecId(item.id);
     setObecForm({
-      title: item.title,
-      imagePreview: item.image_url,
-      imageFile: null
+      title: item.title || '',
+      imagePreviews: [item.image_url],
+      imageFiles: []
     });
   };
 
@@ -1670,21 +1697,40 @@ export default function AVPage() {
             </h2>
             <form onSubmit={handleSubmitObec} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
 
+              <div>
+                <label className="form-label">📝 หัวข้อวารสาร Obec Line (ถ้าว่างจะใช้ชื่อไฟล์)</label>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  placeholder={editingObecId ? "เช่น วารสาร OBEC Line ฉบับที่ 1" : "เว้นว่างไว้เพื่อใช้ชื่อไฟล์ (อัปโหลดหลายไฟล์จะรันเลขต่อท้าย)"}
+                  value={obecForm.title} 
+                  onChange={e => setObecForm(p => ({ ...p, title: e.target.value }))}
+                />
+              </div>
 
               <div>
                 <label className="form-label">🖼️ รูปภาพวารสาร Obec Line * (แนะนำสัดส่วน A4 แนวตั้ง)</label>
                 <input 
                   type="file" 
                   accept="image/*"
+                  multiple={!editingObecId}
                   className="input-field"
                   onChange={e => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setObecForm(p => ({ ...p, imagePreview: reader.result, imageFile: file }));
-                      };
-                      reader.readAsDataURL(file);
+                    const files = Array.from(e.target.files);
+                    if (files.length > 0) {
+                      const newPreviews = [];
+                      let loadedCount = 0;
+                      files.forEach((file, idx) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          newPreviews[idx] = reader.result;
+                          loadedCount++;
+                          if (loadedCount === files.length) {
+                            setObecForm(p => ({ ...p, imagePreviews: newPreviews, imageFiles: files }));
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      });
                     }
                   }}
                   required={!editingObecId}
@@ -1693,29 +1739,34 @@ export default function AVPage() {
                   💡 ระบบจะจัดเก็บและแสดงรูปภาพในอัตราส่วน A4 แนวตั้ง (1:1.414) เพื่อความสวยงามบนหน้าแรก
                 </span>
                 
-                {obecForm.imagePreview && (
-                  <div style={{ marginTop: 15, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ 
-                      width: 140, 
-                      aspectRatio: '1 / 1.414', 
-                      overflow: 'hidden', 
-                      borderRadius: 6, 
-                      border: '2px solid var(--purple-200)',
-                      boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-                    }}>
-                      <img 
-                        src={transformGoogleDriveUrl(obecForm.imagePreview)} 
-                        alt="A4 ratio preview" 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                      />
+                {obecForm.imagePreviews && obecForm.imagePreviews.length > 0 && (
+                  <div style={{ marginTop: 15, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', maxHeight: 200, overflowY: 'auto', padding: 5, background: '#f9fafb', borderRadius: 8, border: '1px solid #e5e7eb' }}>
+                      {obecForm.imagePreviews.map((prev, idx) => (
+                        <div key={idx} style={{ 
+                          width: 80, 
+                          aspectRatio: '1 / 1.414', 
+                          overflow: 'hidden', 
+                          borderRadius: 6, 
+                          border: '2px solid var(--purple-200)',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                          position: 'relative'
+                        }}>
+                          <img 
+                            src={transformGoogleDriveUrl(prev)} 
+                            alt="A4 ratio preview" 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                          />
+                        </div>
+                      ))}
                     </div>
                     <button 
                       type="button"
                       className="btn btn-sm"
                       style={{ background: '#e53935', color: 'white', border: 'none', padding: '5px 10px', borderRadius: 4, width: 140, fontSize: 12, cursor: 'pointer' }}
-                      onClick={() => setObecForm(p => ({ ...p, imagePreview: null, imageFile: null }))}
+                      onClick={() => setObecForm(p => ({ ...p, imagePreviews: [], imageFiles: [] }))}
                     >
-                      ลบรูปภาพ
+                      ลบรูปภาพทั้งหมด
                     </button>
                   </div>
                 )}
@@ -1728,7 +1779,7 @@ export default function AVPage() {
                     className="btn btn-gray"
                     onClick={() => {
                       setEditingObecId(null);
-                      setObecForm({ title: '', imagePreview: null, imageFile: null });
+                      setObecForm({ title: '', imagePreviews: [], imageFiles: [] });
                     }}
                     style={{ flex: 1 }}
                   >
