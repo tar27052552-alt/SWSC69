@@ -100,9 +100,13 @@ export function transformGoogleDriveUrl(url) {
   if (!url) return "";
   if (typeof url !== "string") return url;
   
-  // หากเป็น Base64 หรือเป็นลิงก์ lh3 อยู่แล้ว หรือไม่ใช่เว็บ Google Drive ให้ส่งกลับตามเดิม
-  if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("https://lh3.googleusercontent.com/")) {
+  if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("https://drive.google.com/thumbnail")) {
     return url;
+  }
+  
+  if (url.startsWith("https://lh3.googleusercontent.com/d/")) {
+    const id = url.split('/').pop().split('?')[0];
+    return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
   }
   
   if (!url.includes("drive.google.com")) {
@@ -112,13 +116,13 @@ export function transformGoogleDriveUrl(url) {
   // 1. ตรวจสอบรูปแบบ /file/d/FILE_ID/view
   let match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (match && match[1]) {
-    return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
   }
   
   // 2. ตรวจสอบรูปแบบ uc?id=FILE_ID หรือ open?id=FILE_ID
   match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (match && match[1]) {
-    return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
   }
   
   return url;
