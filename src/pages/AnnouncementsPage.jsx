@@ -52,7 +52,9 @@ export default function AnnouncementsPage() {
 
       if (annForm.imageFile) {
         const base64 = await toBase64(annForm.imageFile);
-        const fileName = `ann_${Date.now()}_${annForm.imageFile.name}`;
+        const fileExt = annForm.imageFile.name.split('.').pop();
+        const cleanTitle = (annForm.title.trim() || 'announcement').replace(/[\/\\?%*:|"<>]/g, '-');
+        const fileName = `${cleanTitle}.${fileExt}`;
         const subFolderName = annForm.title.trim() || 'ประกาศไม่มีหัวข้อ';
         const result = await uploadFileToDrive(base64, fileName, 'pr', subFolderName);
         if (!result?.url) throw new Error('อัปโหลดรูปภาพไม่สำเร็จ');

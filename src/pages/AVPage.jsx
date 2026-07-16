@@ -231,7 +231,9 @@ export default function AVPage() {
         if (obecForm.imageFiles && obecForm.imageFiles.length > 0) {
           const file = obecForm.imageFiles[0];
           const base64 = await toBase64(file);
-          const fileName = `obec_${Date.now()}_${file.name}`;
+          const fileExt = file.name.split('.').pop();
+          const cleanTitle = (obecForm.title.trim() || 'obec').replace(/[\/\\?%*:|"<>]/g, '-');
+          const fileName = `${cleanTitle}.${fileExt}`;
           const uploadResult = await uploadFileToDrive(base64, fileName, 'obec');
           if (uploadResult && uploadResult.url) {
             finalImageUrl = uploadResult.url;
@@ -257,17 +259,20 @@ export default function AVPage() {
         for (let i = 0; i < obecForm.imageFiles.length; i++) {
           const file = obecForm.imageFiles[i];
           const base64 = await toBase64(file);
-          const fileName = `obec_${Date.now()}_${file.name}`;
+          
+          // Generate customized filename based on title
+          let itemTitle = obecForm.title.trim();
+          if (!itemTitle) {
+            itemTitle = file.name.split('.').slice(0, -1).join('.');
+          } else if (obecForm.imageFiles.length > 1) {
+            itemTitle = `${obecForm.title} (รูปที่ ${i + 1})`;
+          }
+          
+          const fileExt = file.name.split('.').pop();
+          const cleanTitle = itemTitle.replace(/[\/\\?%*:|"<>]/g, '-');
+          const fileName = `${cleanTitle}.${fileExt}`;
           const uploadResult = await uploadFileToDrive(base64, fileName, 'obec');
           if (uploadResult && uploadResult.url) {
-            // If user provided a title, append file index for multiple files
-            let itemTitle = obecForm.title.trim();
-            if (!itemTitle) {
-              itemTitle = file.name.split('.').slice(0, -1).join('.');
-            } else if (obecForm.imageFiles.length > 1) {
-              itemTitle = `${obecForm.title} (รูปที่ ${i + 1})`;
-            }
-
             const obecData = {
               title: itemTitle,
               file_url: uploadResult.url,
@@ -342,7 +347,9 @@ export default function AVPage() {
       if (newsForm.imageFile) {
         
         const base64 = await toBase64(newsForm.imageFile);
-        const fileName = `news_${Date.now()}_${newsForm.imageFile.name}`;
+        const fileExt = newsForm.imageFile.name.split('.').pop();
+        const cleanHeadline = (newsForm.headline.trim() || 'news').replace(/[\/\\?%*:|"<>]/g, '-');
+        const fileName = `${cleanHeadline}.${fileExt}`;
         const subFolderName = newsForm.headline.trim() || 'ข่าวไม่มีหัวข้อ';
         const uploadResult = await uploadFileToDrive(base64, fileName, 'pr', subFolderName);
         if (uploadResult && uploadResult.url) {
@@ -361,11 +368,14 @@ export default function AVPage() {
       let finalSupportingImages = [];
       if (newsForm.supportingImages && newsForm.supportingImages.length > 0) {
         const subFolderName = newsForm.headline.trim() || 'ข่าวไม่มีหัวข้อ';
-        for (let img of newsForm.supportingImages) {
+        const cleanHeadline = subFolderName.replace(/[\/\\?%*:|"<>]/g, '-');
+        for (let i = 0; i < newsForm.supportingImages.length; i++) {
+          const img = newsForm.supportingImages[i];
           if (img.file) {
             // New file selected — upload to Google Drive
             const base64 = await toBase64(img.file);
-            const fileName = `news_sub_${Date.now()}_${img.file.name}`;
+            const fileExt = img.file.name.split('.').pop();
+            const fileName = `${cleanHeadline}_sub_${i + 1}.${fileExt}`;
             const uploadResult = await uploadFileToDrive(base64, fileName, 'pr', subFolderName);
             if (uploadResult && uploadResult.url) {
               finalSupportingImages.push(uploadResult.url);
