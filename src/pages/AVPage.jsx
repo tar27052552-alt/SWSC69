@@ -225,6 +225,27 @@ export default function AVPage() {
         reader.onerror = error => reject(error);
       });
 
+      // Calculate next number for automatic naming
+      let nextNum = 1;
+      try {
+        const { data, error } = await supabase
+          .from('obec_line')
+          .select('title');
+        if (!error && data) {
+          let maxNum = 0;
+          data.forEach(item => {
+            const match = (item.title || '').match(/Obec Line ข่าวที่\s*(\d+)/i);
+            if (match) {
+              const num = parseInt(match[1], 10);
+              if (num > maxNum) maxNum = num;
+            }
+          });
+          nextNum = maxNum + 1;
+        }
+      } catch (e) {
+        console.error("Failed to calculate next Obec number:", e);
+      }
+
       if (editingObecId) {
         let finalImageUrl = obecForm.imagePreviews[0] || '';
 
@@ -232,7 +253,7 @@ export default function AVPage() {
           const file = obecForm.imageFiles[0];
           const base64 = await toBase64(file);
           const fileExt = file.name.split('.').pop();
-          const cleanTitle = (obecForm.title.trim() || 'obec').replace(/[\/\\?%*:|"<>]/g, '-');
+          const cleanTitle = (obecForm.title.trim() || `Obec Line ข่าวที่ ${nextNum}`).replace(/[\/\\?%*:|"<>]/g, '-');
           const fileName = `${cleanTitle}.${fileExt}`;
           const uploadResult = await uploadFileToDrive(base64, fileName, 'obec');
           if (uploadResult && uploadResult.url) {
@@ -243,7 +264,7 @@ export default function AVPage() {
         }
 
         const obecData = {
-          title: obecForm.title.trim() || 'Obec Line',
+          title: obecForm.title.trim() || `Obec Line ข่าวที่ ${nextNum}`,
           file_url: finalImageUrl,
           image_url: finalImageUrl
         };
@@ -263,7 +284,7 @@ export default function AVPage() {
           // Generate customized filename based on title
           let itemTitle = obecForm.title.trim();
           if (!itemTitle) {
-            itemTitle = file.name.split('.').slice(0, -1).join('.');
+            itemTitle = `Obec Line ข่าวที่ ${nextNum + i}`;
           } else if (obecForm.imageFiles.length > 1) {
             itemTitle = `${obecForm.title} (รูปที่ ${i + 1})`;
           }
