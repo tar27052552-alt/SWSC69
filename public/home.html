@@ -1784,22 +1784,31 @@
     return r.json();
   }
 
-  function transformGoogleDriveUrl(url) {
+  function transformGoogleDriveUrl(url, width = 600) {
     if (!url) return "";
     if (typeof url !== "string") return url;
-    if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("https://lh3.googleusercontent.com/")) {
+    if (url.startsWith("data:") || url.startsWith("blob:")) {
       return url;
+    }
+    if (url.startsWith("https://lh3.googleusercontent.com/")) {
+      return url.includes("=") ? url : `${url}=w${width}`;
     }
     if (!url.includes("drive.google.com")) {
       return url;
     }
+    let id = "";
     let match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (match && match[1]) {
-      return `https://lh3.googleusercontent.com/d/${match[1]}`;
+      id = match[1];
+    } else {
+      match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        id = match[1];
+      }
     }
-    match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    if (match && match[1]) {
-      return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    if (id) {
+      // Append size parameter and a cache-buster timestamp
+      return `https://lh3.googleusercontent.com/d/${id}=w${width}`;
     }
     return url;
   }
@@ -2100,7 +2109,7 @@
     const el = document.getElementById('carouselThumbs');
     if (!el) return;
     el.innerHTML = carouselItems.map((n, i) => {
-      const img = n.image_url ? transformGoogleDriveUrl(n.image_url) : FALLBACK_IMG;
+      const img = n.image_url ? transformGoogleDriveUrl(n.image_url, 800) : FALLBACK_IMG;
       const isActive = i === activeIdx;
       return `<div onclick="carouselGoTo(${i});restartCarouselTimer()" title="${n.headline||''}" style="
         flex-shrink:0; width:90px; height:60px; border-radius:6px; overflow:hidden; cursor:pointer;
@@ -2137,7 +2146,7 @@
     const slidesEl = document.getElementById('carouselSlides');
     if (slidesEl) {
       slidesEl.innerHTML = carouselItems.map(n => {
-        const img = transformGoogleDriveUrl(n.image_url);
+        const img = transformGoogleDriveUrl(n.image_url, 800);
         return `<div onclick="showNewsPopup('${n.id}')" style="
           flex-shrink:0; width:100%; cursor:pointer; position:relative; overflow:hidden;
         ">
@@ -2168,7 +2177,7 @@
       'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&q=80&w=200'
     ];
 
-    const mainImg = main.image_url ? transformGoogleDriveUrl(main.image_url) : imgs[0];
+    const mainImg = main.image_url ? transformGoogleDriveUrl(main.image_url, 600) : imgs[0];
     const mainAuthor = getAuthorName(main.submitter);
 
     let html = `
@@ -2184,7 +2193,7 @@
     `;
     
     side.forEach((n, idx) => {
-      const sideImg = n.image_url ? transformGoogleDriveUrl(n.image_url) : imgs[idx+1];
+      const sideImg = n.image_url ? transformGoogleDriveUrl(n.image_url, 400) : imgs[idx+1];
       const sideAuthor = getAuthorName(n.submitter);
       html += `
         <div class="pr-item" onclick="showNewsPopup('${n.id}')" style="cursor:pointer;">
@@ -2210,7 +2219,7 @@
       const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH') : '');
       const author = getAuthorName(n.submitter);
       const thumbHtml = n.image_url 
-        ? `<img src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; height:100%; object-fit:cover;" />` 
+        ? `<img src="${transformGoogleDriveUrl(n.image_url, 400)}" style="width:100%; height:100%; object-fit:cover;" />` 
         : m.icon;
       return `<div class="news-card" onclick="showNewsPopup('${n.id}')">
         <div class="news-card-thumb" style="background:${n.image_url ? 'none' : m.bg}">
@@ -2258,7 +2267,7 @@
     }
     grid.innerHTML = items.map(item => `
       <a href="${item.file_url}" target="_blank" class="obec-card">
-        <img src="${transformGoogleDriveUrl(item.image_url)}" alt="${item.title}" />
+        <img src="${transformGoogleDriveUrl(item.image_url, 400)}" alt="${item.title}" />
       </a>
     `).join('');
   }
@@ -2503,7 +2512,7 @@
     let imgHtml = '';
     if (n.image_url) {
       imgHtml = `<div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
-        <img id="mainNewsImage" src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
+        <img id="mainNewsImage" src="${transformGoogleDriveUrl(n.image_url, 1200)}" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
       </div>`;
     }
 
@@ -2512,7 +2521,7 @@
     if (n.supporting_images && n.supporting_images.length > 0) {
       const imagesHtml = n.supporting_images.map(imgUrl => `
         <div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
-          <img src="${transformGoogleDriveUrl(imgUrl)}" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
+          <img src="${transformGoogleDriveUrl(imgUrl, 1000)}" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
         </div>
       `).join('');
       
@@ -2527,7 +2536,7 @@
     const latestNews = allNews.slice(0, 5);
     const sidebarHtml = latestNews.map(item => {
       const itemImg = item.image_url 
-        ? transformGoogleDriveUrl(item.image_url) 
+        ? transformGoogleDriveUrl(item.image_url, 200) 
         : 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=200';
       const isActive = item.id == id;
       return `
