@@ -22,7 +22,8 @@ const SUB_FOLDERS = {
   slips: "สลิปการเงิน",
   secretary: "เอกสารฝ่ายเลขา",
   academic: "เอกสารฝ่ายวิชาการ",
-  pr: "รูปข่าวประชาสัมพันธ์"
+  pr: "รูปข่าวประชาสัมพันธ์",
+  obec: "งาน OBEC Line"
 };
 
 // ฟังก์ชันหลักรับ POST Request จากแอป React
