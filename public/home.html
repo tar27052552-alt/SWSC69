@@ -49,6 +49,177 @@
       min-height: 100vh;
     }
 
+    /* ==================== LOADING SCREEN ==================== */
+    #loadingScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: #0d0714;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      transition: opacity 0.7s ease, visibility 0.7s ease;
+    }
+    #loadingScreen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .loader-logo {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 3px solid rgba(245,158,11,0.15);
+      border-top-color: var(--gold-400);
+      animation: spinLogo 1s linear infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .loader-logo::before {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      border: 2px solid rgba(168,85,247,0.15);
+      border-bottom-color: var(--purple-400);
+      animation: spinLogo 1.5s linear infinite reverse;
+    }
+    .loader-logo img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      border-radius: 50%;
+    }
+    @keyframes spinLogo {
+      to { transform: rotate(360deg); }
+    }
+    .loader-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #fff, #fcd34d, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .loader-subtitle {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.5px;
+    }
+    .loader-bar-wrap {
+      width: 200px;
+      height: 3px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .loader-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
+      border-radius: 99px;
+      animation: loadBar 2s ease forwards;
+    }
+    @keyframes loadBar {
+      from { width: 0%; }
+      to   { width: 100%; }
+    }
+
+    /* ==================== HERO OVERLAY TEXT ==================== */
+    .hero-overlay {
+      position: absolute;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      z-index: 5;
+      pointer-events: none;
+      width: 90%;
+      max-width: 700px;
+    }
+    .hero-typing-text {
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(20px, 4vw, 34px);
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.7), 0 0 40px rgba(245,158,11,0.4);
+      letter-spacing: 1px;
+      min-height: 1.4em;
+    }
+    .hero-cursor {
+      display: inline-block;
+      width: 3px;
+      height: 1em;
+      background: var(--gold-400);
+      margin-left: 3px;
+      vertical-align: middle;
+      animation: blink 0.9s step-end infinite;
+      border-radius: 2px;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    /* ==================== STATS COUNTER STRIP ==================== */
+    .stats-strip {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin: 0 0 28px 0;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    }
+    .stat-item {
+      flex: 1;
+      min-width: 150px;
+      padding: 22px 20px;
+      text-align: center;
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(10px);
+      border-right: 1px solid rgba(245,158,11,0.15);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-item:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(245,158,11,0.12);
+    }
+    .stat-item::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
+    }
+    .stat-icon {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+    .stat-number {
+      font-family: 'Oswald', sans-serif;
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--gold-500);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: var(--gray-500);
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
 
 
     /* ==================== NAVBAR ==================== */
@@ -1720,8 +1891,22 @@
   </div>
 
   <!-- FULL HERO BANNER -->
+  <!-- LOADING SCREEN -->
+  <div id="loadingScreen">
+    <div class="loader-logo">
+      <img src="./logo.png" alt="SWSC" onerror="this.style.display='none'" />
+    </div>
+    <div class="loader-title">SWSC.OFFICIAL</div>
+    <div class="loader-subtitle">คณะกรรมการนักเรียน โรงเรียนสรรพวิทยาคม</div>
+    <div class="loader-bar-wrap"><div class="loader-bar"></div></div>
+  </div>
+
   <header class="full-hero" id="fullHero">
     <img src="./hero-group.png" alt="Student Council" class="hero-img" />
+    <!-- Hero Typing Overlay -->
+    <div class="hero-overlay">
+      <div class="hero-typing-text" id="heroTyping"><span class="hero-cursor"></span></div>
+    </div>
     <div style="display:none">
       <div id="hStatNews"></div>
       <div id="hStatEvents"></div>
@@ -1775,6 +1960,30 @@
           </div>
         </div>
         <!-- ===== END ANNOUNCEMENT CAROUSEL ===== -->
+
+        <!-- ===== STATS COUNTER STRIP ===== -->
+        <div class="stats-strip" id="statsStrip">
+          <div class="stat-item">
+            <div class="stat-icon">📰</div>
+            <div class="stat-number" data-target="0" id="statNews">0</div>
+            <div class="stat-label">ข่าวสารประชาสัมพันธ์</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">📅</div>
+            <div class="stat-number" data-target="0" id="statEvents">0</div>
+            <div class="stat-label">กิจกรรมในปีการศึกษา</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">👥</div>
+            <div class="stat-number" data-target="27" id="statMembers">0</div>
+            <div class="stat-label">คณะกรรมการนักเรียน</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">🏫</div>
+            <div class="stat-number" data-target="4" id="statFactions">0</div>
+            <div class="stat-label">ฝ่ายงานในสภา</div>
+          </div>
+        </div>
 
         <!-- ข่าวประชาสัมพันธ์ (PR News Redesign) -->
         <div class="section-wrapper">
@@ -2494,11 +2703,13 @@
       const hNews = document.getElementById('hStatNews');
       if (hNews) hNews.textContent = count;
       initScrollReveal();
+      return count;
     } catch { 
       ['homeNewsContainer','fullNewsGrid'].forEach(id => { 
         const el = document.getElementById(id);
         if(el) el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>ยังไม่มีข่าวสาร</div>'; 
       });
+      return 0;
     }
   }
 
@@ -2994,6 +3205,7 @@
     calYear = t.getFullYear(); calMonth = t.getMonth();
     await fetchCalEvents();
     renderCalendar();
+    return calEvents.length;
   }
 
   /* ---- TEAM ---- */
@@ -3276,16 +3488,101 @@
     animate();
   }
 
+  /* ---- LOADING SCREEN ---- */
+  function hideLoadingScreen() {
+    const ls = document.getElementById('loadingScreen');
+    if (ls) {
+      setTimeout(() => ls.classList.add('hidden'), 2200);
+    }
+  }
+
+  /* ---- TYPING EFFECT ---- */
+  function initTypingEffect() {
+    const el = document.getElementById('heroTyping');
+    if (!el) return;
+    const phrases = [
+      'คณะกรรมการนักเรียน SWSC',
+      'สร้างสรรค์ พัฒนา รับใช้',
+      'โรงเรียนสรรพวิทยาคม',
+      'Student Welfare & Service Council',
+    ];
+    let phraseIdx = 0, charIdx = 0, deleting = false;
+    function tick() {
+      const phrase = phrases[phraseIdx];
+      const cursor = '<span class="hero-cursor"></span>';
+      if (!deleting) {
+        charIdx++;
+        el.innerHTML = phrase.slice(0, charIdx) + cursor;
+        if (charIdx === phrase.length) {
+          deleting = true;
+          setTimeout(tick, 2200);
+          return;
+        }
+        setTimeout(tick, 75);
+      } else {
+        charIdx--;
+        el.innerHTML = phrase.slice(0, charIdx) + cursor;
+        if (charIdx === 0) {
+          deleting = false;
+          phraseIdx = (phraseIdx + 1) % phrases.length;
+          setTimeout(tick, 400);
+          return;
+        }
+        setTimeout(tick, 35);
+      }
+    }
+    setTimeout(tick, 2600);
+  }
+
+  /* ---- COUNTER ANIMATION ---- */
+  function animateCounter(el, target, duration = 1800) {
+    const start = performance.now();
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(target * ease);
+      if (progress < 1) requestAnimationFrame(update);
+      else el.textContent = target;
+    }
+    requestAnimationFrame(update);
+  }
+
+  function initStatsCounters() {
+    const strip = document.getElementById('statsStrip');
+    if (!strip) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          strip.querySelectorAll('.stat-number[data-target]').forEach(el => {
+            animateCounter(el, parseInt(el.dataset.target) || 0);
+          });
+          observer.disconnect();
+        }
+      });
+    }, { threshold: 0.3 });
+    observer.observe(strip);
+  }
+
   /* ---- INIT ---- */
   document.addEventListener('DOMContentLoaded', async () => {
+    hideLoadingScreen();
     initParticles();
+    initTypingEffect();
     await loadUsers();
-    loadNews();
+    loadNews().then(count => {
+      const el = document.getElementById('statNews');
+      if (el) { el.dataset.target = count || 0; }
+    });
     loadAnnouncements();
     loadObecLine();
-    loadEvents();
+    loadEvents().then(count => {
+      const el = document.getElementById('statEvents');
+      if (el) { el.dataset.target = count || 0; }
+    });
     loadTeam();
     setTimeout(initScrollReveal, 300);
+    setTimeout(initStatsCounters, 2500);
   });
 </script>
 
