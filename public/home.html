@@ -1292,6 +1292,7 @@
         position: static;
       }
     }
+    }
     html.modal-open, body.modal-open {
       overflow: hidden !important;
     }
@@ -1300,6 +1301,291 @@
       top: 0;
       left: 0;
       right: 0;
+    }
+
+    /* ==================== SPECTACULAR GLOW & LIGHTING UX OVERRIDES ==================== */
+    @keyframes glowFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes textShine {
+      to { background-position: 200% center; }
+    }
+    @keyframes pulseGlow {
+      0% { opacity: 0.45; transform: translate(-50%, -50%) scale(1); filter: blur(50px); }
+      100% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.15); filter: blur(65px); }
+    }
+
+    /* Floating blobs with richer opacity */
+    .circle-1 {
+      background: radial-gradient(circle, rgba(147, 51, 234, 0.5) 0%, rgba(147, 51, 234, 0) 70%) !important;
+      opacity: 0.35 !important;
+    }
+    .circle-2 {
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.4) 0%, rgba(245, 158, 11, 0) 70%) !important;
+      opacity: 0.35 !important;
+    }
+
+    /* Backlight for Hero banner */
+    .full-hero {
+      position: relative;
+      overflow: hidden;
+    }
+    .full-hero::before {
+      content: '';
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(147, 51, 234, 0.35) 0%, rgba(245, 158, 11, 0.15) 50%, rgba(0,0,0,0) 80%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 1;
+      animation: pulseGlow 6s infinite alternate ease-in-out;
+    }
+    .full-hero img.hero-img {
+      position: relative;
+      z-index: 2;
+    }
+    .scroll-down {
+      z-index: 3;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.15), inset 0 0 10px rgba(255, 255, 255, 0.1);
+    }
+    .scroll-down:hover {
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.6), inset 0 0 15px rgba(168, 85, 247, 0.4);
+      border-color: rgba(168, 85, 247, 0.5);
+    }
+
+    /* Neon indicator Navbar */
+    nav {
+      background: rgba(17, 17, 17, 0.8) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    nav::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(147, 51, 234, 0.5), rgba(245, 158, 11, 0.5), transparent);
+    }
+    .nav-brand-name {
+      background: linear-gradient(135deg, #fff, #fcd34d, #a855f7, #fff);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: textShine 5s linear infinite;
+    }
+
+    /* Section Header and Title Accents */
+    .section-header {
+      background: linear-gradient(90deg, #6b21a8, #7c3aed, #db2777, #6b21a8);
+      background-size: 300% 300%;
+      animation: glowFlow 8s ease infinite;
+      border-radius: 6px;
+      box-shadow: 0 4px 15px rgba(107, 33, 168, 0.25);
+    }
+    .section-header::after {
+      background: linear-gradient(90deg, #7c3aed, transparent);
+      height: 2px;
+      opacity: 0.4;
+    }
+    .block-head-title::before {
+      background: linear-gradient(to bottom, #a855f7, #fcd34d, #db2777);
+      background-size: 100% 300%;
+      animation: glowFlow 4s ease infinite;
+    }
+
+    /* Glassmorphism Section Wrapper */
+    .section-wrapper {
+      background: rgba(255, 255, 255, 0.45) !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.55) !important;
+      box-shadow: 0 15px 35px rgba(107, 33, 168, 0.05), inset 0 0 20px rgba(255,255,255,0.3) !important;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .section-wrapper:hover {
+      box-shadow: 0 20px 50px rgba(107, 33, 168, 0.08), inset 0 0 25px rgba(255,255,255,0.4) !important;
+      border-color: rgba(147, 51, 234, 0.25) !important;
+    }
+
+    /* Glow Cards (News card, Obec, Documents, etc.) */
+    .news-card, .doc-card, .event-row, .team-card, .org-node, .contact-card, .qlink, .pr-main, .pr-item {
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Light Shine Sweep overlay */
+    .news-card::before, .doc-card::before, .event-row::before, .team-card::before, .org-node::before, .contact-card::before, .qlink::before, .section-wrapper::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -150%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+      transform: skewX(-25deg);
+      pointer-events: none;
+      z-index: 10;
+    }
+    .news-card:hover::before, .doc-card:hover::before, .event-row:hover::before, .team-card:hover::before, .org-node:hover::before, .contact-card:hover::before, .qlink:hover::before, .section-wrapper:hover::before {
+      left: 150%;
+      transition: left 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Custom glow shadow effects on hover */
+    .news-card {
+      background: rgba(255, 255, 255, 0.75) !important;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.6) !important;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .news-card:hover {
+      transform: translateY(-6px) scale(1.02) !important;
+      box-shadow: 0 20px 40px rgba(147, 51, 234, 0.16), 0 0 15px rgba(147, 51, 234, 0.08) !important;
+      border-color: rgba(147, 51, 234, 0.45) !important;
+    }
+
+    /* Obec Card glow */
+    .obec-card img {
+      border: 1.5px solid rgba(255, 255, 255, 0.6) !important;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .obec-card:hover img {
+      transform: translateY(-8px) scale(1.04) !important;
+      box-shadow: 0 20px 45px rgba(107, 33, 168, 0.28), 0 0 18px rgba(107, 33, 168, 0.16) !important;
+      border-color: rgba(168, 85, 247, 0.65) !important;
+    }
+
+    /* PR News glowing elements */
+    .pr-main img {
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .pr-main:hover img {
+      transform: translateY(-4px) scale(1.01);
+      box-shadow: 0 15px 35px rgba(107, 33, 168, 0.2), 0 0 15px rgba(107, 33, 168, 0.1);
+      border-color: rgba(168, 85, 247, 0.4);
+    }
+    .pr-item img {
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.3s var(--ease);
+    }
+    .pr-item:hover img {
+      transform: scale(1.05);
+      box-shadow: 0 8px 20px rgba(107, 33, 168, 0.18);
+      border-color: rgba(168, 85, 247, 0.4);
+    }
+    .pr-btn {
+      border: 1.5px solid var(--purple-500) !important;
+      color: var(--purple-700) !important;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.5);
+      transition: all 0.3s var(--ease) !important;
+    }
+    .pr-btn:hover {
+      background: linear-gradient(135deg, var(--purple-600), var(--purple-700)) !important;
+      color: #fff !important;
+      box-shadow: 0 5px 15px rgba(107, 33, 168, 0.3);
+      border-color: transparent !important;
+    }
+
+    /* Document cards glow */
+    .doc-card {
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .doc-card:hover {
+      border-color: rgba(168, 85, 247, 0.5) !important;
+      transform: translateY(-4px) !important;
+      box-shadow: 0 12px 30px rgba(107, 33, 168, 0.16), 0 0 12px rgba(107, 33, 168, 0.08) !important;
+    }
+
+    /* Event Row slide glow */
+    .event-row {
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .event-row:hover {
+      border-color: rgba(168, 85, 247, 0.4) !important;
+      transform: translateX(10px) scale(1.005) !important;
+      box-shadow: 0 15px 30px rgba(107, 33, 168, 0.12) !important;
+    }
+
+    /* Team card pulse */
+    .team-card {
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .team-card:hover {
+      border-color: rgba(168, 85, 247, 0.5) !important;
+      box-shadow: 0 15px 35px rgba(107, 33, 168, 0.18) !important;
+      transform: translateY(-5px) !important;
+    }
+    .team-card.president-card {
+      position: relative;
+    }
+    .team-card.president-card:hover {
+      box-shadow: 0 15px 35px rgba(245, 158, 11, 0.25), 0 0 15px rgba(245, 158, 11, 0.12) !important;
+      border-color: var(--gold-500) !important;
+    }
+
+    /* Org node hover */
+    .org-node {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .org-node:hover {
+      border-color: var(--purple-400) !important;
+      transform: translateY(-2px) scale(1.04) !important;
+      box-shadow: 0 8px 20px rgba(107, 33, 168, 0.15) !important;
+    }
+    .org-node.top-node:hover {
+      border-color: var(--gold-400) !important;
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.2) !important;
+    }
+
+    /* Contact card reflection */
+    .contact-card {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .contact-card:hover {
+      border-color: rgba(168, 85, 247, 0.5) !important;
+      box-shadow: 0 10px 25px rgba(107, 33, 168, 0.14) !important;
+      transform: translateY(-3px) !important;
+    }
+
+    /* Quick link glow */
+    .qlink {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .qlink:hover {
+      border-color: rgba(168, 85, 247, 0.4) !important;
+      box-shadow: 0 6px 15px rgba(107, 33, 168, 0.1) !important;
+      transform: translateX(6px) !important;
+    }
+
+    /* Form control focus glow */
+    .form-ctrl {
+      transition: all 0.25s var(--ease) !important;
+    }
+    .form-ctrl:focus {
+      border-color: var(--purple-500) !important;
+      box-shadow: 0 0 0 4px rgba(147, 51, 234, 0.18), 0 0 10px rgba(147, 51, 234, 0.1) !important;
+    }
+    .form-submit {
+      background: linear-gradient(135deg, var(--purple-600), #7c3aed, var(--purple-700)) !important;
+      background-size: 200% auto;
+      transition: all 0.3s var(--ease) !important;
+    }
+    .form-submit:hover {
+      background-position: right center;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(107, 33, 168, 0.45), 0 0 15px rgba(107, 33, 168, 0.2) !important;
     }
   </style>
 </head>
