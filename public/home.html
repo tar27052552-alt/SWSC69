@@ -130,52 +130,6 @@
       to   { width: 100%; }
     }
 
-    /* ==================== HERO OVERLAY TEXT ==================== */
-    .hero-overlay {
-      position: absolute;
-      bottom: 85px;
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      z-index: 5;
-      pointer-events: none;
-      /* Premium Glassmorphism Badge */
-      background: rgba(30, 10, 46, 0.65);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      padding: 10px 32px;
-      border-radius: 99px;
-      border: 1px solid rgba(168, 85, 247, 0.3);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: max-content;
-      max-width: 90%;
-    }
-    .hero-typing-text {
-      font-family: 'Sarabun', sans-serif;
-      font-size: clamp(16px, 3.5vw, 22px);
-      font-weight: 500;
-      color: #f3e8ff;
-      letter-spacing: 0.5px;
-      min-height: 1.5em;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-    }
-    .hero-cursor {
-      display: inline-block;
-      width: 2px;
-      height: 1.2em;
-      background: var(--gold-400);
-      margin-left: 8px;
-      vertical-align: middle;
-      animation: blink 0.9s step-end infinite;
-      border-radius: 2px;
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0; }
-    }
 
     /* ==================== STATS COUNTER STRIP ==================== */
     .stats-strip {
@@ -1914,10 +1868,7 @@
 
   <header class="full-hero" id="fullHero">
     <img src="./hero-group.png" alt="Student Council" class="hero-img" />
-    <!-- Hero Typing Overlay -->
-    <div class="hero-overlay">
-      <div class="hero-typing-text" id="heroTyping"><span class="hero-cursor"></span></div>
-    </div>
+
     <div style="display:none">
       <div id="hStatNews"></div>
       <div id="hStatEvents"></div>
@@ -3507,43 +3458,6 @@
     }
   }
 
-  /* ---- TYPING EFFECT ---- */
-  function initTypingEffect() {
-    const el = document.getElementById('heroTyping');
-    if (!el) return;
-    const phrases = [
-      'คณะกรรมการนักเรียน SWSC',
-      'สร้างสรรค์ พัฒนา รับใช้',
-      'โรงเรียนสรรพวิทยาคม',
-      'Student Welfare & Service Council',
-    ];
-    let phraseIdx = 0, charIdx = 0, deleting = false;
-    function tick() {
-      const phrase = phrases[phraseIdx];
-      const cursor = '<span class="hero-cursor"></span>';
-      if (!deleting) {
-        charIdx++;
-        el.innerHTML = phrase.slice(0, charIdx) + cursor;
-        if (charIdx === phrase.length) {
-          deleting = true;
-          setTimeout(tick, 2200);
-          return;
-        }
-        setTimeout(tick, 75);
-      } else {
-        charIdx--;
-        el.innerHTML = phrase.slice(0, charIdx) + cursor;
-        if (charIdx === 0) {
-          deleting = false;
-          phraseIdx = (phraseIdx + 1) % phrases.length;
-          setTimeout(tick, 400);
-          return;
-        }
-        setTimeout(tick, 35);
-      }
-    }
-    setTimeout(tick, 2600);
-  }
 
   /* ---- COUNTER ANIMATION ---- */
   function animateCounter(el, target, duration = 1800) {
@@ -3579,7 +3493,7 @@
   document.addEventListener('DOMContentLoaded', async () => {
     hideLoadingScreen();
     initParticles();
-    initTypingEffect();
+
     await loadUsers();
     loadNews().then(count => {
       const el = document.getElementById('statNews');
