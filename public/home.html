@@ -133,30 +133,41 @@
     /* ==================== HERO OVERLAY TEXT ==================== */
     .hero-overlay {
       position: absolute;
-      bottom: 70px;
+      bottom: 85px;
       left: 50%;
       transform: translateX(-50%);
       text-align: center;
       z-index: 5;
       pointer-events: none;
-      width: 90%;
-      max-width: 700px;
+      /* Premium Glassmorphism Badge */
+      background: rgba(30, 10, 46, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 10px 32px;
+      border-radius: 99px;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: max-content;
+      max-width: 90%;
     }
     .hero-typing-text {
-      font-family: 'Oswald', sans-serif;
-      font-size: clamp(20px, 4vw, 34px);
-      font-weight: 700;
-      color: #fff;
-      text-shadow: 0 2px 20px rgba(0,0,0,0.7), 0 0 40px rgba(245,158,11,0.4);
-      letter-spacing: 1px;
-      min-height: 1.4em;
+      font-family: 'Sarabun', sans-serif;
+      font-size: clamp(16px, 3.5vw, 22px);
+      font-weight: 500;
+      color: #f3e8ff;
+      letter-spacing: 0.5px;
+      min-height: 1.5em;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
     }
     .hero-cursor {
       display: inline-block;
-      width: 3px;
-      height: 1em;
+      width: 2px;
+      height: 1.2em;
       background: var(--gold-400);
-      margin-left: 3px;
+      margin-left: 8px;
       vertical-align: middle;
       animation: blink 0.9s step-end infinite;
       border-radius: 2px;
