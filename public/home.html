@@ -1612,18 +1612,6 @@
       opacity: 0.85;
     }
 
-    /* Glowing Scroll Progress Bar */
-    #scrollProgress {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #9333ea, #fbbf24, #ec4899);
-      width: 0%;
-      z-index: 10000;
-      box-shadow: 0 0 10px rgba(168, 85, 247, 0.8), 0 0 5px rgba(236, 72, 153, 0.5);
-      transition: width 0.1s ease-out;
-    }
 
     /* Floating Back-to-Top Button */
     #backToTop {
@@ -1663,7 +1651,6 @@
   </style>
 </head>
 <body>
-  <div id="scrollProgress"></div>
   <div class="glass-bg-circle circle-1"></div>
   <div class="glass-bg-circle circle-2"></div>
   <canvas id="particleCanvas"></canvas>
@@ -2425,16 +2412,7 @@
     // 1. Navbar scrolled effect
     document.getElementById('navbar').classList.toggle('scrolled', scrollY > 10);
 
-    // 2. Scroll Progress Bar
-    const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
-    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-    const scrolled = height > 0 ? (winScroll / height) * 100 : 0;
-    const progressEl = document.getElementById('scrollProgress');
-    if (progressEl) {
-      progressEl.style.width = scrolled + "%";
-    }
-
-    // 3. Back to Top Button
+    // 2. Back to Top Button
     const backToTop = document.getElementById('backToTop');
     if (backToTop) {
       if (scrollY > 300) {
