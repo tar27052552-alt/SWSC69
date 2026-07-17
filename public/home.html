@@ -1324,7 +1324,11 @@
       to { background-position: 200% center; }
     }
     @keyframes pulseGlow {
-      /* Floating blobs with richer opacity */
+      0% { opacity: 0.45; transform: translate(-50%, -50%) scale(1); filter: blur(50px); }
+      100% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.15); filter: blur(65px); }
+    }
+
+    /* Floating blobs with richer opacity */
     .circle-1 {
       background: radial-gradient(circle, rgba(245, 158, 11, 0.45) 0%, rgba(251, 191, 36, 0.2) 40%, rgba(245, 158, 11, 0) 70%) !important;
       opacity: 0.45 !important;
