@@ -217,6 +217,11 @@
       letter-spacing: .5px;
     }
     .nav-brand-name span { color: var(--gold-500); }
+    .nav-all-logos {
+      height: 32px;
+      margin-left: 12px;
+      object-fit: contain;
+    }
     .nav-menu {
       display: flex;
       align-items: center;
@@ -1362,6 +1367,8 @@
     @media (max-width: 768px) {
       .public-modal-content { padding: 80px 20px 20px 20px; }
       .public-modal-header { margin-bottom: 16px; padding-bottom: 12px; }
+      .nav-brand-name { font-size: 16px; }
+      .nav-all-logos { display: none; }
       .public-modal-title { font-size: 18px; }
     }
     .doc-list-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid var(--gray-200); border-radius: 8px; text-decoration: none; color: var(--gray-800); transition: .2s; }
@@ -1802,6 +1809,7 @@
     <a href="#/home" class="nav-brand">
       <img src="./logo.png" alt="SWSC Logo" class="nav-logo" onerror="this.style.display='none'"/>
       <span class="nav-brand-name">SWSC<span>.</span>OFFICIAL</span>
+      <img src="./all-logos.png" alt="School Logos" class="nav-all-logos" onerror="this.style.display='none'"/>
     </a>
     <ul class="nav-menu">
       <li class="nav-item"><a href="#/home" class="nav-link" style="color: #a855f7;">หน้าแรก</a></li>
