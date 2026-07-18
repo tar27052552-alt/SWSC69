@@ -421,7 +421,8 @@ export default function AVPage() {
         for_date: thaiDateStr,
         image_url: finalImageUrl,
         supporting_images: finalSupportingImages,
-        submitter: user?.name || user?.nickname || 'ฝ่ายโสตฯ'
+        submitter: user?.name || user?.nickname || 'ฝ่ายโสตฯ',
+        created_at: dt.toISOString()
       };
 
       if (editingNewsId) {
