@@ -3217,7 +3217,10 @@
 
   async function loadNews() {
     try {
-      allNews = await sbFetch(`web_news?select=*&order=created_at.desc&limit=30`) || [];
+      let fetchedNews = await sbFetch(`web_news?select=*&order=created_at.desc&limit=30`) || [];
+      // Filter out donation posts per user request
+      allNews = fetchedNews.filter(n => n.headline !== 'รับบริจาค' && n.headline !== 'เปิดรับบริจาค');
+      
       renderHomeNews(allNews.slice(0, 5));
       renderNews(allNews, 'fullNewsGrid');
 
@@ -3237,7 +3240,10 @@
 
   async function loadAnnouncements() {
     try {
-      const anns = await sbFetch(`web_news?select=*&category=eq.${encodeURIComponent('ประกาศ')}&order=created_at.desc`) || [];
+      let anns = await sbFetch(`web_news?select=*&category=eq.${encodeURIComponent('ประกาศ')}&order=created_at.desc`) || [];
+      // Filter out donation posts per user request
+      anns = anns.filter(n => n.headline !== 'รับบริจาค' && n.headline !== 'เปิดรับบริจาค');
+      
       renderCarousel(anns);
     } catch (e) {
       console.warn('Could not load announcements:', e);
