@@ -2001,6 +2001,7 @@
           <a href="#/events">📅 ปฏิทินกิจกรรม</a>
           <a href="#/suggestions">💬 ข้อเสนอแนะ/ร้องเรียน</a>
           <a href="#/documents">📑 เอกสารวิชาการ</a>
+          <a href="#/certificates">🎓 ค้นหาเกียรติบัตร</a>
         </div>
       </li>
       <li class="nav-item">
@@ -2031,6 +2032,7 @@
     <a href="#/events" onclick="closeMobile()">📅 กิจกรรม</a>
     <a href="#/structure" onclick="closeMobile()">🏛️ โครงสร้างสภา</a>
     <a href="#/videos" onclick="closeMobile()">🎬 วิดีโอกิจกรรม</a>
+    <a href="#/certificates" onclick="closeMobile()">🎓 ค้นหาเกียรติบัตร</a>
     <a href="#/suggestions" onclick="closeMobile()">💬 ข้อเสนอแนะ</a>
     <a href="#/contact" onclick="closeMobile()">📞 ติดต่อ</a>
     <a href="index.html#/login" style="background:var(--purple-100);color:var(--purple-700);font-weight:800;">🔐 เข้าสู่ระบบสภา</a>
@@ -2304,10 +2306,46 @@
                 <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">📄</div>
                 <div class="doc-title" style="font-size:14px;">เอกสารโครงการ</div>
               </a>
-              <a href="javascript:void(0)" class="doc-card" style="padding: 15px; grid-column: 1 / -1; background: #faf5ff; border-color: var(--purple-400);" onclick="openCertModal()">
+              <a href="#/certificates" class="doc-card" style="padding: 15px; grid-column: 1 / -1; background: #faf5ff; border-color: var(--purple-400);">
                 <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">🎓</div>
                 <div class="doc-title" style="font-size:14px; color: var(--purple-700); font-weight: 700;">ค้นหาเกียรติบัตร</div>
               </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: CERTIFICATES -->
+      <div class="page-section" id="certificates">
+        <div class="block">
+          <div class="block-head">
+            <span class="block-head-title">🎓 ค้นหาและดาวน์โหลดเกียรติบัตร</span>
+          </div>
+          <div class="block-body" style="padding: 30px 20px;">
+            <div style="max-width: 500px; margin: 0 auto; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); padding: 25px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.03);">
+              <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 40px; margin-bottom: 10px;">🎓</div>
+                <h3 style="font-size: 18px; color: var(--purple-950); margin-bottom: 6px; font-weight: 700;">ตรวจสอบเกียรติบัตรของคุณ</h3>
+                <p style="font-size: 13px; color: var(--gray-500); line-height: 1.5;">กรอกเลขประจำตัวนักเรียน 5 หลัก เพื่อค้นหาและดาวน์โหลดเกียรติบัตรกิจกรรมต่างๆ ที่คุณเข้าร่วม</p>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                  <label style="display: block; font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px;">เลขประจำตัวนักเรียน</label>
+                  <input type="text" id="certStudentIdPage" placeholder="ระบุเลขประจำตัว 5 หลัก เช่น 12345" style="width: 100%; padding: 12px 16px; border: 1px solid var(--gray-300); border-radius: 10px; font-size: 14px; outline: none; transition: border 0.2s;" onkeypress="if(event.key === 'Enter') searchCertificatesPage()" />
+                </div>
+                <button onclick="searchCertificatesPage()" style="width: 100%; background: linear-gradient(135deg, var(--purple-600), var(--purple-700)); color: white; border: none; border-radius: 10px; padding: 12px 20px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(147, 51, 234, 0.2); transition: all 0.2s;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  ค้นหาเกียรติบัตร
+                </button>
+              </div>
+            </div>
+            
+            <!-- Result Area -->
+            <div id="certPageResult" style="max-width: 600px; margin: 30px auto 0; display: flex; flex-direction: column; gap: 10px;">
+              <!-- Results will render here dynamically -->
             </div>
           </div>
         </div>
@@ -2707,6 +2745,59 @@
     } catch (err) {
       console.error(err);
       resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#e53935; font-size:14px;">เกิดข้อผิดพลาดในการค้นหา โปรดลองอีกครั้ง</div>';
+    }
+  }
+
+  async function searchCertificatesPage() {
+    const studentId = document.getElementById('certStudentIdPage').value.trim();
+    const resultDiv = document.getElementById('certPageResult');
+
+    if (!studentId) {
+      resultDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#e53935; font-size:14px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; width: 100%;">โปรดระบุเลขประจำตัวก่อนค้นหา</div>';
+      return;
+    }
+
+    resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500); width: 100%;"><div class="spin" style="margin: 0 auto 15px; border-top-color: var(--purple-600); width: 30px; height: 30px;"></div>กำลังค้นหาเกียรติบัตร...</div>';
+
+    try {
+      const res = await fetch(GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Docs" })
+      });
+      const resJson = await res.json();
+      
+      if (!resJson.success) {
+        throw new Error("Failed to load");
+      }
+      
+      const data = resJson.data;
+      const certs = data.filter(d => d.type && d.type.startsWith('เกียรติบัตร') && String(d.title) === studentId).reverse();
+
+      if (certs.length === 0) {
+        resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500); font-size:14px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.6); width: 100%;">ไม่พบเกียรติบัตรสำหรับเลขประจำตัวนี้</div>';
+        return;
+      }
+
+      resultDiv.innerHTML = certs.map(d => {
+        let displayDate = d.date;
+        if (displayDate && displayDate.includes('T')) {
+          const dt = new Date(displayDate);
+          displayDate = dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        const cat = d.type.includes('|') ? d.type.split('|')[1] : (d.category || 'เกียรติบัตรเข้าร่วมกิจกรรม');
+        return `
+        <a href="${d.file_url}" target="_blank" class="doc-list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.85); border-radius: 12px; text-decoration: none; color: inherit; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+          <div class="doc-list-info" style="display: flex; flex-direction: column; gap: 4px; text-align: left;">
+            <div class="doc-list-title" style="font-weight: 700; color: var(--purple-950); font-size: 14px;">${cat}</div>
+            <div class="doc-list-meta" style="font-size: 12px; color: var(--gray-500);">เลขประจำตัว: ${d.title} • ${displayDate}</div>
+          </div>
+          <div class="doc-download-btn" style="background: var(--purple-100); color: var(--purple-700); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; transition: all 0.2s;">ดาวน์โหลด</div>
+        </a>
+      `}).join('');
+    } catch (err) {
+      console.error(err);
+      resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#e53935; font-size:14px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; width: 100%;">เกิดข้อผิดพลาดในการค้นหา/ฐานข้อมูลขัดข้อง โปรดลองอีกครั้งภายหลัง</div>';
     }
   }
 
