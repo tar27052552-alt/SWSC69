@@ -1541,9 +1541,49 @@
     @media (max-width: 768px) {
       .public-modal-content { padding: 80px 20px 20px 20px; }
       .public-modal-header { margin-bottom: 16px; padding-bottom: 12px; }
-      .nav-brand-name { font-size: 16px; }
-      .nav-all-logos { height: 48px; }
+      .nav-brand-name { font-size: 15px; }
+      .nav-all-logos { height: 38px; }
       .public-modal-title { font-size: 18px; }
+      
+      /* Hide bulky PDF iframes on mobile and expand buttons */
+      #regulations iframe, #manual iframe {
+        display: none !important;
+      }
+      .btn-download-pdf {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 100% !important;
+        padding: 14px 20px !important;
+        font-size: 14px !important;
+        text-align: center !important;
+      }
+
+      /* Adjust close button for mobile video player overlay */
+      #videoViewerClose {
+        top: 10px !important;
+        right: 10px !important;
+        background: rgba(0, 0, 0, 0.7) !important;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 10;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .nav-all-logos {
+        height: 32px !important;
+      }
+      .nav-brand-name {
+        font-size: 13px !important;
+      }
+      #navbar {
+        padding: 0 10px !important;
+      }
+      .nav-brand {
+        gap: 6px !important;
+      }
     }
     .doc-list-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid var(--gray-200); border-radius: 8px; text-decoration: none; color: var(--gray-800); transition: .2s; }
     .doc-list-item:hover { border-color: var(--purple-400); background: #faf5ff; }
@@ -2402,7 +2442,10 @@
             <span class="block-head-title">🏛️ โครงสร้างการบริหารกิจกรรมสภานักเรียน</span>
           </div>
           <div class="block-body" style="text-align: center; padding: 25px 20px;">
-            <img src="./structure.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน" style="max-width: 900px; width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); margin: 0 auto; display: block;" />
+            <a href="./structure.png" target="_blank" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: block; max-width: 900px; margin: 0 auto;">
+              <img src="./structure.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block;" />
+            </a>
+            <p style="font-size: 12px; color: var(--gray-400); margin-top: 12px; text-align: center;">📱 สำหรับมือถือ: สามารถแตะที่รูปภาพเพื่อขยายดูขนาดเต็มและซูมอ่านรายละเอียดได้ครับ</p>
           </div>
         </div>
       </div>
