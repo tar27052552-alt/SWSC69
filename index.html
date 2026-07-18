@@ -1,25 +1,4269 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="th">
-  <head>
-    <script>
-      if (!window.location.hash || window.location.hash === '#' || window.location.hash === '#/') {
-        window.location.href = 'home.html';
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SWSC.OFFICIAL | คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม</title>
+  <meta name="description" content="SWSC.OFFICIAL — คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม อำเภอแม่สอด จังหวัดตาก" />
+  <link rel="icon" href="./logo.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --purple-900: #1e0a2e;
+      --purple-800: #2d1046;
+      --purple-700: #4a1270;
+      --purple-600: #6b21a8;
+      --purple-500: #9333ea;
+      --purple-400: #a855f7;
+      --purple-100: #f3e8ff;
+      --gold-500: #f59e0b;
+      --gold-400: #fbbf24;
+      --gold-300: #fcd34d;
+      --white: #ffffff;
+      --gray-50:  #fafafa;
+      --gray-100: #f4f4f5;
+      --gray-200: #e4e4e7;
+      --gray-500: #71717a;
+      --gray-700: #3f3f46;
+      --gray-900: #18181b;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.08);
+      --shadow-lg: 0 12px 40px rgba(147,51,234,.10);
+      --shadow-xl: 0 20px 60px rgba(147,51,234,.15);
+      --radius: 12px;
+      --radius-lg: 20px;
+      --ease: cubic-bezier(.4,0,.2,1);
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: linear-gradient(135deg, #f5f3ff 0%, #fafafa 50%, #fffbeb 100%);
+      color: var(--gray-900);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    /* ==================== LOADING SCREEN ==================== */
+    #loadingScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: #0d0714;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      transition: opacity 0.7s ease, visibility 0.7s ease;
+    }
+    #loadingScreen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .loader-logo {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 3px solid rgba(245,158,11,0.15);
+      border-top-color: var(--gold-400);
+      animation: spinLogo 1s linear infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .loader-logo::before {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      border: 2px solid rgba(168,85,247,0.15);
+      border-bottom-color: var(--purple-400);
+      animation: spinLogo 1.5s linear infinite reverse;
+    }
+    .loader-logo img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      border-radius: 50%;
+    }
+    @keyframes spinLogo {
+      to { transform: rotate(360deg); }
+    }
+    .loader-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #fff, #fcd34d, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .loader-subtitle {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.5px;
+    }
+    .loader-bar-wrap {
+      width: 200px;
+      height: 3px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .loader-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
+      border-radius: 99px;
+      animation: loadBar 2s ease forwards;
+    }
+    @keyframes loadBar {
+      from { width: 0%; }
+      to   { width: 100%; }
+    }
+
+
+    /* ==================== STATS COUNTER STRIP ==================== */
+    .stats-strip {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin: 0 0 28px 0;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    }
+    .stat-item {
+      flex: 1;
+      min-width: 150px;
+      padding: 22px 20px;
+      text-align: center;
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(10px);
+      border-right: 1px solid rgba(245,158,11,0.15);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-item:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(245,158,11,0.12);
+    }
+    .stat-item::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
+    }
+    .stat-icon {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+    .stat-number {
+      font-family: 'Oswald', sans-serif;
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--gold-500);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: var(--gray-500);
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+
+
+    /* ==================== NAVBAR ==================== */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      height: 60px;
+      background: #111111;
+      border-bottom: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      transition: box-shadow .3s var(--ease);
+    }
+    nav.scrolled { box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-logo { width: 38px; height: 38px; object-fit: contain; }
+    .nav-brand-name {
+      font-family: 'Oswald', sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: .5px;
+    }
+    .nav-brand-name span { color: var(--gold-500); }
+    .nav-all-logos {
+      height: 44px;
+      object-fit: contain;
+    }
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      list-style: none;
+      gap: 16px;
+      height: 100%;
+    }
+    .nav-item {
+      position: relative;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+    .nav-menu a.nav-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 6px;
+      color: #e5e5e5;
+      font-size: 13.5px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: .2s var(--ease);
+      height: 100%;
+    }
+    .nav-menu a.nav-link:hover, .nav-menu a.nav-link.active {
+      color: #fff;
+    }
+    .nav-dropdown {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 8px 0;
+      min-width: 180px;
+      opacity: 0;
+      visibility: hidden;
+      transition: .2s var(--ease);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 201;
+    }
+    .nav-item:hover .nav-dropdown {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+    .nav-dropdown a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      color: #ccc;
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: .2s;
+      white-space: nowrap;
+    }
+    .nav-dropdown a:hover {
+      background: #2a2a2a;
+      color: #fff;
+    }
+    .nav-search {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      border-left: 1px solid #333;
+      padding-left: 20px;
+      margin-left: 10px;
+    }
+    .nav-search-icon {
+      color: #ccc;
+      cursor: pointer;
+      transition: .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #2a2a2a;
+    }
+    .nav-search-icon:hover { color: #fff; background: #333; }
+    .nav-cta {
+      background: var(--purple-600);
+      color: var(--white) !important;
+      padding: 6px 16px !important;
+      border-radius: 6px;
+      font-weight: 700 !important;
+      font-size: 13px !important;
+      transition: .2s var(--ease);
+    }
+    .nav-cta:hover { background: var(--purple-700) !important; }
+    .btn-download-pdf {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--purple-600), var(--purple-800));
+      color: #fff !important;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+      text-decoration: none;
+      box-shadow: 0 4px 15px rgba(109, 40, 217, 0.3);
+      transition: all 0.3s ease;
+    }
+    .btn-download-pdf:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(109, 40, 217, 0.5);
+    }
+    .btn-zoom {
+      background: var(--purple-50);
+      color: var(--purple-700);
+      border: 1px solid var(--purple-200);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-zoom:hover {
+      background: var(--purple-600);
+      color: #fff;
+      border-color: var(--purple-600);
+    }
+    .nav-burger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .nav-burger span { display: block; width: 22px; height: 2px; background: #fff; border-radius: 2px; }
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 60px;
+      left: 0; right: 0;
+      background: var(--white);
+      padding: 12px;
+      z-index: 199;
+      border-bottom: 3px solid var(--purple-500);
+      box-shadow: var(--shadow-lg);
+      max-height: calc(100vh - 70px);
+      overflow-y: auto;
+    }
+    .mobile-menu.open { display: flex; flex-direction: column; gap: 6px; }
+    .mobile-menu a {
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: var(--gray-700);
+      font-weight: 600;
+      text-decoration: none;
+      font-size: 14.5px;
+    }
+    .mobile-menu a:hover, .mobile-menu a.active {
+      background: var(--purple-100);
+      color: var(--purple-700);
+    }
+    
+    /* Mobile dropdown accordions */
+    .mobile-dropdown-parent {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .mobile-dropdown-toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--gray-700);
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .mobile-dropdown-toggle:hover {
+      background: var(--purple-50);
+      color: var(--purple-700);
+    }
+    .dropdown-chevron {
+      transition: transform 0.2s ease;
+      color: var(--gray-400);
+    }
+    .mobile-dropdown-parent.active .dropdown-chevron {
+      transform: rotate(180deg);
+      color: var(--purple-600);
+    }
+    .mobile-dropdown-parent.active .mobile-dropdown-toggle {
+      color: var(--purple-700);
+      background: var(--purple-50);
+      border-radius: 8px 8px 0 0;
+    }
+    .mobile-dropdown-sub {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease-out;
+      display: flex;
+      flex-direction: column;
+      background: #faf8ff;
+      border-radius: 0 0 8px 8px;
+    }
+    .mobile-dropdown-parent.active .mobile-dropdown-sub {
+      max-height: 300px;
+    }
+    .mobile-dropdown-sub a {
+      padding: 10px 16px 10px 32px !important;
+      font-size: 13.5px !important;
+      font-weight: 600 !important;
+      color: var(--gray-600) !important;
+      border-radius: 0 !important;
+      background: none !important;
+      border-bottom: 1px solid rgba(0,0,0,0.02);
+    }
+    .mobile-dropdown-sub a:hover {
+      color: var(--purple-700) !important;
+      background: var(--purple-100) !important;
+    }
+    
+    /* Announcement Carousel Heights */
+    .announcement-carousel-wrap {
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 28px;
+      border-radius: 12px;
+      height: 380px;
+      width: 100%;
+      background: #000;
+    }
+    @media (max-width: 768px) {
+      .announcement-carousel-wrap {
+        height: 240px;
       }
-    </script>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="logo.png" />
-    <link rel="apple-touch-icon" href="logo.png" />
-    <link rel="manifest" href="./manifest.json" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="SWSC69" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="ระบบอินทราเน็ตสภานักเรียน สำหรับจัดการงานภายในสภา ตารางเวร กิจกรรม และสมาชิก" />
-    <title>สภานักเรียน | SWSC69</title>
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+      #carouselDots {
+        bottom: 68px !important;
+      }
+    }
+
+    /* ==================== FULL HERO BANNER ==================== */
+    .full-hero {
+      width: 100%;
+      position: relative;
+      background: var(--gray-900);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .full-hero img.hero-img {
+      width: 100%;
+      max-height: calc(100vh - 60px);
+      object-fit: contain;
+      display: block;
+    }
+    .scroll-down {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.8);
+      animation: bounce 2s infinite;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 10px;
+      z-index: 10;
+      background: rgba(0,0,0,0.3);
+      border-radius: 50%;
+    }
+    .scroll-down:hover { color: #fff; }
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0) translateX(-50%); }
+      40% { transform: translateY(-10px) translateX(-50%); }
+      60% { transform: translateY(-5px) translateX(-50%); }
+    }
+    /* ==================== HOMEPAGE NEW SECTIONS ==================== */
+    .section-header {
+      background: #5b3a6e;
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      font-size: 16px;
+      font-weight: 700;
+      position: relative;
+    }
+    .section-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 100%;
+      height: 1px;
+      width: 100vw;
+      background: #5b3a6e;
+    }
+    .section-wrapper {
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 35px;
+      box-shadow: 0 10px 30px rgba(107, 33, 168, 0.03);
+      overflow: hidden;
+      transition: transform 0.4s var(--ease);
+    }
+
+    /* PR NEWS (1 Large + 4 Small) */
+    .pr-news-container {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .pr-main {
+      flex: 1.2;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .pr-main img {
+      width: 100%;
+      height: auto;
+      max-height: 480px;
+      aspect-ratio: 4 / 5;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    .pr-tag { font-size: 12px; color: #666; }
+    .pr-main h3 { font-size: 20px; font-weight: 700; margin: 0; color: #222; line-height: 1.3; }
+    .pr-meta { font-size: 13px; color: #777; }
+    .pr-excerpt { font-size: 14.5px; color: #555; line-height: 1.5; }
+    .pr-btn {
+      align-self: flex-start;
+      border: 1px solid #333;
+      padding: 6px 16px;
+      font-size: 14px;
+      border-radius: 4px;
+      color: #333;
+      transition: .2s;
+    }
+    .pr-btn:hover { background: #333; color: #fff; }
+
+    .pr-side {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .pr-item {
+      display: flex;
+      gap: 15px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .pr-item img {
+      width: 100px; height: 125px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    .pr-item-info { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+    .pr-item-info h4 { font-size: 16px; font-weight: 700; margin: 0; color: #222; line-height: 1.3; }
+
+    /* OBEC LINE GRID */
+    .obec-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .obec-card {
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .obec-card img {
+      width: 100%;
+      aspect-ratio: 1 / 1.414; /* A4 proportion */
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .obec-card:hover img { 
+      transform: translateY(-8px) scale(1.03); 
+      box-shadow: 0 20px 40px rgba(107, 33, 168, 0.15); 
+    }
+
+    /* Obec Line Viewer Modal */
+    #obecViewer {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 99999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #obecViewer.open { display: flex; }
+    #obecViewerImg {
+      max-width: min(700px, 95vw);
+      max-height: 85vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+      display: block;
+    }
+    #obecViewerTitle {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-align: center;
+      font-family: 'Noto Sans Thai', sans-serif;
+    }
+    #obecViewerCounter {
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+      margin-top: 14px;
+    }
+    .obecViewer-nav {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.12);
+      border: none;
+      color: #fff;
+      font-size: 28px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      z-index: 100000;
+    }
+    .obecViewer-nav:hover { background: rgba(255,255,255,0.25); }
+    #obecViewerPrev { left: 16px; }
+    #obecViewerNext { right: 16px; }
+    #obecViewerClose {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: #fff;
+      font-size: 22px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      z-index: 100000;
+    }
+    #obecViewerClose:hover { background: rgba(255,0,0,0.4); }
+    .obec-footer-links {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .obec-footer-links a { color: #333; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .obec-footer-links a:hover { color: #5b3a6e; }
+
+    /* DOCS GRID (Reused from previous) */
+    .docs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .doc-card {
+      background: #fff;
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      text-decoration: none;
+      color: inherit;
+      transition: .2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .doc-card:hover {
+      border-color: var(--purple-400);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(107,33,168,0.1);
+    }
+    .doc-icon { font-size: 36px; margin-bottom: 12px; }
+    .doc-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .doc-desc { font-size: 12px; color: var(--gray-500); }
+
+    @media (max-width: 768px) {
+      .pr-news-container { flex-direction: column; }
+      .home-grid-2 { grid-template-columns: 1fr !important; }
+      .obec-footer-links { flex-direction: column; gap: 10px; }
+    }
+    /* ==================== PAGE LAYOUT ==================== */
+    .layout {
+      max-width: 1400px;
+      margin: 28px auto 80px;
+      padding: 0 40px;
+    }
+
+    .page-section {
+      display: none;
+      opacity: 0;
+      transform: translateY(15px);
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .page-section.active {
+      display: block;
+    }
+    .page-section.active-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ==================== CONTENT BLOCK ==================== */
+    .block {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+      overflow: hidden;
+      margin-bottom: 24px;
+      transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease);
+    }
+    .block:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(147, 51, 234, 0.06);
+    }
+    .block-head {
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .block-head-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--gray-900);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .block-head-title::before {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 18px;
+      background: linear-gradient(to bottom, var(--purple-500), var(--gold-400));
+      border-radius: 2px;
+    }
+    .block-more {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--purple-600);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      transition: .2s;
+    }
+    .block-more:hover { background: var(--purple-100); }
+    .block-body { padding: 24px; }
+
+    /* ==================== NEWS CARDS ==================== */
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 16px;
+    }
+    .news-card {
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.85);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.01);
+    }
+    .news-card:hover {
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 20px 40px rgba(147, 51, 234, 0.1);
+      border-color: rgba(147, 51, 234, 0.3);
+    }
+    .news-card-thumb {
+      height: 130px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      position: relative;
+    }
+    .cat-dot {
+      position: absolute;
+      top: 10px; left: 10px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .news-card-body { padding: 14px; flex: 1; display: flex; flex-direction: column; }
+    .news-title {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.45;
+      color: var(--gray-900);
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .news-excerpt {
+      font-size: 12.5px;
+      color: var(--gray-500);
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .news-footer {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      border-top: 1px solid var(--gray-100);
+      padding-top: 10px;
+    }
+    .news-date { color: var(--gray-500); }
+    .news-author { color: var(--purple-600); font-weight: 700; }
+
+    /* category color system */
+    .cat-sch  { background: #ede9fe; color: #6d28d9; }
+    .cat-evt  { background: #fef3c7; color: #b45309; }
+    .cat-ann  { background: #fee2e2; color: #b91c1c; }
+    .cat-clb  { background: #d1fae5; color: #065f46; }
+    .cat-awd  { background: #ffedd5; color: #9a3412; }
+    .cat-gen  { background: var(--gray-100); color: var(--gray-500); }
+
+    .cat-sch-bg  { background: #ede9fe22; }
+    .cat-evt-bg  { background: #fef3c722; }
+    .cat-ann-bg  { background: #fee2e222; }
+    .cat-clb-bg  { background: #d1fae522; }
+    .cat-awd-bg  { background: #ffedd522; }
+    .cat-gen-bg  { background: var(--gray-100); }
+
+    /* ==================== FILTER PILLS ==================== */
+    .filter-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .pill {
+      padding: 6px 16px;
+      border-radius: 100px;
+      border: 1.5px solid var(--gray-200);
+      background: var(--white);
+      color: var(--gray-500);
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .2s;
+    }
+    .pill.active, .pill:hover {
+      background: var(--purple-600);
+      color: var(--white);
+      border-color: var(--purple-600);
+    }
+
+    /* ==================== EVENTS TIMELINE ==================== */
+    .events-list { display: flex; flex-direction: column; gap: 12px; }
+    .event-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.8);
+      transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease), border-color 0.3s var(--ease);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+    }
+    .event-row:hover { 
+      border-color: rgba(147, 51, 234, 0.3); 
+      background: rgba(255, 255, 255, 0.95); 
+      transform: translateX(8px) scale(1.01); 
+      box-shadow: 0 12px 25px rgba(147, 51, 234, 0.08); 
+    }
+    .event-date-col {
+      width: 54px;
+      height: 54px;
+      background: linear-gradient(135deg, var(--purple-600), var(--purple-500));
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--white);
+    }
+    .event-day { font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700; line-height: 1; }
+    .event-month-txt { font-size: 10px; font-weight: 600; opacity: .85; }
+    .event-col-info { flex: 1; }
+    .event-type-tag {
+      display: inline-block;
+      background: var(--purple-100);
+      color: var(--purple-700);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 100px;
+      margin-bottom: 3px;
+    }
+    .event-name { font-size: 14px; font-weight: 700; color: var(--gray-900); }
+    .event-desc-txt { font-size: 12.5px; color: var(--gray-500); }
+
+    /* ==================== TEAM GRID ==================== */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+    }
+    .team-card {
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 24px 16px;
+      text-align: center;
+      background: var(--white);
+      transition: .25s var(--ease);
+    }
+    .team-card:hover {
+      border-color: var(--purple-400);
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-3px);
+    }
+    .team-card.president-card {
+      border-color: var(--gold-400);
+      background: linear-gradient(160deg, #fff7ed 0%, #fffbeb 100%);
+    }
+    .team-avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--white);
+      box-shadow: var(--shadow-md);
+    }
+    .team-card.president-card .team-avatar {
+      box-shadow: 0 0 0 3px var(--gold-400), 0 8px 20px rgba(245,158,11,.3);
+    }
+    .team-name { font-size: 14px; font-weight: 800; color: var(--gray-900); }
+    .team-nick { font-size: 12px; color: var(--gray-500); font-style: italic; margin-bottom: 10px; }
+    .team-badge {
+      display: inline-block;
+      background: var(--purple-100);
+      color: var(--purple-700);
+      padding: 3px 12px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .president-card .team-badge {
+      background: var(--gold-400);
+      color: var(--gray-900);
+    }
+
+    /* ==================== ORG CHART ==================== */
+    .org-wrap { overflow-x: auto; padding: 8px 0; }
+    .org-chart { display: flex; flex-direction: column; align-items: center; min-width: 800px; }
+    .org-row { display: flex; gap: 10px; justify-content: center; margin: 10px 0; }
+    .org-node {
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 10px 18px;
+      min-width: 110px;
+      text-align: center;
+      background: var(--white);
+      border-top: 3px solid var(--purple-500);
+      transition: .2s;
+    }
+    .org-node:hover { border-color: var(--purple-400); transform: scale(1.03); }
+    .org-node.top-node { border-top-color: var(--gold-400); background: #fffbeb; }
+    .org-node-role { font-size: 10px; color: var(--purple-600); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
+    .org-node-name { font-size: 13px; font-weight: 700; color: var(--gray-900); }
+    .org-line-v { width: 2px; height: 28px; background: var(--gray-200); }
+    .org-line-h { height: 2px; width: 70%; background: var(--gray-200); }
+
+    /* ==================== VIDEOS ==================== */
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+      padding: 10px 0;
+    }
+    .video-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--gray-200);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s var(--ease);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+    }
+    .video-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(109, 40, 217, 0.1);
+      border-color: var(--purple-200);
+    }
+    .video-thumbnail-wrapper {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 Aspect Ratio */
+      background: #000;
+      overflow: hidden;
+    }
+    .video-thumbnail {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s var(--ease);
+    }
+    .video-card:hover .video-thumbnail {
+      transform: scale(1.05);
+    }
+    .video-play-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      background: rgba(109, 40, 217, 0.9);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      transition: all 0.3s var(--ease);
+      z-index: 2;
+    }
+    .video-play-btn svg {
+      margin-left: 3px;
+      transition: transform 0.3s var(--ease);
+    }
+    .video-card:hover .video-play-btn {
+      background: var(--gold-500);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+      transform: translate(-50%, -50%) scale(1.1);
+    }
+    .video-info {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+    .video-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 8px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .video-desc {
+      font-size: 13px;
+      color: var(--gray-500);
+      line-height: 1.5;
+      margin-top: auto;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Video Viewer Modal */
+    #videoViewer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    #videoViewer.open {
+      display: flex;
+    }
+    .video-viewer-content {
+      width: 90%;
+      max-width: 900px;
+      position: relative;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .video-viewer-ratio {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 */
+    }
+    .video-viewer-ratio iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    #videoViewerClose {
+      position: absolute;
+      top: -45px;
+      right: 0;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    #videoViewerClose:hover {
+      background: #ef4444;
+    }
+
+    /* ==================== SUGGESTION FORM ==================== */
+    .form-card {
+      max-width: 580px;
+      margin: 0 auto;
+      padding: 10px 0;
+    }
+    .form-group { margin-bottom: 20px; }
+    .form-lbl { display: block; font-size: 13px; font-weight: 700; color: var(--gray-700); margin-bottom: 6px; }
+    .form-ctrl {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 14px;
+      color: var(--gray-900);
+      background: var(--gray-50);
+      transition: .2s;
+    }
+    .form-ctrl:focus {
+      outline: none;
+      border-color: var(--purple-500);
+      background: var(--white);
+      box-shadow: 0 0 0 3px rgba(147,51,234,.1);
+    }
+    textarea.form-ctrl { min-height: 130px; }
+    .form-submit {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--purple-600), var(--purple-700));
+      color: var(--white);
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Sarabun', sans-serif;
+      box-shadow: 0 4px 16px rgba(107,33,168,.3);
+      transition: .2s var(--ease);
+    }
+    .form-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(107,33,168,.4); }
+    .form-submit:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+    .form-success-view { display: none; text-align: center; padding: 20px; }
+    .success-icon { font-size: 56px; margin-bottom: 16px; }
+    .success-title { font-size: 19px; font-weight: 800; color: var(--purple-700); }
+
+    /* ==================== CONTACT CARDS ==================== */
+    .contact-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .contact-card {
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 22px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      text-decoration: none;
+      color: inherit;
+      background: var(--white);
+      transition: .2s var(--ease);
+    }
+    .contact-card:hover {
+      border-color: var(--purple-400);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+    .contact-icon-box {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: var(--purple-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .contact-lbl { font-size: 11px; color: var(--gray-500); font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
+    .contact-val { font-size: 14.5px; font-weight: 800; color: var(--gray-900); }
+
+    /* ==================== SIDEBAR WIDGETS ==================== */
+    .widget {
+      background: var(--white);
+      border-radius: var(--radius);
+      border: 1px solid var(--gray-200);
+      box-shadow: var(--shadow-sm);
+      padding: 22px;
+      margin-bottom: 20px;
+    }
+    .widget-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--gray-900);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .widget-title::before {
+      content: '';
+      display: block;
+      width: 3px;
+      height: 16px;
+      background: linear-gradient(to bottom, var(--purple-500), var(--gold-400));
+      border-radius: 2px;
+    }
+
+    /* Leader card widget */
+    .leader-box { text-align: center; }
+    .leader-crown { font-size: 20px; margin-bottom: 4px; }
+    .leader-avatar-box {
+      width: 88px; height: 88px;
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--white);
+      box-shadow: 0 0 0 3px var(--white), 0 0 0 5px var(--purple-500), var(--shadow-md);
+    }
+    .leader-name-txt { font-size: 15px; font-weight: 800; color: var(--gray-900); }
+    .leader-pos-txt { font-size: 11.5px; color: var(--purple-600); font-weight: 700; margin-top: 2px; }
+
+    /* Quick links */
+    .qlink-list { display: flex; flex-direction: column; gap: 8px; }
+    .qlink {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--gray-200);
+      text-decoration: none;
+      color: var(--gray-700);
+      font-size: 13.5px;
+      font-weight: 600;
+      background: var(--gray-50);
+      transition: .2s var(--ease);
+    }
+    .qlink:hover {
+      background: var(--purple-100);
+      border-color: var(--purple-300);
+      color: var(--purple-700);
+      transform: translateX(3px);
+    }
+
+    /* Stats widget */
+    .stat-rows { display: flex; flex-direction: column; gap: 10px; }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--gray-50);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .stat-row strong { color: var(--purple-600); font-size: 16px; }
+
+    /* ==================== CALENDAR ==================== */
+    .cal-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--gray-200);
+      background: var(--white);
+    }
+    .cal-btn {
+      padding: 7px 14px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 6px;
+      background: var(--white);
+      cursor: pointer;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gray-700);
+      transition: .15s;
+    }
+    .cal-btn:hover { background: var(--purple-100); border-color: var(--purple-400); color: var(--purple-700); }
+    .cal-btn.cal-nav { padding: 7px 12px; font-size: 18px; font-weight: 400; }
+    .cal-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--gray-900);
+      margin-left: 4px;
+    }
+    .cal-wrap {
+      overflow-x: auto;
+      max-width: 100%;
+      width: 100%;
+      display: block;
+      -webkit-overflow-scrolling: touch;
+    }
+    .cal-head-row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background: var(--gray-50);
+      border-bottom: 1px solid var(--gray-200);
+      min-width: 560px;
+    }
+    .cal-hday {
+      padding: 10px 0;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-auto-rows: 120px;
+      border-left: 1px solid var(--gray-200);
+      min-width: 560px;
+    }
+    .cal-cell {
+      padding: 6px 6px 4px;
+      border-right: 1px solid var(--gray-200);
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      cursor: pointer;
+      transition: background .15s;
+      overflow: hidden;
+    }
+    .cal-cell:hover { background: #faf5ff; }
+    .cal-cell-other { background: var(--gray-50); }
+    .cal-cell-today { background: #faf5ff; }
+    .cal-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px; height: 26px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--gray-700);
+      border-radius: 50%;
+      flex-shrink: 0;
+      align-self: flex-start;
+    }
+    .cal-cell-other .cal-num { color: var(--gray-300); font-weight: 500; }
+    .cal-num-today {
+      background: #0891b2;
+      color: var(--white) !important;
+    }
+    .cal-event-pill {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--white);
+      padding: 2px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: opacity .15s, filter .15s;
+      line-height: 1.6;
+    }
+    .cal-event-pill:hover { opacity: .85; filter: brightness(1.1); }
+    .cal-more {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gray-500);
+      padding: 1px 6px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .cal-more:hover { background: var(--gray-200); color: var(--gray-700); }
+
+    /* Calendar Popup (FULL SCREEN OVERLAY) */
+    .cal-popup {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: var(--white);
+      display: none;
+      overflow-y: auto;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .cal-popup.show {
+      display: block;
+      opacity: 1;
+    }
+    .cal-popup-inner {
+      background: var(--white);
+      border-radius: 0;
+      padding: 40px;
+      max-width: 100vw;
+      width: 100%;
+      min-height: 100vh;
+      position: relative;
+      box-shadow: none;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .cal-popup.show .cal-popup-inner {
+      transform: translateY(0);
+    }
+    .cal-popup-close {
+      position: absolute;
+      top: 24px; right: 24px;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: var(--gray-100);
+      color: var(--gray-500);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: .15s;
+      z-index: 10;
+    }
+    .cal-popup-close:hover { background: var(--gray-200); color: var(--gray-900); }
+    @media (max-width: 768px) {
+      .cal-popup-inner { padding: 20px; }
+      .cal-popup-close { top: 16px; right: 16px; }
+    }
+
+    /* ==================== FOOTER ==================== */
+
+    footer {
+      background: var(--purple-900);
+      color: rgba(255,255,255,.6);
+      padding: 60px 40px 28px;
+      border-top: 4px solid var(--gold-400);
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+    .footer-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+    .footer-brand-group { display: flex; flex-direction: column; gap: 8px; }
+    .footer-brand-name {
+      font-family: 'Oswald', sans-serif;
+      font-size: 20px;
+      color: var(--gold-300);
+      letter-spacing: 1px;
+    }
+    .footer-brand-desc { font-size: 13px; max-width: 280px; line-height: 1.6; }
+    .footer-nav { display: flex; gap: 20px; flex-wrap: wrap; }
+    .footer-nav a {
+      color: rgba(255,255,255,.5);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 600;
+      transition: .2s;
+    }
+    .footer-nav a:hover { color: var(--gold-300); }
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,.07);
+      padding-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* ==================== LOADER ==================== */
+    .loader {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 48px;
+      color: var(--gray-500);
+    }
+    .spin {
+      width: 32px; height: 32px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--purple-500);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ==================== EMPTY STATE ==================== */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gray-500);
+      font-size: 14px;
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+    /* ==================== RESPONSIVE ==================== */
+    @media (max-width: 1024px) { .layout { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-menu { display: none; }
+      .nav-cta { display: none; }
+      .nav-burger { display: flex; }
+      .full-hero { height: auto; }
+      .scroll-down { display: none !important; }
+      .layout { padding: 0 20px; }
+      .contact-grid { grid-template-columns: 1fr; }
+      .footer-top { flex-direction: column; }
+    }
+    @media (max-width: 480px) {
+      .team-grid { grid-template-columns: repeat(2, 1fr); }
+      .news-grid { grid-template-columns: 1fr; }
+    }
+    /* ==================== PUBLIC MODAL (FULL SCREEN OVERLAY) ==================== */
+    .public-modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--white);
+      z-index: 190; display: none;
+      overflow-y: auto;
+      opacity: 0; transition: opacity 0.3s ease;
+    }
+    .public-modal-overlay.show { display: block; opacity: 1; }
+    .public-modal-content {
+      background: var(--white); width: 100%; max-width: 100vw;
+      min-height: 100vh;
+      border-radius: 0; padding: 80px 40px 40px 40px; box-shadow: none;
+      transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .public-modal-overlay.show .public-modal-content { transform: translateY(0); }
+    .public-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--gray-200); padding-bottom: 16px; flex-shrink: 0; width: 100%; max-width: 1100px; margin: 0 auto 24px; }
+    .public-modal-title { font-size: 22px; font-weight: 800; color: var(--gray-900); }
+    .public-modal-close { background: var(--gray-100); border: none; font-size: 22px; cursor: pointer; color: var(--gray-500); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: .2s; }
+    .public-modal-close:hover { background: var(--gray-200); color: var(--gray-900); }
+    .public-modal-body { display: block; width: 100%; max-width: 1100px; margin: 0 auto; }
+    @media (max-width: 768px) {
+      .public-modal-content { padding: 80px 20px 20px 20px; }
+      .public-modal-header { margin-bottom: 16px; padding-bottom: 12px; }
+      .nav-brand-name { font-size: 15px; }
+      .nav-all-logos { height: 38px; }
+      .public-modal-title { font-size: 18px; }
+      
+      /* Show PDF iframes on mobile with a compact height */
+      #regulations iframe, #manual iframe {
+        display: block !important;
+        height: 480px !important;
+        margin-top: 15px !important;
+      }
+      .btn-download-pdf {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 100% !important;
+        padding: 14px 20px !important;
+        font-size: 14px !important;
+        text-align: center !important;
+      }
+
+      /* Adjust close button for mobile video player overlay */
+      #videoViewerClose {
+        top: 10px !important;
+        right: 10px !important;
+        background: rgba(0, 0, 0, 0.7) !important;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 10;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+      }
+      
+      /* Mobile calendar overrides - stretch to 100% width (no scroll) */
+      .cal-head-row, .cal-grid {
+        min-width: unset !important;
+      }
+      .cal-grid {
+        grid-auto-rows: 70px !important;
+      }
+      .cal-cell {
+        padding: 3px !important;
+      }
+      .cal-hday {
+        font-size: 11px !important;
+        padding: 6px 0 !important;
+      }
+      .cal-num {
+        font-size: 11px !important;
+      }
+      .cal-event-pill {
+        font-size: 8px !important;
+        padding: 1px 3px !important;
+        margin-top: 1px !important;
+        line-height: 1.2 !important;
+        border-radius: 3px !important;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+      .cal-more {
+        font-size: 8px !important;
+        padding: 1px !important;
+        margin-top: 1px !important;
+        line-height: 1.2 !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .nav-all-logos {
+        height: 32px !important;
+      }
+      .nav-brand-name {
+        font-size: 13px !important;
+      }
+      #navbar {
+        padding: 0 10px !important;
+      }
+      .nav-brand {
+        gap: 6px !important;
+      }
+    }
+    .doc-list-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid var(--gray-200); border-radius: 8px; text-decoration: none; color: var(--gray-800); transition: .2s; }
+    .doc-list-item:hover { border-color: var(--purple-400); background: #faf5ff; }
+    .doc-list-info { display: flex; flex-direction: column; gap: 4px; }
+    .doc-list-title { font-size: 14px; font-weight: 600; }
+    .doc-list-meta { font-size: 11px; color: var(--gray-500); }
+    .doc-download-btn { background: var(--purple-100); color: var(--purple-700); padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+
+    /* GLASS BG CIRCLES */
+    .glass-bg-circle {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      z-index: -10;
+      opacity: 0.25;
+      pointer-events: none;
+      animation: float-slow 25s infinite alternate ease-in-out;
+    }
+    .circle-1 {
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(147, 51, 234, 0.4) 0%, rgba(147, 51, 234, 0) 70%);
+      top: 15%;
+      left: -10%;
+    }
+    .circle-2 {
+      width: 550px;
+      height: 550px;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, rgba(245, 158, 11, 0) 70%);
+      bottom: 10%;
+      right: -10%;
+      animation-delay: -7s;
+    }
+    @keyframes float-slow {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(40px, 60px) scale(1.08); }
+      100% { transform: translate(-20px, -40px) scale(0.95); }
+    }
+
+    /* SCROLL REVEAL */
+    .reveal-on-scroll {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-on-scroll.active-reveal {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* TWO COLUMN NEWS DETAIL LAYOUT */
+    .news-detail-layout {
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      gap: 30px;
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .news-detail-main {
+      background: #fff;
+    }
+    .news-detail-sidebar {
+      position: sticky;
+      top: 20px;
+      align-self: start;
+    }
+    @media (max-width: 900px) {
+      .news-detail-layout {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+      .news-detail-sidebar {
+        position: static;
+      }
+    }
+    html.modal-open, body.modal-open {
+      overflow: hidden !important;
+    }
+    body.modal-open #backToTop {
+      display: none !important;
+    }
+    body.modal-open #navbar {
+      position: fixed !important;
+      top: 0;
+      left: 0;
+      right: 0;
+    }
+
+    /* ==================== SPECTACULAR GLOW & LIGHTING UX OVERRIDES ==================== */
+    @keyframes glowFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes textShine {
+      to { background-position: 200% center; }
+    }
+    @keyframes pulseGlow {
+      0% { opacity: 0.45; transform: translate(-50%, -50%) scale(1); filter: blur(50px); }
+      100% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.15); filter: blur(65px); }
+    }
+
+    /* Floating blobs with richer opacity */
+    .circle-1 {
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.45) 0%, rgba(251, 191, 36, 0.2) 40%, rgba(245, 158, 11, 0) 70%) !important;
+      opacity: 0.45 !important;
+    }
+    .circle-2 {
+      background: radial-gradient(circle, rgba(251, 191, 36, 0.4) 0%, rgba(253, 224, 71, 0.15) 50%, rgba(0, 0, 0, 0) 70%) !important;
+      opacity: 0.45 !important;
+    }
+
+    /* Backlight for Hero banner */
+    .full-hero {
+      position: relative;
+      overflow: hidden;
+    }
+    .full-hero::before {
+      content: '';
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.4) 0%, rgba(253, 224, 71, 0.18) 50%, rgba(0,0,0,0) 80%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 1;
+      animation: pulseGlow 6s infinite alternate ease-in-out;
+    }
+    .full-hero img.hero-img {
+      position: relative;
+      z-index: 2;
+    }
+    .scroll-down {
+      z-index: 3;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.15), inset 0 0 10px rgba(255, 255, 255, 0.1);
+    }
+    .scroll-down:hover {
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.6), inset 0 0 15px rgba(245, 158, 11, 0.4);
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    /* Neon indicator Navbar */
+    nav {
+      background: rgba(17, 17, 17, 0.8) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    nav::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.6), rgba(253, 224, 71, 0.6), transparent);
+    }
+    .nav-brand-name {
+      background: linear-gradient(135deg, #fff, #fcd34d, #f59e0b, #fff);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: textShine 5s linear infinite;
+    }
+
+    /* Section Header and Title Accents */
+    .section-header {
+      background: linear-gradient(90deg, #d97706, #fbbf24, #f59e0b, #d97706);
+      background-size: 300% 300%;
+      animation: glowFlow 8s ease infinite;
+      border-radius: 6px;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+    }
+    .section-header::after {
+      background: linear-gradient(90deg, #fbbf24, transparent);
+      height: 2px;
+      opacity: 0.5;
+    }
+    .block-head-title::before {
+      background: linear-gradient(to bottom, #fbbf24, #fcd34d, #d97706);
+      background-size: 100% 300%;
+      animation: glowFlow 4s ease infinite;
+    }
+
+    /* Glassmorphism Section Wrapper */
+    .section-wrapper {
+      background: rgba(255, 255, 255, 0.45) !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.55) !important;
+      box-shadow: 0 15px 35px rgba(245, 158, 11, 0.05), inset 0 0 20px rgba(255,255,255,0.3) !important;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .section-wrapper:hover {
+      box-shadow: 0 20px 50px rgba(245, 158, 11, 0.08), inset 0 0 25px rgba(255,255,255,0.4) !important;
+      border-color: rgba(245, 158, 11, 0.25) !important;
+    }
+
+    /* Glow Cards (News card, Obec, Documents, etc.) */
+    .news-card, .doc-card, .event-row, .team-card, .org-node, .contact-card, .qlink, .pr-main, .pr-item {
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Light Shine Sweep overlay */
+    .news-card::before, .doc-card::before, .event-row::before, .team-card::before, .org-node::before, .contact-card::before, .qlink::before, .section-wrapper::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -150%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+      transform: skewX(-25deg);
+      pointer-events: none;
+      z-index: 10;
+    }
+    .news-card:hover::before, .doc-card:hover::before, .event-row:hover::before, .team-card:hover::before, .org-node:hover::before, .contact-card:hover::before, .qlink:hover::before, .section-wrapper:hover::before {
+      left: 150%;
+      transition: left 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Custom glow shadow effects on hover */
+    .news-card {
+      background: rgba(255, 255, 255, 0.75) !important;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.6) !important;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .news-card:hover {
+      transform: translateY(-6px) scale(1.02) !important;
+      box-shadow: 0 20px 40px rgba(245, 158, 11, 0.16), 0 0 15px rgba(245, 158, 11, 0.08) !important;
+      border-color: rgba(245, 158, 11, 0.45) !important;
+    }
+
+    /* Obec Card glow */
+    .obec-card img {
+      border: 1.5px solid rgba(255, 255, 255, 0.6) !important;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .obec-card:hover img {
+      transform: translateY(-8px) scale(1.04) !important;
+      box-shadow: 0 20px 45px rgba(245, 158, 11, 0.28), 0 0 18px rgba(245, 158, 11, 0.16) !important;
+      border-color: rgba(245, 158, 11, 0.65) !important;
+    }
+
+    /* PR News glowing elements */
+    .pr-main img {
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .pr-main:hover img {
+      transform: translateY(-4px) scale(1.01);
+      box-shadow: 0 15px 35px rgba(245, 158, 11, 0.2), 0 0 15px rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.45);
+    }
+    .pr-item img {
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.3s var(--ease);
+    }
+    .pr-item:hover img {
+      transform: scale(1.05);
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.18);
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    .pr-btn {
+      border: 1.5px solid var(--gold-500) !important;
+      color: var(--gold-500) !important;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.5);
+      transition: all 0.3s var(--ease) !important;
+    }
+    .pr-btn:hover {
+      background: linear-gradient(135deg, var(--gold-500), var(--gold-400)) !important;
+      color: #fff !important;
+      box-shadow: 0 5px 15px rgba(245, 158, 11, 0.3);
+      border-color: transparent !important;
+    }
+
+    /* Document cards glow */
+    .doc-card {
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .doc-card:hover {
+      border-color: rgba(245, 158, 11, 0.5) !important;
+      transform: translateY(-4px) !important;
+      box-shadow: 0 12px 30px rgba(245, 158, 11, 0.16), 0 0 12px rgba(245, 158, 11, 0.08) !important;
+    }
+
+    /* Event Row slide glow */
+    .event-row {
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .event-row:hover {
+      border-color: rgba(245, 158, 11, 0.4) !important;
+      transform: translateX(10px) scale(1.005) !important;
+      box-shadow: 0 15px 30px rgba(245, 158, 11, 0.12) !important;
+    }
+
+    /* Team card pulse */
+    .team-card {
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .team-card:hover {
+      border-color: rgba(245, 158, 11, 0.5) !important;
+      box-shadow: 0 15px 35px rgba(245, 158, 11, 0.18) !important;
+      transform: translateY(-5px) !important;
+    }
+    .team-card.president-card {
+      position: relative;
+    }
+    .team-card.president-card:hover {
+      box-shadow: 0 15px 35px rgba(245, 158, 11, 0.25), 0 0 15px rgba(245, 158, 11, 0.12) !important;
+      border-color: var(--gold-500) !important;
+    }
+
+    /* Org node hover */
+    .org-node {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .org-node:hover {
+      border-color: var(--gold-400) !important;
+      transform: translateY(-2px) scale(1.04) !important;
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.15) !important;
+    }
+    .org-node.top-node:hover {
+      border-color: var(--gold-400) !important;
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.2) !important;
+    }
+
+    /* Contact card reflection */
+    .contact-card {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .contact-card:hover {
+      border-color: rgba(245, 158, 11, 0.5) !important;
+      box-shadow: 0 10px 25px rgba(245, 158, 11, 0.14) !important;
+      transform: translateY(-3px) !important;
+    }
+
+    /* Quick link glow */
+    .qlink {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .qlink:hover {
+      border-color: rgba(245, 158, 11, 0.4) !important;
+      box-shadow: 0 6px 15px rgba(245, 158, 11, 0.1) !important;
+      transform: translateX(6px) !important;
+    }
+
+    /* Form control focus glow */
+    .form-ctrl {
+      transition: all 0.25s var(--ease) !important;
+    }
+    .form-ctrl:focus {
+      border-color: var(--gold-500) !important;
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18), 0 0 10px rgba(245, 158, 11, 0.1) !important;
+    }
+    .form-submit {
+      background: linear-gradient(135deg, var(--gold-500), var(--gold-400)) !important;
+      background-size: 200% auto;
+      transition: all 0.3s var(--ease) !important;
+    }
+    .form-submit:hover {
+      background-position: right center;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(245, 158, 11, 0.45), 0 0 15px rgba(245, 158, 11, 0.2) !important;
+    }
+
+    /* Particle Canvas Background */
+    #particleCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -5;
+      pointer-events: none;
+      opacity: 0.85;
+    }
+
+
+    /* Floating Back-to-Top Button */
+    #backToTop {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(17, 17, 17, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      z-index: 999;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(20px);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #backToTop.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    #backToTop:hover {
+      background: #7c3aed;
+      border-color: rgba(168, 85, 247, 0.4);
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.6);
+      transform: translateY(-4px) scale(1.05);
+    }
+
+  </style>
+</head>
+<body>
+  <div class="glass-bg-circle circle-1"></div>
+  <div class="glass-bg-circle circle-2"></div>
+  <canvas id="particleCanvas"></canvas>
+
+  <button id="backToTop" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="เลื่อนกลับขึ้นด้านบน">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+  </button>
+
+
+
+  <!-- NAVBAR -->
+  <nav id="navbar">
+    <a href="#/home" class="nav-brand">
+      <img src="./all-logos.png" alt="School Logos" class="nav-all-logos" onerror="this.style.display='none'"/>
+      <span class="nav-brand-name">SWSC<span>.</span>OFFICIAL</span>
+    </a>
+    <ul class="nav-menu">
+      <li class="nav-item"><a href="#/home" class="nav-link" style="color: #a855f7;">หน้าแรก</a></li>
+      <li class="nav-item">
+        <a href="javascript:void(0)" class="nav-link">🏘️ ข้อมูลพื้นฐาน <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
+        <div class="nav-dropdown">
+          <a href="#/news">📰 ข่าวประชาสัมพันธ์</a>
+          <a href="#/regulations">📜 ระเบียบโรงเรียนสรรพวิทยาคมว่าด้วยคณะกรรมการสภานักเรียน โรงเรียนสรรพวิทยาคม</a>
+          <a href="#/manual">📘 คู่มือการปฏิบัติงานสภานักเรียน โรงเรียนสรรพวิทยาคม</a>
+          <a href="#/structure">🏛️ โครงสร้างการบริหารงาน</a>
+        </div>
+      </li>
+      <li class="nav-item">
+        <a href="javascript:void(0)" class="nav-link">📁 ข้อมูลบริการ <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
+        <div class="nav-dropdown">
+          <a href="#/events">📅 ปฏิทินกิจกรรม</a>
+          <a href="#/suggestions">💬 ข้อเสนอแนะ/ร้องเรียน</a>
+          <a href="#/documents">📑 เอกสารวิชาการ</a>
+          <a href="#/certificates">🎓 ค้นหาเกียรติบัตร</a>
+        </div>
+      </li>
+      <li class="nav-item">
+        <a href="javascript:void(0)" class="nav-link">🌐 เว็บไซต์บริการ <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
+        <div class="nav-dropdown">
+          <a href="https://www.sappha.ac.th" target="_blank">🏫 เว็บไซต์โรงเรียนสรรพวิทยาคม</a>
+          <a href="admin.html#/login">🔐 ระบบภายในสภา</a>
+        </div>
+      </li>
+      <li class="nav-item">
+        <a href="javascript:void(0)" class="nav-link">🎞️ สื่อวีดิทัศน์ <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
+        <div class="nav-dropdown">
+          <a href="#/videos">📺 วิดีโอกิจกรรม</a>
+        </div>
+      </li>
+      <li class="nav-item"><a href="#/contact" class="nav-link">📞 ติดต่อเรา</a></li>
+
+    </ul>
+    <button class="nav-burger" id="burger"><span></span><span></span><span></span></button>
+  </nav>
+  <div class="mobile-menu" id="mobileMenu">
+    <!-- หน้าแรก -->
+    <a href="#/home" onclick="closeMobile()">🏠 หน้าแรก</a>
+
+    <!-- ข้อมูลพื้นฐาน -->
+    <div class="mobile-dropdown-parent">
+      <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
+        <span>🏘️ ข้อมูลพื้นฐาน</span>
+        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="mobile-dropdown-sub">
+        <a href="#/news" onclick="closeMobile()">📰 ข่าวประชาสัมพันธ์</a>
+        <a href="#/regulations" onclick="closeMobile()">📜 ระเบียบสภาฯ</a>
+        <a href="#/manual" onclick="closeMobile()">📘 คู่มือปฏิบัติงาน</a>
+        <a href="#/structure" onclick="closeMobile()">🏛️ โครงสร้างการบริหารงาน</a>
+      </div>
+    </div>
+
+    <!-- ข้อมูลบริการ -->
+    <div class="mobile-dropdown-parent">
+      <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
+        <span>📁 ข้อมูลบริการ</span>
+        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="mobile-dropdown-sub">
+        <a href="#/events" onclick="closeMobile()">📅 ปฏิทินกิจกรรม</a>
+        <a href="#/suggestions" onclick="closeMobile()">💬 ข้อเสนอแนะ/ร้องเรียน</a>
+        <a href="#/documents" onclick="closeMobile()">📑 เอกสารวิชาการ</a>
+        <a href="#/certificates" onclick="closeMobile()">🎓 ค้นหาเกียรติบัตร</a>
+      </div>
+    </div>
+
+    <!-- เว็บไซต์บริการ -->
+    <div class="mobile-dropdown-parent">
+      <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
+        <span>🌐 เว็บไซต์บริการ</span>
+        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="mobile-dropdown-sub">
+        <a href="https://www.sappha.ac.th" target="_blank" onclick="closeMobile()">🏫 เว็บไซต์โรงเรียน</a>
+        <a href="admin.html#/login" onclick="closeMobile()">🔐 ระบบภายในสภา</a>
+      </div>
+    </div>
+
+    <!-- สื่อวีดิทัศน์ -->
+    <div class="mobile-dropdown-parent">
+      <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
+        <span>🎞️ สื่อวีดิทัศน์</span>
+        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="mobile-dropdown-sub">
+        <a href="#/videos" onclick="closeMobile()">🎬 วิดีโอกิจกรรม</a>
+      </div>
+    </div>
+
+    <!-- ติดต่อเรา -->
+    <a href="#/contact" onclick="closeMobile()">📞 ติดต่อเรา</a>
+  </div>
+
+  <!-- FULL HERO BANNER -->
+  <!-- LOADING SCREEN -->
+  <div id="loadingScreen">
+    <div class="loader-logo">
+      <img src="./logo.png" alt="SWSC" onerror="this.style.display='none'" />
+    </div>
+    <div class="loader-title">SWSC.OFFICIAL</div>
+    <div class="loader-subtitle">คณะกรรมการนักเรียน โรงเรียนสรรพวิทยาคม</div>
+    <div class="loader-bar-wrap"><div class="loader-bar"></div></div>
+  </div>
+
+  <header class="full-hero" id="fullHero">
+    <img src="./hero-group.png" alt="Student Council" class="hero-img" />
+
+    <div style="display:none">
+      <div id="hStatNews"></div>
+      <div id="hStatEvents"></div>
+      <div id="hStatMembers"></div>
+    </div>
+    <div class="scroll-down" onclick="window.scrollTo({top: window.innerHeight, behavior: 'smooth'})">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+  </header>
+
+  <!-- MAIN PAGE LAYOUT -->
+  <div class="layout">
+    <main>
+
+      <!-- PAGE: HOME -->
+      <div class="page-section active" id="homePage">
+        
+        <!-- ===== ANNOUNCEMENT CAROUSEL ===== -->
+        <div class="announcement-carousel-wrap" id="announcementCarouselWrap">
+
+          <!-- Loading state -->
+          <div id="carouselLoading" style="display:flex;align-items:center;justify-content:center;height:100%;gap:12px;color:#aaa;background:#f3f4f6;border-radius:12px;">
+            <div class="spin"></div><span>กำลังโหลด...</span>
+          </div>
+
+          <!-- Arrow left -->
+          <button id="carouselPrev" onclick="carouselMove(-1)" style="
+            display:none;position:absolute;left:12px;top:50%;transform:translateY(-50%);
+            z-index:20;background:rgba(255,255,255,0.75);border:none;
+            color:#333;font-size:24px;width:40px;height:40px;border-radius:50%;cursor:pointer;
+            transition:.2s;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,0.2);
+          " onmouseover="this.style.background='rgba(255,255,255,0.95)'" onmouseout="this.style.background='rgba(255,255,255,0.75)'">‹</button>
+
+          <!-- Arrow right -->
+          <button id="carouselNext" onclick="carouselMove(1)" style="
+            display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);
+            z-index:20;background:rgba(255,255,255,0.75);border:none;
+            color:#333;font-size:24px;width:40px;height:40px;border-radius:50%;cursor:pointer;
+            transition:.2s;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,0.2);
+          " onmouseover="this.style.background='rgba(255,255,255,0.95)'" onmouseout="this.style.background='rgba(255,255,255,0.75)'">›</button>
+
+          <!-- Slides container -->
+          <div id="carouselSlides" style="display:flex;height:100%;transition:transform 0.45s cubic-bezier(.4,0,.2,1);will-change:transform;"></div>
+
+          <!-- Dot indicators overlaid on image -->
+          <div id="carouselDots" style="position:absolute;bottom:80px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:15;"></div>
+
+          <!-- Thumbnail strip (overlaid at bottom) -->
+          <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);padding:8px 12px;z-index:16;">
+            <div id="carouselThumbs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;"></div>
+          </div>
+        </div>
+        <!-- ===== END ANNOUNCEMENT CAROUSEL ===== -->
+
+        <!-- ===== STATS COUNTER STRIP ===== -->
+        <div class="stats-strip" id="statsStrip">
+          <div class="stat-item">
+            <div class="stat-icon">📰</div>
+            <div class="stat-number" data-target="0" id="statNews">0</div>
+            <div class="stat-label">ข่าวสารประชาสัมพันธ์</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">📅</div>
+            <div class="stat-number" data-target="0" id="statEvents">0</div>
+            <div class="stat-label">กิจกรรมในปีการศึกษา</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">👥</div>
+            <div class="stat-number" data-target="27" id="statMembers">0</div>
+            <div class="stat-label">คณะกรรมการนักเรียน</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">🏫</div>
+            <div class="stat-number" data-target="4" id="statFactions">0</div>
+            <div class="stat-label">ฝ่ายงานในสภา</div>
+          </div>
+        </div>
+
+        <!-- ข่าวประชาสัมพันธ์ (PR News Redesign) -->
+        <div class="section-wrapper">
+          <div class="section-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            ข่าวประชาสัมพันธ์
+          </div>
+          <div class="pr-news-container" id="homeNewsContainer">
+            <div class="loader" style="width:100%;text-align:center;padding:40px 0;"><div class="spin"></div><span style="display:block;margin-top:10px;">กำลังโหลดข่าวสาร...</span></div>
+          </div>
+        </div>
+
+
+        <!-- OBEC Line -->
+        <div class="section-wrapper">
+          <div class="section-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Obec Line
+          </div>
+          <div class="obec-grid">
+            <div style="grid-column: 1/-1; text-align:center; padding:20px; color:var(--gray-500);">กำลังโหลดข้อมูล...</div>
+          </div>
+          <div class="obec-footer-links">
+            <a href="https://drive.google.com/drive/folders/1Ts11XqYXpXern2H2uPAsHFM27SYKSAjY?usp=sharing" target="_blank"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg> อ่าน Obec Line เพิ่มเติม</a>
+          </div>
+        </div>
+
+        <div class="home-grid-2" style="display:grid; grid-template-columns: 1fr; gap: 28px;">
+          <!-- ปฏิทินกิจกรรม -->
+          <div class="block">
+            <div class="block-head">
+              <span class="block-head-title">ปฏิทินกิจกรรม</span>
+              <a href="#/events" class="block-more">ดูทั้งหมด →</a>
+            </div>
+            <div class="block-body" style="padding:0">
+              <div class="cal-toolbar" style="justify-content: space-between;">
+                <button class="cal-btn" onclick="calChangeMonth(-1)">← ก่อนหน้า</button>
+                <span class="cal-title" id="homeCalTitle" style="color: #0891b2; font-size: 18px;">ก.ค. 2569</span>
+                <button class="cal-btn" onclick="calChangeMonth(1)">ถัดไป →</button>
+              </div>
+              <div class="cal-wrap">
+                <div class="cal-head-row">
+                  <div class="cal-hday">อา.</div><div class="cal-hday">จ.</div><div class="cal-hday">อ.</div><div class="cal-hday">พ.</div><div class="cal-hday">พฤ.</div><div class="cal-hday">ศ.</div><div class="cal-hday">ส.</div>
+                </div>
+                <div class="cal-grid" id="homeCalGrid">
+                  <div class="loader" style="grid-column:1/-1"><div class="spin"></div><span>กำลังโหลดปฏิทิน...</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PAGE: NEWS -->
+      <div class="page-section" id="news">
+        <div class="block">
+          <div class="block-head">
+            <span class="block-head-title">คลังข่าวสารและประชาสัมพันธ์</span>
+          </div>
+          <div class="block-body">
+            <div class="filter-row" id="newsFilter">
+              <button class="pill active" onclick="filterNews('all',this)">ทั้งหมด</button>
+              <button class="pill" onclick="filterNews('ข่าวโรงเรียน',this)">ข่าวโรงเรียน</button>
+              <button class="pill" onclick="filterNews('กิจกรรมสภา',this)">กิจกรรมสภา</button>
+              <button class="pill" onclick="filterNews('ผลงาน',this)">ผลงาน</button>
+              <button class="pill" onclick="filterNews('ข่าวชมรม',this)">ข่าวชมรม</button>
+            </div>
+            <div class="news-grid" id="fullNewsGrid">
+              <div class="loader"><div class="spin"></div><span>กำลังโหลดข่าวสาร...</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: EVENTS -->
+      <div class="page-section" id="events">
+        <div class="block">
+          <div class="block-head">
+            <span class="block-head-title">📅 ปฏิทินกิจกรรม</span>
+          </div>
+          <div class="block-body" style="padding:0">
+
+            <!-- Calendar Toolbar -->
+            <div class="cal-toolbar" style="justify-content: space-between;">
+              <button class="cal-btn" onclick="calChangeMonth(-1)">← ก่อนหน้า</button>
+              <span class="cal-title" id="calTitle" style="color: #0891b2; font-size: 18px;">ก.ค. 2569</span>
+              <button class="cal-btn" onclick="calChangeMonth(1)">ถัดไป →</button>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="cal-wrap">
+              <div class="cal-head-row">
+                <div class="cal-hday">อา.</div>
+                <div class="cal-hday">จ.</div>
+                <div class="cal-hday">อ.</div>
+                <div class="cal-hday">พ.</div>
+                <div class="cal-hday">พฤ.</div>
+                <div class="cal-hday">ศ.</div>
+                <div class="cal-hday">ส.</div>
+              </div>
+              <div class="cal-grid" id="calGrid">
+                <div class="loader" style="grid-column:1/-1"><div class="spin"></div><span>กำลังโหลดปฏิทิน...</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- PAGE: CONTACT -->
+      <div class="page-section" id="contact">
+        <div class="block">
+          <div class="block-head">
+            <span class="block-head-title">📞 ติดต่อเรา</span>
+          </div>
+          <div class="block-body" style="padding:0">
+            <div class="contact-grid">
+              <a href="https://www.facebook.com/profile.php?id=100078807302585&locale=th_TH" target="_blank" class="contact-card">
+                <div class="contact-icon" style="background:#1877F2;color:white">f</div>
+                <div class="contact-info">
+                  <div class="contact-name">Facebook Page</div>
+                  <div class="contact-desc">สภานักเรียนโรงเรียนสรรพวิทยาคม</div>
+                </div>
+              </a>
+              <a href="https://www.sappha.ac.th" target="_blank" class="contact-card">
+                <div class="contact-icon" style="background:var(--purple-600);color:white">🌐</div>
+                <div class="contact-info">
+                  <div class="contact-name">Website</div>
+                  <div class="contact-desc">www.sappha.ac.th</div>
+                </div>
+              </a>
+              <a href="mailto:swscsappha@sappha.ac.th" class="contact-card">
+                <div class="contact-icon" style="background:#ea4335;color:white">✉️</div>
+                <div class="contact-info">
+                  <div class="contact-name">Email</div>
+                  <div class="contact-desc">swscsappha@sappha.ac.th</div>
+                </div>
+              </a>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: DOCUMENTS -->
+      <div class="page-section" id="documents">
+        <div class="block">
+          <div class="block-head">
+            <span class="block-head-title">📑 เอกสารวิชาการ</span>
+          </div>
+          <div class="block-body">
+            <div class="docs-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
+              <a href="javascript:void(0)" class="doc-card" style="padding: 15px;" onclick="openDocCategory('วาระการประชุม', 'sec')">
+                <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">📑</div>
+                <div class="doc-title" style="font-size:14px;">วาระการประชุม</div>
+              </a>
+              <a href="javascript:void(0)" class="doc-card" style="padding: 15px;" onclick="openDocCategory('สรุปการประชุม', 'sec')">
+                <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">📝</div>
+                <div class="doc-title" style="font-size:14px;">สรุปการประชุม</div>
+              </a>
+              <a href="javascript:void(0)" class="doc-card" style="padding: 15px;" onclick="openDocCategory('ใบขอเวลาเรียน', 'academic')">
+                <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">🕒</div>
+                <div class="doc-title" style="font-size:14px;">ใบขอเวลาเรียน</div>
+              </a>
+              <a href="javascript:void(0)" class="doc-card" style="padding: 15px;" onclick="openDocCategory('เอกสารโครงการ', 'academic')">
+                <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">📄</div>
+                <div class="doc-title" style="font-size:14px;">เอกสารโครงการ</div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: CERTIFICATES -->
+      <div class="page-section" id="certificates">
+        <div class="block">
+          <div class="block-head">
+            <span class="block-head-title">🎓 ค้นหาและดาวน์โหลดเกียรติบัตร</span>
+          </div>
+          <div class="block-body" style="padding: 30px 20px;">
+            <div style="max-width: 500px; margin: 0 auto; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.6); padding: 25px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.03);">
+              <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 40px; margin-bottom: 10px;">🎓</div>
+                <h3 style="font-size: 18px; color: var(--purple-950); margin-bottom: 6px; font-weight: 700;">ตรวจสอบเกียรติบัตรของคุณ</h3>
+                <p style="font-size: 13px; color: var(--gray-500); line-height: 1.5;">กรอกเลขประจำตัวนักเรียน 5 หลัก เพื่อค้นหาและดาวน์โหลดเกียรติบัตรกิจกรรมต่างๆ ที่คุณเข้าร่วม</p>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                  <label style="display: block; font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px;">เลขประจำตัวนักเรียน</label>
+                  <input type="text" id="certStudentIdPage" placeholder="ระบุเลขประจำตัว 5 หลัก เช่น 12345" style="width: 100%; padding: 12px 16px; border: 1px solid var(--gray-300); border-radius: 10px; font-size: 14px; outline: none; transition: border 0.2s;" onkeypress="if(event.key === 'Enter') searchCertificatesPage()" />
+                </div>
+                <button onclick="searchCertificatesPage()" style="width: 100%; background: linear-gradient(135deg, var(--purple-600), var(--purple-700)); color: white; border: none; border-radius: 10px; padding: 12px 20px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(147, 51, 234, 0.2); transition: all 0.2s;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  ค้นหาเกียรติบัตร
+                </button>
+              </div>
+            </div>
+            
+            <!-- Result Area -->
+            <div id="certPageResult" style="max-width: 600px; margin: 30px auto 0; display: flex; flex-direction: column; gap: 10px;">
+              <!-- Results will render here dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: REGULATIONS -->
+      <div class="page-section" id="regulations">
+        <div class="block">
+          <div class="block-head">
+            <span class="block-head-title">📜 ระเบียบโรงเรียนสรรพวิทยาคมว่าด้วยคณะกรรมการสภานักเรียน</span>
+          </div>
+          <div class="block-body" style="padding: 20px;">
+            <div style="text-align: right; margin-bottom: 20px;">
+              <a href="./regulations.pdf" target="_blank" class="btn-download-pdf">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                ดาวน์โหลดฉบับเต็ม (PDF)
+              </a>
+            </div>
+            <iframe src="./regulations.pdf" width="100%" height="800px" style="border: 1px solid var(--gray-200); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+              <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./regulations.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
+            </iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: MANUAL -->
+      <div class="page-section" id="manual">
+        <div class="block">
+          <div class="block-head">
+            <span class="block-head-title">📘 คู่มือการปฏิบัติงานสภานักเรียน</span>
+          </div>
+          <div class="block-body" style="padding: 20px;">
+            <div style="text-align: right; margin-bottom: 20px;">
+              <a href="./manual.pdf" target="_blank" class="btn-download-pdf">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                ดาวน์โหลดคู่มือการปฏิบัติงาน (PDF)
+              </a>
+            </div>
+            <iframe src="./manual.pdf" width="100%" height="800px" style="border: 1px solid var(--gray-200); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+              <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./manual.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
+            </iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: STRUCTURE -->
+      <div class="page-section" id="structure">
+        <div class="block">
+          <div class="block-head">
+            <span class="block-head-title">🏛️ โครงสร้างการบริหารกิจกรรมสภานักเรียน</span>
+          </div>
+          <div class="block-body" style="padding: 25px 20px; text-align: center;">
+
+            
+            <!-- Image viewport container -->
+            <div id="structureImgContainer" style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
+              <a href="./structure.png" target="_blank" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
+                <img id="structureImg" src="./structure.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: SUGGESTIONS -->
+      <div class="page-section" id="suggestions">
+        <div class="block">
+          <div class="block-head"><span class="block-head-title">กล่องรับข้อเสนอแนะและฟีดแบ็ค</span></div>
+          <div class="block-body">
+            <div class="form-card">
+              <div id="formView">
+                <div class="form-group">
+                  <label class="form-lbl">ชื่อผู้เสนอแนะ (ไม่ระบุก็ได้)</label>
+                  <input type="text" class="form-ctrl" id="sugName" placeholder="ระบุชื่อหรือนามแฝง" />
+                </div>
+                <div class="form-group">
+                  <label class="form-lbl">ประเภทเรื่องที่ต้องการเสนอ</label>
+                  <select class="form-ctrl" id="sugType">
+                    <option value="ทั่วไป">💬 ทั่วไป / อื่นๆ</option>
+                    <option value="กิจกรรม">🎉 การจัดกิจกรรมในโรงเรียน</option>
+                    <option value="สิ่งอำนวยความสะดวก">🏫 สิ่งอำนวยความสะดวก</option>
+                    <option value="ร้องเรียน">📣 เรื่องร้องเรียน</option>
+                    <option value="ชมเชย">⭐ ชมเชยคณะทำงาน</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-lbl">รายละเอียด <span style="color:#ef4444">*</span></label>
+                  <textarea class="form-ctrl" id="sugMessage" placeholder="เขียนข้อความของคุณอย่างสุภาพ..."></textarea>
+                </div>
+                <button class="form-submit" id="sugSubmit" onclick="submitSug()">ส่งข้อเสนอแนะสภา</button>
+              </div>
+              <div class="form-success-view" id="successView">
+                <div class="success-icon">🎉</div>
+                <div class="success-title">ส่งเรียบร้อยแล้ว!</div>
+                <p style="color:var(--gray-500);font-size:14px;margin:8px 0 20px">ขอบคุณสำหรับการมีส่วนร่วม สภานักเรียนจะนำฟีดแบ็คของคุณเข้าพิจารณาในการประชุมครั้งถัดไป</p>
+                <button class="form-submit" onclick="resetForm()" style="max-width:180px">ส่งเรื่องเพิ่มเติม</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: VIDEOS -->
+      <div class="page-section" id="videos">
+        <div class="block">
+          <div class="block-head"><span class="block-head-title">🎬 วิดีโอกิจกรรมสภานักเรียน</span></div>
+          <div class="block-body" style="padding: 20px;">
+            <div class="video-grid" id="videoGrid">
+              <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--gray-500);">
+                กำลังโหลดวิดีโอ...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: CONTACT -->
+      <div class="page-section" id="contact">
+        <div class="block">
+          <div class="block-head"><span class="block-head-title">ช่องทางการติดต่อ</span></div>
+          <div class="block-body">
+            <div class="contact-grid">
+              <a href="https://www.sappha.ac.th" target="_blank" class="contact-card">
+                <div class="contact-icon-box">🏫</div>
+                <div>
+                  <div class="contact-lbl">เว็บไซต์โรงเรียน</div>
+                  <div class="contact-val">www.sappha.ac.th</div>
+                </div>
+              </a>
+              <a href="#" class="contact-card">
+                <div class="contact-icon-box">📘</div>
+                <div>
+                  <div class="contact-lbl">Facebook Page</div>
+                  <div class="contact-val">SWSC Official</div>
+                </div>
+              </a>
+              <a href="#" class="contact-card">
+                <div class="contact-icon-box">💬</div>
+                <div>
+                  <div class="contact-lbl">LINE Official</div>
+                  <div class="contact-val">@SWSC_SAPA</div>
+                </div>
+              </a>
+              <div class="contact-card">
+                <div class="contact-icon-box">📍</div>
+                <div>
+                  <div class="contact-lbl">สถานที่</div>
+                  <div class="contact-val">ห้องสำนักงานสภาฯ ชั้น 1</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Detail Popup (Global) -->
+      <div class="cal-popup" id="calPopup" style="display:none">
+        <div class="cal-popup-inner">
+          <button class="cal-popup-close" onclick="closeCalPopup()">✕</button>
+          <div id="calPopupContent"></div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer style="background: linear-gradient(180deg, #1e1b4b 0%, #0f0b29 100%); color: rgba(255, 255, 255, 0.7); padding: 50px 20px 30px; border-top: 4px solid var(--gold-400); position: relative; font-family: 'Inter', sans-serif;">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px;">
+      
+      <!-- Top Row: Branding and Multi-column Links -->
+      <div style="display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap;">
+        
+        <!-- Column 1: Brand Info -->
+        <div style="flex: 1.5; min-width: 260px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="./all-logos.png" alt="SWSC" style="height: 38px; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));" />
+            <div>
+              <div style="font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 0.5px; line-height: 1;">
+                SWSC<span style="color: var(--gold-400);">.</span>OFFICIAL
+              </div>
+              <div style="font-size: 11px; color: var(--gold-400); font-weight: 700; margin-top: 4px; letter-spacing: 1px;">STUDENT COUNCIL PORTAL</div>
+            </div>
+          </div>
+          <p style="font-size: 13.5px; line-height: 1.6; color: rgba(255, 255, 255, 0.6); margin: 0; max-width: 380px;">
+            คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม อำเภอแม่สอด จังหวัดตาก — ระบบสารสนเทศสภานักเรียน พัฒนาขึ้นเพื่อการบริหารงานและให้บริการข้อมูลข่าวสารแก่คณะครูและนักเรียน
+          </p>
+        </div>
+
+        <!-- Column 2: Navigation Links -->
+        <div style="flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 12px;">
+          <h4 style="font-size: 14px; color: #fff; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0; border-left: 3px solid var(--purple-500); padding-left: 8px; text-align: left;">ลิงก์ด่วน</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+            <a href="#/home" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">หน้าแรก</a>
+            <a href="#/news" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">ข่าวสารสภา</a>
+            <a href="#/events" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">ปฏิทินกิจกรรม</a>
+            <a href="#/structure" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">โครงสร้างสภาฯ</a>
+          </div>
+        </div>
+
+        <!-- Column 3: Services & Docs -->
+        <div style="flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 12px;">
+          <h4 style="font-size: 14px; color: #fff; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0; border-left: 3px solid var(--purple-500); padding-left: 8px; text-align: left;">ข้อมูลบริการ & เอกสาร</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+            <a href="#/certificates" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">ค้นหาเกียรติบัตร</a>
+            <a href="#/documents" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">คลังเอกสารวิชาการ</a>
+            <a href="#/regulations" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">ระเบียบสภาฯ</a>
+            <a href="#/manual" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">คู่มือปฏิบัติงาน</a>
+          </div>
+        </div>
+
+        <!-- Column 4: Contact -->
+        <div style="flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 12px;">
+          <h4 style="font-size: 14px; color: #fff; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0; border-left: 3px solid var(--purple-500); padding-left: 8px; text-align: left;">เสนอแนะ & ติดต่อ</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+            <a href="#/suggestions" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">กล่องข้อเสนอแนะ</a>
+            <a href="#/contact" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">ช่องทางติดต่อสภา</a>
+            <a href="https://www.sappha.ac.th" target="_blank" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">เว็บไซต์โรงเรียน</a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Divider line -->
+      <div style="height: 1px; background: rgba(255, 255, 255, 0.08); width: 100%;"></div>
+
+      <!-- Bottom Row: Copyright & Credits -->
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: rgba(255, 255, 255, 0.45); text-align: left;">
+        <span>© 2569 คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม. สงวนลิขสิทธิ์ทั้งหมด.</span>
+        <span style="display: flex; align-items: center; gap: 6px;">
+          Developed by 
+          <span style="color: var(--gold-400); font-weight: 700;">ฝ่ายโสตทัศนศึกษา</span>
+        </span>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- News Modal -->
+  <div class="public-modal-overlay" id="newsPopup" onclick="if(event.target===this) closeNewsPopup()">
+    <div class="public-modal-content">
+      <div class="public-modal-header">
+        <div class="public-modal-title">รายละเอียดข่าวประชาสัมพันธ์</div>
+        <button class="public-modal-close" onclick="closeNewsPopup()">&times;</button>
+      </div>
+      <div class="public-modal-body" id="newsPopupContent"></div>
+    </div>
+  </div>
+
+  <!-- Document Modal -->
+  <div class="public-modal-overlay" id="docModalOverlay" onclick="if(event.target===this) closeDocModal()">
+    <div class="public-modal-content">
+      <div class="public-modal-header">
+        <div class="public-modal-title" id="docModalTitle">หมวดหมู่เอกสาร</div>
+        <button class="public-modal-close" onclick="closeDocModal()">&times;</button>
+      </div>
+      <div class="public-modal-body" id="docModalBody">
+        <div style="text-align:center; padding:20px; color:var(--gray-500);">กำลังโหลดข้อมูล...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Certificate Modal -->
+  <div class="public-modal-overlay" id="certModalOverlay" onclick="if(event.target===this) closeCertModal()">
+    <div class="public-modal-content">
+      <div class="public-modal-header">
+        <div class="public-modal-title">🎓 ค้นหาและดาวน์โหลดเกียรติบัตร</div>
+        <button class="public-modal-close" onclick="closeCertModal()">&times;</button>
+      </div>
+      <div class="public-modal-body">
+        <div style="margin-bottom: 15px;">
+          <label style="display:block; margin-bottom:8px; font-weight:600; font-size:14px;">เลขประจำตัวนักเรียน</label>
+          <div style="display:flex; gap:10px;">
+            <input type="text" id="certStudentId" placeholder="ระบุเลขประจำตัว 5 หลัก" style="flex:1; padding:10px 14px; border:1px solid var(--gray-300); border-radius:8px; outline:none;" />
+            <button onclick="searchCertificates()" style="background:var(--purple-600); color:white; border:none; border-radius:8px; padding:0 20px; font-weight:600; cursor:pointer;">ค้นหา</button>
+          </div>
+        </div>
+        <div id="certModalResult">
+          <div style="text-align:center; padding:30px 20px; color:var(--gray-500); font-size:14px;">กรุณาระบุเลขประจำตัวและกดค้นหา</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  /* ---- SUPABASE ---- */
+  const SB_URL = 'https://pzlcxctnnhjqpbhwcxqx.supabase.co';
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6bGN4Y3RubmhqcXBiaHdjeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMjA0ODgsImV4cCI6MjA5NDY5NjQ4OH0.LsofMV8YVlqFxir2o76Mbw4fNOHljVrealsew4XXQkY';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzzjkdNczg7aw2p9CU53I58NMzm1oFP-CiiyfAgFdBSQZ7kA9tZ71oFw-N6Q1xles1rxA/exec';
+
+  async function sbFetch(path) {
+    const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }
+    });
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  }
+
+  function transformGoogleDriveUrl(url) {
+    if (!url) return "";
+    if (typeof url !== "string") return url;
+    if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("https://lh3.googleusercontent.com/")) {
+      return url;
+    }
+    if (!url.includes("drive.google.com")) {
+      return url;
+    }
+    let match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    }
+    match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    }
+    return url;
+  }
+
+  /* ---- DOCUMENTS MODAL ---- */
+  let cachedDocs = { sec: null, academic: null };
+
+  async function openDocCategory(category, type) {
+    const overlay = document.getElementById('docModalOverlay');
+    const title = document.getElementById('docModalTitle');
+    const body = document.getElementById('docModalBody');
+    
+    title.innerText = category;
+    body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);"><div class="spin" style="margin: 0 auto 15px; border-top-color: var(--purple-600); width: 30px; height: 30px;"></div>กำลังโหลดข้อมูลเอกสาร...</div>';
+    overlay.classList.add('show');
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
+
+    try {
+      let sheetName = type === 'sec' ? 'Secretary_Docs' : 'Academic_Docs';
+      let data = type === 'sec' ? cachedDocs.sec : cachedDocs.academic;
+      
+      if (!data) {
+        const res = await fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "read_sheet", sheetName })
+        });
+        const resJson = await res.json();
+        if (resJson.success) {
+          data = resJson.data;
+          if (type === 'sec') cachedDocs.sec = data;
+          else cachedDocs.academic = data;
+        } else {
+          throw new Error("Failed to load");
+        }
+      }
+
+      // Filter by category and sort by date descending (approximate using id if date parsing fails)
+      const filtered = data.filter(d => d.category === category).reverse();
+      
+      if (filtered.length === 0) {
+        body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);">ยังไม่มีเอกสารในหมวดหมู่นี้</div>';
+        return;
+      }
+
+      body.innerHTML = filtered.map(d => `
+        <a href="${d.file_url}" target="_blank" class="doc-list-item">
+          <div class="doc-list-info">
+            <div class="doc-list-title">${d.title}</div>
+            <div class="doc-list-meta">ประเภท: ${d.type} • อัปโหลดเมื่อ: ${d.date}</div>
+          </div>
+          <div class="doc-download-btn">ดาวน์โหลด</div>
+        </a>
+      `).join('');
+
+    } catch (err) {
+      console.error(err);
+      body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#e53935;">เกิดข้อผิดพลาดในการโหลดข้อมูล<br/><span style="font-size:12px;opacity:0.7">โปรดลองใหม่อีกครั้งในภายหลัง</span></div>';
+    }
+  }
+
+  function closeDocModal() {
+    document.getElementById('docModalOverlay').classList.remove('show');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
+  }
+
+  /* ---- CERTIFICATES MODAL ---- */
+  function openCertModal() {
+    document.getElementById('certModalOverlay').classList.add('show');
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
+    document.getElementById('certStudentId').value = '';
+    document.getElementById('certModalResult').innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500); font-size:14px;">กรุณาระบุเลขประจำตัวและกดค้นหา</div>';
+  }
+  
+  function closeCertModal() {
+    document.getElementById('certModalOverlay').classList.remove('show');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
+  }
+
+  async function searchCertificates() {
+    const studentId = document.getElementById('certStudentId').value.trim();
+    const resultDiv = document.getElementById('certModalResult');
+
+    if (!studentId) {
+      resultDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#e53935; font-size:14px;">โปรดระบุเลขประจำตัวก่อนค้นหา</div>';
+      return;
+    }
+
+    resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);"><div class="spin" style="margin: 0 auto 15px; border-top-color: var(--purple-600); width: 30px; height: 30px;"></div>กำลังค้นหาเกียรติบัตร...</div>';
+
+    try {
+      // Fetch fresh data every time to ensure newly synced certs are found
+      const res = await fetch(GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Docs" })
+      });
+      const resJson = await res.json();
+      
+      if (!resJson.success) {
+        throw new Error("Failed to load");
+      }
+      
+      const data = resJson.data;
+
+      // Find certificates matching Student ID (convert d.title to String to match sheet numbers)
+      const certs = data.filter(d => d.type && d.type.startsWith('เกียรติบัตร') && String(d.title) === studentId).reverse();
+
+      if (certs.length === 0) {
+        resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500); font-size:14px;">ไม่พบเกียรติบัตรสำหรับเลขประจำตัวนี้</div>';
+        return;
+      }
+
+      resultDiv.innerHTML = certs.map(d => {
+        let displayDate = d.date;
+        if (displayDate && displayDate.includes('T')) {
+          const dt = new Date(displayDate);
+          displayDate = dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        const cat = d.type.includes('|') ? d.type.split('|')[1] : (d.category || 'เกียรติบัตรเข้าร่วมกิจกรรม');
+        return `
+        <a href="${d.file_url}" target="_blank" class="doc-list-item" style="margin-bottom:8px;">
+          <div class="doc-list-info">
+            <div class="doc-list-title">${cat}</div>
+            <div class="doc-list-meta">เลขประจำตัว: ${d.title} • ${displayDate}</div>
+          </div>
+          <div class="doc-download-btn">ดาวน์โหลด</div>
+        </a>
+      `}).join('');
+    } catch (err) {
+      console.error(err);
+      resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#e53935; font-size:14px;">เกิดข้อผิดพลาดในการค้นหา โปรดลองอีกครั้ง</div>';
+    }
+  }
+
+  async function searchCertificatesPage() {
+    const studentId = document.getElementById('certStudentIdPage').value.trim();
+    const resultDiv = document.getElementById('certPageResult');
+
+    if (!studentId) {
+      resultDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#e53935; font-size:14px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; width: 100%;">โปรดระบุเลขประจำตัวก่อนค้นหา</div>';
+      return;
+    }
+
+    resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500); width: 100%;"><div class="spin" style="margin: 0 auto 15px; border-top-color: var(--purple-600); width: 30px; height: 30px;"></div>กำลังค้นหาเกียรติบัตร...</div>';
+
+    try {
+      const res = await fetch(GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Docs" })
+      });
+      const resJson = await res.json();
+      
+      if (!resJson.success) {
+        throw new Error("Failed to load");
+      }
+      
+      const data = resJson.data;
+      const certs = data.filter(d => d.type && d.type.startsWith('เกียรติบัตร') && String(d.title) === studentId).reverse();
+
+      if (certs.length === 0) {
+        resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500); font-size:14px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.6); width: 100%;">ไม่พบเกียรติบัตรสำหรับเลขประจำตัวนี้</div>';
+        return;
+      }
+
+      resultDiv.innerHTML = certs.map(d => {
+        let displayDate = d.date;
+        if (displayDate && displayDate.includes('T')) {
+          const dt = new Date(displayDate);
+          displayDate = dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        const cat = d.type.includes('|') ? d.type.split('|')[1] : (d.category || 'เกียรติบัตรเข้าร่วมกิจกรรม');
+        return `
+        <a href="${d.file_url}" target="_blank" class="doc-list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.85); border-radius: 12px; text-decoration: none; color: inherit; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+          <div class="doc-list-info" style="display: flex; flex-direction: column; gap: 4px; text-align: left;">
+            <div class="doc-list-title" style="font-weight: 700; color: var(--purple-950); font-size: 14px;">${cat}</div>
+            <div class="doc-list-meta" style="font-size: 12px; color: var(--gray-500);">เลขประจำตัว: ${d.title} • ${displayDate}</div>
+          </div>
+          <div class="doc-download-btn" style="background: var(--purple-100); color: var(--purple-700); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; transition: all 0.2s;">ดาวน์โหลด</div>
+        </a>
+      `}).join('');
+    } catch (err) {
+      console.error(err);
+      resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#e53935; font-size:14px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; width: 100%;">เกิดข้อผิดพลาดในการค้นหา/ฐานข้อมูลขัดข้อง โปรดลองอีกครั้งภายหลัง</div>';
+    }
+  }
+
+  /* ---- ROUTING ---- */
+  function route() {
+    closeCalPopup();
+    closeNewsPopup();
+    closeDocModal();
+    closeCertModal();
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
+    const hash = location.hash || '#/home';
+
+    // Hide all sections first (and reset transitions)
+    document.querySelectorAll('.page-section').forEach(s => {
+      s.classList.remove('active-visible', 'active');
+      s.style.display = 'none';
+    });
+    document.querySelectorAll('.nav-menu a, .mobile-menu a').forEach(a => a.classList.remove('active'));
+    const fullHero = document.getElementById('fullHero');
+
+    let activeSec = null;
+    if (hash === '#/home' || hash === '' || hash === '#') {
+      activeSec = document.getElementById('homePage');
+      if (fullHero) fullHero.style.display = '';
+    } else {
+      if (fullHero) fullHero.style.display = 'none';
+      const id = hash.replace('#/', '');
+      activeSec = document.getElementById(id);
+    }
+
+    if (activeSec) {
+      activeSec.classList.add('active');
+      activeSec.style.display = 'block';
+      // Trigger CSS transition
+      setTimeout(() => {
+        activeSec.classList.add('active-visible');
+      }, 20);
+    }
+
+    document.querySelectorAll(`.nav-menu a[href="${hash}"], .mobile-menu a[href="${hash}"]`).forEach(a => a.classList.add('active'));
+    scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', route);
+  window.addEventListener('load', route);
+
+  /* ---- SCROLL EFFECTS (Navbar, Progress Bar, Back-To-Top) ---- */
+  window.addEventListener('scroll', () => {
+    // 1. Navbar scrolled effect
+    document.getElementById('navbar').classList.toggle('scrolled', scrollY > 10);
+
+    // 2. Back to Top Button
+    const backToTop = document.getElementById('backToTop');
+    if (backToTop) {
+      if (scrollY > 300) {
+        backToTop.classList.add('visible');
+      } else {
+        backToTop.classList.remove('visible');
+      }
+    }
+  });
+
+  /* ---- MOBILE MENU ---- */
+  const burger = document.getElementById('burger');
+  const mobileMenu = document.getElementById('mobileMenu');
+  burger.addEventListener('click', () => mobileMenu.classList.toggle('open'));
+  function closeMobile() {
+    mobileMenu.classList.remove('open');
+    document.querySelectorAll('.mobile-dropdown-parent').forEach(p => p.classList.remove('active'));
+  }
+  function toggleMobileDropdown(elem) {
+    const parent = elem.closest('.mobile-dropdown-parent');
+    const wasActive = parent.classList.contains('active');
+    document.querySelectorAll('.mobile-dropdown-parent').forEach(p => p.classList.remove('active'));
+    if (!wasActive) {
+      parent.classList.add('active');
+    }
+  }
+  document.addEventListener('click', e => {
+    if (!burger.contains(e.target) && !mobileMenu.contains(e.target)) {
+      closeMobile();
+    }
+  });
+
+  /* ---- SLIDER REMOVED ---- */
+
+  /* ---- COUNT-UP ---- */
+  function countUp(el, target) {
+    const step = Math.max(1, Math.ceil(target / 60));
+    let v = 0;
+    const t = setInterval(() => {
+      v = Math.min(v + step, target);
+      el.textContent = v;
+      if (v >= target) clearInterval(t);
+    }, 20);
+  }
+
+  /* ---- AVATAR COLORS ---- */
+  const COLORS = ['#7c3aed','#6d28d9','#4f46e5','#0891b2','#059669','#dc2626','#d97706','#db2777','#9333ea','#065f46'];
+  function avatarColor(name) {
+    let h = 0;
+    for (let c of (name || 'x')) h = c.charCodeAt(0) + ((h << 5) - h);
+    return COLORS[Math.abs(h) % COLORS.length];
+  }
+
+  /* ---- HELPERS ---- */
+  const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const EV_ICONS = { กีฬา:'⚽', วิชาการ:'📚', ดนตรี:'🎵', ศิลปะ:'🎨', ชุมนุม:'👥', ประชุม:'📋', วันหยุด:'🎉' };
+  function evIcon(t) { const k = Object.keys(EV_ICONS).find(k => (t||'').includes(k)); return k ? EV_ICONS[k] : '✨'; }
+  const CAT_META = {
+    'ข่าวโรงเรียน': { bg: '#ede9fe22', pill: 'cat-sch', icon: '🏫' },
+    'กิจกรรมสภา':  { bg: '#fef3c722', pill: 'cat-evt', icon: '⭐' },
+    'ประกาศ':       { bg: '#fee2e222', pill: 'cat-ann', icon: '📣' },
+    'ข่าวชมรม':    { bg: '#d1fae522', pill: 'cat-clb', icon: '🎭' },
+    'ผลงาน':      { bg: '#ffedd522', pill: 'cat-awd', icon: '🏆' },
+  };
+  function catMeta(c) { return CAT_META[c] || { bg: '#f4f4f522', pill: 'cat-gen', icon: '📰' }; }
+
+  /* ---- NEWS ---- */
+  let allNews = [];
+  let allUsers = [];
+
+  async function loadUsers() {
+    try {
+      allUsers = await sbFetch('users?select=name,nickname,role') || [];
+    } catch (e) {
+      console.error('Failed to load users for mapping:', e);
+    }
+  }
+
+  function getAuthorName(submitter) {
+    if (!submitter) return 'ผู้ดูแล';
+    const foundUser = allUsers.find(u => u.nickname === submitter || u.name === submitter);
+    return foundUser ? foundUser.name : submitter;
+  }
+
+  async function loadNews() {
+    try {
+      let fetchedNews = await sbFetch(`web_news?select=*&category=not.in.(${encodeURIComponent('ประกาศ')},${encodeURIComponent('ประกาศ_ซ่อน')})&order=created_at.desc`) || [];
+      // Filter out all announcements so banners and general news are completely separated
+      allNews = fetchedNews.filter(n => n.category !== 'ประกาศ' && n.category !== 'ประกาศ_ซ่อน');
+      
+      renderHomeNews(allNews.slice(0, 5));
+      renderNews(allNews, 'fullNewsGrid');
+
+      const count = allNews.length;
+      const hNews = document.getElementById('hStatNews');
+      if (hNews) hNews.textContent = count;
+      initScrollReveal();
+      return count;
+    } catch { 
+      ['homeNewsContainer','fullNewsGrid'].forEach(id => { 
+        const el = document.getElementById(id);
+        if(el) el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>ยังไม่มีข่าวสาร</div>'; 
+      });
+      return 0;
+    }
+  }
+
+  async function loadAnnouncements() {
+    try {
+      const anns = await sbFetch(`web_news?select=*&category=eq.${encodeURIComponent('ประกาศ')}&order=created_at.desc`) || [];
+      renderCarousel(anns);
+    } catch (e) {
+      console.warn('Could not load announcements:', e);
+      // Hide carousel if failed
+      const wrap = document.getElementById('announcementCarouselWrap');
+      if (wrap) wrap.style.display = 'none';
+    }
+  }
+
+  // ==================== ANNOUNCEMENT CAROUSEL ====================
+  let carouselItems = [];
+  let carouselIndex = 0;
+  let carouselTimer = null;
+  const CAROUSEL_INTERVAL = 5000;
+  const FALLBACK_IMG = 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=900';
+
+  function carouselMove(dir) {
+    if (!carouselItems.length) return;
+    carouselGoTo((carouselIndex + dir + carouselItems.length) % carouselItems.length);
+    restartCarouselTimer();
+  }
+
+  function carouselGoTo(idx) {
+    carouselIndex = idx;
+    const slides = document.getElementById('carouselSlides');
+    if (slides) slides.style.transform = `translateX(-${idx * 100}%)`;
+    updateCarouselOverlay(idx);
+    updateCarouselDots(idx);
+    updateCarouselThumbs(idx);
+  }
+
+  function updateCarouselOverlay(idx) {
+    // No overlay in clean frameless mode
+  }
+
+  function updateCarouselDots(activeIdx) {
+    const el = document.getElementById('carouselDots');
+    if (!el) return;
+    el.innerHTML = carouselItems.map((_, i) => `
+      <div onclick="carouselGoTo(${i});restartCarouselTimer()" style="
+        width:${i === activeIdx ? 22 : 8}px; height:8px; border-radius:100px;
+        background:${i === activeIdx ? '#fff' : 'rgba(255,255,255,0.45)'};
+        cursor:pointer; transition:all 0.3s;
+        box-shadow:0 1px 4px rgba(0,0,0,0.4);
+      "></div>
+    `).join('');
+  }
+
+  function updateCarouselThumbs(activeIdx) {
+    const el = document.getElementById('carouselThumbs');
+    if (!el) return;
+    el.innerHTML = carouselItems.map((n, i) => {
+      const img = n.image_url ? transformGoogleDriveUrl(n.image_url) : FALLBACK_IMG;
+      const isActive = i === activeIdx;
+      return `<div onclick="carouselGoTo(${i});restartCarouselTimer()" title="${n.headline||''}" style="
+        flex-shrink:0; width:90px; height:60px; border-radius:6px; overflow:hidden; cursor:pointer;
+        border:${isActive ? '2px solid #fff' : '1px solid rgba(255,255,255,0.2)'};
+        opacity:${isActive ? 1 : 0.6}; transition:all 0.25s;
+        position:relative;
+      " onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=${isActive?1:0.6}">
+        <img src="${img}" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='${FALLBACK_IMG}'" />
+      </div>`;
+    }).join('');
+  }
+
+  function restartCarouselTimer() {
+    if (carouselTimer) clearInterval(carouselTimer);
+    carouselTimer = setInterval(() => carouselMove(1), CAROUSEL_INTERVAL);
+  }
+
+  function renderCarousel(items) {
+    carouselItems = items.filter(n => n.image_url); // only items with images
+    if (!carouselItems.length) {
+      const loading = document.getElementById('carouselLoading');
+      if (loading) loading.innerHTML = '<div style="color:rgba(255,255,255,0.4);font-size:14px;">ยังไม่มีข่าวที่มีรูปภาพ</div>';
+      return;
+    }
+    // Hide loader, show arrows
+    const loading = document.getElementById('carouselLoading');
+    if (loading) loading.style.display = 'none';
+    const prev = document.getElementById('carouselPrev');
+    const next = document.getElementById('carouselNext');
+    if (prev) prev.style.display = 'flex';
+    if (next) next.style.display = 'flex';
+
+    // Build slides
+    const slidesEl = document.getElementById('carouselSlides');
+    if (slidesEl) {
+      slidesEl.innerHTML = carouselItems.map(n => {
+        const img = transformGoogleDriveUrl(n.image_url);
+        return `<div onclick="showNewsPopup('${n.id}')" class="carousel-slide-item" style="
+          flex-shrink:0; width:100%; height:100%; cursor:pointer; position:relative; overflow:hidden;
+        ">
+          <!-- Background image with referrerpolicy -->
+          <img src="${img}" referrerpolicy="no-referrer" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; filter: blur(15px); opacity: 0.85;" onerror="this.src='${FALLBACK_IMG}'" />
+          <!-- Blurred background overlay -->
+          <div style="position:absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.15); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index:1;"></div>
+          <!-- Foreground sharp contained image -->
+          <img src="${img}" referrerpolicy="no-referrer" style="position:relative; z-index:2; width:100%; height:100%; object-fit:contain; display:block;"
+            onerror="this.src='${FALLBACK_IMG}'" />
+        </div>`;
+      }).join('');
+    }
+
+    carouselGoTo(0);
+    restartCarouselTimer();
+  }
+
+  function renderHomeNews(items) {
+    const el = document.getElementById('homeNewsContainer');
+    if (!el) return;
+    if (!items.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>ยังไม่มีข่าวสาร</div>'; return; }
+    
+    const main = items[0];
+    const side = items.slice(1, 5);
+    const formatD = (n) => n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH') : '');
+    
+    const imgs = [
+      'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=400',
+      'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=200',
+      'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&q=80&w=200',
+      'https://images.unsplash.com/photo-1511649475669-e288648b2339?auto=format&fit=crop&q=80&w=200',
+      'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&q=80&w=200'
+    ];
+
+    const mainImg = main.image_url ? transformGoogleDriveUrl(main.image_url) : imgs[0];
+    const mainAuthor = getAuthorName(main.submitter);
+
+    let html = `
+      <div class="pr-main" onclick="showNewsPopup('${main.id}')" style="cursor:pointer;">
+        <img src="${mainImg}" data-src="${mainImg}" data-retries="0" referrerpolicy="no-referrer" alt="Main News"
+             onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="opacity:0.5;transition:opacity 0.4s;" />
+        <div class="pr-tag">${main.category || 'ข่าวประชาสัมพันธ์'}</div>
+        <h3>${main.headline || ''}</h3>
+        <div class="pr-meta">${mainAuthor} • ${formatD(main)}</div>
+        <div class="pr-excerpt">${(main.detail || '').substring(0, 100)}...</div>
+        <div class="pr-btn">อ่านเพิ่มเติม</div>
+      </div>
+      <div class="pr-side">
+    `;
+    
+    side.forEach((n, idx) => {
+      const sideImg = n.image_url ? transformGoogleDriveUrl(n.image_url) : imgs[idx+1];
+      const sideAuthor = getAuthorName(n.submitter);
+      html += `
+        <div class="pr-item" onclick="showNewsPopup('${n.id}')" style="cursor:pointer;">
+          <img src="${sideImg}" data-src="${sideImg}" data-retries="0" referrerpolicy="no-referrer" alt="News Thumb"
+               onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="opacity:0.5;transition:opacity 0.4s;" />
+          <div class="pr-item-info">
+            <div class="pr-tag" style="font-size:11px;">${n.category || 'ข่าวประชาสัมพันธ์'}</div>
+            <h4>${n.headline || ''}</h4>
+            <div class="pr-meta">${sideAuthor} • ${formatD(n)}</div>
+          </div>
+        </div>
+      `;
+    });
+    
+    html += `</div>`;
+    el.innerHTML = html;
+  }
+
+  function renderNews(items, targetId) {
+    const el = document.getElementById(targetId);
+    if (!items.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>ยังไม่มีข่าวสาร</div>'; return; }
+    el.innerHTML = items.map(n => {
+      const m = catMeta(n.category);
+      const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH') : '');
+      const author = getAuthorName(n.submitter);
+      const thumbHtml = n.image_url 
+        ? `<img src="${transformGoogleDriveUrl(n.image_url)}" data-src="${transformGoogleDriveUrl(n.image_url)}" data-retries="0" referrerpolicy="no-referrer"
+               onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="width:100%; height:100%; object-fit:cover; opacity:0.5; transition:opacity 0.4s;" />` 
+        : m.icon;
+      return `<div class="news-card" onclick="showNewsPopup('${n.id}')">
+        <div class="news-card-thumb" style="background:${n.image_url ? 'none' : m.bg}">
+          <span class="cat-dot ${m.pill}">${n.category || 'ทั่วไป'}</span>
+          ${thumbHtml}
+        </div>
+        <div class="news-card-body">
+          <div class="news-title">${n.headline || ''}</div>
+          <div class="news-excerpt">${n.detail || '(ไม่มีรายละเอียด)'}</div>
+          <div class="news-footer">
+            <span class="news-date">📅 ${d}</span>
+            <span class="news-author">${author}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function filterNews(cat, btn) {
+    document.querySelectorAll('#newsFilter .pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderNews(cat === 'all' ? allNews : allNews.filter(n => n.category === cat), 'fullNewsGrid');
+    initScrollReveal();
+  }
+
+  /* ---- OBEC LINE ---- */
+  async function loadObecLine() {
+    try {
+      const data = await sbFetch(`obec_line?select=*&order=created_at.desc&limit=8`) || [];
+      renderObecLine(data);
+        initScrollReveal();
+    } catch (err) {
+      console.error("Failed to load Obec Line:", err);
+      const grid = document.querySelector('.obec-grid');
+      if (grid) grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:20px; color:var(--gray-500);">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+    }
+  }
+
+  // Obec image retry queue
+  const _obecRetrySet = new Set();
+  function _obecRetryLoop() {
+    if (_obecRetrySet.size === 0) return;
+    _obecRetrySet.forEach(img => {
+      const src = img.getAttribute('data-src');
+      if (!src) { _obecRetrySet.delete(img); return; }
+      // Replace img node to bypass browser cache for this URL
+      const clone = img.cloneNode(false);
+      clone.setAttribute('data-src', src);
+      clone.setAttribute('data-retries', parseInt(img.getAttribute('data-retries') || '0') + 1);
+      clone.onerror = function() { _obecImgError(this); };
+      clone.onload  = function() { this.style.opacity = '1'; this.style.filter = ''; };
+      img.parentNode && img.parentNode.replaceChild(clone, img);
+      _obecRetrySet.delete(img);
+      // Set src AFTER replacing so browser sees it as a fresh element
+      setTimeout(() => { clone.src = src; }, 50);
+    });
+  }
+  setInterval(_obecRetryLoop, 20000); // retry every 20 seconds
+
+  function _obecImgError(img) {
+    const retries = parseInt(img.getAttribute('data-retries') || '0');
+    if (retries >= 10) return; // give up after 10 tries (~3 min)
+    img.style.opacity = '0.25';
+    img.style.filter = 'grayscale(1)';
+    _obecRetrySet.add(img);
+  }
+
+  // News image retry (same mechanism as obec)
+  const _newsRetrySet = new Set();
+  function _newsRetryLoop() {
+    if (_newsRetrySet.size === 0) return;
+    _newsRetrySet.forEach(img => {
+      const src = img.getAttribute('data-src');
+      if (!src) { _newsRetrySet.delete(img); return; }
+      const clone = img.cloneNode(false);
+      clone.setAttribute('data-src', src);
+      clone.setAttribute('data-retries', parseInt(img.getAttribute('data-retries') || '0') + 1);
+      clone.onerror = function() { _newsImgError(this); };
+      clone.onload  = function() { this.style.opacity = '1'; this.style.filter = ''; };
+      img.parentNode && img.parentNode.replaceChild(clone, img);
+      _newsRetrySet.delete(img);
+      setTimeout(() => { clone.src = src; }, 50);
+    });
+  }
+  setInterval(_newsRetryLoop, 20000);
+
+  function _newsImgError(img) {
+    const retries = parseInt(img.getAttribute('data-retries') || '0');
+    if (retries >= 10) return;
+    img.style.opacity = '0.25';
+    img.style.filter = 'grayscale(1)';
+    _newsRetrySet.add(img);
+  }
+
+  function renderObecLine(items) {
+    const grid = document.querySelector('.obec-grid');
+    if (!grid) return;
+    if (!items.length) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:20px; color:var(--gray-500);">ยังไม่มี Obec Line ในระบบ</div>';
+      return;
+    }
+    // Store items globally for modal navigation
+    window._obecItems = items;
+    grid.innerHTML = items.map((item, idx) => `
+      <div class="obec-card" onclick="openObecViewer(${idx})">
+        <img src="${transformGoogleDriveUrl(item.image_url)}"
+             data-src="${transformGoogleDriveUrl(item.image_url)}"
+             data-retries="0"
+             referrerpolicy="no-referrer"
+             alt="${item.title}"
+             onerror="_obecImgError(this)"
+             onload="this.style.opacity='1';this.style.filter=''"
+             style="opacity:0.5; transition: opacity 0.4s;" />
+        <div style="text-align:center; font-size:12px; color:#6b7280; margin-top:6px; font-weight:600;">${item.title}</div>
+      </div>
+    `).join('');
+  }
+
+  // Obec Line Viewer
+  let _obecCurrentIdx = 0;
+  function openObecViewer(idx) {
+    const items = window._obecItems || [];
+    if (!items.length) return;
+    _obecCurrentIdx = idx;
+    const item = items[idx];
+    document.getElementById('obecViewerImg').src = transformGoogleDriveUrl(item.image_url);
+    document.getElementById('obecViewerTitle').textContent = item.title;
+    document.getElementById('obecViewerCounter').textContent = `${idx + 1} / ${items.length}`;
+    document.getElementById('obecViewerPrev').style.display = items.length > 1 ? 'flex' : 'none';
+    document.getElementById('obecViewerNext').style.display = items.length > 1 ? 'flex' : 'none';
+    document.getElementById('obecViewer').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeObecViewer() {
+    document.getElementById('obecViewer').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function prevObec() {
+    const items = window._obecItems || [];
+    _obecCurrentIdx = (_obecCurrentIdx - 1 + items.length) % items.length;
+    openObecViewer(_obecCurrentIdx);
+  }
+  function nextObec() {
+    const items = window._obecItems || [];
+    _obecCurrentIdx = (_obecCurrentIdx + 1) % items.length;
+    openObecViewer(_obecCurrentIdx);
+  }
+  // Keyboard support for obec viewer
+  document.addEventListener('keydown', (e) => {
+    const v = document.getElementById('obecViewer');
+    if (!v || !v.classList.contains('open')) return;
+    if (e.key === 'Escape') closeObecViewer();
+    if (e.key === 'ArrowLeft') prevObec();
+    if (e.key === 'ArrowRight') nextObec();
+  });
+
+  /* ---- EVENTS ---- */
+  /* ---- CALENDAR ENGINE ---- */
+  const THAI_MONTHS_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const EV_COLORS = ['#7c3aed','#0891b2','#059669','#dc2626','#d97706','#db2777','#6d28d9','#065f46','#b45309','#9333ea'];
+  let calYear, calMonth, calEvents = [];
+
+  function calColorFor(type) {
+    const map = { กีฬา:'#dc2626', วิชาการ:'#0891b2', ดนตรี:'#db2777', ศิลปะ:'#d97706', ชุมนุม:'#059669', ประชุม:'#6d28d9', วันหยุด:'#b45309' };
+    const k = Object.keys(map).find(k => (type||'').includes(k));
+    return k ? map[k] : '#7c3aed';
+  }
+
+  function calGotoToday() {
+    const t = new Date();
+    calYear = t.getFullYear(); calMonth = t.getMonth();
+    renderCalendar();
+  }
+
+  async function calChangeMonth(delta) {
+    calMonth += delta;
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    if (calMonth < 0)  { calMonth = 11; calYear--; }
+    await fetchCalEvents();
+    renderCalendar();
+  }
+
+  async function fetchCalEvents() {
+    const firstDay = `${calYear}-${String(calMonth+1).padStart(2,'0')}-01`;
+    const lastDay  = new Date(calYear, calMonth+1, 0);
+    const lastStr  = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(lastDay.getDate()).padStart(2,'0')}`;
+    try {
+      calEvents = await sbFetch(`events?select=*&date=gte.${firstDay}&date=lte.${lastStr}&order=date.asc`) || [];
+    } catch { calEvents = []; }
+  }
+
+  function renderCalendar() {
+    const thaiYear = calYear + 543;
+    document.getElementById('calTitle').textContent = `${MONTHS[calMonth]} ${thaiYear}`;
+    const grid = document.getElementById('calGrid');
+    const today = new Date();
+
+    const firstWeekday = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth  = new Date(calYear, calMonth+1, 0).getDate();
+    const daysInPrev   = new Date(calYear, calMonth, 0).getDate();
+
+    // Update home sidebar event list with up-coming events (Not used since we deleted the sidebar list, but kept for legacy/other pages)
+    const upcoming = calEvents.filter(ev => {
+      if (!ev.date) return false;
+      const evDate = new Date(ev.date + 'T00:00:00');
+      const endDate = ev.end_date ? new Date(ev.end_date + 'T00:00:00') : evDate;
+      return endDate >= new Date(today.setHours(0,0,0,0));
+    }).slice(0, 3);
+
+    // Map events by day
+    const evByDay = {};
+    calEvents.forEach(ev => {
+      if (!ev.date) return;
+      const startDate = new Date(ev.date + 'T00:00:00');
+      const endDate = ev.end_date ? new Date(ev.end_date + 'T00:00:00') : startDate;
+      
+      for (let d = 1; d <= daysInMonth; d++) {
+        const curr = new Date(calYear, calMonth, d);
+        if (curr >= startDate && curr <= endDate) {
+          if (!evByDay[d]) evByDay[d] = [];
+          evByDay[d].push(ev);
+        }
+      }
+    });
+
+    let cells = '';
+
+    // Leading prev-month cells
+    for (let i = firstWeekday - 1; i >= 0; i--) {
+      cells += `<div class="cal-cell cal-cell-other"><span class="cal-num">${daysInPrev - i}</span></div>`;
+    }
+
+    // Initialize global maps for safe event retrieval without passing raw JSON in HTML attributes
+    window.calendarEventsMap = window.calendarEventsMap || {};
+    window.calendarDaysMap = window.calendarDaysMap || {};
+
+    // Current month cells
+    for (let d = 1; d <= daysInMonth; d++) {
+      const isToday = (d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear());
+      const evs = evByDay[d] || [];
+      
+      const dayKey = `day_${d}`;
+      window.calendarDaysMap[dayKey] = evs;
+
+      const MAX_SHOW = 2;
+      const shown = evs.slice(0, MAX_SHOW);
+      const more  = evs.length - MAX_SHOW;
+      
+      const evHtml = shown.map(ev => {
+        const col = calColorFor(ev.type);
+        const timeStr = ev.time ? `${ev.time} ` : '';
+        const evKey = `ev_${ev.id || Math.random().toString(36).substr(2, 9)}`;
+        window.calendarEventsMap[evKey] = ev;
+        
+        return `<div class="cal-event-pill" style="background:${col}33;color:${col};" onclick="event.stopPropagation(); showCalPopupByKey('${evKey}')" title="${ev.title}">${timeStr}${ev.title}</div>`;
+      }).join('');
+      
+      const moreHtml = more > 0 ? `<div class="cal-more" onclick="event.stopPropagation(); showDayPopupByKey(${d}, '${dayKey}')">+${more}</div>` : '';
+      
+      cells += `<div class="cal-cell${isToday?' cal-cell-today':''}" onclick="showDayPopupByKey(${d}, '${dayKey}')"><span class="cal-num${isToday?' cal-num-today':''}">${d}</span>${evHtml}${moreHtml}</div>`;
+    }
+
+    // Trailing next-month cells
+    const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
+    let nextDay = 1;
+    for (let i = firstWeekday + daysInMonth; i < totalCells; i++) {
+      cells += `<div class="cal-cell cal-cell-other"><span class="cal-num">${nextDay++}</span></div>`;
+    }
+
+    grid.innerHTML = cells;
+    
+    const homeGrid = document.getElementById('homeCalGrid');
+    if (homeGrid) homeGrid.innerHTML = cells;
+
+    const hTitle = document.getElementById('homeCalTitle');
+    if (hTitle) hTitle.textContent = `${MONTHS[calMonth]} ${thaiYear}`;
+
+    const hEvents = document.getElementById('hStatEvents');
+    if (hEvents) hEvents.textContent = calEvents.length;
+    initScrollReveal();
+  }
+
+  function showCalPopupByKey(key) {
+    const ev = window.calendarEventsMap[key];
+    if (ev) showCalPopup(ev);
+  }
+
+  function showDayPopupByKey(day, key) {
+    const evs = window.calendarDaysMap[key] || [];
+    showDayPopup(day, evs);
+  }
+
+  function showCalPopup(ev) {
+    const d = new Date(ev.date + 'T00:00:00');
+    const col = calColorFor(ev.type);
+    document.getElementById('calPopupContent').innerHTML = `
+      <div style="border-left:4px solid ${col};padding-left:18px;margin-bottom:20px;margin-top:30px;">
+        <div style="font-size:12px;color:var(--gray-500);font-weight:700;text-transform:uppercase;margin-bottom:6px">${ev.type||'กิจกรรม'}</div>
+        <h2 style="font-size:24px;font-weight:800;color:var(--gray-900);line-height:1.3">${ev.title||''}</h2>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:15px;color:var(--gray-700)">
+        <div>📅 <strong>${d.toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</strong></div>
+        ${ev.time ? `<div>🕐 <strong>${ev.time}</strong></div>` : ''}
+        ${ev.location ? `<div>📍 ${ev.location}</div>` : ''}
+        ${ev.description ? `<div style="margin-top:15px;padding:16px;background:var(--gray-50);border-radius:12px;font-size:14px;line-height:1.7">${ev.description}</div>` : ''}
+      </div>`;
+    const pop = document.getElementById('calPopup');
+    pop.style.display = 'flex';
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
+    setTimeout(() => pop.classList.add('show'), 10);
+  }
+
+  function showDayPopup(day, evs) {
+    const d = new Date(calYear, calMonth, day);
+    let evsList = '';
+    
+    if (!evs || evs.length === 0) {
+      evsList = `<div style="text-align:center; padding:30px 20px; color:var(--gray-400); font-size:14px;">ไม่มีกิจกรรมในวันนี้</div>`;
+    } else {
+      evsList = evs.map(ev => {
+        const col = calColorFor(ev.type);
+        const evKey = `ev_popup_${ev.id || Math.random().toString(36).substr(2, 9)}`;
+        window.calendarEventsMap[evKey] = ev;
+        return `<div style="padding:12px 14px;border-radius:10px;background:${col}15;border-left:4px solid ${col};margin-bottom:10px;cursor:pointer;transition:transform 0.15s;text-align:left;" onclick="event.stopPropagation(); showCalPopupByKey('${evKey}')" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
+          <div style="font-size:11px;color:${col};font-weight:800;text-transform:uppercase;margin-bottom:2px;">${ev.type||'กิจกรรม'}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--gray-900);line-height:1.3">${ev.title||''}</div>
+          ${ev.time ? `<div style="font-size:12px;color:var(--gray-500);margin-top:4px">🕐 ${ev.time}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    document.getElementById('calPopupContent').innerHTML = `
+      <div style="font-size:15px;font-weight:800;color:var(--gray-900);margin-bottom:18px;border-bottom:1px solid var(--gray-100);padding-bottom:10px;text-align:left;">
+        📅 กิจกรรมวันที่ ${d.toLocaleDateString('th-TH',{weekday:'long',day:'numeric',month:'long'})}
+      </div>
+      ${evsList}`;
+      
+    const pop = document.getElementById('calPopup');
+    pop.style.display = 'flex';
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
+    setTimeout(() => pop.classList.add('show'), 10);
+  }
+
+  function closeCalPopup() {
+    const pop = document.getElementById('calPopup');
+    pop.classList.remove('show');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
+    setTimeout(() => pop.style.display = 'none', 300);
+  }
+  document.addEventListener('keydown', e => { 
+    if (e.key === 'Escape') {
+      closeCalPopup();
+      closeNewsPopup();
+      closeDocModal();
+      closeCertModal();
+    }
+  });
+
+  async function loadEvents() {
+    const t = new Date();
+    calYear = t.getFullYear(); calMonth = t.getMonth();
+    await fetchCalEvents();
+    renderCalendar();
+    return calEvents.length;
+  }
+
+  let structureZoom = 1.0;
+  function zoomStructure(amount) {
+    structureZoom = Math.max(1.0, Math.min(3.0, structureZoom + amount));
+    updateStructureZoom();
+  }
+  function resetZoomStructure() {
+    structureZoom = 1.0;
+    updateStructureZoom();
+  }
+  function updateStructureZoom() {
+    const img = document.getElementById('structureImg');
+    const container = document.getElementById('structureImgContainer');
+    if (img && container) {
+      img.style.width = (structureZoom * 100) + '%';
+      if (structureZoom > 1.0) {
+        container.style.overflowX = 'auto';
+        img.style.maxWidth = 'none';
+        img.style.width = (structureZoom * 100) + '%';
+      } else {
+        container.style.overflowX = 'hidden';
+        img.style.maxWidth = '900px';
+        img.style.width = '100%';
+      }
+    }
+  }
+
+  /* ---- TEAM ---- */
+  async function loadTeam() {
+    try {
+      const data = await sbFetch(`users?select=id,name,nickname,role,position,avatar_color&role=in.(president,dept_head)&order=role.asc`) || [];
+      const sorted = [...data].sort((a,b) => ({ president:0, dept_head:1 }[a.role]??2) - ({ president:0, dept_head:1 }[b.role]??2));
+      
+      const pres = sorted.find(u => u.role === 'president');
+      if (pres) {
+        const orgP = document.getElementById('orgPresident');
+        if (orgP) orgP.textContent = pres.name || 'ประธานสภา';
+      }
+
+      const teamGrid = document.getElementById('teamGrid');
+      if (teamGrid) {
+        teamGrid.innerHTML = sorted.map(u => {
+          const isP = u.role === 'president';
+          const color = u.avatar_color || avatarColor(u.name);
+          const label = isP ? '👑 ประธานสภา' : '🏅 หัวหน้าฝ่าย';
+          return `<div class="team-card ${isP ? 'president-card' : ''}">
+            <div class="team-avatar" style="background:${color}">${(u.nickname||u.name||'?')[0]}</div>
+            <div class="team-name">${u.name||''}</div>
+            <div class="team-nick">"${u.nickname||''}"</div>
+            <span class="team-badge">${u.position||label}</span>
+          </div>`;
+        }).join('');
+      }
+
+      const hMembers = document.getElementById('hStatMembers');
+      if (hMembers) hMembers.textContent = data.length;
+      initScrollReveal();
+    } catch {
+      const teamGrid = document.getElementById('teamGrid');
+      if (teamGrid) teamGrid.innerHTML = '<div class="empty"><div>โหลดไม่สำเร็จ</div></div>';
+    }
+  }
+
+
+  /* ---- SCROLL REVEAL SYSTEM ---- */
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('active-reveal');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.05 });
+
+  function initScrollReveal() {
+    document.querySelectorAll('.reveal-on-scroll:not(.active-reveal)').forEach(el => {
+      revealObserver.observe(el);
+    });
+  }
+
+
+  /* ---- NEWS POPUP SYSTEM ---- */
+  function swapMainNewsImage(url) {
+    const mainImg = document.getElementById('mainNewsImage');
+    if (mainImg) {
+      mainImg.src = url;
+    }
+  }
+
+  function showNewsPopup(id) {
+    const n = allNews.find(item => item.id == id);
+    if (!n) return;
+    const m = catMeta(n.category);
+    const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '');
+    
+    // Map submitter nickname to real name
+    const submitterName = getAuthorName(n.submitter);
+
+    let imgHtml = '';
+    if (n.image_url) {
+      imgHtml = `<div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
+        <img id="mainNewsImage" src="${transformGoogleDriveUrl(n.image_url)}" referrerpolicy="no-referrer" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
+      </div>`;
+    }
+
+    // Generate gallery html for supporting images
+    let galleryHtml = '';
+    if (n.supporting_images && n.supporting_images.length > 0) {
+      const imagesHtml = n.supporting_images.map(imgUrl => `
+        <div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
+          <img src="${transformGoogleDriveUrl(imgUrl)}" referrerpolicy="no-referrer" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
+        </div>
+      `).join('');
+      
+      galleryHtml = `
+        <div style="margin-top:25px; border-top:1px solid #e5e7eb; padding-top:20px; display:flex; flex-direction:column; gap:15px;">
+          ${imagesHtml}
+        </div>
+      `;
+    }
+
+    // Generate latest news list for sidebar
+    const latestNews = allNews.slice(0, 5);
+    const sidebarHtml = latestNews.map(item => {
+      const itemImg = item.image_url 
+        ? transformGoogleDriveUrl(item.image_url) 
+        : 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=200';
+      const isActive = item.id == id;
+      return `
+        <div onclick="showNewsPopup('${item.id}')" style="display:flex; gap:10px; cursor:pointer; padding:10px 0; border-bottom:1px solid #f3f4f6; transition:opacity 0.2s; opacity:${isActive ? 0.5 : 1}; pointer-events:${isActive ? 'none' : 'auto'};" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=${isActive ? 0.5 : 1}">
+          <img src="${itemImg}" referrerpolicy="no-referrer" style="width:80px; height:58px; object-fit:cover; border-radius:4px; flex-shrink:0;" />
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:12px; font-weight:700; color:${isActive ? 'var(--purple-700)' : '#111827'}; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.3; margin-bottom:4px;">
+              ${item.headline || ''}
+            </div>
+            <div style="font-size:10.5px; color:#9ca3af;">
+              📅 ${item.for_date || (item.created_at ? new Date(item.created_at).toLocaleDateString('th-TH') : '')}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('newsPopupContent').innerHTML = `
+      <div class="news-detail-layout">
+        <!-- LEFT COLUMN: Main News -->
+        <div class="news-detail-main">
+          <div style="font-size:11px; font-weight:800; color:var(--purple-700); background:var(--purple-100); padding:3px 10px; border-radius:100px; display:inline-block; margin-bottom:12px;">
+            ${n.category || 'ข่าวประชาสัมพันธ์'}
+          </div>
+          <h1 style="font-size:24px; font-weight:800; color:#111827; margin:0 0 10px 0; line-height:1.4;">
+            ${n.headline || ''}
+          </h1>
+          <div style="font-size:12.5px; color:#6b7280; margin-bottom:20px; border-bottom:1px solid #e5e7eb; padding-bottom:12px;">
+            👤 ผู้เขียน: ${submitterName} • 📅 ${d}
+          </div>
+          ${imgHtml}
+          <div style="font-size:15px; line-height:1.8; color:#374151; white-space:pre-line; word-break:break-word; margin-top:20px;">
+            ${n.detail || ''}
+          </div>
+          ${galleryHtml}
+        </div>
+        
+        <!-- RIGHT COLUMN: Sidebar -->
+        <div class="news-detail-sidebar">
+          <div style="background:#5b3a6e; color:white; padding:8px 12px; font-size:14px; font-weight:700; border-radius:4px 4px 0 0; display:flex; align-items:center; gap:8px;">
+            📰 ข่าวสารล่าสุด
+          </div>
+          <div style="border:1px solid #e5e7eb; border-top:none; padding:15px; background:#fff; border-radius:0 0 4px 4px; display:flex; flex-direction:column; gap:10px;">
+            ${sidebarHtml}
+          </div>
+        </div>
+      </div>
+    `;
+    const pop = document.getElementById('newsPopup');
+    pop.style.display = 'flex';
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
+    setTimeout(() => pop.classList.add('show'), 10);
+  }
+
+  function closeNewsPopup() {
+    const pop = document.getElementById('newsPopup');
+    pop.classList.remove('show');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
+    setTimeout(() => pop.style.display = 'none', 300);
+  }
+
+  /* ---- SUGGESTIONS ---- */
+  async function submitSug() {
+    const name = document.getElementById('sugName').value.trim();
+    const type = document.getElementById('sugType').value;
+    const msg  = document.getElementById('sugMessage').value.trim();
+    if (!msg) { alert('กรุณากรอกรายละเอียดก่อนส่ง'); return; }
+    const btn = document.getElementById('sugSubmit');
+    btn.disabled = true; btn.textContent = '⏳ กำลังส่ง...';
+    try {
+      await fetch(`${SB_URL}/rest/v1/suggestions`, {
+        method: 'POST',
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ name: name || 'ไม่ระบุชื่อ', type, message: msg })
+      });
+    } catch {}
+    document.getElementById('formView').style.display = 'none';
+    document.getElementById('successView').style.display = 'block';
+    btn.disabled = false; btn.textContent = 'ส่งข้อเสนอแนะสภา';
+  }
+  function resetForm() {
+    ['sugName','sugMessage'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('formView').style.display = '';
+    document.getElementById('successView').style.display = 'none';
+  }
+
+  /* ---- VIDEOS ---- */
+  async function loadVideos() {
+    try {
+      const data = await sbFetch(`web_videos?select=*&order=created_at.desc`) || [];
+      renderVideos(data);
+    } catch (err) {
+      console.error("Failed to load videos:", err);
+      const grid = document.getElementById('videoGrid');
+      if (grid) grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:20px; color:var(--gray-500);">เกิดข้อผิดพลาดในการโหลดวิดีโอ</div>';
+    }
+  }
+
+  function getYouTubeId(url) {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  }
+
+  function getGoogleDriveId(url) {
+    if (!url) return null;
+    const match = url.match(/[-\w]{25,}/);
+    return match ? match[0] : null;
+  }
+
+  function getEmbedUrl(url) {
+    const ytId = getYouTubeId(url);
+    if (ytId) {
+      return `https://www.youtube.com/embed/${ytId}?autoplay=1`;
+    }
+    if (url.includes('facebook.com')) {
+      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&autoplay=1`;
+    }
+    if (url.includes('drive.google.com')) {
+      const driveId = getGoogleDriveId(url);
+      if (driveId) {
+        return `https://drive.google.com/file/d/${driveId}/preview`;
+      }
+    }
+    return url;
+  }
+
+  function getThumbnailUrl(url) {
+    const ytId = getYouTubeId(url);
+    if (ytId) {
+      return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+    }
+    if (url.includes('drive.google.com')) {
+      return transformGoogleDriveUrl(url);
+    }
+    return './logo.png';
+  }
+
+  function renderVideos(items) {
+    const grid = document.getElementById('videoGrid');
+    if (!grid) return;
+    if (!items.length) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--gray-500);">ยังไม่มีวิดีโอกิจกรรมในระบบ</div>';
+      return;
+    }
+    grid.innerHTML = items.map(item => {
+      const thumb = getThumbnailUrl(item.video_url);
+      const embed = getEmbedUrl(item.video_url);
+      return `
+        <div class="video-card" onclick="openVideoPlayer('${embed}')">
+          <div class="video-thumbnail-wrapper">
+            <img src="${thumb}" class="video-thumbnail" alt="${item.title}" onerror="this.src='./logo.png'" />
+            <div class="video-play-btn">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+          <div class="video-info">
+            <div class="video-title">${item.title}</div>
+            <div class="video-desc">${item.description || ''}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openVideoPlayer(embedUrl) {
+    document.getElementById('videoViewerIframe').src = embedUrl;
+    document.getElementById('videoViewer').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeVideoPlayer() {
+    document.getElementById('videoViewerIframe').src = '';
+    document.getElementById('videoViewer').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  /* ---- PARTICLES BACKGROUND SYSTEM ---- */
+  function initParticles() {
+    const canvas = document.getElementById('particleCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    const maxParticles = 65;
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    const mouse = { x: null, y: null, radius: 150 };
+
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    window.addEventListener('mouseout', () => {
+      mouse.x = null;
+      mouse.y = null;
+    });
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.size = Math.random() * 1.8 + 1.2;
+        this.speedX = Math.random() * 0.4 - 0.2;
+        this.speedY = Math.random() * 0.4 - 0.2;
+        this.color = Math.random() > 0.15 ? 'rgba(245, 158, 11, 0.45)' : 'rgba(147, 51, 234, 0.3)';
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        if (this.x < 0 || this.x > width) this.speedX *= -1;
+        if (this.y < 0 || this.y > height) this.speedY *= -1;
+
+        if (mouse.x !== null && mouse.y !== null) {
+          const dx = mouse.x - this.x;
+          const dy = mouse.y - this.y;
+          const distance = Math.hypot(dx, dy);
+          if (distance < mouse.radius) {
+            const force = (mouse.radius - distance) / mouse.radius;
+            this.x += (dx / distance) * force * 0.6;
+            this.y += (dy / distance) * force * 0.6;
+          }
+        }
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < maxParticles; i++) {
+      particles.push(new Particle());
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+
+      particles.forEach(p => {
+        p.update();
+        p.draw();
+      });
+
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const distance = Math.hypot(dx, dy);
+
+          if (distance < 95) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(245, 158, 11, ${0.12 * (1 - distance / 95)})`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+    animate();
+  }
+
+  /* ---- LOADING SCREEN ---- */
+  function hideLoadingScreen() {
+    const ls = document.getElementById('loadingScreen');
+    if (ls) {
+      setTimeout(() => ls.classList.add('hidden'), 2200);
+    }
+  }
+
+
+  /* ---- COUNTER ANIMATION ---- */
+  function animateCounter(el, target, duration = 1800) {
+    const start = performance.now();
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(target * ease);
+      if (progress < 1) requestAnimationFrame(update);
+      else el.textContent = target;
+    }
+    requestAnimationFrame(update);
+  }
+
+  function initStatsCounters() {
+    const strip = document.getElementById('statsStrip');
+    if (!strip) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          strip.querySelectorAll('.stat-number[data-target]').forEach(el => {
+            animateCounter(el, parseInt(el.dataset.target) || 0);
+          });
+          observer.disconnect();
+        }
+      });
+    }, { threshold: 0.3 });
+    observer.observe(strip);
+  }
+
+  /* ---- INIT ---- */
+  document.addEventListener('DOMContentLoaded', async () => {
+    hideLoadingScreen();
+    initParticles();
+
+    await loadUsers();
+    const statMem = document.getElementById('statMembers');
+    if (statMem) {
+      const nonAdmins = allUsers.filter(u => u.role !== 'admin');
+      statMem.dataset.target = nonAdmins.length;
+    }
+
+    loadNews().then(count => {
+      const el = document.getElementById('statNews');
+      if (el) { el.dataset.target = count || 0; }
+    });
+    loadAnnouncements();
+    loadObecLine();
+    loadVideos();
+    loadEvents().then(count => {
+      const el = document.getElementById('statEvents');
+      if (el) { el.dataset.target = count || 0; }
+    });
+    loadTeam();
+    setTimeout(initScrollReveal, 300);
+    setTimeout(initStatsCounters, 2500);
+  });
+</script>
+
+<!-- Obec Line Viewer Modal -->
+<div id="obecViewer" onclick="if(event.target===this) closeObecViewer()">
+  <button id="obecViewerClose" onclick="closeObecViewer()" title="ปิด">✕</button>
+  <button id="obecViewerPrev" class="obecViewer-nav" onclick="prevObec()">&#8249;</button>
+  <div id="obecViewerTitle"></div>
+  <img id="obecViewerImg" src="" referrerpolicy="no-referrer" alt="Obec Line" />
+  <div id="obecViewerCounter"></div>
+  <button id="obecViewerNext" class="obecViewer-nav" onclick="nextObec()">&#8250;</button>
+</div>
+
+<!-- Video Viewer Modal -->
+<div id="videoViewer" onclick="if(event.target===this) closeVideoPlayer()">
+  <div class="video-viewer-content">
+    <button id="videoViewerClose" onclick="closeVideoPlayer()">✕ ปิดหน้าต่าง</button>
+    <div class="video-viewer-ratio">
+      <iframe id="videoViewerIframe" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
+</body>
 </html>
