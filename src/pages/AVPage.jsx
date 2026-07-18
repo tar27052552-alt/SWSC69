@@ -1511,6 +1511,7 @@ export default function AVPage() {
                     <option value="ข่าวโรงเรียน">ข่าวโรงเรียน</option>
                     <option value="กิจกรรมสภา">กิจกรรมสภา</option>
                     <option value="ข่าวชมรม">ข่าวชมรม</option>
+                    <option value="รางวัล">รางวัล</option>
                     <option value="อื่นๆ">อื่นๆ</option>
                   </select>
                 </div>
