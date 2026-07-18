@@ -316,6 +316,24 @@
       transition: .2s var(--ease);
     }
     .nav-cta:hover { background: var(--purple-700) !important; }
+    .btn-download-pdf {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--purple-600), var(--purple-800));
+      color: #fff !important;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+      text-decoration: none;
+      box-shadow: 0 4px 15px rgba(109, 40, 217, 0.3);
+      transition: all 0.3s ease;
+    }
+    .btn-download-pdf:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(109, 40, 217, 0.5);
+    }
     .nav-burger {
       display: none;
       flex-direction: column;
@@ -2188,10 +2206,17 @@
             <span class="block-head-title">📜 ระเบียบโรงเรียนสรรพวิทยาคมว่าด้วยคณะกรรมการสภานักเรียน</span>
           </div>
           <div class="block-body" style="padding: 20px;">
-            <div style="text-align: right; margin-bottom: 15px;">
-              <a href="./regulations.pdf" target="_blank" class="btn btn-primary" style="text-decoration: none; padding: 8px 16px; border-radius: 6px;">⬇️ ดาวน์โหลดฉบับเต็ม (PDF)</a>
+            <div style="text-align: right; margin-bottom: 20px;">
+              <a href="./regulations.pdf" target="_blank" class="btn-download-pdf">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                ดาวน์โหลดฉบับเต็ม (PDF)
+              </a>
             </div>
-            <iframe src="./regulations.pdf#toolbar=0" width="100%" height="800px" style="border: 1px solid var(--gray-200); border-radius: 8px;">
+            <iframe src="./regulations.pdf#toolbar=0" width="100%" height="800px" style="border: 1px solid var(--gray-200); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
               <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./regulations.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
             </iframe>
           </div>
