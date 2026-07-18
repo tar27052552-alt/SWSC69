@@ -3588,6 +3588,12 @@
     return (match && match[2].length === 11) ? match[2] : null;
   }
 
+  function getGoogleDriveId(url) {
+    if (!url) return null;
+    const match = url.match(/[-\w]{25,}/);
+    return match ? match[0] : null;
+  }
+
   function getEmbedUrl(url) {
     const ytId = getYouTubeId(url);
     if (ytId) {
@@ -3596,6 +3602,12 @@
     if (url.includes('facebook.com')) {
       return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&autoplay=1`;
     }
+    if (url.includes('drive.google.com')) {
+      const driveId = getGoogleDriveId(url);
+      if (driveId) {
+        return `https://drive.google.com/file/d/${driveId}/preview`;
+      }
+    }
     return url;
   }
 
@@ -3603,6 +3615,9 @@
     const ytId = getYouTubeId(url);
     if (ytId) {
       return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+    }
+    if (url.includes('drive.google.com')) {
+      return transformGoogleDriveUrl(url);
     }
     return './logo.png';
   }

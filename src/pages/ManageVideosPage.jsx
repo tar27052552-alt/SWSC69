@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import { Camera, Trash2, Edit2, X, Plus, Save, ExternalLink } from 'lucide-react';
+import { uploadFileToDrive } from '../lib/googleDriveUpload';
 
 export default function ManageVideosPage() {
   const { user } = useAuth();
@@ -44,6 +45,48 @@ export default function ManageVideosPage() {
       return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
     }
     return ''; // Return empty so it falls back to a placeholder
+  };
+
+  const toBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+  });
+
+  const handleVideoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Size limit warning
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      alert('ไฟล์วิดีโอมีขนาดใหญ่เกิน 50MB ครับ เนื่องจากข้อจำกัดของการอัปโหลดผ่าน Apps Script แนะนำให้อัปโหลดเข้า Google Drive โดยตรง แล้วก๊อปปี้ลิงก์ที่แชร์มาวางในช่องลิงก์ด้านบนแทนครับ');
+      e.target.value = '';
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const base64 = await toBase64(file);
+      const fileExt = file.name.split('.').pop();
+      const cleanTitle = (form.title.trim() || 'activity-video').replace(/[\/\\?%*:|"<>]/g, '-');
+      const fileName = `${Date.now()}-${cleanTitle}.${fileExt}`;
+      
+      alert('ระบบกำลังทำการอัปโหลดวิดีโอไปยัง Google Drive ของสภา... ขั้นตอนนี้อาจใช้เวลา 1-3 นาทีขึ้นอยู่กับขนาดไฟล์และเน็ต ห้ามปิดหรือกดยกเลิกหน้านี้ครับ');
+      const result = await uploadFileToDrive(base64, fileName, 'obec');
+      
+      if (!result?.url) throw new Error('อัปโหลดวิดีโอขึ้น Google Drive ไม่สำเร็จ');
+      
+      setForm(prev => ({ ...prev, video_url: result.url }));
+      alert('อัปโหลดวิดีโอขึ้น Google Drive สำเร็จ! ลิงก์ถูกกรอกให้โดยอัตโนมัติแล้วครับ');
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+    } finally {
+      setSubmitting(false);
+      e.target.value = '';
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -162,6 +205,21 @@ export default function ManageVideosPage() {
               />
               <span style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 4, display: 'block' }}>
                 รองรับลิงก์วิดีโอ YouTube ทั่วไป, ลิงก์ย่อ (youtu.be), และลิงก์จากหน้า Facebook Watch
+              </span>
+            </div>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+                หรือ อัปโหลดไฟล์วิดีโอเข้า Google Drive โดยตรง
+              </label>
+              <input
+                type="file"
+                accept="video/*"
+                className="form-ctrl"
+                onChange={handleVideoUpload}
+                disabled={submitting}
+              />
+              <span style={{ fontSize: 11, color: '#ef4444', marginTop: 4, display: 'block', fontWeight: 500 }}>
+                ⚠️ ข้อจำกัด: ขนาดไฟล์ต้องไม่เกิน 50MB (หากใหญ่กว่านี้ แนะนำให้อัปโหลดเข้า Google Drive โดยตรงแล้วนำลิงก์แชร์มาวางในช่องลิงก์วิดีโอด้านบนแทน)
               </span>
             </div>
             <div>
