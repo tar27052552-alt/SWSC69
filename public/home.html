@@ -1618,9 +1618,11 @@
       .nav-all-logos { height: 38px; }
       .public-modal-title { font-size: 18px; }
       
-      /* Hide bulky PDF iframes on mobile and expand buttons */
+      /* Show PDF iframes on mobile with a compact height */
       #regulations iframe, #manual iframe {
-        display: none !important;
+        display: block !important;
+        height: 480px !important;
+        margin-top: 15px !important;
       }
       .btn-download-pdf {
         display: flex !important;
