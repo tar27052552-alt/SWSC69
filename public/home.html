@@ -2599,25 +2599,74 @@
   </div>
 
   <!-- FOOTER -->
-  <footer>
-    <div class="footer-inner">
-      <div class="footer-top">
-        <div class="footer-brand-group">
-          <span class="footer-brand-name">SWSC.OFFICIAL</span>
-          <span class="footer-brand-desc">คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม อำเภอแม่สอด จังหวัดตาก — ระบบสารสนเทศสภานักเรียน v2.0</span>
+  <footer style="background: linear-gradient(180deg, #1e1b4b 0%, #0f0b29 100%); color: rgba(255, 255, 255, 0.7); padding: 50px 20px 30px; border-top: 4px solid var(--gold-400); position: relative; font-family: 'Inter', sans-serif;">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px;">
+      
+      <!-- Top Row: Branding and Multi-column Links -->
+      <div style="display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap;">
+        
+        <!-- Column 1: Brand Info -->
+        <div style="flex: 1.5; min-width: 260px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="./all-logos.png" alt="SWSC" style="height: 38px; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));" />
+            <div>
+              <div style="font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 0.5px; line-height: 1;">
+                SWSC<span style="color: var(--gold-400);">.</span>OFFICIAL
+              </div>
+              <div style="font-size: 11px; color: var(--gold-400); font-weight: 700; margin-top: 4px; letter-spacing: 1px;">STUDENT COUNCIL PORTAL</div>
+            </div>
+          </div>
+          <p style="font-size: 13.5px; line-height: 1.6; color: rgba(255, 255, 255, 0.6); margin: 0; max-width: 380px;">
+            คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม อำเภอแม่สอด จังหวัดตาก — ระบบสารสนเทศสภานักเรียน v2.1 พัฒนาขึ้นเพื่อการบริหารงานและให้บริการข้อมูลข่าวสารแก่คณะครูและนักเรียน
+          </p>
         </div>
-        <nav class="footer-nav">
-          <a href="#/home">หน้าแรก</a>
-          <a href="#/news">ข่าวสาร</a>
-          <a href="#/events">กิจกรรม</a>
-          <a href="#/team">คณะกรรมการ</a>
-          <a href="#/suggestions">ร้องเรียน / เสนอแนะ</a>
-        </nav>
+
+        <!-- Column 2: Navigation Links -->
+        <div style="flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 12px;">
+          <h4 style="font-size: 14px; color: #fff; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0; border-left: 3px solid var(--purple-500); padding-left: 8px; text-align: left;">ลิงก์ด่วน</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+            <a href="#/home" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">🏠 หน้าแรก</a>
+            <a href="#/news" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">📰 ข่าวสารสภา</a>
+            <a href="#/events" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">📅 ปฏิทินกิจกรรม</a>
+            <a href="#/structure" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">🏛️ โครงสร้างสภาฯ</a>
+          </div>
+        </div>
+
+        <!-- Column 3: Services & Docs -->
+        <div style="flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 12px;">
+          <h4 style="font-size: 14px; color: #fff; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0; border-left: 3px solid var(--purple-500); padding-left: 8px; text-align: left;">ข้อมูลบริการ & เอกสาร</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+            <a href="#/certificates" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">🎓 ค้นหาเกียรติบัตร</a>
+            <a href="#/documents" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">📑 คลังเอกสารวิชาการ</a>
+            <a href="#/regulations" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">📜 ระเบียบสภาฯ</a>
+            <a href="#/manual" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">📘 คู่มือปฏิบัติงาน</a>
+          </div>
+        </div>
+
+        <!-- Column 4: Contact -->
+        <div style="flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 12px;">
+          <h4 style="font-size: 14px; color: #fff; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0; border-left: 3px solid var(--purple-500); padding-left: 8px; text-align: left;">เสนอแนะ & ติดต่อ</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+            <a href="#/suggestions" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">💬 กล่องข้อเสนอแนะ</a>
+            <a href="#/contact" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">📞 ช่องทางติดต่อสภา</a>
+            <a href="https://www.sappha.ac.th" target="_blank" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">🏫 เว็บไซต์โรงเรียน</a>
+          </div>
+        </div>
+
       </div>
-      <div class="footer-bottom">
-        <span>© 2568 คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม. สงวนลิขสิทธิ์ทั้งหมด.</span>
-        <span>พัฒนาโดยฝ่ายประชาสัมพันธ์และสารสนเทศสภา SWSC</span>
+
+      <!-- Divider line -->
+      <div style="height: 1px; background: rgba(255, 255, 255, 0.08); width: 100%;"></div>
+
+      <!-- Bottom Row: Copyright & Credits -->
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: rgba(255, 255, 255, 0.45); text-align: left;">
+        <span>© 2569 คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม. สงวนลิขสิทธิ์ทั้งหมด.</span>
+        <span style="display: flex; align-items: center; gap: 6px;">
+          Developed by 
+          <span style="color: var(--gold-400); font-weight: 700;">ฝ่ายประชาสัมพันธ์และสารสนเทศสภา SWSC</span>
+        </span>
       </div>
+
     </div>
   </footer>
 
