@@ -3212,7 +3212,7 @@
 
   async function loadNews() {
     try {
-      let fetchedNews = await sbFetch(`web_news?select=*&category=not.in.(${encodeURIComponent('ประกาศ')},${encodeURIComponent('ประกาศ_ซ่อน')})&order=created_at.desc&limit=30`) || [];
+      let fetchedNews = await sbFetch(`web_news?select=*&category=not.in.(${encodeURIComponent('ประกาศ')},${encodeURIComponent('ประกาศ_ซ่อน')})&order=created_at.desc`) || [];
       // Filter out all announcements so banners and general news are completely separated
       allNews = fetchedNews.filter(n => n.category !== 'ประกาศ' && n.category !== 'ประกาศ_ซ่อน');
       
