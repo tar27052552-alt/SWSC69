@@ -41,7 +41,7 @@ const NAV = [
 const PAGE_TITLES = {
   '/dashboard': 'หน้าหลัก', '/checkin': 'เช็คชื่อมาโรงเรียน', '/my-attendance': 'ประวัติเช็คชื่อ', '/greeting-duty': 'ส่งรายงานเวรยืนไหว้', '/clean-duty': 'ส่งเวรห้องสภา', '/submit-news': 'ส่งข่าวประชาสัมพันธ์', '/suggestions': 'ข้อเสนอแนะนักเรียน', '/schedules': 'ตารางเวร', '/calendar': 'ปฏิทินกิจกรรม',
   '/my-fines': 'ชำระเงินและค่าปรับ',
-  '/profile': 'ประวัติส่วนตัว', '/settings': 'ตั้งค่าทั่วไป', '/admin': 'จัดการผู้ใช้งาน',
+  '/profile': 'ประวัติส่วนตัว', '/settings': 'ตั้งค่าทั่วไป', '/admin': 'จัดการผู้ใช้งาน', '/admin-videos': 'จัดการวิดีโอกิจกรรม',
   '/finance': 'ฝ่ายการเงิน', '/discipline': 'ฝ่ายปกครอง', '/academic': 'ฝ่ายวิชาการ',
   '/office': 'สนง.กรรมการ', '/pr': 'ประชาสัมพันธ์', '/recreation': 'นันทนาการ',
   '/secretary': 'เลขานุการ', '/facilities': 'อาคารสถานที่', '/av': 'โสตทัศนศึกษา',
@@ -199,6 +199,10 @@ export default function Layout({ children }) {
               <NavLink to="/admin-announcements" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
                 <Megaphone size={15} />
                 <span>จัดการประกาศหน้าเว็บ</span>
+              </NavLink>
+              <NavLink to="/admin-videos" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
+                <Camera size={15} />
+                <span>จัดการวิดีโอกิจกรรม</span>
               </NavLink>
             </div>
           )}

@@ -948,6 +948,164 @@
     .org-line-v { width: 2px; height: 28px; background: var(--gray-200); }
     .org-line-h { height: 2px; width: 70%; background: var(--gray-200); }
 
+    /* ==================== VIDEOS ==================== */
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+      padding: 10px 0;
+    }
+    .video-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--gray-200);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s var(--ease);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+    }
+    .video-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(109, 40, 217, 0.1);
+      border-color: var(--purple-200);
+    }
+    .video-thumbnail-wrapper {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 Aspect Ratio */
+      background: #000;
+      overflow: hidden;
+    }
+    .video-thumbnail {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s var(--ease);
+    }
+    .video-card:hover .video-thumbnail {
+      transform: scale(1.05);
+    }
+    .video-play-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      background: rgba(109, 40, 217, 0.9);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      transition: all 0.3s var(--ease);
+      z-index: 2;
+    }
+    .video-play-btn svg {
+      margin-left: 3px;
+      transition: transform 0.3s var(--ease);
+    }
+    .video-card:hover .video-play-btn {
+      background: var(--gold-500);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+      transform: translate(-50%, -50%) scale(1.1);
+    }
+    .video-info {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+    .video-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 8px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .video-desc {
+      font-size: 13px;
+      color: var(--gray-500);
+      line-height: 1.5;
+      margin-top: auto;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Video Viewer Modal */
+    #videoViewer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    #videoViewer.open {
+      display: flex;
+    }
+    .video-viewer-content {
+      width: 90%;
+      max-width: 900px;
+      position: relative;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .video-viewer-ratio {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 */
+    }
+    .video-viewer-ratio iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    #videoViewerClose {
+      position: absolute;
+      top: -45px;
+      right: 0;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    #videoViewerClose:hover {
+      background: #ef4444;
+    }
+
     /* ==================== SUGGESTION FORM ==================== */
     .form-card {
       max-width: 580px;
@@ -1856,7 +2014,7 @@
       <li class="nav-item">
         <a href="javascript:void(0)" class="nav-link">🎞️ สื่อวีดิทัศน์ <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
         <div class="nav-dropdown">
-          <a href="#/home">📺 วิดีโอกิจกรรม</a>
+          <a href="#/videos">📺 วิดีโอกิจกรรม</a>
         </div>
       </li>
       <li class="nav-item"><a href="#/contact" class="nav-link">📞 ติดต่อเรา</a></li>
@@ -1873,6 +2031,7 @@
     <a href="#/news" onclick="closeMobile()">📢 ข่าวสาร</a>
     <a href="#/events" onclick="closeMobile()">📅 กิจกรรม</a>
     <a href="#/team" onclick="closeMobile()">👥 คณะกรรมการ</a>
+    <a href="#/videos" onclick="closeMobile()">🎬 วิดีโอกิจกรรม</a>
     <a href="#/suggestions" onclick="closeMobile()">💬 ข้อเสนอแนะ</a>
     <a href="#/contact" onclick="closeMobile()">📞 ติดต่อ</a>
     <a href="index.html#/login" style="background:var(--purple-100);color:var(--purple-700);font-weight:800;">🔐 เข้าสู่ระบบสภา</a>
@@ -2290,6 +2449,20 @@
                 <div class="success-title">ส่งเรียบร้อยแล้ว!</div>
                 <p style="color:var(--gray-500);font-size:14px;margin:8px 0 20px">ขอบคุณสำหรับการมีส่วนร่วม สภานักเรียนจะนำฟีดแบ็คของคุณเข้าพิจารณาในการประชุมครั้งถัดไป</p>
                 <button class="form-submit" onclick="resetForm()" style="max-width:180px">ส่งเรื่องเพิ่มเติม</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: VIDEOS -->
+      <div class="page-section" id="videos">
+        <div class="block">
+          <div class="block-head"><span class="block-head-title">🎬 วิดีโอกิจกรรมสภานักเรียน</span></div>
+          <div class="block-body" style="padding: 20px;">
+            <div class="video-grid" id="videoGrid">
+              <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--gray-500);">
+                กำลังโหลดวิดีโอ...
               </div>
             </div>
           </div>
@@ -3396,6 +3569,85 @@
     document.getElementById('successView').style.display = 'none';
   }
 
+  /* ---- VIDEOS ---- */
+  async function loadVideos() {
+    try {
+      const data = await sbFetch(`web_videos?select=*&order=created_at.desc`) || [];
+      renderVideos(data);
+    } catch (err) {
+      console.error("Failed to load videos:", err);
+      const grid = document.getElementById('videoGrid');
+      if (grid) grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:20px; color:var(--gray-500);">เกิดข้อผิดพลาดในการโหลดวิดีโอ</div>';
+    }
+  }
+
+  function getYouTubeId(url) {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  }
+
+  function getEmbedUrl(url) {
+    const ytId = getYouTubeId(url);
+    if (ytId) {
+      return `https://www.youtube.com/embed/${ytId}?autoplay=1`;
+    }
+    if (url.includes('facebook.com')) {
+      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&autoplay=1`;
+    }
+    return url;
+  }
+
+  function getThumbnailUrl(url) {
+    const ytId = getYouTubeId(url);
+    if (ytId) {
+      return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+    }
+    return './logo.png';
+  }
+
+  function renderVideos(items) {
+    const grid = document.getElementById('videoGrid');
+    if (!grid) return;
+    if (!items.length) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--gray-500);">ยังไม่มีวิดีโอกิจกรรมในระบบ</div>';
+      return;
+    }
+    grid.innerHTML = items.map(item => {
+      const thumb = getThumbnailUrl(item.video_url);
+      const embed = getEmbedUrl(item.video_url);
+      return `
+        <div class="video-card" onclick="openVideoPlayer('${embed}')">
+          <div class="video-thumbnail-wrapper">
+            <img src="${thumb}" class="video-thumbnail" alt="${item.title}" onerror="this.src='./logo.png'" />
+            <div class="video-play-btn">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+          <div class="video-info">
+            <div class="video-title">${item.title}</div>
+            <div class="video-desc">${item.description || ''}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openVideoPlayer(embedUrl) {
+    document.getElementById('videoViewerIframe').src = embedUrl;
+    document.getElementById('videoViewer').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeVideoPlayer() {
+    document.getElementById('videoViewerIframe').src = '';
+    document.getElementById('videoViewer').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
   /* ---- PARTICLES BACKGROUND SYSTEM ---- */
   function initParticles() {
     const canvas = document.getElementById('particleCanvas');
@@ -3546,6 +3798,7 @@
     });
     loadAnnouncements();
     loadObecLine();
+    loadVideos();
     loadEvents().then(count => {
       const el = document.getElementById('statEvents');
       if (el) { el.dataset.target = count || 0; }
@@ -3564,6 +3817,16 @@
   <img id="obecViewerImg" src="" alt="Obec Line" />
   <div id="obecViewerCounter"></div>
   <button id="obecViewerNext" class="obecViewer-nav" onclick="nextObec()">&#8250;</button>
+</div>
+
+<!-- Video Viewer Modal -->
+<div id="videoViewer" onclick="if(event.target===this) closeVideoPlayer()">
+  <div class="video-viewer-content">
+    <button id="videoViewerClose" onclick="closeVideoPlayer()">✕ ปิดหน้าต่าง</button>
+    <div class="video-viewer-ratio">
+      <iframe id="videoViewerIframe" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+  </div>
 </div>
 
 </body>
