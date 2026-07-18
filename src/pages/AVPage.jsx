@@ -133,6 +133,7 @@ export default function AVPage() {
       const { data, error } = await supabase
         .from('web_news')
         .select('*')
+        .not('category', 'in', '("ประกาศ","ประกาศ_ซ่อน")')
         .order('created_at', { ascending: false });
       if (error) throw error;
       setNewsList(data || []);
@@ -1509,7 +1510,6 @@ export default function AVPage() {
                   >
                     <option value="ข่าวโรงเรียน">ข่าวโรงเรียน</option>
                     <option value="กิจกรรมสภา">กิจกรรมสภา</option>
-                    <option value="ประกาศ">ประกาศ</option>
                     <option value="ข่าวชมรม">ข่าวชมรม</option>
                     <option value="อื่นๆ">อื่นๆ</option>
                   </select>
