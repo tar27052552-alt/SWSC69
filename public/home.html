@@ -1990,7 +1990,6 @@
         <a href="javascript:void(0)" class="nav-link">🏘️ ข้อมูลพื้นฐาน <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
         <div class="nav-dropdown">
           <a href="#/news">📰 ข่าวประชาสัมพันธ์</a>
-          <a href="#/team">👥 ทำเนียบคณะกรรมการสภา</a>
           <a href="#/regulations">📜 ระเบียบโรงเรียนสรรพวิทยาคมว่าด้วยคณะกรรมการสภานักเรียน โรงเรียนสรรพวิทยาคม</a>
           <a href="#/manual">📘 คู่มือการปฏิบัติงานสภานักเรียน โรงเรียนสรรพวิทยาคม</a>
           <a href="#/structure">🏛️ โครงสร้างการบริหารงาน</a>
@@ -2030,7 +2029,7 @@
     <a href="#/home" onclick="closeMobile()">🏠 หน้าแรก</a>
     <a href="#/news" onclick="closeMobile()">📢 ข่าวสาร</a>
     <a href="#/events" onclick="closeMobile()">📅 กิจกรรม</a>
-    <a href="#/team" onclick="closeMobile()">👥 คณะกรรมการ</a>
+    <a href="#/structure" onclick="closeMobile()">🏛️ โครงสร้างสภา</a>
     <a href="#/videos" onclick="closeMobile()">🎬 วิดีโอกิจกรรม</a>
     <a href="#/suggestions" onclick="closeMobile()">💬 ข้อเสนอแนะ</a>
     <a href="#/contact" onclick="closeMobile()">📞 ติดต่อ</a>
@@ -2238,25 +2237,7 @@
         </div>
       </div>
 
-      <!-- PAGE: TEAM -->
-      <div class="page-section" id="team">
-        <div class="block">
-          <div class="block-head">
-            <span class="block-head-title">ทำเนียบคณะกรรมการนักเรียน</span>
-          </div>
-          <div class="block-body">
-            <div class="team-grid" id="teamGrid">
-              <div class="loader"><div class="spin"></div><span>กำลังโหลดทำเนียบ...</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="block" style="margin-top:0">
-          <div class="block-head"><span class="block-head-title">โครงสร้างการบริหารงาน</span></div>
-          <div class="block-body" style="text-align: center; padding: 20px;">
-            <img src="./structure.jpg" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);" />
-          </div>
-        </div>
-      </div>
+
 
       <!-- PAGE: CONTACT -->
       <div class="page-section" id="contact">
@@ -3375,23 +3356,27 @@
         if (orgP) orgP.textContent = pres.name || 'ประธานสภา';
       }
 
-      document.getElementById('teamGrid').innerHTML = sorted.map(u => {
-        const isP = u.role === 'president';
-        const color = u.avatar_color || avatarColor(u.name);
-        const label = isP ? '👑 ประธานสภา' : u.role === 'admin' ? '⚙️ แอดมิน' : '🏅 หัวหน้าฝ่าย';
-        return `<div class="team-card ${isP ? 'president-card' : ''}">
-          <div class="team-avatar" style="background:${color}">${(u.nickname||u.name||'?')[0]}</div>
-          <div class="team-name">${u.name||''}</div>
-          <div class="team-nick">"${u.nickname||''}"</div>
-          <span class="team-badge">${u.position||label}</span>
-        </div>`;
-      }).join('');
+      const teamGrid = document.getElementById('teamGrid');
+      if (teamGrid) {
+        teamGrid.innerHTML = sorted.map(u => {
+          const isP = u.role === 'president';
+          const color = u.avatar_color || avatarColor(u.name);
+          const label = isP ? '👑 ประธานสภา' : u.role === 'admin' ? '⚙️ แอดมิน' : '🏅 หัวหน้าฝ่าย';
+          return `<div class="team-card ${isP ? 'president-card' : ''}">
+            <div class="team-avatar" style="background:${color}">${(u.nickname||u.name||'?')[0]}</div>
+            <div class="team-name">${u.name||''}</div>
+            <div class="team-nick">"${u.nickname||''}"</div>
+            <span class="team-badge">${u.position||label}</span>
+          </div>`;
+        }).join('');
+      }
 
       const hMembers = document.getElementById('hStatMembers');
       if (hMembers) hMembers.textContent = data.length;
       initScrollReveal();
     } catch {
-      document.getElementById('teamGrid').innerHTML = '<div class="empty"><div>โหลดไม่สำเร็จ</div></div>';
+      const teamGrid = document.getElementById('teamGrid');
+      if (teamGrid) teamGrid.innerHTML = '<div class="empty"><div>โหลดไม่สำเร็จ</div></div>';
     }
   }
 
