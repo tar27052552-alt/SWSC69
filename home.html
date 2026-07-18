@@ -49,6 +49,142 @@
       min-height: 100vh;
     }
 
+    /* ==================== LOADING SCREEN ==================== */
+    #loadingScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: #0d0714;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      transition: opacity 0.7s ease, visibility 0.7s ease;
+    }
+    #loadingScreen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .loader-logo {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 3px solid rgba(245,158,11,0.15);
+      border-top-color: var(--gold-400);
+      animation: spinLogo 1s linear infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .loader-logo::before {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      border: 2px solid rgba(168,85,247,0.15);
+      border-bottom-color: var(--purple-400);
+      animation: spinLogo 1.5s linear infinite reverse;
+    }
+    .loader-logo img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      border-radius: 50%;
+    }
+    @keyframes spinLogo {
+      to { transform: rotate(360deg); }
+    }
+    .loader-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #fff, #fcd34d, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .loader-subtitle {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.5px;
+    }
+    .loader-bar-wrap {
+      width: 200px;
+      height: 3px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .loader-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
+      border-radius: 99px;
+      animation: loadBar 2s ease forwards;
+    }
+    @keyframes loadBar {
+      from { width: 0%; }
+      to   { width: 100%; }
+    }
+
+
+    /* ==================== STATS COUNTER STRIP ==================== */
+    .stats-strip {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin: 0 0 28px 0;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    }
+    .stat-item {
+      flex: 1;
+      min-width: 150px;
+      padding: 22px 20px;
+      text-align: center;
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(10px);
+      border-right: 1px solid rgba(245,158,11,0.15);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-item:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(245,158,11,0.12);
+    }
+    .stat-item::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
+    }
+    .stat-icon {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+    .stat-number {
+      font-family: 'Oswald', sans-serif;
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--gold-500);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: var(--gray-500);
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
 
 
     /* ==================== NAVBAR ==================== */
@@ -81,6 +217,10 @@
       letter-spacing: .5px;
     }
     .nav-brand-name span { color: var(--gold-500); }
+    .nav-all-logos {
+      height: 44px;
+      object-fit: contain;
+    }
     .nav-menu {
       display: flex;
       align-items: center;
@@ -176,6 +316,24 @@
       transition: .2s var(--ease);
     }
     .nav-cta:hover { background: var(--purple-700) !important; }
+    .btn-download-pdf {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--purple-600), var(--purple-800));
+      color: #fff !important;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+      text-decoration: none;
+      box-shadow: 0 4px 15px rgba(109, 40, 217, 0.3);
+      transition: all 0.3s ease;
+    }
+    .btn-download-pdf:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(109, 40, 217, 0.5);
+    }
     .nav-burger {
       display: none;
       flex-direction: column;
@@ -347,6 +505,7 @@
     }
     .obec-card {
       text-decoration: none;
+      cursor: pointer;
     }
     .obec-card img {
       width: 100%;
@@ -361,6 +520,83 @@
       transform: translateY(-8px) scale(1.03); 
       box-shadow: 0 20px 40px rgba(107, 33, 168, 0.15); 
     }
+
+    /* Obec Line Viewer Modal */
+    #obecViewer {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 99999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #obecViewer.open { display: flex; }
+    #obecViewerImg {
+      max-width: min(700px, 95vw);
+      max-height: 85vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+      display: block;
+    }
+    #obecViewerTitle {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-align: center;
+      font-family: 'Noto Sans Thai', sans-serif;
+    }
+    #obecViewerCounter {
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+      margin-top: 14px;
+    }
+    .obecViewer-nav {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.12);
+      border: none;
+      color: #fff;
+      font-size: 28px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      z-index: 100000;
+    }
+    .obecViewer-nav:hover { background: rgba(255,255,255,0.25); }
+    #obecViewerPrev { left: 16px; }
+    #obecViewerNext { right: 16px; }
+    #obecViewerClose {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: #fff;
+      font-size: 22px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      z-index: 100000;
+    }
+    #obecViewerClose:hover { background: rgba(255,0,0,0.4); }
     .obec-footer-links {
       display: flex;
       justify-content: space-between;
@@ -409,8 +645,19 @@
       padding: 0 40px;
     }
 
-    .page-section { display: none; }
-    .page-section.active { display: block; }
+    .page-section {
+      display: none;
+      opacity: 0;
+      transform: translateY(15px);
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .page-section.active {
+      display: block;
+    }
+    .page-section.active-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
 
     /* ==================== CONTENT BLOCK ==================== */
     .block {
@@ -545,12 +792,14 @@
     .cat-evt  { background: #fef3c7; color: #b45309; }
     .cat-ann  { background: #fee2e2; color: #b91c1c; }
     .cat-clb  { background: #d1fae5; color: #065f46; }
+    .cat-awd  { background: #ffedd5; color: #9a3412; }
     .cat-gen  { background: var(--gray-100); color: var(--gray-500); }
 
     .cat-sch-bg  { background: #ede9fe22; }
     .cat-evt-bg  { background: #fef3c722; }
     .cat-ann-bg  { background: #fee2e222; }
     .cat-clb-bg  { background: #d1fae522; }
+    .cat-awd-bg  { background: #ffedd522; }
     .cat-gen-bg  { background: var(--gray-100); }
 
     /* ==================== FILTER PILLS ==================== */
@@ -699,14 +948,169 @@
     .org-line-v { width: 2px; height: 28px; background: var(--gray-200); }
     .org-line-h { height: 2px; width: 70%; background: var(--gray-200); }
 
+    /* ==================== VIDEOS ==================== */
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+      padding: 10px 0;
+    }
+    .video-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--gray-200);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s var(--ease);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+    }
+    .video-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(109, 40, 217, 0.1);
+      border-color: var(--purple-200);
+    }
+    .video-thumbnail-wrapper {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 Aspect Ratio */
+      background: #000;
+      overflow: hidden;
+    }
+    .video-thumbnail {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s var(--ease);
+    }
+    .video-card:hover .video-thumbnail {
+      transform: scale(1.05);
+    }
+    .video-play-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      background: rgba(109, 40, 217, 0.9);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      transition: all 0.3s var(--ease);
+      z-index: 2;
+    }
+    .video-play-btn svg {
+      margin-left: 3px;
+      transition: transform 0.3s var(--ease);
+    }
+    .video-card:hover .video-play-btn {
+      background: var(--gold-500);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+      transform: translate(-50%, -50%) scale(1.1);
+    }
+    .video-info {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+    .video-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 8px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .video-desc {
+      font-size: 13px;
+      color: var(--gray-500);
+      line-height: 1.5;
+      margin-top: auto;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Video Viewer Modal */
+    #videoViewer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    #videoViewer.open {
+      display: flex;
+    }
+    .video-viewer-content {
+      width: 90%;
+      max-width: 900px;
+      position: relative;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .video-viewer-ratio {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 */
+    }
+    .video-viewer-ratio iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    #videoViewerClose {
+      position: absolute;
+      top: -45px;
+      right: 0;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    #videoViewerClose:hover {
+      background: #ef4444;
+    }
+
     /* ==================== SUGGESTION FORM ==================== */
     .form-card {
       max-width: 580px;
-      background: var(--white);
-      border-radius: var(--radius-lg);
-      padding: 36px;
-      box-shadow: var(--shadow-lg);
-      border: 1px solid var(--gray-200);
+      margin: 0 auto;
+      padding: 10px 0;
     }
     .form-group { margin-bottom: 20px; }
     .form-lbl { display: block; font-size: 13px; font-weight: 700; color: var(--gray-700); margin-bottom: 6px; }
@@ -969,44 +1373,57 @@
     }
     .cal-more:hover { background: var(--gray-200); color: var(--gray-700); }
 
-    /* Calendar Popup */
+    /* Calendar Popup (FULL SCREEN OVERLAY) */
     .cal-popup {
       position: fixed;
       inset: 0;
-      z-index: 500;
-      background: rgba(0,0,0,.35);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(4px);
+      z-index: 9999;
+      background: var(--white);
+      display: none;
+      overflow-y: auto;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .cal-popup.show {
+      display: block;
+      opacity: 1;
     }
     .cal-popup-inner {
       background: var(--white);
-      border-radius: var(--radius-lg);
-      padding: 32px;
-      max-width: 420px;
-      width: calc(100% - 40px);
+      border-radius: 0;
+      padding: 40px;
+      max-width: 100vw;
+      width: 100%;
+      min-height: 100vh;
       position: relative;
-      box-shadow: 0 32px 80px rgba(0,0,0,.25);
-      animation: popIn .2s var(--ease);
+      box-shadow: none;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    @keyframes popIn { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .cal-popup.show .cal-popup-inner {
+      transform: translateY(0);
+    }
     .cal-popup-close {
       position: absolute;
-      top: 16px; right: 16px;
-      width: 30px; height: 30px;
+      top: 24px; right: 24px;
+      width: 36px; height: 36px;
       border-radius: 50%;
       border: none;
       background: var(--gray-100);
       color: var(--gray-500);
-      font-size: 14px;
+      font-size: 18px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: .15s;
+      z-index: 10;
     }
     .cal-popup-close:hover { background: var(--gray-200); color: var(--gray-900); }
+    @media (max-width: 768px) {
+      .cal-popup-inner { padding: 20px; }
+      .cal-popup-close { top: 16px; right: 16px; }
+    }
 
     /* ==================== FOOTER ==================== */
 
@@ -1100,25 +1517,34 @@
       .team-grid { grid-template-columns: repeat(2, 1fr); }
       .news-grid { grid-template-columns: 1fr; }
     }
-    /* ==================== PUBLIC MODAL ==================== */
+    /* ==================== PUBLIC MODAL (FULL SCREEN OVERLAY) ==================== */
     .public-modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-      z-index: 9999; display: none; align-items: center; justify-content: center;
-      opacity: 0; transition: opacity 0.3s;
+      background: var(--white);
+      z-index: 190; display: none;
+      overflow-y: auto;
+      opacity: 0; transition: opacity 0.3s ease;
     }
-    .public-modal-overlay.show { display: flex; opacity: 1; }
+    .public-modal-overlay.show { display: block; opacity: 1; }
     .public-modal-content {
-      background: var(--white); width: 90%; max-width: 500px;
-      border-radius: 12px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-      transform: translateY(20px); transition: transform 0.3s;
-      max-height: 80vh; display: flex; flex-direction: column;
+      background: var(--white); width: 100%; max-width: 100vw;
+      min-height: 100vh;
+      border-radius: 0; padding: 80px 40px 40px 40px; box-shadow: none;
+      transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .public-modal-overlay.show .public-modal-content { transform: translateY(0); }
-    .public-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--gray-200); padding-bottom: 12px; }
-    .public-modal-title { font-size: 18px; font-weight: 700; color: var(--gray-900); }
-    .public-modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--gray-500); }
-    .public-modal-body { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+    .public-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--gray-200); padding-bottom: 16px; flex-shrink: 0; width: 100%; max-width: 1100px; margin: 0 auto 24px; }
+    .public-modal-title { font-size: 22px; font-weight: 800; color: var(--gray-900); }
+    .public-modal-close { background: var(--gray-100); border: none; font-size: 22px; cursor: pointer; color: var(--gray-500); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: .2s; }
+    .public-modal-close:hover { background: var(--gray-200); color: var(--gray-900); }
+    .public-modal-body { display: block; width: 100%; max-width: 1100px; margin: 0 auto; }
+    @media (max-width: 768px) {
+      .public-modal-content { padding: 80px 20px 20px 20px; }
+      .public-modal-header { margin-bottom: 16px; padding-bottom: 12px; }
+      .nav-brand-name { font-size: 16px; }
+      .nav-all-logos { height: 48px; }
+      .public-modal-title { font-size: 18px; }
+    }
     .doc-list-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid var(--gray-200); border-radius: 8px; text-decoration: none; color: var(--gray-800); transition: .2s; }
     .doc-list-item:hover { border-color: var(--purple-400); background: #faf5ff; }
     .doc-list-info { display: flex; flex-direction: column; gap: 4px; }
@@ -1167,17 +1593,395 @@
       opacity: 1;
       transform: translateY(0);
     }
+
+    /* TWO COLUMN NEWS DETAIL LAYOUT */
+    .news-detail-layout {
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      gap: 30px;
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .news-detail-main {
+      background: #fff;
+    }
+    .news-detail-sidebar {
+      position: sticky;
+      top: 20px;
+      align-self: start;
+    }
+    @media (max-width: 900px) {
+      .news-detail-layout {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+      .news-detail-sidebar {
+        position: static;
+      }
+    }
+    }
+    html.modal-open, body.modal-open {
+      overflow: hidden !important;
+    }
+    body.modal-open #navbar {
+      position: fixed !important;
+      top: 0;
+      left: 0;
+      right: 0;
+    }
+
+    /* ==================== SPECTACULAR GLOW & LIGHTING UX OVERRIDES ==================== */
+    @keyframes glowFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes textShine {
+      to { background-position: 200% center; }
+    }
+    @keyframes pulseGlow {
+      0% { opacity: 0.45; transform: translate(-50%, -50%) scale(1); filter: blur(50px); }
+      100% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.15); filter: blur(65px); }
+    }
+
+    /* Floating blobs with richer opacity */
+    .circle-1 {
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.45) 0%, rgba(251, 191, 36, 0.2) 40%, rgba(245, 158, 11, 0) 70%) !important;
+      opacity: 0.45 !important;
+    }
+    .circle-2 {
+      background: radial-gradient(circle, rgba(251, 191, 36, 0.4) 0%, rgba(253, 224, 71, 0.15) 50%, rgba(0, 0, 0, 0) 70%) !important;
+      opacity: 0.45 !important;
+    }
+
+    /* Backlight for Hero banner */
+    .full-hero {
+      position: relative;
+      overflow: hidden;
+    }
+    .full-hero::before {
+      content: '';
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.4) 0%, rgba(253, 224, 71, 0.18) 50%, rgba(0,0,0,0) 80%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 1;
+      animation: pulseGlow 6s infinite alternate ease-in-out;
+    }
+    .full-hero img.hero-img {
+      position: relative;
+      z-index: 2;
+    }
+    .scroll-down {
+      z-index: 3;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.15), inset 0 0 10px rgba(255, 255, 255, 0.1);
+    }
+    .scroll-down:hover {
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.6), inset 0 0 15px rgba(245, 158, 11, 0.4);
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    /* Neon indicator Navbar */
+    nav {
+      background: rgba(17, 17, 17, 0.8) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    nav::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.6), rgba(253, 224, 71, 0.6), transparent);
+    }
+    .nav-brand-name {
+      background: linear-gradient(135deg, #fff, #fcd34d, #f59e0b, #fff);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: textShine 5s linear infinite;
+    }
+
+    /* Section Header and Title Accents */
+    .section-header {
+      background: linear-gradient(90deg, #d97706, #fbbf24, #f59e0b, #d97706);
+      background-size: 300% 300%;
+      animation: glowFlow 8s ease infinite;
+      border-radius: 6px;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+    }
+    .section-header::after {
+      background: linear-gradient(90deg, #fbbf24, transparent);
+      height: 2px;
+      opacity: 0.5;
+    }
+    .block-head-title::before {
+      background: linear-gradient(to bottom, #fbbf24, #fcd34d, #d97706);
+      background-size: 100% 300%;
+      animation: glowFlow 4s ease infinite;
+    }
+
+    /* Glassmorphism Section Wrapper */
+    .section-wrapper {
+      background: rgba(255, 255, 255, 0.45) !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.55) !important;
+      box-shadow: 0 15px 35px rgba(245, 158, 11, 0.05), inset 0 0 20px rgba(255,255,255,0.3) !important;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .section-wrapper:hover {
+      box-shadow: 0 20px 50px rgba(245, 158, 11, 0.08), inset 0 0 25px rgba(255,255,255,0.4) !important;
+      border-color: rgba(245, 158, 11, 0.25) !important;
+    }
+
+    /* Glow Cards (News card, Obec, Documents, etc.) */
+    .news-card, .doc-card, .event-row, .team-card, .org-node, .contact-card, .qlink, .pr-main, .pr-item {
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Light Shine Sweep overlay */
+    .news-card::before, .doc-card::before, .event-row::before, .team-card::before, .org-node::before, .contact-card::before, .qlink::before, .section-wrapper::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -150%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+      transform: skewX(-25deg);
+      pointer-events: none;
+      z-index: 10;
+    }
+    .news-card:hover::before, .doc-card:hover::before, .event-row:hover::before, .team-card:hover::before, .org-node:hover::before, .contact-card:hover::before, .qlink:hover::before, .section-wrapper:hover::before {
+      left: 150%;
+      transition: left 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Custom glow shadow effects on hover */
+    .news-card {
+      background: rgba(255, 255, 255, 0.75) !important;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.6) !important;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .news-card:hover {
+      transform: translateY(-6px) scale(1.02) !important;
+      box-shadow: 0 20px 40px rgba(245, 158, 11, 0.16), 0 0 15px rgba(245, 158, 11, 0.08) !important;
+      border-color: rgba(245, 158, 11, 0.45) !important;
+    }
+
+    /* Obec Card glow */
+    .obec-card img {
+      border: 1.5px solid rgba(255, 255, 255, 0.6) !important;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .obec-card:hover img {
+      transform: translateY(-8px) scale(1.04) !important;
+      box-shadow: 0 20px 45px rgba(245, 158, 11, 0.28), 0 0 18px rgba(245, 158, 11, 0.16) !important;
+      border-color: rgba(245, 158, 11, 0.65) !important;
+    }
+
+    /* PR News glowing elements */
+    .pr-main img {
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .pr-main:hover img {
+      transform: translateY(-4px) scale(1.01);
+      box-shadow: 0 15px 35px rgba(245, 158, 11, 0.2), 0 0 15px rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.45);
+    }
+    .pr-item img {
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.3s var(--ease);
+    }
+    .pr-item:hover img {
+      transform: scale(1.05);
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.18);
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    .pr-btn {
+      border: 1.5px solid var(--gold-500) !important;
+      color: var(--gold-500) !important;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.5);
+      transition: all 0.3s var(--ease) !important;
+    }
+    .pr-btn:hover {
+      background: linear-gradient(135deg, var(--gold-500), var(--gold-400)) !important;
+      color: #fff !important;
+      box-shadow: 0 5px 15px rgba(245, 158, 11, 0.3);
+      border-color: transparent !important;
+    }
+
+    /* Document cards glow */
+    .doc-card {
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .doc-card:hover {
+      border-color: rgba(245, 158, 11, 0.5) !important;
+      transform: translateY(-4px) !important;
+      box-shadow: 0 12px 30px rgba(245, 158, 11, 0.16), 0 0 12px rgba(245, 158, 11, 0.08) !important;
+    }
+
+    /* Event Row slide glow */
+    .event-row {
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .event-row:hover {
+      border-color: rgba(245, 158, 11, 0.4) !important;
+      transform: translateX(10px) scale(1.005) !important;
+      box-shadow: 0 15px 30px rgba(245, 158, 11, 0.12) !important;
+    }
+
+    /* Team card pulse */
+    .team-card {
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .team-card:hover {
+      border-color: rgba(245, 158, 11, 0.5) !important;
+      box-shadow: 0 15px 35px rgba(245, 158, 11, 0.18) !important;
+      transform: translateY(-5px) !important;
+    }
+    .team-card.president-card {
+      position: relative;
+    }
+    .team-card.president-card:hover {
+      box-shadow: 0 15px 35px rgba(245, 158, 11, 0.25), 0 0 15px rgba(245, 158, 11, 0.12) !important;
+      border-color: var(--gold-500) !important;
+    }
+
+    /* Org node hover */
+    .org-node {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .org-node:hover {
+      border-color: var(--gold-400) !important;
+      transform: translateY(-2px) scale(1.04) !important;
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.15) !important;
+    }
+    .org-node.top-node:hover {
+      border-color: var(--gold-400) !important;
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.2) !important;
+    }
+
+    /* Contact card reflection */
+    .contact-card {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .contact-card:hover {
+      border-color: rgba(245, 158, 11, 0.5) !important;
+      box-shadow: 0 10px 25px rgba(245, 158, 11, 0.14) !important;
+      transform: translateY(-3px) !important;
+    }
+
+    /* Quick link glow */
+    .qlink {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .qlink:hover {
+      border-color: rgba(245, 158, 11, 0.4) !important;
+      box-shadow: 0 6px 15px rgba(245, 158, 11, 0.1) !important;
+      transform: translateX(6px) !important;
+    }
+
+    /* Form control focus glow */
+    .form-ctrl {
+      transition: all 0.25s var(--ease) !important;
+    }
+    .form-ctrl:focus {
+      border-color: var(--gold-500) !important;
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18), 0 0 10px rgba(245, 158, 11, 0.1) !important;
+    }
+    .form-submit {
+      background: linear-gradient(135deg, var(--gold-500), var(--gold-400)) !important;
+      background-size: 200% auto;
+      transition: all 0.3s var(--ease) !important;
+    }
+    .form-submit:hover {
+      background-position: right center;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(245, 158, 11, 0.45), 0 0 15px rgba(245, 158, 11, 0.2) !important;
+    }
+
+    /* Particle Canvas Background */
+    #particleCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -5;
+      pointer-events: none;
+      opacity: 0.85;
+    }
+
+
+    /* Floating Back-to-Top Button */
+    #backToTop {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(17, 17, 17, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      z-index: 999;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(20px);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #backToTop.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    #backToTop:hover {
+      background: #7c3aed;
+      border-color: rgba(168, 85, 247, 0.4);
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.6);
+      transform: translateY(-4px) scale(1.05);
+    }
+
   </style>
 </head>
 <body>
   <div class="glass-bg-circle circle-1"></div>
   <div class="glass-bg-circle circle-2"></div>
+  <canvas id="particleCanvas"></canvas>
+
+  <button id="backToTop" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="เลื่อนกลับขึ้นด้านบน">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+  </button>
+
 
 
   <!-- NAVBAR -->
   <nav id="navbar">
     <a href="#/home" class="nav-brand">
-      <img src="./logo.png" alt="SWSC Logo" class="nav-logo" onerror="this.style.display='none'"/>
+      <img src="./all-logos.png" alt="School Logos" class="nav-all-logos" onerror="this.style.display='none'"/>
       <span class="nav-brand-name">SWSC<span>.</span>OFFICIAL</span>
     </a>
     <ul class="nav-menu">
@@ -1186,7 +1990,6 @@
         <a href="javascript:void(0)" class="nav-link">🏘️ ข้อมูลพื้นฐาน <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
         <div class="nav-dropdown">
           <a href="#/news">📰 ข่าวประชาสัมพันธ์</a>
-          <a href="#/home">🏫 ประวัติสภานักเรียน</a>
           <a href="#/team">👥 โครงสร้างการบริหารงาน</a>
           <a href="#/regulations">📜 ระเบียบโรงเรียนสรรพวิทยาคมว่าด้วยคณะกรรมการสภานักเรียน โรงเรียนสรรพวิทยาคม</a>
           <a href="#/manual">📘 คู่มือการปฏิบัติงานสภานักเรียน โรงเรียนสรรพวิทยาคม</a>
@@ -1205,13 +2008,13 @@
         <a href="javascript:void(0)" class="nav-link">🌐 เว็บไซต์บริการ <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
         <div class="nav-dropdown">
           <a href="https://www.sappha.ac.th" target="_blank">🏫 เว็บไซต์โรงเรียนสรรพวิทยาคม</a>
-          <a href="./#/login">🔐 ระบบภายในสภา (Admin)</a>
+          <a href="index.html#/login">🔐 ระบบภายในสภา</a>
         </div>
       </li>
       <li class="nav-item">
         <a href="javascript:void(0)" class="nav-link">🎞️ สื่อวีดิทัศน์ <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
         <div class="nav-dropdown">
-          <a href="#/home">📺 วิดีโอกิจกรรม</a>
+          <a href="#/videos">📺 วิดีโอกิจกรรม</a>
         </div>
       </li>
       <li class="nav-item"><a href="#/contact" class="nav-link">📞 ติดต่อเรา</a></li>
@@ -1228,14 +2031,26 @@
     <a href="#/news" onclick="closeMobile()">📢 ข่าวสาร</a>
     <a href="#/events" onclick="closeMobile()">📅 กิจกรรม</a>
     <a href="#/team" onclick="closeMobile()">👥 คณะกรรมการ</a>
+    <a href="#/videos" onclick="closeMobile()">🎬 วิดีโอกิจกรรม</a>
     <a href="#/suggestions" onclick="closeMobile()">💬 ข้อเสนอแนะ</a>
     <a href="#/contact" onclick="closeMobile()">📞 ติดต่อ</a>
-    <a href="./#/login" style="background:var(--purple-100);color:var(--purple-700);font-weight:800;">🔐 เข้าสู่ระบบสภา</a>
+    <a href="index.html#/login" style="background:var(--purple-100);color:var(--purple-700);font-weight:800;">🔐 เข้าสู่ระบบสภา</a>
   </div>
 
   <!-- FULL HERO BANNER -->
+  <!-- LOADING SCREEN -->
+  <div id="loadingScreen">
+    <div class="loader-logo">
+      <img src="./logo.png" alt="SWSC" onerror="this.style.display='none'" />
+    </div>
+    <div class="loader-title">SWSC.OFFICIAL</div>
+    <div class="loader-subtitle">คณะกรรมการนักเรียน โรงเรียนสรรพวิทยาคม</div>
+    <div class="loader-bar-wrap"><div class="loader-bar"></div></div>
+  </div>
+
   <header class="full-hero" id="fullHero">
     <img src="./hero-group.png" alt="Student Council" class="hero-img" />
+
     <div style="display:none">
       <div id="hStatNews"></div>
       <div id="hStatEvents"></div>
@@ -1253,6 +2068,67 @@
       <!-- PAGE: HOME -->
       <div class="page-section active" id="homePage">
         
+        <!-- ===== ANNOUNCEMENT CAROUSEL ===== -->
+        <div style="position:relative;overflow:hidden;margin-bottom:28px;border-radius:12px;" id="announcementCarouselWrap">
+
+          <!-- Loading state -->
+          <div id="carouselLoading" style="display:flex;align-items:center;justify-content:center;height:400px;gap:12px;color:#aaa;background:#f3f4f6;border-radius:12px;">
+            <div class="spin"></div><span>กำลังโหลด...</span>
+          </div>
+
+          <!-- Arrow left -->
+          <button id="carouselPrev" onclick="carouselMove(-1)" style="
+            display:none;position:absolute;left:12px;top:50%;transform:translateY(-50%);
+            z-index:20;background:rgba(255,255,255,0.75);border:none;
+            color:#333;font-size:24px;width:40px;height:40px;border-radius:50%;cursor:pointer;
+            transition:.2s;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,0.2);
+          " onmouseover="this.style.background='rgba(255,255,255,0.95)'" onmouseout="this.style.background='rgba(255,255,255,0.75)'">‹</button>
+
+          <!-- Arrow right -->
+          <button id="carouselNext" onclick="carouselMove(1)" style="
+            display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);
+            z-index:20;background:rgba(255,255,255,0.75);border:none;
+            color:#333;font-size:24px;width:40px;height:40px;border-radius:50%;cursor:pointer;
+            transition:.2s;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,0.2);
+          " onmouseover="this.style.background='rgba(255,255,255,0.95)'" onmouseout="this.style.background='rgba(255,255,255,0.75)'">›</button>
+
+          <!-- Slides container -->
+          <div id="carouselSlides" style="display:flex;transition:transform 0.45s cubic-bezier(.4,0,.2,1);will-change:transform;"></div>
+
+          <!-- Dot indicators overlaid on image -->
+          <div id="carouselDots" style="position:absolute;bottom:80px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:15;"></div>
+
+          <!-- Thumbnail strip (overlaid at bottom) -->
+          <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);padding:8px 12px;">
+            <div id="carouselThumbs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;"></div>
+          </div>
+        </div>
+        <!-- ===== END ANNOUNCEMENT CAROUSEL ===== -->
+
+        <!-- ===== STATS COUNTER STRIP ===== -->
+        <div class="stats-strip" id="statsStrip">
+          <div class="stat-item">
+            <div class="stat-icon">📰</div>
+            <div class="stat-number" data-target="0" id="statNews">0</div>
+            <div class="stat-label">ข่าวสารประชาสัมพันธ์</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">📅</div>
+            <div class="stat-number" data-target="0" id="statEvents">0</div>
+            <div class="stat-label">กิจกรรมในปีการศึกษา</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">👥</div>
+            <div class="stat-number" data-target="27" id="statMembers">0</div>
+            <div class="stat-label">คณะกรรมการนักเรียน</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">🏫</div>
+            <div class="stat-number" data-target="4" id="statFactions">0</div>
+            <div class="stat-label">ฝ่ายงานในสภา</div>
+          </div>
+        </div>
+
         <!-- ข่าวประชาสัมพันธ์ (PR News Redesign) -->
         <div class="section-wrapper">
           <div class="section-header">
@@ -1264,6 +2140,7 @@
           </div>
         </div>
 
+
         <!-- OBEC Line -->
         <div class="section-wrapper">
           <div class="section-header">
@@ -1274,11 +2151,11 @@
             <div style="grid-column: 1/-1; text-align:center; padding:20px; color:var(--gray-500);">กำลังโหลดข้อมูล...</div>
           </div>
           <div class="obec-footer-links">
-            <a href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg> อ่าน Obec Line เพิ่มเติม</a>
+            <a href="https://drive.google.com/drive/folders/1Ts11XqYXpXern2H2uPAsHFM27SYKSAjY?usp=sharing" target="_blank"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg> อ่าน Obec Line เพิ่มเติม</a>
           </div>
         </div>
 
-        <div class="home-grid-2" style="display:grid; grid-template-columns: 1fr 1fr; gap: 28px;">
+        <div class="home-grid-2" style="display:grid; grid-template-columns: 1fr; gap: 28px;">
           <!-- ปฏิทินกิจกรรม -->
           <div class="block">
             <div class="block-head">
@@ -1318,6 +2195,7 @@
               <button class="pill" onclick="filterNews('กิจกรรมสภา',this)">กิจกรรมสภา</button>
               <button class="pill" onclick="filterNews('ประกาศ',this)">ประกาศ</button>
               <button class="pill" onclick="filterNews('ข่าวชมรม',this)">ข่าวชมรม</button>
+              <button class="pill" onclick="filterNews('รางวัล',this)">รางวัล</button>
             </div>
             <div class="news-grid" id="fullNewsGrid">
               <div class="loader"><div class="spin"></div><span>กำลังโหลดข่าวสาร...</span></div>
@@ -1483,10 +2361,20 @@
           <div class="block-head">
             <span class="block-head-title">📜 ระเบียบโรงเรียนสรรพวิทยาคมว่าด้วยคณะกรรมการสภานักเรียน</span>
           </div>
-          <div class="block-body" style="text-align: center; padding: 40px;">
-            <div class="empty-icon" style="font-size:40px; margin-bottom: 20px;">📜</div>
-            <h3 style="color:var(--gray-900); margin-bottom: 10px;">กำลังอัปเดตข้อมูลระเบียบการ</h3>
-            <p style="color:var(--gray-500);">เนื้อหาระเบียบการจะพร้อมให้ใช้งานเร็วๆ นี้ครับ</p>
+          <div class="block-body" style="padding: 20px;">
+            <div style="text-align: right; margin-bottom: 20px;">
+              <a href="./regulations.pdf" target="_blank" class="btn-download-pdf">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                ดาวน์โหลดฉบับเต็ม (PDF)
+              </a>
+            </div>
+            <iframe src="./regulations.pdf#toolbar=0" width="100%" height="800px" style="border: 1px solid var(--gray-200); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+              <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./regulations.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
+            </iframe>
           </div>
         </div>
       </div>
@@ -1497,10 +2385,20 @@
           <div class="block-head">
             <span class="block-head-title">📘 คู่มือการปฏิบัติงานสภานักเรียน</span>
           </div>
-          <div class="block-body" style="text-align: center; padding: 40px;">
-            <div class="empty-icon" style="font-size:40px; margin-bottom: 20px;">📘</div>
-            <h3 style="color:var(--gray-900); margin-bottom: 10px;">กำลังอัปเดตข้อมูลคู่มือ</h3>
-            <p style="color:var(--gray-500);">คู่มือการปฏิบัติงานจะถูกนำมาแสดงในส่วนนี้เร็วๆ นี้ครับ</p>
+          <div class="block-body" style="padding: 20px;">
+            <div style="text-align: right; margin-bottom: 20px;">
+              <a href="./manual.pdf" target="_blank" class="btn-download-pdf">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                ดาวน์โหลดคู่มือการปฏิบัติงาน (PDF)
+              </a>
+            </div>
+            <iframe src="./manual.pdf#toolbar=0" width="100%" height="800px" style="border: 1px solid var(--gray-200); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+              <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./manual.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
+            </iframe>
           </div>
         </div>
       </div>
@@ -1551,6 +2449,20 @@
                 <div class="success-title">ส่งเรียบร้อยแล้ว!</div>
                 <p style="color:var(--gray-500);font-size:14px;margin:8px 0 20px">ขอบคุณสำหรับการมีส่วนร่วม สภานักเรียนจะนำฟีดแบ็คของคุณเข้าพิจารณาในการประชุมครั้งถัดไป</p>
                 <button class="form-submit" onclick="resetForm()" style="max-width:180px">ส่งเรื่องเพิ่มเติม</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: VIDEOS -->
+      <div class="page-section" id="videos">
+        <div class="block">
+          <div class="block-head"><span class="block-head-title">🎬 วิดีโอกิจกรรมสภานักเรียน</span></div>
+          <div class="block-body" style="padding: 20px;">
+            <div class="video-grid" id="videoGrid">
+              <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--gray-500);">
+                กำลังโหลดวิดีโอ...
               </div>
             </div>
           </div>
@@ -1631,6 +2543,17 @@
     </div>
   </footer>
 
+  <!-- News Modal -->
+  <div class="public-modal-overlay" id="newsPopup" onclick="if(event.target===this) closeNewsPopup()">
+    <div class="public-modal-content">
+      <div class="public-modal-header">
+        <div class="public-modal-title">รายละเอียดข่าวประชาสัมพันธ์</div>
+        <button class="public-modal-close" onclick="closeNewsPopup()">&times;</button>
+      </div>
+      <div class="public-modal-body" id="newsPopupContent"></div>
+    </div>
+  </div>
+
   <!-- Document Modal -->
   <div class="public-modal-overlay" id="docModalOverlay" onclick="if(event.target===this) closeDocModal()">
     <div class="public-modal-content">
@@ -1670,7 +2593,7 @@
   /* ---- SUPABASE ---- */
   const SB_URL = 'https://pzlcxctnnhjqpbhwcxqx.supabase.co';
   const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6bGN4Y3RubmhqcXBiaHdjeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMjA0ODgsImV4cCI6MjA5NDY5NjQ4OH0.LsofMV8YVlqFxir2o76Mbw4fNOHljVrealsew4XXQkY';
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbwtcOIix-iPdAxLcJMrvoLxCMj1vuzIRU-XyZlFGYTQCkIc4R5Ykn9_6F96fRiDT5IBJA/exec';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzzjkdNczg7aw2p9CU53I58NMzm1oFP-CiiyfAgFdBSQZ7kA9tZ71oFw-N6Q1xles1rxA/exec';
 
   async function sbFetch(path) {
     const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
@@ -1711,6 +2634,7 @@
     title.innerText = category;
     body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);"><div class="spin" style="margin: 0 auto 15px; border-top-color: var(--purple-600); width: 30px; height: 30px;"></div>กำลังโหลดข้อมูลเอกสาร...</div>';
     overlay.classList.add('show');
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
 
     try {
       let sheetName = type === 'sec' ? 'Secretary_Docs' : 'Academic_Docs';
@@ -1758,17 +2682,20 @@
 
   function closeDocModal() {
     document.getElementById('docModalOverlay').classList.remove('show');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
   }
 
   /* ---- CERTIFICATES MODAL ---- */
   function openCertModal() {
     document.getElementById('certModalOverlay').classList.add('show');
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
     document.getElementById('certStudentId').value = '';
     document.getElementById('certModalResult').innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500); font-size:14px;">กรุณาระบุเลขประจำตัวและกดค้นหา</div>';
   }
   
   function closeCertModal() {
     document.getElementById('certModalOverlay').classList.remove('show');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
   }
 
   async function searchCertificates() {
@@ -1829,29 +2756,60 @@
 
   /* ---- ROUTING ---- */
   function route() {
+    closeCalPopup();
+    closeNewsPopup();
+    closeDocModal();
+    closeCertModal();
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
     const hash = location.hash || '#/home';
-    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+
+    // Hide all sections first (and reset transitions)
+    document.querySelectorAll('.page-section').forEach(s => {
+      s.classList.remove('active-visible', 'active');
+      s.style.display = 'none';
+    });
     document.querySelectorAll('.nav-menu a, .mobile-menu a').forEach(a => a.classList.remove('active'));
     const fullHero = document.getElementById('fullHero');
 
+    let activeSec = null;
     if (hash === '#/home' || hash === '' || hash === '#') {
-      document.getElementById('homePage').classList.add('active');
+      activeSec = document.getElementById('homePage');
       if (fullHero) fullHero.style.display = '';
     } else {
       if (fullHero) fullHero.style.display = 'none';
       const id = hash.replace('#/', '');
-      const sec = document.getElementById(id);
-      if (sec) sec.classList.add('active');
+      activeSec = document.getElementById(id);
     }
+
+    if (activeSec) {
+      activeSec.classList.add('active');
+      activeSec.style.display = 'block';
+      // Trigger CSS transition
+      setTimeout(() => {
+        activeSec.classList.add('active-visible');
+      }, 20);
+    }
+
     document.querySelectorAll(`.nav-menu a[href="${hash}"], .mobile-menu a[href="${hash}"]`).forEach(a => a.classList.add('active'));
     scrollTo(0, 0);
   }
   window.addEventListener('hashchange', route);
   window.addEventListener('load', route);
 
-  /* ---- NAVBAR SCROLL EFFECT ---- */
+  /* ---- SCROLL EFFECTS (Navbar, Progress Bar, Back-To-Top) ---- */
   window.addEventListener('scroll', () => {
+    // 1. Navbar scrolled effect
     document.getElementById('navbar').classList.toggle('scrolled', scrollY > 10);
+
+    // 2. Back to Top Button
+    const backToTop = document.getElementById('backToTop');
+    if (backToTop) {
+      if (scrollY > 300) {
+        backToTop.classList.add('visible');
+      } else {
+        backToTop.classList.remove('visible');
+      }
+    }
   });
 
   /* ---- MOBILE MENU ---- */
@@ -1893,27 +2851,152 @@
     'กิจกรรมสภา':  { bg: '#fef3c722', pill: 'cat-evt', icon: '⭐' },
     'ประกาศ':       { bg: '#fee2e222', pill: 'cat-ann', icon: '📣' },
     'ข่าวชมรม':    { bg: '#d1fae522', pill: 'cat-clb', icon: '🎭' },
+    'รางวัล':      { bg: '#ffedd522', pill: 'cat-awd', icon: '🏆' },
   };
   function catMeta(c) { return CAT_META[c] || { bg: '#f4f4f522', pill: 'cat-gen', icon: '📰' }; }
 
   /* ---- NEWS ---- */
   let allNews = [];
+  let allUsers = [];
+
+  async function loadUsers() {
+    try {
+      allUsers = await sbFetch('users?select=name,nickname') || [];
+    } catch (e) {
+      console.error('Failed to load users for mapping:', e);
+    }
+  }
+
+  function getAuthorName(submitter) {
+    if (!submitter) return 'ผู้ดูแล';
+    const foundUser = allUsers.find(u => u.nickname === submitter || u.name === submitter);
+    return foundUser ? foundUser.name : submitter;
+  }
 
   async function loadNews() {
     try {
-      allNews = await sbFetch(`web_news?select=*&order=created_at.desc&limit=15`) || [];
+      allNews = await sbFetch(`web_news?select=*&order=created_at.desc&limit=30`) || [];
       renderHomeNews(allNews.slice(0, 5));
       renderNews(allNews, 'fullNewsGrid');
 
       const count = allNews.length;
       const hNews = document.getElementById('hStatNews');
       if (hNews) hNews.textContent = count;
+      initScrollReveal();
+      return count;
     } catch { 
       ['homeNewsContainer','fullNewsGrid'].forEach(id => { 
         const el = document.getElementById(id);
         if(el) el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>ยังไม่มีข่าวสาร</div>'; 
       });
+      return 0;
     }
+  }
+
+  async function loadAnnouncements() {
+    try {
+      const anns = await sbFetch(`web_news?select=*&category=eq.${encodeURIComponent('ประกาศ')}&order=created_at.desc`) || [];
+      renderCarousel(anns);
+    } catch (e) {
+      console.warn('Could not load announcements:', e);
+      // Hide carousel if failed
+      const wrap = document.getElementById('announcementCarouselWrap');
+      if (wrap) wrap.style.display = 'none';
+    }
+  }
+
+  // ==================== ANNOUNCEMENT CAROUSEL ====================
+  let carouselItems = [];
+  let carouselIndex = 0;
+  let carouselTimer = null;
+  const CAROUSEL_INTERVAL = 5000;
+  const FALLBACK_IMG = 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=900';
+
+  function carouselMove(dir) {
+    if (!carouselItems.length) return;
+    carouselGoTo((carouselIndex + dir + carouselItems.length) % carouselItems.length);
+    restartCarouselTimer();
+  }
+
+  function carouselGoTo(idx) {
+    carouselIndex = idx;
+    const slides = document.getElementById('carouselSlides');
+    if (slides) slides.style.transform = `translateX(-${idx * 100}%)`;
+    updateCarouselOverlay(idx);
+    updateCarouselDots(idx);
+    updateCarouselThumbs(idx);
+  }
+
+  function updateCarouselOverlay(idx) {
+    // No overlay in clean frameless mode
+  }
+
+  function updateCarouselDots(activeIdx) {
+    const el = document.getElementById('carouselDots');
+    if (!el) return;
+    el.innerHTML = carouselItems.map((_, i) => `
+      <div onclick="carouselGoTo(${i});restartCarouselTimer()" style="
+        width:${i === activeIdx ? 22 : 8}px; height:8px; border-radius:100px;
+        background:${i === activeIdx ? '#fff' : 'rgba(255,255,255,0.45)'};
+        cursor:pointer; transition:all 0.3s;
+        box-shadow:0 1px 4px rgba(0,0,0,0.4);
+      "></div>
+    `).join('');
+  }
+
+  function updateCarouselThumbs(activeIdx) {
+    const el = document.getElementById('carouselThumbs');
+    if (!el) return;
+    el.innerHTML = carouselItems.map((n, i) => {
+      const img = n.image_url ? transformGoogleDriveUrl(n.image_url) : FALLBACK_IMG;
+      const isActive = i === activeIdx;
+      return `<div onclick="carouselGoTo(${i});restartCarouselTimer()" title="${n.headline||''}" style="
+        flex-shrink:0; width:90px; height:60px; border-radius:6px; overflow:hidden; cursor:pointer;
+        border:${isActive ? '2px solid #fff' : '1px solid rgba(255,255,255,0.2)'};
+        opacity:${isActive ? 1 : 0.6}; transition:all 0.25s;
+        position:relative;
+      " onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=${isActive?1:0.6}">
+        <img src="${img}" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='${FALLBACK_IMG}'" />
+      </div>`;
+    }).join('');
+  }
+
+  function restartCarouselTimer() {
+    if (carouselTimer) clearInterval(carouselTimer);
+    carouselTimer = setInterval(() => carouselMove(1), CAROUSEL_INTERVAL);
+  }
+
+  function renderCarousel(items) {
+    carouselItems = items.filter(n => n.image_url); // only items with images
+    if (!carouselItems.length) {
+      const loading = document.getElementById('carouselLoading');
+      if (loading) loading.innerHTML = '<div style="color:rgba(255,255,255,0.4);font-size:14px;">ยังไม่มีข่าวที่มีรูปภาพ</div>';
+      return;
+    }
+    // Hide loader, show arrows
+    const loading = document.getElementById('carouselLoading');
+    if (loading) loading.style.display = 'none';
+    const prev = document.getElementById('carouselPrev');
+    const next = document.getElementById('carouselNext');
+    if (prev) prev.style.display = 'flex';
+    if (next) next.style.display = 'flex';
+
+    // Build slides
+    const slidesEl = document.getElementById('carouselSlides');
+    if (slidesEl) {
+      slidesEl.innerHTML = carouselItems.map(n => {
+        const img = transformGoogleDriveUrl(n.image_url);
+        return `<div onclick="showNewsPopup('${n.id}')" style="
+          flex-shrink:0; width:100%; cursor:pointer; position:relative; overflow:hidden;
+        ">
+          <img src="${img}" style="width:100%;height:auto;object-fit:contain;background:#f5f5f5;display:block;"
+            onerror="this.style.objectFit='cover';this.src='${FALLBACK_IMG}'" />
+        </div>`;
+      }).join('');
+    }
+
+    carouselGoTo(0);
+    restartCarouselTimer();
   }
 
   function renderHomeNews(items) {
@@ -1934,30 +3017,34 @@
     ];
 
     const mainImg = main.image_url ? transformGoogleDriveUrl(main.image_url) : imgs[0];
+    const mainAuthor = getAuthorName(main.submitter);
 
     let html = `
-      <a href="#/news" class="pr-main">
-        <img src="${mainImg}" alt="Main News" />
+      <div class="pr-main" onclick="showNewsPopup('${main.id}')" style="cursor:pointer;">
+        <img src="${mainImg}" data-src="${mainImg}" data-retries="0" alt="Main News"
+             onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="opacity:0.5;transition:opacity 0.4s;" />
         <div class="pr-tag">${main.category || 'ข่าวประชาสัมพันธ์'}</div>
         <h3>${main.headline || ''}</h3>
-        <div class="pr-meta">${main.submitter || 'ผู้ดูแล'} • ${formatD(main)}</div>
+        <div class="pr-meta">${mainAuthor} • ${formatD(main)}</div>
         <div class="pr-excerpt">${(main.detail || '').substring(0, 100)}...</div>
         <div class="pr-btn">อ่านเพิ่มเติม</div>
-      </a>
+      </div>
       <div class="pr-side">
     `;
     
     side.forEach((n, idx) => {
       const sideImg = n.image_url ? transformGoogleDriveUrl(n.image_url) : imgs[idx+1];
+      const sideAuthor = getAuthorName(n.submitter);
       html += `
-        <a href="#/news" class="pr-item">
-          <img src="${sideImg}" alt="News Thumb" />
+        <div class="pr-item" onclick="showNewsPopup('${n.id}')" style="cursor:pointer;">
+          <img src="${sideImg}" data-src="${sideImg}" data-retries="0" alt="News Thumb"
+               onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="opacity:0.5;transition:opacity 0.4s;" />
           <div class="pr-item-info">
             <div class="pr-tag" style="font-size:11px;">${n.category || 'ข่าวประชาสัมพันธ์'}</div>
             <h4>${n.headline || ''}</h4>
-            <div class="pr-meta">${n.submitter || 'ผู้ดูแล'} • ${formatD(n)}</div>
+            <div class="pr-meta">${sideAuthor} • ${formatD(n)}</div>
           </div>
-        </a>
+        </div>
       `;
     });
     
@@ -1971,10 +3058,12 @@
     el.innerHTML = items.map(n => {
       const m = catMeta(n.category);
       const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH') : '');
+      const author = getAuthorName(n.submitter);
       const thumbHtml = n.image_url 
-        ? `<img src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; height:100%; object-fit:cover;" />` 
+        ? `<img src="${transformGoogleDriveUrl(n.image_url)}" data-src="${transformGoogleDriveUrl(n.image_url)}" data-retries="0"
+               onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="width:100%; height:100%; object-fit:cover; opacity:0.5; transition:opacity 0.4s;" />` 
         : m.icon;
-      return `<div class="news-card">
+      return `<div class="news-card" onclick="showNewsPopup('${n.id}')">
         <div class="news-card-thumb" style="background:${n.image_url ? 'none' : m.bg}">
           <span class="cat-dot ${m.pill}">${n.category || 'ทั่วไป'}</span>
           ${thumbHtml}
@@ -1984,7 +3073,7 @@
           <div class="news-excerpt">${n.detail || '(ไม่มีรายละเอียด)'}</div>
           <div class="news-footer">
             <span class="news-date">📅 ${d}</span>
-            <span class="news-author">${n.submitter || 'ผู้ดูแล'}</span>
+            <span class="news-author">${author}</span>
           </div>
         </div>
       </div>`;
@@ -2011,6 +3100,62 @@
     }
   }
 
+  // Obec image retry queue
+  const _obecRetrySet = new Set();
+  function _obecRetryLoop() {
+    if (_obecRetrySet.size === 0) return;
+    _obecRetrySet.forEach(img => {
+      const src = img.getAttribute('data-src');
+      if (!src) { _obecRetrySet.delete(img); return; }
+      // Replace img node to bypass browser cache for this URL
+      const clone = img.cloneNode(false);
+      clone.setAttribute('data-src', src);
+      clone.setAttribute('data-retries', parseInt(img.getAttribute('data-retries') || '0') + 1);
+      clone.onerror = function() { _obecImgError(this); };
+      clone.onload  = function() { this.style.opacity = '1'; this.style.filter = ''; };
+      img.parentNode && img.parentNode.replaceChild(clone, img);
+      _obecRetrySet.delete(img);
+      // Set src AFTER replacing so browser sees it as a fresh element
+      setTimeout(() => { clone.src = src; }, 50);
+    });
+  }
+  setInterval(_obecRetryLoop, 20000); // retry every 20 seconds
+
+  function _obecImgError(img) {
+    const retries = parseInt(img.getAttribute('data-retries') || '0');
+    if (retries >= 10) return; // give up after 10 tries (~3 min)
+    img.style.opacity = '0.25';
+    img.style.filter = 'grayscale(1)';
+    _obecRetrySet.add(img);
+  }
+
+  // News image retry (same mechanism as obec)
+  const _newsRetrySet = new Set();
+  function _newsRetryLoop() {
+    if (_newsRetrySet.size === 0) return;
+    _newsRetrySet.forEach(img => {
+      const src = img.getAttribute('data-src');
+      if (!src) { _newsRetrySet.delete(img); return; }
+      const clone = img.cloneNode(false);
+      clone.setAttribute('data-src', src);
+      clone.setAttribute('data-retries', parseInt(img.getAttribute('data-retries') || '0') + 1);
+      clone.onerror = function() { _newsImgError(this); };
+      clone.onload  = function() { this.style.opacity = '1'; this.style.filter = ''; };
+      img.parentNode && img.parentNode.replaceChild(clone, img);
+      _newsRetrySet.delete(img);
+      setTimeout(() => { clone.src = src; }, 50);
+    });
+  }
+  setInterval(_newsRetryLoop, 20000);
+
+  function _newsImgError(img) {
+    const retries = parseInt(img.getAttribute('data-retries') || '0');
+    if (retries >= 10) return;
+    img.style.opacity = '0.25';
+    img.style.filter = 'grayscale(1)';
+    _newsRetrySet.add(img);
+  }
+
   function renderObecLine(items) {
     const grid = document.querySelector('.obec-grid');
     if (!grid) return;
@@ -2018,12 +3163,59 @@
       grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:20px; color:var(--gray-500);">ยังไม่มี Obec Line ในระบบ</div>';
       return;
     }
-    grid.innerHTML = items.map(item => `
-      <a href="${item.file_url}" target="_blank" class="obec-card">
-        <img src="${transformGoogleDriveUrl(item.image_url)}" alt="${item.title}" />
-      </a>
+    // Store items globally for modal navigation
+    window._obecItems = items;
+    grid.innerHTML = items.map((item, idx) => `
+      <div class="obec-card" onclick="openObecViewer(${idx})">
+        <img src="${transformGoogleDriveUrl(item.image_url)}"
+             data-src="${transformGoogleDriveUrl(item.image_url)}"
+             data-retries="0"
+             alt="${item.title}"
+             onerror="_obecImgError(this)"
+             onload="this.style.opacity='1';this.style.filter=''"
+             style="opacity:0.5; transition: opacity 0.4s;" />
+        <div style="text-align:center; font-size:12px; color:#6b7280; margin-top:6px; font-weight:600;">${item.title}</div>
+      </div>
     `).join('');
   }
+
+  // Obec Line Viewer
+  let _obecCurrentIdx = 0;
+  function openObecViewer(idx) {
+    const items = window._obecItems || [];
+    if (!items.length) return;
+    _obecCurrentIdx = idx;
+    const item = items[idx];
+    document.getElementById('obecViewerImg').src = transformGoogleDriveUrl(item.image_url);
+    document.getElementById('obecViewerTitle').textContent = item.title;
+    document.getElementById('obecViewerCounter').textContent = `${idx + 1} / ${items.length}`;
+    document.getElementById('obecViewerPrev').style.display = items.length > 1 ? 'flex' : 'none';
+    document.getElementById('obecViewerNext').style.display = items.length > 1 ? 'flex' : 'none';
+    document.getElementById('obecViewer').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeObecViewer() {
+    document.getElementById('obecViewer').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function prevObec() {
+    const items = window._obecItems || [];
+    _obecCurrentIdx = (_obecCurrentIdx - 1 + items.length) % items.length;
+    openObecViewer(_obecCurrentIdx);
+  }
+  function nextObec() {
+    const items = window._obecItems || [];
+    _obecCurrentIdx = (_obecCurrentIdx + 1) % items.length;
+    openObecViewer(_obecCurrentIdx);
+  }
+  // Keyboard support for obec viewer
+  document.addEventListener('keydown', (e) => {
+    const v = document.getElementById('obecViewer');
+    if (!v || !v.classList.contains('open')) return;
+    if (e.key === 'Escape') closeObecViewer();
+    if (e.key === 'ArrowLeft') prevObec();
+    if (e.key === 'ArrowRight') nextObec();
+  });
 
   /* ---- EVENTS ---- */
   /* ---- CALENDAR ENGINE ---- */
@@ -2134,23 +3326,27 @@
 
     const hEvents = document.getElementById('hStatEvents');
     if (hEvents) hEvents.textContent = calEvents.length;
+    initScrollReveal();
   }
 
   function showCalPopup(ev) {
     const d = new Date(ev.date + 'T00:00:00');
     const col = calColorFor(ev.type);
     document.getElementById('calPopupContent').innerHTML = `
-      <div style="border-left:4px solid ${col};padding-left:14px;margin-bottom:14px">
-        <div style="font-size:11px;color:var(--gray-500);font-weight:700;text-transform:uppercase;margin-bottom:4px">${ev.type||'กิจกรรม'}</div>
-        <div style="font-size:17px;font-weight:800;color:var(--gray-900);line-height:1.3">${ev.title||''}</div>
+      <div style="border-left:4px solid ${col};padding-left:18px;margin-bottom:20px;margin-top:30px;">
+        <div style="font-size:12px;color:var(--gray-500);font-weight:700;text-transform:uppercase;margin-bottom:6px">${ev.type||'กิจกรรม'}</div>
+        <h2 style="font-size:24px;font-weight:800;color:var(--gray-900);line-height:1.3">${ev.title||''}</h2>
       </div>
-      <div style="display:flex;flex-direction:column;gap:8px;font-size:13.5px;color:var(--gray-700)">
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:15px;color:var(--gray-700)">
         <div>📅 <strong>${d.toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</strong></div>
         ${ev.time ? `<div>🕐 <strong>${ev.time}</strong></div>` : ''}
         ${ev.location ? `<div>📍 ${ev.location}</div>` : ''}
-        ${ev.description ? `<div style="margin-top:10px;padding:12px;background:var(--gray-50);border-radius:8px;font-size:13px;line-height:1.6">${ev.description}</div>` : ''}
+        ${ev.description ? `<div style="margin-top:15px;padding:16px;background:var(--gray-50);border-radius:12px;font-size:14px;line-height:1.7">${ev.description}</div>` : ''}
       </div>`;
-    document.getElementById('calPopup').style.display = 'flex';
+    const pop = document.getElementById('calPopup');
+    pop.style.display = 'flex';
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
+    setTimeout(() => pop.classList.add('show'), 10);
   }
 
   function showDayPopup(day, evs) {
@@ -2169,14 +3365,27 @@
     document.getElementById('calPopup').style.display = 'flex';
   }
 
-  function closeCalPopup() { document.getElementById('calPopup').style.display = 'none'; }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCalPopup(); });
+  function closeCalPopup() {
+    const pop = document.getElementById('calPopup');
+    pop.classList.remove('show');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
+    setTimeout(() => pop.style.display = 'none', 300);
+  }
+  document.addEventListener('keydown', e => { 
+    if (e.key === 'Escape') {
+      closeCalPopup();
+      closeNewsPopup();
+      closeDocModal();
+      closeCertModal();
+    }
+  });
 
   async function loadEvents() {
     const t = new Date();
     calYear = t.getFullYear(); calMonth = t.getMonth();
     await fetchCalEvents();
     renderCalendar();
+    return calEvents.length;
   }
 
   /* ---- TEAM ---- */
@@ -2205,6 +3414,7 @@
 
       const hMembers = document.getElementById('hStatMembers');
       if (hMembers) hMembers.textContent = data.length;
+      initScrollReveal();
     } catch {
       document.getElementById('teamGrid').innerHTML = '<div class="empty"><div>โหลดไม่สำเร็จ</div></div>';
     }
@@ -2222,9 +3432,116 @@
   }, { threshold: 0.05 });
 
   function initScrollReveal() {
-    document.querySelectorAll('.reveal-on-scroll').forEach(el => {
+    document.querySelectorAll('.reveal-on-scroll:not(.active-reveal)').forEach(el => {
       revealObserver.observe(el);
     });
+  }
+
+
+  /* ---- NEWS POPUP SYSTEM ---- */
+  function swapMainNewsImage(url) {
+    const mainImg = document.getElementById('mainNewsImage');
+    if (mainImg) {
+      mainImg.src = url;
+    }
+  }
+
+  function showNewsPopup(id) {
+    const n = allNews.find(item => item.id == id);
+    if (!n) return;
+    const m = catMeta(n.category);
+    const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '');
+    
+    // Map submitter nickname to real name
+    const submitterName = getAuthorName(n.submitter);
+
+    let imgHtml = '';
+    if (n.image_url) {
+      imgHtml = `<div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
+        <img id="mainNewsImage" src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
+      </div>`;
+    }
+
+    // Generate gallery html for supporting images
+    let galleryHtml = '';
+    if (n.supporting_images && n.supporting_images.length > 0) {
+      const imagesHtml = n.supporting_images.map(imgUrl => `
+        <div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
+          <img src="${transformGoogleDriveUrl(imgUrl)}" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
+        </div>
+      `).join('');
+      
+      galleryHtml = `
+        <div style="margin-top:25px; border-top:1px solid #e5e7eb; padding-top:20px; display:flex; flex-direction:column; gap:15px;">
+          ${imagesHtml}
+        </div>
+      `;
+    }
+
+    // Generate latest news list for sidebar
+    const latestNews = allNews.slice(0, 5);
+    const sidebarHtml = latestNews.map(item => {
+      const itemImg = item.image_url 
+        ? transformGoogleDriveUrl(item.image_url) 
+        : 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=200';
+      const isActive = item.id == id;
+      return `
+        <div onclick="showNewsPopup('${item.id}')" style="display:flex; gap:10px; cursor:pointer; padding:10px 0; border-bottom:1px solid #f3f4f6; transition:opacity 0.2s; opacity:${isActive ? 0.5 : 1}; pointer-events:${isActive ? 'none' : 'auto'};" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=${isActive ? 0.5 : 1}">
+          <img src="${itemImg}" style="width:80px; height:58px; object-fit:cover; border-radius:4px; flex-shrink:0;" />
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:12px; font-weight:700; color:${isActive ? 'var(--purple-700)' : '#111827'}; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.3; margin-bottom:4px;">
+              ${item.headline || ''}
+            </div>
+            <div style="font-size:10.5px; color:#9ca3af;">
+              📅 ${item.for_date || (item.created_at ? new Date(item.created_at).toLocaleDateString('th-TH') : '')}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('newsPopupContent').innerHTML = `
+      <div class="news-detail-layout">
+        <!-- LEFT COLUMN: Main News -->
+        <div class="news-detail-main">
+          <div style="font-size:11px; font-weight:800; color:var(--purple-700); background:var(--purple-100); padding:3px 10px; border-radius:100px; display:inline-block; margin-bottom:12px;">
+            ${n.category || 'ข่าวประชาสัมพันธ์'}
+          </div>
+          <h1 style="font-size:24px; font-weight:800; color:#111827; margin:0 0 10px 0; line-height:1.4;">
+            ${n.headline || ''}
+          </h1>
+          <div style="font-size:12.5px; color:#6b7280; margin-bottom:20px; border-bottom:1px solid #e5e7eb; padding-bottom:12px;">
+            👤 ผู้เขียน: ${submitterName} • 📅 ${d}
+          </div>
+          ${imgHtml}
+          <div style="font-size:15px; line-height:1.8; color:#374151; white-space:pre-line; word-break:break-word; margin-top:20px;">
+            ${n.detail || ''}
+          </div>
+          ${galleryHtml}
+        </div>
+        
+        <!-- RIGHT COLUMN: Sidebar -->
+        <div class="news-detail-sidebar">
+          <div style="background:#5b3a6e; color:white; padding:8px 12px; font-size:14px; font-weight:700; border-radius:4px 4px 0 0; display:flex; align-items:center; gap:8px;">
+            📰 ข่าวสารล่าสุด
+          </div>
+          <div style="border:1px solid #e5e7eb; border-top:none; padding:15px; background:#fff; border-radius:0 0 4px 4px; display:flex; flex-direction:column; gap:10px;">
+            ${sidebarHtml}
+          </div>
+        </div>
+      </div>
+    `;
+    const pop = document.getElementById('newsPopup');
+    pop.style.display = 'flex';
+    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
+    setTimeout(() => pop.classList.add('show'), 10);
+  }
+
+  function closeNewsPopup() {
+    const pop = document.getElementById('newsPopup');
+    pop.classList.remove('show');
+    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
+    setTimeout(() => pop.style.display = 'none', 300);
   }
 
   /* ---- SUGGESTIONS ---- */
@@ -2252,14 +3569,280 @@
     document.getElementById('successView').style.display = 'none';
   }
 
+  /* ---- VIDEOS ---- */
+  async function loadVideos() {
+    try {
+      const data = await sbFetch(`web_videos?select=*&order=created_at.desc`) || [];
+      renderVideos(data);
+    } catch (err) {
+      console.error("Failed to load videos:", err);
+      const grid = document.getElementById('videoGrid');
+      if (grid) grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:20px; color:var(--gray-500);">เกิดข้อผิดพลาดในการโหลดวิดีโอ</div>';
+    }
+  }
+
+  function getYouTubeId(url) {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  }
+
+  function getGoogleDriveId(url) {
+    if (!url) return null;
+    const match = url.match(/[-\w]{25,}/);
+    return match ? match[0] : null;
+  }
+
+  function getEmbedUrl(url) {
+    const ytId = getYouTubeId(url);
+    if (ytId) {
+      return `https://www.youtube.com/embed/${ytId}?autoplay=1`;
+    }
+    if (url.includes('facebook.com')) {
+      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&autoplay=1`;
+    }
+    if (url.includes('drive.google.com')) {
+      const driveId = getGoogleDriveId(url);
+      if (driveId) {
+        return `https://drive.google.com/file/d/${driveId}/preview`;
+      }
+    }
+    return url;
+  }
+
+  function getThumbnailUrl(url) {
+    const ytId = getYouTubeId(url);
+    if (ytId) {
+      return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+    }
+    if (url.includes('drive.google.com')) {
+      return transformGoogleDriveUrl(url);
+    }
+    return './logo.png';
+  }
+
+  function renderVideos(items) {
+    const grid = document.getElementById('videoGrid');
+    if (!grid) return;
+    if (!items.length) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--gray-500);">ยังไม่มีวิดีโอกิจกรรมในระบบ</div>';
+      return;
+    }
+    grid.innerHTML = items.map(item => {
+      const thumb = getThumbnailUrl(item.video_url);
+      const embed = getEmbedUrl(item.video_url);
+      return `
+        <div class="video-card" onclick="openVideoPlayer('${embed}')">
+          <div class="video-thumbnail-wrapper">
+            <img src="${thumb}" class="video-thumbnail" alt="${item.title}" onerror="this.src='./logo.png'" />
+            <div class="video-play-btn">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+          <div class="video-info">
+            <div class="video-title">${item.title}</div>
+            <div class="video-desc">${item.description || ''}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openVideoPlayer(embedUrl) {
+    document.getElementById('videoViewerIframe').src = embedUrl;
+    document.getElementById('videoViewer').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeVideoPlayer() {
+    document.getElementById('videoViewerIframe').src = '';
+    document.getElementById('videoViewer').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  /* ---- PARTICLES BACKGROUND SYSTEM ---- */
+  function initParticles() {
+    const canvas = document.getElementById('particleCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    const maxParticles = 65;
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    const mouse = { x: null, y: null, radius: 150 };
+
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    window.addEventListener('mouseout', () => {
+      mouse.x = null;
+      mouse.y = null;
+    });
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.size = Math.random() * 1.8 + 1.2;
+        this.speedX = Math.random() * 0.4 - 0.2;
+        this.speedY = Math.random() * 0.4 - 0.2;
+        this.color = Math.random() > 0.15 ? 'rgba(245, 158, 11, 0.45)' : 'rgba(147, 51, 234, 0.3)';
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        if (this.x < 0 || this.x > width) this.speedX *= -1;
+        if (this.y < 0 || this.y > height) this.speedY *= -1;
+
+        if (mouse.x !== null && mouse.y !== null) {
+          const dx = mouse.x - this.x;
+          const dy = mouse.y - this.y;
+          const distance = Math.hypot(dx, dy);
+          if (distance < mouse.radius) {
+            const force = (mouse.radius - distance) / mouse.radius;
+            this.x += (dx / distance) * force * 0.6;
+            this.y += (dy / distance) * force * 0.6;
+          }
+        }
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < maxParticles; i++) {
+      particles.push(new Particle());
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+
+      particles.forEach(p => {
+        p.update();
+        p.draw();
+      });
+
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const distance = Math.hypot(dx, dy);
+
+          if (distance < 95) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(245, 158, 11, ${0.12 * (1 - distance / 95)})`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+    animate();
+  }
+
+  /* ---- LOADING SCREEN ---- */
+  function hideLoadingScreen() {
+    const ls = document.getElementById('loadingScreen');
+    if (ls) {
+      setTimeout(() => ls.classList.add('hidden'), 2200);
+    }
+  }
+
+
+  /* ---- COUNTER ANIMATION ---- */
+  function animateCounter(el, target, duration = 1800) {
+    const start = performance.now();
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(target * ease);
+      if (progress < 1) requestAnimationFrame(update);
+      else el.textContent = target;
+    }
+    requestAnimationFrame(update);
+  }
+
+  function initStatsCounters() {
+    const strip = document.getElementById('statsStrip');
+    if (!strip) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          strip.querySelectorAll('.stat-number[data-target]').forEach(el => {
+            animateCounter(el, parseInt(el.dataset.target) || 0);
+          });
+          observer.disconnect();
+        }
+      });
+    }, { threshold: 0.3 });
+    observer.observe(strip);
+  }
+
   /* ---- INIT ---- */
-  document.addEventListener('DOMContentLoaded', () => {
-    loadNews();
+  document.addEventListener('DOMContentLoaded', async () => {
+    hideLoadingScreen();
+    initParticles();
+
+    await loadUsers();
+    loadNews().then(count => {
+      const el = document.getElementById('statNews');
+      if (el) { el.dataset.target = count || 0; }
+    });
+    loadAnnouncements();
     loadObecLine();
-    loadEvents();
+    loadVideos();
+    loadEvents().then(count => {
+      const el = document.getElementById('statEvents');
+      if (el) { el.dataset.target = count || 0; }
+    });
     loadTeam();
     setTimeout(initScrollReveal, 300);
+    setTimeout(initStatsCounters, 2500);
   });
 </script>
+
+<!-- Obec Line Viewer Modal -->
+<div id="obecViewer" onclick="if(event.target===this) closeObecViewer()">
+  <button id="obecViewerClose" onclick="closeObecViewer()" title="ปิด">✕</button>
+  <button id="obecViewerPrev" class="obecViewer-nav" onclick="prevObec()">&#8249;</button>
+  <div id="obecViewerTitle"></div>
+  <img id="obecViewerImg" src="" alt="Obec Line" />
+  <div id="obecViewerCounter"></div>
+  <button id="obecViewerNext" class="obecViewer-nav" onclick="nextObec()">&#8250;</button>
+</div>
+
+<!-- Video Viewer Modal -->
+<div id="videoViewer" onclick="if(event.target===this) closeVideoPlayer()">
+  <div class="video-viewer-content">
+    <button id="videoViewerClose" onclick="closeVideoPlayer()">✕ ปิดหน้าต่าง</button>
+    <div class="video-viewer-ratio">
+      <iframe id="videoViewerIframe" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
