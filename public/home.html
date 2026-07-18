@@ -334,6 +334,25 @@
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(109, 40, 217, 0.5);
     }
+    .btn-zoom {
+      background: var(--purple-50);
+      color: var(--purple-700);
+      border: 1px solid var(--purple-200);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-zoom:hover {
+      background: var(--purple-600);
+      color: #fff;
+      border-color: var(--purple-600);
+    }
     .nav-burger {
       display: none;
       flex-direction: column;
@@ -2597,11 +2616,21 @@
           <div class="block-head">
             <span class="block-head-title">🏛️ โครงสร้างการบริหารกิจกรรมสภานักเรียน</span>
           </div>
-          <div class="block-body" style="text-align: center; padding: 25px 20px;">
-            <a href="./structure.png" target="_blank" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: block; max-width: 900px; margin: 0 auto;">
-              <img src="./structure.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block;" />
-            </a>
-            <p style="font-size: 12px; color: var(--gray-400); margin-top: 12px; text-align: center;">📱 สำหรับมือถือ: สามารถแตะที่รูปภาพเพื่อขยายดูขนาดเต็มและซูมอ่านรายละเอียดได้ครับ</p>
+          <div class="block-body" style="padding: 25px 20px; text-align: center;">
+            <!-- Zoom toolbar -->
+            <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+              <button onclick="zoomStructure(0.2)" class="btn-zoom">🔍➕ ซูมเข้า</button>
+              <button onclick="zoomStructure(-0.2)" class="btn-zoom">🔍➖ ซูมออก</button>
+              <button onclick="resetZoomStructure()" class="btn-zoom">🔄 รีเซ็ต</button>
+            </div>
+            
+            <!-- Image viewport container -->
+            <div id="structureImgContainer" style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
+              <a href="./structure.png" target="_blank" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
+                <img id="structureImg" src="./structure.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
+              </a>
+            </div>
+            <p style="font-size: 12.5px; color: var(--gray-400); margin-top: 15px; text-align: center;">📱 สำหรับมือถือ: สามารถกดซูมบนเว็บ หรือแตะที่รูปเพื่อเปิดดูขนาดเต็มและซูมได้อย่างอิสระครับ</p>
           </div>
         </div>
       </div>
@@ -3729,6 +3758,32 @@
     await fetchCalEvents();
     renderCalendar();
     return calEvents.length;
+  }
+
+  let structureZoom = 1.0;
+  function zoomStructure(amount) {
+    structureZoom = Math.max(1.0, Math.min(3.0, structureZoom + amount));
+    updateStructureZoom();
+  }
+  function resetZoomStructure() {
+    structureZoom = 1.0;
+    updateStructureZoom();
+  }
+  function updateStructureZoom() {
+    const img = document.getElementById('structureImg');
+    const container = document.getElementById('structureImgContainer');
+    if (img && container) {
+      img.style.width = (structureZoom * 100) + '%';
+      if (structureZoom > 1.0) {
+        container.style.overflowX = 'auto';
+        img.style.maxWidth = 'none';
+        img.style.width = (structureZoom * 100) + '%';
+      } else {
+        container.style.overflowX = 'hidden';
+        img.style.maxWidth = '900px';
+        img.style.width = '100%';
+      }
+    }
   }
 
   /* ---- TEAM ---- */
