@@ -1577,16 +1577,38 @@
         border: 1px solid rgba(255,255,255,0.2) !important;
       }
       
-      /* Mobile calendar compactness overrides */
+      /* Mobile calendar overrides - stretch to 100% width (no scroll) */
+      .cal-head-row, .cal-grid {
+        min-width: unset !important;
+      }
       .cal-grid {
-        grid-auto-rows: 85px !important;
+        grid-auto-rows: 70px !important;
       }
       .cal-cell {
-        padding: 4px !important;
+        padding: 3px !important;
+      }
+      .cal-hday {
+        font-size: 11px !important;
+        padding: 6px 0 !important;
+      }
+      .cal-num {
+        font-size: 11px !important;
       }
       .cal-event-pill {
-        font-size: 10px !important;
-        padding: 2px 4px !important;
+        font-size: 8px !important;
+        padding: 1px 3px !important;
+        margin-top: 1px !important;
+        line-height: 1.2 !important;
+        border-radius: 3px !important;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+      .cal-more {
+        font-size: 8px !important;
+        padding: 1px !important;
+        margin-top: 1px !important;
+        line-height: 1.2 !important;
       }
     }
 
