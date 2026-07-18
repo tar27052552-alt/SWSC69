@@ -2426,7 +2426,7 @@
               <button class="pill" onclick="filterNews('กิจกรรมสภา',this)">กิจกรรมสภา</button>
               <button class="pill" onclick="filterNews('ประกาศ',this)">ประกาศ</button>
               <button class="pill" onclick="filterNews('ข่าวชมรม',this)">ข่าวชมรม</button>
-              <button class="pill" onclick="filterNews('รางวัล',this)">รางวัล</button>
+              <button class="pill" onclick="filterNews('ผลงาน',this)">ผลงาน</button>
             </div>
             <div class="news-grid" id="fullNewsGrid">
               <div class="loader"><div class="spin"></div><span>กำลังโหลดข่าวสาร...</span></div>
@@ -3193,7 +3193,7 @@
     'กิจกรรมสภา':  { bg: '#fef3c722', pill: 'cat-evt', icon: '⭐' },
     'ประกาศ':       { bg: '#fee2e222', pill: 'cat-ann', icon: '📣' },
     'ข่าวชมรม':    { bg: '#d1fae522', pill: 'cat-clb', icon: '🎭' },
-    'รางวัล':      { bg: '#ffedd522', pill: 'cat-awd', icon: '🏆' },
+    'ผลงาน':      { bg: '#ffedd522', pill: 'cat-awd', icon: '🏆' },
   };
   function catMeta(c) { return CAT_META[c] || { bg: '#f4f4f522', pill: 'cat-gen', icon: '📰' }; }
 
