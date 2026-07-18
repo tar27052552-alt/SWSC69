@@ -3402,20 +3402,34 @@
       cells += `<div class="cal-cell cal-cell-other"><span class="cal-num">${daysInPrev - i}</span></div>`;
     }
 
+    // Initialize global maps for safe event retrieval without passing raw JSON in HTML attributes
+    window.calendarEventsMap = window.calendarEventsMap || {};
+    window.calendarDaysMap = window.calendarDaysMap || {};
+
     // Current month cells
     for (let d = 1; d <= daysInMonth; d++) {
       const isToday = (d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear());
       const evs = evByDay[d] || [];
+      
+      const dayKey = `day_${d}`;
+      window.calendarDaysMap[dayKey] = evs;
+
       const MAX_SHOW = 2;
       const shown = evs.slice(0, MAX_SHOW);
       const more  = evs.length - MAX_SHOW;
+      
       const evHtml = shown.map(ev => {
         const col = calColorFor(ev.type);
         const timeStr = ev.time ? `${ev.time} ` : '';
-        return `<div class="cal-event-pill" style="background:${col}33;color:${col};" onclick="event.stopPropagation(); showCalPopup(${JSON.stringify(ev)})" title="${ev.title}">${timeStr}${ev.title}</div>`;
+        const evKey = `ev_${ev.id || Math.random().toString(36).substr(2, 9)}`;
+        window.calendarEventsMap[evKey] = ev;
+        
+        return `<div class="cal-event-pill" style="background:${col}33;color:${col};" onclick="event.stopPropagation(); showCalPopupByKey('${evKey}')" title="${ev.title}">${timeStr}${ev.title}</div>`;
       }).join('');
-      const moreHtml = more > 0 ? `<div class="cal-more" onclick="event.stopPropagation(); showDayPopup(${d},${JSON.stringify(evs)})">+${more}</div>` : '';
-      cells += `<div class="cal-cell${isToday?' cal-cell-today':''}" onclick="showDayPopup(${d},${JSON.stringify(evs)})"><span class="cal-num${isToday?' cal-num-today':''}">${d}</span>${evHtml}${moreHtml}</div>`;
+      
+      const moreHtml = more > 0 ? `<div class="cal-more" onclick="event.stopPropagation(); showDayPopupByKey(${d}, '${dayKey}')">+${more}</div>` : '';
+      
+      cells += `<div class="cal-cell${isToday?' cal-cell-today':''}" onclick="showDayPopupByKey(${d}, '${dayKey}')"><span class="cal-num${isToday?' cal-num-today':''}">${d}</span>${evHtml}${moreHtml}</div>`;
     }
 
     // Trailing next-month cells
@@ -3436,6 +3450,16 @@
     const hEvents = document.getElementById('hStatEvents');
     if (hEvents) hEvents.textContent = calEvents.length;
     initScrollReveal();
+  }
+
+  function showCalPopupByKey(key) {
+    const ev = window.calendarEventsMap[key];
+    if (ev) showCalPopup(ev);
+  }
+
+  function showDayPopupByKey(day, key) {
+    const evs = window.calendarDaysMap[key] || [];
+    showDayPopup(day, evs);
   }
 
   function showCalPopup(ev) {
@@ -3467,10 +3491,12 @@
     } else {
       evsList = evs.map(ev => {
         const col = calColorFor(ev.type);
-        return `<div style="padding:12px 14px;border-radius:10px;background:${col}15;border-left:4px solid ${col};margin-bottom:10px;cursor:pointer;transition:transform 0.15s;text-align:left;" onclick="event.stopPropagation(); showCalPopup(${JSON.stringify(ev)})" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
+        const evKey = `ev_popup_${ev.id || Math.random().toString(36).substr(2, 9)}`;
+        window.calendarEventsMap[evKey] = ev;
+        return `<div style="padding:12px 14px;border-radius:10px;background:${col}15;border-left:4px solid ${col};margin-bottom:10px;cursor:pointer;transition:transform 0.15s;text-align:left;" onclick="event.stopPropagation(); showCalPopupByKey('${evKey}')" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
           <div style="font-size:11px;color:${col};font-weight:800;text-transform:uppercase;margin-bottom:2px;">${ev.type||'กิจกรรม'}</div>
           <div style="font-size:14px;font-weight:700;color:var(--gray-900);line-height:1.3">${ev.title||''}</div>
-          ${ev.time ? `<div style="font-size:12px;color:var(--gray-500);margin-top:4px"></div>🕐 ${ev.time}</div>` : ''}
+          ${ev.time ? `<div style="font-size:12px;color:var(--gray-500);margin-top:4px">🕐 ${ev.time}</div>` : ''}
         </div>`;
       }).join('');
     }
