@@ -26,6 +26,7 @@ import RecreationPage from './pages/RecreationPage';
 import FacilitiesPage from './pages/FacilitiesPage';
 import ReceptionPage from './pages/ReceptionPage';
 import SubmitNewsPage from './pages/SubmitNewsPage';
+import SuggestionsPage from './pages/SuggestionsPage';
 
 function PrivateRoute({ children }) {
   const { user } = useAuth();
@@ -251,6 +252,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/dashboard"  element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+      <Route path="/suggestions" element={<PrivateRoute><SuggestionsPage /></PrivateRoute>} />
       <Route path="/schedules"  element={<PrivateRoute><SchedulesPage /></PrivateRoute>} />
       <Route path="/calendar"   element={<PrivateRoute><CalendarPage /></PrivateRoute>} />
       <Route path="/checkin"    element={<PrivateRoute><CheckInPage /></PrivateRoute>} />

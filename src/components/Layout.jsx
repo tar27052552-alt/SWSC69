@@ -17,6 +17,7 @@ const NAV = [
     { to: '/greeting-duty', icon: HandHeart,    label: 'ส่งรายงานเวรยืนไหว้' },
     { to: '/clean-duty',icon: Sparkles,        label: 'ส่งเวรห้องสภา' },
     { to: '/submit-news', icon: Megaphone,     label: 'ส่งข่าวประชาสัมพันธ์' },
+    { to: '/suggestions', icon: FileText,      label: 'ข้อเสนอแนะนักเรียน' },
     { to: '/schedules', icon: Calendar,        label: 'ตารางเวร' },
     { to: '/calendar',  icon: Calendar,        label: 'ปฏิทินกิจกรรม' },
     { to: '/my-fines',  icon: Banknote,        label: 'ชำระเงิน/ค่าปรับ' },
@@ -38,7 +39,7 @@ const NAV = [
 ];
 
 const PAGE_TITLES = {
-  '/dashboard': 'หน้าหลัก', '/checkin': 'เช็คชื่อมาโรงเรียน', '/my-attendance': 'ประวัติเช็คชื่อ', '/greeting-duty': 'ส่งรายงานเวรยืนไหว้', '/clean-duty': 'ส่งเวรห้องสภา', '/submit-news': 'ส่งข่าวประชาสัมพันธ์', '/schedules': 'ตารางเวร', '/calendar': 'ปฏิทินกิจกรรม',
+  '/dashboard': 'หน้าหลัก', '/checkin': 'เช็คชื่อมาโรงเรียน', '/my-attendance': 'ประวัติเช็คชื่อ', '/greeting-duty': 'ส่งรายงานเวรยืนไหว้', '/clean-duty': 'ส่งเวรห้องสภา', '/submit-news': 'ส่งข่าวประชาสัมพันธ์', '/suggestions': 'ข้อเสนอแนะนักเรียน', '/schedules': 'ตารางเวร', '/calendar': 'ปฏิทินกิจกรรม',
   '/my-fines': 'ชำระเงินและค่าปรับ',
   '/profile': 'ประวัติส่วนตัว', '/settings': 'ตั้งค่าทั่วไป', '/admin': 'จัดการผู้ใช้งาน',
   '/finance': 'ฝ่ายการเงิน', '/discipline': 'ฝ่ายปกครอง', '/academic': 'ฝ่ายวิชาการ',
