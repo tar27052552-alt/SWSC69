@@ -3328,11 +3328,10 @@
         const img = transformGoogleDriveUrl(n.image_url);
         return `<div onclick="showNewsPopup('${n.id}')" class="carousel-slide-item" style="
           flex-shrink:0; width:100%; height:100%; cursor:pointer; position:relative; overflow:hidden;
-          <!-- Background image with referrerpolicy -->
-          <img src="${img}" referrerpolicy="no-referrer" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; filter: blur(15px); transform: scale(1.15); opacity: 0.85;" onerror="this.src='${FALLBACK_IMG}'" />
-          <!-- Blurred background overlay -->
-          <div style="position:absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.15); z-index:1;"></div>
-          <!-- Foreground sharp contained image -->
+          background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+        ">
+          <img src="${img}" referrerpolicy="no-referrer" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; filter: blur(18px); transform: scale(1.2); opacity: 0.85;" onerror="this.style.display='none'" />
+          <div style="position:absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.1); z-index:1;"></div>
           <img src="${img}" referrerpolicy="no-referrer" style="position:relative; z-index:2; width:100%; height:100%; object-fit:contain; display:block;"
             onerror="this.src='${FALLBACK_IMG}'" />
         </div>`;
