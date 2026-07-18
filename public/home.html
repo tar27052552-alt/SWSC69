@@ -774,12 +774,14 @@
     .cat-evt  { background: #fef3c7; color: #b45309; }
     .cat-ann  { background: #fee2e2; color: #b91c1c; }
     .cat-clb  { background: #d1fae5; color: #065f46; }
+    .cat-awd  { background: #ffedd5; color: #9a3412; }
     .cat-gen  { background: var(--gray-100); color: var(--gray-500); }
 
     .cat-sch-bg  { background: #ede9fe22; }
     .cat-evt-bg  { background: #fef3c722; }
     .cat-ann-bg  { background: #fee2e222; }
     .cat-clb-bg  { background: #d1fae522; }
+    .cat-awd-bg  { background: #ffedd522; }
     .cat-gen-bg  { background: var(--gray-100); }
 
     /* ==================== FILTER PILLS ==================== */
@@ -2019,6 +2021,7 @@
               <button class="pill" onclick="filterNews('กิจกรรมสภา',this)">กิจกรรมสภา</button>
               <button class="pill" onclick="filterNews('ประกาศ',this)">ประกาศ</button>
               <button class="pill" onclick="filterNews('ข่าวชมรม',this)">ข่าวชมรม</button>
+              <button class="pill" onclick="filterNews('รางวัล',this)">รางวัล</button>
             </div>
             <div class="news-grid" id="fullNewsGrid">
               <div class="loader"><div class="spin"></div><span>กำลังโหลดข่าวสาร...</span></div>
@@ -2640,6 +2643,7 @@
     'กิจกรรมสภา':  { bg: '#fef3c722', pill: 'cat-evt', icon: '⭐' },
     'ประกาศ':       { bg: '#fee2e222', pill: 'cat-ann', icon: '📣' },
     'ข่าวชมรม':    { bg: '#d1fae522', pill: 'cat-clb', icon: '🎭' },
+    'รางวัล':      { bg: '#ffedd522', pill: 'cat-awd', icon: '🏆' },
   };
   function catMeta(c) { return CAT_META[c] || { bg: '#f4f4f522', pill: 'cat-gen', icon: '📰' }; }
 
@@ -2663,7 +2667,7 @@
 
   async function loadNews() {
     try {
-      allNews = await sbFetch(`web_news?select=*&category=eq.${encodeURIComponent('ข่าวโรงเรียน')}&order=created_at.desc&limit=15`) || [];
+      allNews = await sbFetch(`web_news?select=*&order=created_at.desc&limit=30`) || [];
       renderHomeNews(allNews.slice(0, 5));
       renderNews(allNews, 'fullNewsGrid');
 
