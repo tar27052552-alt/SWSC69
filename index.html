@@ -4216,16 +4216,24 @@
   }
 
   /* ---- INIT ---- */
-  document.addEventListener('DOMContentLoaded', async () => {
+  document.addEventListener('DOMContentLoaded', () => {
     hideLoadingScreen();
     initParticles();
 
-    await loadUsers();
-    const statMem = document.getElementById('statMembers');
-    if (statMem) {
-      const nonAdmins = allUsers.filter(u => u.role !== 'admin');
-      statMem.dataset.target = nonAdmins.length;
-    }
+    // Load users in the background to prevent rendering bottleneck
+    loadUsers().then(() => {
+      const statMem = document.getElementById('statMembers');
+      if (statMem) {
+        const nonAdmins = allUsers.filter(u => u.role !== 'admin');
+        statMem.dataset.target = nonAdmins.length;
+        animateCounter(statMem, nonAdmins.length);
+      }
+      // Re-render news with full author names once loaded
+      if (allNews && allNews.length > 0) {
+        renderHomeNews(allNews.slice(0, 5));
+        renderNews(allNews, 'fullNewsGrid');
+      }
+    });
 
     loadNews().then(count => {
       const el = document.getElementById('statNews');
