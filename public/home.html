@@ -3240,10 +3240,7 @@
 
   async function loadAnnouncements() {
     try {
-      let anns = await sbFetch(`web_news?select=*&category=eq.${encodeURIComponent('ประกาศ')}&order=created_at.desc`) || [];
-      // Filter out donation posts per user request
-      anns = anns.filter(n => n.headline !== 'รับบริจาค' && n.headline !== 'เปิดรับบริจาค');
-      
+      const anns = await sbFetch(`web_news?select=*&category=eq.${encodeURIComponent('ประกาศ')}&order=created_at.desc`) || [];
       renderCarousel(anns);
     } catch (e) {
       console.warn('Could not load announcements:', e);
