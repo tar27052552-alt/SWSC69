@@ -3212,7 +3212,7 @@
 
   async function loadNews() {
     try {
-      let fetchedNews = await sbFetch(`web_news?select=*&category=not.in.(${encodeURIComponent('ประกาศ')},${encodeURIComponent('ประกาศ_ซ่อน')})&order=created_at.desc`) || [];
+      let fetchedNews = await sbFetch(`web_news?select=id,headline,detail,image_url,category,created_at,submitted_by&category=not.in.(${encodeURIComponent('ประกาศ')},${encodeURIComponent('ประกาศ_ซ่อน')})&order=created_at.desc&limit=30`) || [];
       // Filter out all announcements so banners and general news are completely separated
       allNews = fetchedNews.filter(n => n.category !== 'ประกาศ' && n.category !== 'ประกาศ_ซ่อน');
       
@@ -3235,7 +3235,7 @@
 
   async function loadAnnouncements() {
     try {
-      const anns = await sbFetch(`web_news?select=*&category=eq.${encodeURIComponent('ประกาศ')}&order=created_at.desc`) || [];
+      const anns = await sbFetch(`web_news?select=id,headline,detail,image_url,category,created_at,submitted_by&category=eq.${encodeURIComponent('ประกาศ')}&order=created_at.desc&limit=10`) || [];
       renderCarousel(anns);
     } catch (e) {
       console.warn('Could not load announcements:', e);
@@ -4179,7 +4179,7 @@
   function hideLoadingScreen() {
     const ls = document.getElementById('loadingScreen');
     if (ls) {
-      setTimeout(() => ls.classList.add('hidden'), 2200);
+      setTimeout(() => ls.classList.add('hidden'), 800);
     }
   }
 
@@ -4219,35 +4219,36 @@
     hideLoadingScreen();
     initParticles();
 
-    // Load users in the background to prevent rendering bottleneck
-    loadUsers().then(() => {
-      const statMem = document.getElementById('statMembers');
-      if (statMem) {
-        const nonAdmins = allUsers.filter(u => u.role !== 'admin');
-        statMem.dataset.target = nonAdmins.length;
-        animateCounter(statMem, nonAdmins.length);
-      }
-      // Re-render news with full author names once loaded
+    // Fire ALL API calls in parallel for fastest possible load
+    Promise.all([
+      loadNews().then(count => {
+        const el = document.getElementById('statNews');
+        if (el) { el.dataset.target = count || 0; }
+      }),
+      loadAnnouncements(),
+      loadObecLine(),
+      loadVideos(),
+      loadEvents().then(count => {
+        const el = document.getElementById('statEvents');
+        if (el) { el.dataset.target = count || 0; }
+      }),
+      loadTeam(),
+      loadUsers().then(() => {
+        const statMem = document.getElementById('statMembers');
+        if (statMem) {
+          const nonAdmins = allUsers.filter(u => u.role !== 'admin');
+          statMem.dataset.target = nonAdmins.length;
+        }
+      }),
+    ]).then(() => {
+      // Re-render news with author names after users loaded
       if (allNews && allNews.length > 0) {
         renderHomeNews(allNews.slice(0, 5));
         renderNews(allNews, 'fullNewsGrid');
       }
+      initScrollReveal();
+      setTimeout(initStatsCounters, 500);
     });
-
-    loadNews().then(count => {
-      const el = document.getElementById('statNews');
-      if (el) { el.dataset.target = count || 0; }
-    });
-    loadAnnouncements();
-    loadObecLine();
-    loadVideos();
-    loadEvents().then(count => {
-      const el = document.getElementById('statEvents');
-      if (el) { el.dataset.target = count || 0; }
-    });
-    loadTeam();
-    setTimeout(initScrollReveal, 300);
-    setTimeout(initStatsCounters, 2500);
   });
 </script>
 
