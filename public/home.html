@@ -4224,6 +4224,9 @@
     initParticles();
 
     await loadUsers();
+    const statMem = document.getElementById('statMembers');
+    if (statMem) { statMem.dataset.target = allUsers.length; }
+
     loadNews().then(count => {
       const el = document.getElementById('statNews');
       if (el) { el.dataset.target = count || 0; }
