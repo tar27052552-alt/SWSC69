@@ -3294,7 +3294,7 @@
         opacity:${isActive ? 1 : 0.6}; transition:all 0.25s;
         position:relative;
       " onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=${isActive?1:0.6}">
-        <img src="${img}" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='${FALLBACK_IMG}'" />
+        <img src="${img}" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='${FALLBACK_IMG}'" />
       </div>`;
     }).join('');
   }
@@ -3326,12 +3326,13 @@
         const img = transformGoogleDriveUrl(n.image_url);
         return `<div onclick="showNewsPopup('${n.id}')" class="carousel-slide-item" style="
           flex-shrink:0; width:100%; height:100%; cursor:pointer; position:relative; overflow:hidden;
-          background-image: url('${img}'); background-size: cover; background-position: center;
         ">
+          <!-- Background image with referrerpolicy -->
+          <img src="${img}" referrerpolicy="no-referrer" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; filter: blur(15px); opacity: 0.85;" onerror="this.src='${FALLBACK_IMG}'" />
           <!-- Blurred background overlay -->
-          <div style="position:absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.15); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);"></div>
+          <div style="position:absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.15); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index:1;"></div>
           <!-- Foreground sharp contained image -->
-          <img src="${img}" style="position:relative; z-index:2; width:100%; height:100%; object-fit:contain; display:block;"
+          <img src="${img}" referrerpolicy="no-referrer" style="position:relative; z-index:2; width:100%; height:100%; object-fit:contain; display:block;"
             onerror="this.src='${FALLBACK_IMG}'" />
         </div>`;
       }).join('');
@@ -3363,7 +3364,7 @@
 
     let html = `
       <div class="pr-main" onclick="showNewsPopup('${main.id}')" style="cursor:pointer;">
-        <img src="${mainImg}" data-src="${mainImg}" data-retries="0" alt="Main News"
+        <img src="${mainImg}" data-src="${mainImg}" data-retries="0" referrerpolicy="no-referrer" alt="Main News"
              onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="opacity:0.5;transition:opacity 0.4s;" />
         <div class="pr-tag">${main.category || 'ข่าวประชาสัมพันธ์'}</div>
         <h3>${main.headline || ''}</h3>
@@ -3379,7 +3380,7 @@
       const sideAuthor = getAuthorName(n.submitter);
       html += `
         <div class="pr-item" onclick="showNewsPopup('${n.id}')" style="cursor:pointer;">
-          <img src="${sideImg}" data-src="${sideImg}" data-retries="0" alt="News Thumb"
+          <img src="${sideImg}" data-src="${sideImg}" data-retries="0" referrerpolicy="no-referrer" alt="News Thumb"
                onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="opacity:0.5;transition:opacity 0.4s;" />
           <div class="pr-item-info">
             <div class="pr-tag" style="font-size:11px;">${n.category || 'ข่าวประชาสัมพันธ์'}</div>
@@ -3402,7 +3403,7 @@
       const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH') : '');
       const author = getAuthorName(n.submitter);
       const thumbHtml = n.image_url 
-        ? `<img src="${transformGoogleDriveUrl(n.image_url)}" data-src="${transformGoogleDriveUrl(n.image_url)}" data-retries="0"
+        ? `<img src="${transformGoogleDriveUrl(n.image_url)}" data-src="${transformGoogleDriveUrl(n.image_url)}" data-retries="0" referrerpolicy="no-referrer"
                onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="width:100%; height:100%; object-fit:cover; opacity:0.5; transition:opacity 0.4s;" />` 
         : m.icon;
       return `<div class="news-card" onclick="showNewsPopup('${n.id}')">
@@ -3512,6 +3513,7 @@
         <img src="${transformGoogleDriveUrl(item.image_url)}"
              data-src="${transformGoogleDriveUrl(item.image_url)}"
              data-retries="0"
+             referrerpolicy="no-referrer"
              alt="${item.title}"
              onerror="_obecImgError(this)"
              onload="this.style.opacity='1';this.style.filter=''"
@@ -3869,7 +3871,7 @@
     let imgHtml = '';
     if (n.image_url) {
       imgHtml = `<div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
-        <img id="mainNewsImage" src="${transformGoogleDriveUrl(n.image_url)}" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
+        <img id="mainNewsImage" src="${transformGoogleDriveUrl(n.image_url)}" referrerpolicy="no-referrer" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
       </div>`;
     }
 
@@ -3878,7 +3880,7 @@
     if (n.supporting_images && n.supporting_images.length > 0) {
       const imagesHtml = n.supporting_images.map(imgUrl => `
         <div style="text-align:center; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); width:100%; display:flex; justify-content:center; align-items:center; background:#fcfcfc;">
-          <img src="${transformGoogleDriveUrl(imgUrl)}" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
+          <img src="${transformGoogleDriveUrl(imgUrl)}" referrerpolicy="no-referrer" style="width:100%; height:auto; object-fit:contain; border-radius:8px;" />
         </div>
       `).join('');
       
@@ -3898,7 +3900,7 @@
       const isActive = item.id == id;
       return `
         <div onclick="showNewsPopup('${item.id}')" style="display:flex; gap:10px; cursor:pointer; padding:10px 0; border-bottom:1px solid #f3f4f6; transition:opacity 0.2s; opacity:${isActive ? 0.5 : 1}; pointer-events:${isActive ? 'none' : 'auto'};" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=${isActive ? 0.5 : 1}">
-          <img src="${itemImg}" style="width:80px; height:58px; object-fit:cover; border-radius:4px; flex-shrink:0;" />
+          <img src="${itemImg}" referrerpolicy="no-referrer" style="width:80px; height:58px; object-fit:cover; border-radius:4px; flex-shrink:0;" />
           <div style="flex:1; min-width:0;">
             <div style="font-size:12px; font-weight:700; color:${isActive ? 'var(--purple-700)' : '#111827'}; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.3; margin-bottom:4px;">
               ${item.headline || ''}
@@ -4246,7 +4248,7 @@
   <button id="obecViewerClose" onclick="closeObecViewer()" title="ปิด">✕</button>
   <button id="obecViewerPrev" class="obecViewer-nav" onclick="prevObec()">&#8249;</button>
   <div id="obecViewerTitle"></div>
-  <img id="obecViewerImg" src="" alt="Obec Line" />
+  <img id="obecViewerImg" src="" referrerpolicy="no-referrer" alt="Obec Line" />
   <div id="obecViewerCounter"></div>
   <button id="obecViewerNext" class="obecViewer-nav" onclick="nextObec()">&#8250;</button>
 </div>
