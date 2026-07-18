@@ -3202,7 +3202,7 @@
 
   async function loadUsers() {
     try {
-      allUsers = await sbFetch('users?select=name,nickname') || [];
+      allUsers = await sbFetch('users?select=name,nickname,role') || [];
     } catch (e) {
       console.error('Failed to load users for mapping:', e);
     }
@@ -3804,8 +3804,8 @@
   /* ---- TEAM ---- */
   async function loadTeam() {
     try {
-      const data = await sbFetch(`users?select=id,name,nickname,role,position,avatar_color&role=in.(president,dept_head,admin)&order=role.asc`) || [];
-      const sorted = [...data].sort((a,b) => ({ president:0, admin:1, dept_head:2 }[a.role]??3) - ({ president:0, admin:1, dept_head:2 }[b.role]??3));
+      const data = await sbFetch(`users?select=id,name,nickname,role,position,avatar_color&role=in.(president,dept_head)&order=role.asc`) || [];
+      const sorted = [...data].sort((a,b) => ({ president:0, dept_head:1 }[a.role]??2) - ({ president:0, dept_head:1 }[b.role]??2));
       
       const pres = sorted.find(u => u.role === 'president');
       if (pres) {
@@ -3818,7 +3818,7 @@
         teamGrid.innerHTML = sorted.map(u => {
           const isP = u.role === 'president';
           const color = u.avatar_color || avatarColor(u.name);
-          const label = isP ? '👑 ประธานสภา' : u.role === 'admin' ? '⚙️ แอดมิน' : '🏅 หัวหน้าฝ่าย';
+          const label = isP ? '👑 ประธานสภา' : '🏅 หัวหน้าฝ่าย';
           return `<div class="team-card ${isP ? 'president-card' : ''}">
             <div class="team-avatar" style="background:${color}">${(u.nickname||u.name||'?')[0]}</div>
             <div class="team-name">${u.name||''}</div>
@@ -4225,7 +4225,10 @@
 
     await loadUsers();
     const statMem = document.getElementById('statMembers');
-    if (statMem) { statMem.dataset.target = allUsers.length; }
+    if (statMem) {
+      const nonAdmins = allUsers.filter(u => u.role !== 'admin');
+      statMem.dataset.target = nonAdmins.length;
+    }
 
     loadNews().then(count => {
       const el = document.getElementById('statNews');
