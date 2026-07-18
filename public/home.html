@@ -1294,7 +1294,13 @@
       color: var(--gray-900);
       margin-left: 4px;
     }
-    .cal-wrap { overflow-x: auto; }
+    .cal-wrap {
+      overflow-x: auto;
+      max-width: 100%;
+      width: 100%;
+      display: block;
+      -webkit-overflow-scrolling: touch;
+    }
     .cal-head-row {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
@@ -1569,6 +1575,18 @@
         -webkit-backdrop-filter: blur(4px);
         z-index: 10;
         border: 1px solid rgba(255,255,255,0.2) !important;
+      }
+      
+      /* Mobile calendar compactness overrides */
+      .cal-grid {
+        grid-auto-rows: 85px !important;
+      }
+      .cal-cell {
+        padding: 4px !important;
+      }
+      .cal-event-pill {
+        font-size: 10px !important;
+        padding: 2px 4px !important;
       }
     }
 
