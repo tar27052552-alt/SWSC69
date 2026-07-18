@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
-import { Megaphone, Save, Trash2, Edit2, X, Plus } from 'lucide-react';
+import { Megaphone, Save, Trash2, Edit2, X, Plus, ArrowUp, ArrowDown } from 'lucide-react';
 
 export default function AnnouncementsPage() {
   const { user } = useAuth();
@@ -116,6 +116,39 @@ export default function AnnouncementsPage() {
     const { error } = await supabase.from('web_news').update({ category: newStatus }).eq('id', ann.id);
     if (error) { alert('เกิดข้อผิดพลาด'); return; }
     loadAnnouncements();
+  };
+
+  const handleMoveAnn = async (idx, direction) => {
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= announcements.length) return;
+    
+    setLoadingAnn(true);
+    try {
+      const itemA = announcements[idx];
+      const itemB = announcements[targetIdx];
+      
+      const timeA = itemA.created_at;
+      const timeB = itemB.created_at;
+      
+      const { error: err1 } = await supabase
+        .from('web_news')
+        .update({ created_at: timeB })
+        .eq('id', itemA.id);
+        
+      const { error: err2 } = await supabase
+        .from('web_news')
+        .update({ created_at: timeA })
+        .eq('id', itemB.id);
+        
+      if (err1 || err2) throw new Error(err1?.message || err2?.message);
+      
+      await loadAnnouncements();
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาดในการจัดลำดับ: ' + err.message);
+    } finally {
+      setLoadingAnn(false);
+    }
   };
 
   return (
@@ -240,8 +273,32 @@ export default function AnnouncementsPage() {
                 const isActive = ann.category === 'ประกาศ';
                 return (
                   <div key={ann.id} style={{ display: 'flex', gap: 16, background: isActive ? '#f0fdf4' : '#f9fafb', border: `1px solid ${isActive ? '#bbf7d0' : '#e5e7eb'}`, borderRadius: 12, padding: 16, alignItems: 'center' }}>
-                    <div style={{ width: 32, height: 32, background: '#e5e7eb', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#4b5563', flexShrink: 0 }}>
-                      {idx + 1}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                      <div style={{ width: 32, height: 32, background: '#e5e7eb', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#4b5563' }}>
+                        {idx + 1}
+                      </div>
+                      <div style={{ display: 'flex', gap: 2 }}>
+                        {idx > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleMoveAnn(idx, 'up')}
+                            title="เลื่อนขึ้น"
+                            style={{ padding: 4, background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <ArrowUp size={10} />
+                          </button>
+                        )}
+                        {idx < announcements.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleMoveAnn(idx, 'down')}
+                            title="เลื่อนลง"
+                            style={{ padding: 4, background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <ArrowDown size={10} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     {ann.image_url && (
                       <img
