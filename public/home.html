@@ -347,15 +347,17 @@
     .mobile-menu {
       display: none;
       position: fixed;
-      top: 62px;
+      top: 60px;
       left: 0; right: 0;
       background: var(--white);
-      padding: 20px;
+      padding: 12px;
       z-index: 199;
       border-bottom: 3px solid var(--purple-500);
       box-shadow: var(--shadow-lg);
+      max-height: calc(100vh - 70px);
+      overflow-y: auto;
     }
-    .mobile-menu.open { display: flex; flex-direction: column; gap: 8px; }
+    .mobile-menu.open { display: flex; flex-direction: column; gap: 6px; }
     .mobile-menu a {
       padding: 12px 16px;
       border-radius: 8px;
@@ -367,6 +369,70 @@
     .mobile-menu a:hover, .mobile-menu a.active {
       background: var(--purple-100);
       color: var(--purple-700);
+    }
+    
+    /* Mobile dropdown accordions */
+    .mobile-dropdown-parent {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .mobile-dropdown-toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--gray-700);
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .mobile-dropdown-toggle:hover {
+      background: var(--purple-50);
+      color: var(--purple-700);
+    }
+    .dropdown-chevron {
+      transition: transform 0.2s ease;
+      color: var(--gray-400);
+    }
+    .mobile-dropdown-parent.active .dropdown-chevron {
+      transform: rotate(180deg);
+      color: var(--purple-600);
+    }
+    .mobile-dropdown-parent.active .mobile-dropdown-toggle {
+      color: var(--purple-700);
+      background: var(--purple-50);
+      border-radius: 8px 8px 0 0;
+    }
+    .mobile-dropdown-sub {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease-out;
+      display: flex;
+      flex-direction: column;
+      background: #faf8ff;
+      border-radius: 0 0 8px 8px;
+    }
+    .mobile-dropdown-parent.active .mobile-dropdown-sub {
+      max-height: 300px;
+    }
+    .mobile-dropdown-sub a {
+      padding: 10px 16px 10px 32px !important;
+      font-size: 13.5px !important;
+      font-weight: 600 !important;
+      color: var(--gray-600) !important;
+      border-radius: 0 !important;
+      background: none !important;
+      border-bottom: 1px solid rgba(0,0,0,0.02);
+    }
+    .mobile-dropdown-sub a:hover {
+      color: var(--purple-700) !important;
+      background: var(--purple-100) !important;
     }
 
     /* ==================== FULL HERO BANNER ==================== */
@@ -2108,19 +2174,62 @@
     <button class="nav-burger" id="burger"><span></span><span></span><span></span></button>
   </nav>
   <div class="mobile-menu" id="mobileMenu">
+    <!-- หน้าแรก -->
     <a href="#/home" onclick="closeMobile()">🏠 หน้าแรก</a>
-    <a href="#/news" onclick="closeMobile()">📢 ข่าวสาร</a>
-    <a href="#/structure" onclick="closeMobile()">🏛️ โครงสร้างสภา</a>
-    <a href="#/regulations" onclick="closeMobile()">📜 ระเบียบสภา</a>
-    <a href="#/manual" onclick="closeMobile()">📘 คู่มือปฏิบัติงาน</a>
-    <a href="#/events" onclick="closeMobile()">📅 กิจกรรม</a>
-    <a href="#/videos" onclick="closeMobile()">🎬 วิดีโอกิจกรรม</a>
-    <a href="#/certificates" onclick="closeMobile()">🎓 ค้นหาเกียรติบัตร</a>
-    <a href="#/documents" onclick="closeMobile()">📑 เอกสารวิชาการ</a>
-    <a href="#/suggestions" onclick="closeMobile()">💬 ข้อเสนอแนะ</a>
-    <a href="#/contact" onclick="closeMobile()">📞 ติดต่อ</a>
-    <a href="https://www.sappha.ac.th" target="_blank" onclick="closeMobile()">🏫 เว็บไซต์โรงเรียน</a>
-    <a href="index.html#/login" style="background:var(--purple-100);color:var(--purple-700);font-weight:800;">🔐 เข้าสู่ระบบสภา</a>
+
+    <!-- ข้อมูลพื้นฐาน -->
+    <div class="mobile-dropdown-parent">
+      <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
+        <span>🏘️ ข้อมูลพื้นฐาน</span>
+        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="mobile-dropdown-sub">
+        <a href="#/news" onclick="closeMobile()">📰 ข่าวประชาสัมพันธ์</a>
+        <a href="#/regulations" onclick="closeMobile()">📜 ระเบียบสภาฯ</a>
+        <a href="#/manual" onclick="closeMobile()">📘 คู่มือปฏิบัติงาน</a>
+        <a href="#/structure" onclick="closeMobile()">🏛️ โครงสร้างการบริหารงาน</a>
+      </div>
+    </div>
+
+    <!-- ข้อมูลบริการ -->
+    <div class="mobile-dropdown-parent">
+      <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
+        <span>📁 ข้อมูลบริการ</span>
+        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="mobile-dropdown-sub">
+        <a href="#/events" onclick="closeMobile()">📅 ปฏิทินกิจกรรม</a>
+        <a href="#/suggestions" onclick="closeMobile()">💬 ข้อเสนอแนะ/ร้องเรียน</a>
+        <a href="#/documents" onclick="closeMobile()">📑 เอกสารวิชาการ</a>
+        <a href="#/certificates" onclick="closeMobile()">🎓 ค้นหาเกียรติบัตร</a>
+      </div>
+    </div>
+
+    <!-- เว็บไซต์บริการ -->
+    <div class="mobile-dropdown-parent">
+      <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
+        <span>🌐 เว็บไซต์บริการ</span>
+        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="mobile-dropdown-sub">
+        <a href="https://www.sappha.ac.th" target="_blank" onclick="closeMobile()">🏫 เว็บไซต์โรงเรียน</a>
+        <a href="index.html#/login" onclick="closeMobile()">🔐 ระบบภายในสภา</a>
+      </div>
+    </div>
+
+    <!-- สื่อวีดิทัศน์ -->
+    <div class="mobile-dropdown-parent">
+      <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
+        <span>🎞️ สื่อวีดิทัศน์</span>
+        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="mobile-dropdown-sub">
+        <a href="#/videos" onclick="closeMobile()">🎬 วิดีโอกิจกรรม</a>
+      </div>
+    </div>
+
+    <!-- ติดต่อเรา -->
+    <a href="#/contact" onclick="closeMobile()">📞 ติดต่อเรา</a>
   </div>
 
   <!-- FULL HERO BANNER -->
@@ -2996,9 +3105,22 @@
   const burger = document.getElementById('burger');
   const mobileMenu = document.getElementById('mobileMenu');
   burger.addEventListener('click', () => mobileMenu.classList.toggle('open'));
-  function closeMobile() { mobileMenu.classList.remove('open'); }
+  function closeMobile() {
+    mobileMenu.classList.remove('open');
+    document.querySelectorAll('.mobile-dropdown-parent').forEach(p => p.classList.remove('active'));
+  }
+  function toggleMobileDropdown(elem) {
+    const parent = elem.closest('.mobile-dropdown-parent');
+    const wasActive = parent.classList.contains('active');
+    document.querySelectorAll('.mobile-dropdown-parent').forEach(p => p.classList.remove('active'));
+    if (!wasActive) {
+      parent.classList.add('active');
+    }
+  }
   document.addEventListener('click', e => {
-    if (!burger.contains(e.target) && !mobileMenu.contains(e.target)) mobileMenu.classList.remove('open');
+    if (!burger.contains(e.target) && !mobileMenu.contains(e.target)) {
+      closeMobile();
+    }
   });
 
   /* ---- SLIDER REMOVED ---- */
