@@ -3220,9 +3220,9 @@
 
   async function loadNews() {
     try {
-      let fetchedNews = await sbFetch(`web_news?select=*&category=not.in.(${encodeURIComponent('ประกาศ')},${encodeURIComponent('ประกาศ_ซ่อน')})&order=created_at.desc`) || [];
+      // Fast fetch: Load 20 most recent news items first for instant page load
+      let fetchedNews = await sbFetch(`web_news?select=*&category=not.in.(${encodeURIComponent('ประกาศ')},${encodeURIComponent('ประกาศ_ซ่อน')})&order=created_at.desc&limit=20`) || [];
       if (!Array.isArray(fetchedNews)) fetchedNews = [];
-      // Filter out all announcements so banners and general news are completely separated
       allNews = fetchedNews.filter(n => n.category !== 'ประกาศ' && n.category !== 'ประกาศ_ซ่อน');
       
       renderHomeNews(allNews.slice(0, 5));
@@ -3232,6 +3232,21 @@
       const hNews = document.getElementById('hStatNews');
       if (hNews) hNews.textContent = count;
       initScrollReveal();
+
+      // Background fetch: Load full news history silently after initial page render
+      setTimeout(async () => {
+        try {
+          let fullFetched = await sbFetch(`web_news?select=*&category=not.in.(${encodeURIComponent('ประกาศ')},${encodeURIComponent('ประกาศ_ซ่อน')})&order=created_at.desc`) || [];
+          if (Array.isArray(fullFetched) && fullFetched.length > allNews.length) {
+            allNews = fullFetched.filter(n => n.category !== 'ประกาศ' && n.category !== 'ประกาศ_ซ่อน');
+            renderNews(allNews, 'fullNewsGrid');
+            if (hNews) hNews.textContent = allNews.length;
+          }
+        } catch (e) {
+          console.warn('Background news fetch error:', e);
+        }
+      }, 1500);
+
       return count;
     } catch (err) { 
       console.error('Failed to load news:', err);
@@ -3245,7 +3260,7 @@
 
   async function loadAnnouncements() {
     try {
-      const anns = await sbFetch(`web_news?select=*&category=eq.${encodeURIComponent('ประกาศ')}&order=created_at.desc`) || [];
+      const anns = await sbFetch(`web_news?select=*&category=eq.${encodeURIComponent('ประกาศ')}&order=created_at.desc&limit=10`) || [];
       renderCarousel(Array.isArray(anns) ? anns : []);
     } catch (e) {
       console.warn('Could not load announcements:', e);
@@ -4232,8 +4247,8 @@
     initParticles();
     initScrollReveal();
 
-    // Safety fallback: Hide loading screen after 2.5s max even if network is slow
-    const maxLoadingTimer = setTimeout(hideLoadingScreen, 2500);
+    // Safety fallback: Hide loading screen after 800ms max even if network is slow
+    const maxLoadingTimer = setTimeout(hideLoadingScreen, 800);
 
     // Wait for essential main page content (news & announcements) to load before closing loading screen
     const mainNewsPromise = loadNews().then(count => {
