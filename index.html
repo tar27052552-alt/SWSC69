@@ -4260,10 +4260,10 @@
     initParticles();
     initScrollReveal();
 
-    // Safety fallback: Hide loading screen after 800ms max even if network is slow
-    const maxLoadingTimer = setTimeout(hideLoadingScreen, 800);
+    // Safety fallback: Hide loading screen after 6s max only if network completely fails
+    const maxLoadingTimer = setTimeout(hideLoadingScreen, 6000);
 
-    // Wait for essential main page content (news & announcements) to load before closing loading screen
+    // Wait strictly for essential main page content (news & announcements) to finish rendering
     const mainNewsPromise = loadNews().then(count => {
       const el = document.getElementById('statNews');
       if (el) { el.dataset.target = count || 0; }
@@ -4272,7 +4272,8 @@
 
     Promise.all([mainNewsPromise, mainAnnouncePromise]).finally(() => {
       clearTimeout(maxLoadingTimer);
-      hideLoadingScreen();
+      // Give 100ms for browser paint then hide loading screen
+      setTimeout(hideLoadingScreen, 100);
     });
 
     // Secondary items load in background
