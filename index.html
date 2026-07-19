@@ -3222,40 +3222,45 @@
     try {
       const catNotAnn = `category=not.in.(${encodeURIComponent('ประกาศ')},${encodeURIComponent('ประกาศ_ซ่อน')})`;
       
-      // Fast fetch: Load ONLY top 5 news items first for instant main page rendering
-      let fetchedNews = await sbFetch(`web_news?select=*&${catNotAnn}&order=created_at.desc&limit=5`) || [];
-      if (!Array.isArray(fetchedNews)) fetchedNews = [];
-      allNews = fetchedNews.filter(n => n.category !== 'ประกาศ' && n.category !== 'ประกาศ_ซ่อน');
+      // Fast parallel fetch: Load REAL total count + top 5 news items for instant rendering
+      const [countRes, fetchedNews] = await Promise.all([
+        sbFetch(`web_news?select=id&${catNotAnn}`).catch(() => []),
+        sbFetch(`web_news?select=*&${catNotAnn}&order=created_at.desc&limit=5`).catch(() => [])
+      ]);
+
+      const totalRealCount = Array.isArray(countRes) && countRes.length > 0 ? countRes.length : (Array.isArray(fetchedNews) ? fetchedNews.length : 0);
+      allNews = Array.isArray(fetchedNews) ? fetchedNews.filter(n => n.category !== 'ประกาศ' && n.category !== 'ประกาศ_ซ่อน') : [];
 
       renderHomeNews(allNews);
       renderNews(allNews, 'fullNewsGrid');
+
+      const elStat = document.getElementById('statNews');
+      if (elStat) {
+        elStat.dataset.target = totalRealCount;
+        if (typeof animateCounter === 'function') animateCounter(elStat, totalRealCount);
+        else elStat.textContent = totalRealCount;
+      }
+
       initScrollReveal();
 
-      // Background fetch: Load full news history and exact total count silently after main page is visible
+      // Background fetch: Load full news history silently
       setTimeout(async () => {
         try {
-          const [countRes, fullFetched] = await Promise.all([
-            sbFetch(`web_news?select=id&${catNotAnn}`).catch(() => []),
-            sbFetch(`web_news?select=*&${catNotAnn}&order=created_at.desc`).catch(() => [])
-          ]);
-
-          const totalCount = Array.isArray(countRes) && countRes.length > 0 ? countRes.length : (Array.isArray(fullFetched) ? fullFetched.length : allNews.length);
-          const elStat = document.getElementById('statNews');
-          if (elStat) {
-            elStat.dataset.target = totalCount;
-            elStat.textContent = totalCount;
-          }
-
+          let fullFetched = await sbFetch(`web_news?select=*&${catNotAnn}&order=created_at.desc`) || [];
           if (Array.isArray(fullFetched) && fullFetched.length > 0) {
             allNews = fullFetched.filter(n => n.category !== 'ประกาศ' && n.category !== 'ประกาศ_ซ่อน');
             renderNews(allNews, 'fullNewsGrid');
+            if (elStat) {
+              elStat.dataset.target = allNews.length;
+              elStat.textContent = allNews.length;
+            }
           }
         } catch (e) {
           console.warn('Background news fetch error:', e);
         }
       }, 800);
 
-      return allNews.length;
+      return totalRealCount;
     } catch (err) { 
       console.error('Failed to load news:', err);
       ['homeNewsContainer','fullNewsGrid'].forEach(id => { 
