@@ -4181,7 +4181,7 @@
   function hideLoadingScreen() {
     const ls = document.getElementById('loadingScreen');
     if (ls) {
-      setTimeout(() => ls.classList.add('hidden'), 800);
+      setTimeout(() => ls.classList.add('hidden'), 150);
     }
   }
 
@@ -4220,37 +4220,34 @@
   document.addEventListener('DOMContentLoaded', () => {
     hideLoadingScreen();
     initParticles();
+    initScrollReveal();
 
-    // Fire ALL API calls in parallel for fastest possible load
-    Promise.all([
-      loadNews().then(count => {
-        const el = document.getElementById('statNews');
-        if (el) { el.dataset.target = count || 0; }
-      }),
-      loadAnnouncements(),
-      loadObecLine(),
-      loadVideos(),
-      loadEvents().then(count => {
-        const el = document.getElementById('statEvents');
-        if (el) { el.dataset.target = count || 0; }
-      }),
-      loadTeam(),
-      loadUsers().then(() => {
-        const statMem = document.getElementById('statMembers');
-        if (statMem) {
-          const nonAdmins = allUsers.filter(u => u.role !== 'admin');
-          statMem.dataset.target = nonAdmins.length;
-        }
-      }),
-    ]).then(() => {
-      // Re-render news with author names after users loaded
+    // Load each section independently so fast APIs display content instantly without waiting for slow APIs
+    loadNews().then(count => {
+      const el = document.getElementById('statNews');
+      if (el) { el.dataset.target = count || 0; }
+    });
+    loadAnnouncements();
+    loadObecLine();
+    loadVideos();
+    loadEvents().then(count => {
+      const el = document.getElementById('statEvents');
+      if (el) { el.dataset.target = count || 0; }
+    });
+    loadTeam();
+    loadUsers().then(() => {
+      const statMem = document.getElementById('statMembers');
+      if (statMem) {
+        const nonAdmins = allUsers.filter(u => u.role !== 'admin');
+        statMem.dataset.target = nonAdmins.length;
+      }
       if (allNews && allNews.length > 0) {
         renderHomeNews(allNews.slice(0, 5));
         renderNews(allNews, 'fullNewsGrid');
       }
-      initScrollReveal();
-      setTimeout(initStatsCounters, 500);
     });
+
+    setTimeout(initStatsCounters, 300);
   });
 </script>
 
