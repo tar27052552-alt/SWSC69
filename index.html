@@ -3212,7 +3212,8 @@
 
   async function loadNews() {
     try {
-      let fetchedNews = await sbFetch(`web_news?select=id,headline,detail,image_url,category,created_at,submitted_by&category=not.in.(${encodeURIComponent('ประกาศ')},${encodeURIComponent('ประกาศ_ซ่อน')})&order=created_at.desc&limit=30`) || [];
+      let fetchedNews = await sbFetch(`web_news?select=*&category=not.in.(${encodeURIComponent('ประกาศ')},${encodeURIComponent('ประกาศ_ซ่อน')})&order=created_at.desc`) || [];
+      if (!Array.isArray(fetchedNews)) fetchedNews = [];
       // Filter out all announcements so banners and general news are completely separated
       allNews = fetchedNews.filter(n => n.category !== 'ประกาศ' && n.category !== 'ประกาศ_ซ่อน');
       
@@ -3224,7 +3225,8 @@
       if (hNews) hNews.textContent = count;
       initScrollReveal();
       return count;
-    } catch { 
+    } catch (err) { 
+      console.error('Failed to load news:', err);
       ['homeNewsContainer','fullNewsGrid'].forEach(id => { 
         const el = document.getElementById(id);
         if(el) el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>ยังไม่มีข่าวสาร</div>'; 
@@ -3235,8 +3237,8 @@
 
   async function loadAnnouncements() {
     try {
-      const anns = await sbFetch(`web_news?select=id,headline,detail,image_url,category,created_at,submitted_by&category=eq.${encodeURIComponent('ประกาศ')}&order=created_at.desc&limit=10`) || [];
-      renderCarousel(anns);
+      const anns = await sbFetch(`web_news?select=*&category=eq.${encodeURIComponent('ประกาศ')}&order=created_at.desc`) || [];
+      renderCarousel(Array.isArray(anns) ? anns : []);
     } catch (e) {
       console.warn('Could not load announcements:', e);
       // Hide carousel if failed
