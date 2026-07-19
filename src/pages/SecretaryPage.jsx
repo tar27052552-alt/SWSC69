@@ -483,27 +483,15 @@ export default function SecretaryPage() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <div className="page-title">📝 ฝ่ายเลขานุการ</div>
-          <div className="page-subtitle">วาระการประชุม รายงานการประชุม และคลังเอกสารสำคัญ (เก็บแบบไร้ค่าใช้จ่ายบน Google Sheets & Drive)</div>
+          <div className="page-subtitle">คลังเอกสารสำคัญและรายงานการประชุม (จัดเก็บใน Google Drive)</div>
         </div>
         {canManage && (
           <div style={{ display: 'flex', gap: 8 }}>
-            {tab === 'meetings' ? (
-              <button className="btn btn-primary" onClick={() => setMeetingModal(true)}>
-                <Plus size={14} /> เพิ่มการประชุม
-              </button>
-            ) : (
-              <button className="btn btn-primary" onClick={() => setDocModal(true)}>
-                <Upload size={14} /> อัปโหลดเอกสาร
-              </button>
-            )}
+            <button className="btn btn-primary" onClick={() => setDocModal(true)}>
+              <Upload size={14} /> อัปโหลดเอกสาร
+            </button>
           </div>
         )}
-      </div>
-
-      {/* Tabs */}
-      <div className="tab-bar">
-        <button className={`tab-btn${tab === 'meetings' ? ' active' : ''}`} onClick={() => setTab('meetings')}>📅 วาระการประชุม</button>
-        <button className={`tab-btn${tab === 'docs' ? ' active' : ''}`} onClick={() => setTab('docs')}>📁 คลังเอกสาร</button>
       </div>
 
       {loadingData ? (
@@ -513,177 +501,7 @@ export default function SecretaryPage() {
           <div style={{ fontSize: 14, color: '#757575' }}>กำลังดึงข้อมูลจาก Google Sheets backend...</div>
         </div>
       ) : (
-        <>
-          {/* Meetings */}
-          {tab === 'meetings' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {meetings.length === 0 ? (
-                <div className="card" style={{ textAlign: 'center', padding: '40px 20px', color: '#9e9e9e' }}>
-                  📅 ยังไม่มีประวัติหรือวาระการประชุมที่บันทึกไว้ใน Google Sheets
-                </div>
-              ) : (
-                meetings.map(m => {
-                  const isExp = expanded === m.id;
-                  const isUpcoming = m.status === 'upcoming';
-                  // Parse agenda and resolutions array safely
-                  const agendaArr = Array.isArray(m.agenda) ? m.agenda : [];
-                  const resArr = Array.isArray(m.resolutions) ? m.resolutions : [];
-                  
-                  return (
-                    <div key={m.id} className="card">
-                      {/* Header */}
-                      <div
-                        style={{ padding: '14px 18px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: `4px solid ${isUpcoming ? '#00bcd4' : '#43a047'}` }}
-                        onClick={() => setExpanded(isExp ? null : m.id)}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <span style={{ fontSize: 24 }}>{isUpcoming ? '📅' : '✅'}</span>
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: 14 }}>{m.title}</div>
-                            <div style={{ fontSize: 12, color: '#757575', marginTop: 2 }}>
-                              📆 {new Date(m.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                              &nbsp;⏰ {m.time} &nbsp;📍 {m.location}
-                            </div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <span className={`badge ${isUpcoming ? 'badge-blue' : 'badge-green'}`}>
-                            {isUpcoming ? '📅 กำลังจะมาถึง' : '✅ เสร็จแล้ว'}
-                          </span>
-                          {isExp ? <ChevronUp size={18} color="#9e9e9e" /> : <ChevronDown size={18} color="#9e9e9e" />}
-                        </div>
-                      </div>
-
-                      {/* Expanded detail */}
-                      {isExp && (
-                        <div style={{ borderTop: '1px solid #f0f0f0' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
-                            {/* Agenda */}
-                            <div style={{ padding: '16px 18px', borderRight: '1px solid #f0f0f0' }}>
-                              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: '#00838f' }}>📋 วาระการประชุม</div>
-                              {(() => {
-                                const agendaVal = m.agenda;
-                                const isUrl = typeof agendaVal === 'string' && agendaVal.startsWith('http');
-                                const isUrlArray = Array.isArray(agendaVal) && agendaVal.length === 1 && typeof agendaVal[0] === 'string' && agendaVal[0].startsWith('http');
-                                const url = isUrl ? agendaVal : (isUrlArray ? agendaVal[0] : null);
-
-                                if (url) {
-                                  return (
-                                    <button 
-                                      className="btn btn-primary btn-sm"
-                                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#00838f', border: 'none', fontSize: 12, padding: '6px 12px', borderRadius: 4 }}
-                                      onClick={() => window.open(url, '_blank')}
-                                    >
-                                      📎 เปิดไฟล์วาระการประชุม (PDF/รูปภาพ)
-                                    </button>
-                                  );
-                                }
-
-                                const agendaArr = Array.isArray(m.agenda) ? m.agenda : (typeof m.agenda === 'string' ? m.agenda.split('\n').filter(Boolean) : []);
-                                if (agendaArr.length > 0) {
-                                  return (
-                                    <ol style={{ paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                      {agendaArr.map((a, i) => <li key={i} style={{ fontSize: 13, color: '#424242', lineHeight: 1.5 }}>{a}</li>)}
-                                    </ol>
-                                  );
-                                }
-
-                                return <p style={{ color: '#9e9e9e', fontSize: 13 }}>ยังไม่ได้กำหนดวาระ</p>;
-                              })()}
-                            </div>
-
-                            {/* Resolutions */}
-                            <div style={{ padding: '16px 18px' }}>
-                              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: '#2e7d32' }}>✅ รายงานการประชุม</div>
-                              {(() => {
-                                const resVal = m.resolutions;
-                                const isUrl = typeof resVal === 'string' && resVal.startsWith('http');
-                                const isUrlArray = Array.isArray(resVal) && resVal.length === 1 && typeof resVal[0] === 'string' && resVal[0].startsWith('http');
-                                const url = isUrl ? resVal : (isUrlArray ? resVal[0] : null);
-
-                                if (url) {
-                                  return (
-                                    <button 
-                                      className="btn btn-primary btn-sm"
-                                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#2e7d32', border: 'none', fontSize: 12, padding: '6px 12px', borderRadius: 4 }}
-                                      onClick={() => window.open(url, '_blank')}
-                                    >
-                                      📎 เปิดไฟล์รายงานการประชุม (PDF/รูปภาพ)
-                                    </button>
-                                  );
-                                }
-
-                                const resArr = Array.isArray(m.resolutions) ? m.resolutions : (typeof m.resolutions === 'string' ? m.resolutions.split('\n').filter(Boolean) : []);
-                                if (resArr.length > 0) {
-                                  return (
-                                    <ul style={{ paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                      {resArr.map((r, i) => <li key={i} style={{ fontSize: 13, color: '#424242', lineHeight: 1.5 }}>{r}</li>)}
-                                    </ul>
-                                  );
-                                }
-
-                                return <p style={{ color: '#9e9e9e', fontSize: 13 }}>{isUpcoming ? 'จะบันทึกหลังการประชุม' : 'ยังไม่มีรายงานการประชุม'}</p>;
-                              })()}
-                            </div>
-                          </div>
-
-                          {/* Attendees */}
-                          {m.attendees && m.attendees.length > 0 && (
-                            <div style={{ padding: '12px 18px', borderTop: '1px solid #f0f0f0', background: '#fafafa', display: 'flex', gap: 20, fontSize: 13 }}>
-                              <div><span style={{ fontWeight: 700, color: '#2e7d32' }}>✅ เข้าร่วม:</span> {m.attendees.join(', ')}</div>
-                              {m.absent && m.absent.length > 0 && <div><span style={{ fontWeight: 700, color: '#e53935' }}>❌ ขาด:</span> {m.absent.join(', ')}</div>}
-                            </div>
-                          )}
-
-                          {canManage && (
-                            <div style={{ padding: '10px 18px', borderTop: '1px solid #f0f0f0', textAlign: 'right' }}>
-                              {isUpcoming ? (
-                                <button 
-                                  className="btn btn-primary" 
-                                  style={{ marginRight: 8, padding: '6px 12px', fontSize: 12 }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openEditMeetingModal(m, 'completed');
-                                  }}
-                                >
-                                  บันทึกผลการประชุม
-                                </button>
-                              ) : (
-                                <button 
-                                  className="btn btn-primary" 
-                                  style={{ marginRight: 8, padding: '6px 12px', fontSize: 12, background: '#43a047', borderColor: '#43a047' }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openEditMeetingModal(m);
-                                  }}
-                                >
-                                  📝 แก้ไขรายงาน/เช็คชื่อ
-                                </button>
-                              )}
-                              <button 
-                                className="btn btn-outline" 
-                                style={{ color: '#e53935', borderColor: '#e53935', padding: '6px 12px', fontSize: 12 }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteMeeting(m.id);
-                                }}
-                              >
-                                ลบการประชุมนี้
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          )}
-
-          {/* Docs */}
-          {tab === 'docs' && (
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
               <div className="card-header" style={{ padding: '18px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className="card-title" style={{ margin: 0 }}>📁 คลังเอกสารสภา (จัดเก็บใน Google Drive โควต้าฟรี)</span>
               </div>
@@ -740,8 +558,6 @@ export default function SecretaryPage() {
                 </div>
               )}
             </div>
-          )}
-        </>
       )}
 
       {/* Add meeting modal */}
