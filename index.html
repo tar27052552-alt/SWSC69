@@ -4178,10 +4178,13 @@
   }
 
   /* ---- LOADING SCREEN ---- */
+  let isLoadingHidden = false;
   function hideLoadingScreen() {
+    if (isLoadingHidden) return;
+    isLoadingHidden = true;
     const ls = document.getElementById('loadingScreen');
     if (ls) {
-      setTimeout(() => ls.classList.add('hidden'), 150);
+      ls.classList.add('hidden');
     }
   }
 
@@ -4218,16 +4221,25 @@
 
   /* ---- INIT ---- */
   document.addEventListener('DOMContentLoaded', () => {
-    hideLoadingScreen();
     initParticles();
     initScrollReveal();
 
-    // Load each section independently so fast APIs display content instantly without waiting for slow APIs
-    loadNews().then(count => {
+    // Safety fallback: Hide loading screen after 2.5s max even if network is slow
+    const maxLoadingTimer = setTimeout(hideLoadingScreen, 2500);
+
+    // Wait for essential main page content (news & announcements) to load before closing loading screen
+    const mainNewsPromise = loadNews().then(count => {
       const el = document.getElementById('statNews');
       if (el) { el.dataset.target = count || 0; }
     });
-    loadAnnouncements();
+    const mainAnnouncePromise = loadAnnouncements();
+
+    Promise.all([mainNewsPromise, mainAnnouncePromise]).finally(() => {
+      clearTimeout(maxLoadingTimer);
+      hideLoadingScreen();
+    });
+
+    // Secondary items load in background
     loadObecLine();
     loadVideos();
     loadEvents().then(count => {
