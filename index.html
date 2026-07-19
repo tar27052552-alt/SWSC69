@@ -3204,10 +3204,16 @@
     }
   }
 
+  function stripPrefix(name) {
+    if (!name) return '';
+    return name.replace(/^(นาย|นางสาว|นาง|ด\.ช\.|ด\.ญ\.|เด็กชาย|เด็กหญิง)\s*/gi, '').trim();
+  }
+
   function getAuthorName(submitter) {
     if (!submitter) return 'ผู้ดูแล';
     const foundUser = allUsers.find(u => u.nickname === submitter || u.name === submitter);
-    return foundUser ? foundUser.name : submitter;
+    const rawName = foundUser ? foundUser.name : submitter;
+    return stripPrefix(rawName);
   }
 
   async function loadNews() {
