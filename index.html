@@ -2434,6 +2434,9 @@
             <div class="news-grid" id="fullNewsGrid">
               <div class="loader"><div class="spin"></div><span>กำลังโหลดข่าวสาร...</span></div>
             </div>
+            <div id="loadMoreNewsWrap" style="text-align:center; margin-top:30px; display:none;">
+              <button class="pill" style="padding:10px 24px; font-size:15px; border-radius:30px; border:2px solid var(--primary); color:var(--primary); background:transparent; cursor:pointer;" onclick="loadMoreNews()">โหลดเพิ่มเติม</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2688,6 +2691,9 @@
               <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--gray-500);">
                 กำลังโหลดวิดีโอ...
               </div>
+            </div>
+            <div id="loadMoreVideosWrap" style="text-align:center; margin-top:30px; display:none;">
+              <button class="pill" style="padding:10px 24px; font-size:15px; border-radius:30px; border:2px solid var(--primary); color:var(--primary); background:transparent; cursor:pointer;" onclick="loadMoreVideos()">โหลดเพิ่มเติม</button>
             </div>
           </div>
         </div>
@@ -3107,6 +3113,13 @@
       activeSec = document.getElementById(id);
     }
 
+    // 🌟 FALLBACK: If hash is invalid or missing (e.g. user typed #/dashboard on the main page)
+    if (!activeSec) {
+      activeSec = document.getElementById('homePage');
+      if (fullHero) fullHero.style.display = '';
+      history.replaceState(null, null, '#/home');
+    }
+
     if (activeSec) {
       activeSec.classList.add('active');
       activeSec.style.display = 'block';
@@ -3120,23 +3133,35 @@
     scrollTo(0, 0);
   }
   window.addEventListener('hashchange', route);
-  window.addEventListener('load', route);
+  document.addEventListener('DOMContentLoaded', route);
+  // Execute immediately if DOM is already loaded
+  if (document.readyState === 'interactive' || document.readyState === 'complete') {
+    route();
+  }
 
   /* ---- SCROLL EFFECTS (Navbar, Progress Bar, Back-To-Top) ---- */
+  let isScrolling = false;
+  const navbarEl = document.getElementById('navbar');
   window.addEventListener('scroll', () => {
-    // 1. Navbar scrolled effect
-    document.getElementById('navbar').classList.toggle('scrolled', scrollY > 10);
+    if (!isScrolling) {
+      window.requestAnimationFrame(() => {
+        // 1. Navbar scrolled effect
+        if (navbarEl) navbarEl.classList.toggle('scrolled', window.scrollY > 10);
 
-    // 2. Back to Top Button
-    const backToTop = document.getElementById('backToTop');
-    if (backToTop) {
-      if (scrollY > 300) {
-        backToTop.classList.add('visible');
-      } else {
-        backToTop.classList.remove('visible');
-      }
+        // 2. Back to Top Button
+        const backToTop = document.getElementById('backToTop');
+        if (backToTop) {
+          if (window.scrollY > 300) {
+            backToTop.classList.add('visible');
+          } else {
+            backToTop.classList.remove('visible');
+          }
+        }
+        isScrolling = false;
+      });
+      isScrolling = true;
     }
-  });
+  }, { passive: true });
 
   /* ---- MOBILE MENU ---- */
   const burger = document.getElementById('burger');
@@ -3197,6 +3222,10 @@
   /* ---- NEWS ---- */
   let allNews = [];
   let allUsers = [];
+  let allVideos = [];
+  let newsDisplayLimit = 30;
+  let currentNewsCat = 'all';
+  let videoDisplayLimit = 20;
 
   async function loadUsers() {
     try {
@@ -3436,7 +3465,13 @@
   function renderNews(items, targetId) {
     const el = document.getElementById(targetId);
     if (!items.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>ยังไม่มีข่าวสาร</div>'; return; }
-    el.innerHTML = items.map(n => {
+    
+    let toRender = items;
+    if (targetId === 'fullNewsGrid') {
+      toRender = items.slice(0, newsDisplayLimit);
+    }
+    
+    el.innerHTML = toRender.map(n => {
       const m = catMeta(n.category);
       const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH') : '');
       const author = getAuthorName(n.submitter);
@@ -3459,19 +3494,35 @@
         </div>
       </div>`;
     }).join('');
+
+    if (targetId === 'fullNewsGrid') {
+      const loadMoreWrap = document.getElementById('loadMoreNewsWrap');
+      if (loadMoreWrap) {
+        if (items.length > newsDisplayLimit) loadMoreWrap.style.display = 'block';
+        else loadMoreWrap.style.display = 'none';
+      }
+    }
   }
 
   function filterNews(cat, btn) {
+    currentNewsCat = cat;
+    newsDisplayLimit = 30; // reset on filter
     document.querySelectorAll('#newsFilter .pill').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    if (btn) btn.classList.add('active');
     renderNews(cat === 'all' ? allNews : allNews.filter(n => n.category === cat), 'fullNewsGrid');
     initScrollReveal();
+  }
+
+  function loadMoreNews() {
+    newsDisplayLimit += 30;
+    const activeBtn = document.querySelector('#newsFilter .pill.active');
+    filterNews(currentNewsCat, activeBtn);
   }
 
   /* ---- OBEC LINE ---- */
   async function loadObecLine() {
     try {
-      const data = await sbFetch(`obec_line?select=*&order=created_at.desc&limit=8`) || [];
+      const data = await sbFetch(`obec_line?select=*&order=created_at.desc&limit=14`) || [];
       renderObecLine(data);
         initScrollReveal();
     } catch (err) {
@@ -4023,8 +4074,8 @@
   /* ---- VIDEOS ---- */
   async function loadVideos() {
     try {
-      const data = await sbFetch(`web_videos?select=*&order=created_at.desc`) || [];
-      renderVideos(data);
+      allVideos = await sbFetch(`web_videos?select=*&order=created_at.desc`) || [];
+      renderVideos(allVideos);
     } catch (err) {
       console.error("Failed to load videos:", err);
       const grid = document.getElementById('videoGrid');
@@ -4080,7 +4131,10 @@
       grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--gray-500);">ยังไม่มีวิดีโอกิจกรรมในระบบ</div>';
       return;
     }
-    grid.innerHTML = items.map(item => {
+    
+    const toRender = items.slice(0, videoDisplayLimit);
+    
+    grid.innerHTML = toRender.map(item => {
       const thumb = getThumbnailUrl(item.video_url);
       const embed = getEmbedUrl(item.video_url);
       return `
@@ -4100,6 +4154,17 @@
         </div>
       `;
     }).join('');
+
+    const loadMoreWrap = document.getElementById('loadMoreVideosWrap');
+    if (loadMoreWrap) {
+      if (items.length > videoDisplayLimit) loadMoreWrap.style.display = 'block';
+      else loadMoreWrap.style.display = 'none';
+    }
+  }
+
+  function loadMoreVideos() {
+    videoDisplayLimit += 20;
+    renderVideos(allVideos);
   }
 
   function openVideoPlayer(embedUrl) {
@@ -4120,7 +4185,7 @@
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let particles = [];
-    const maxParticles = 65;
+    const maxParticles = 40; // ลดจำนวนอนุภาคลงเพื่อลดการกระตุกเวลาเลื่อนหน้าจอ
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
 
@@ -4260,8 +4325,8 @@
     initParticles();
     initScrollReveal();
 
-    // Safety fallback: Hide loading screen after 6s max only if network completely fails
-    const maxLoadingTimer = setTimeout(hideLoadingScreen, 6000);
+    // Safety fallback: Hide loading screen after 3s max only if network completely fails
+    const maxLoadingTimer = setTimeout(hideLoadingScreen, 3000);
 
     // Wait strictly for essential main page content (news & announcements) to finish rendering
     const mainNewsPromise = loadNews().then(count => {

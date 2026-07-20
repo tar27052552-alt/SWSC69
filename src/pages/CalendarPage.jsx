@@ -215,41 +215,34 @@ export default function CalendarPage() {
   };
 
   useEffect(() => {
-    async function loadEvents() {
+    async function loadData() {
       try {
-        const { data, error } = await supabase
-          .from('events')
-          .select('*')
-          .order('date', { ascending: true });
-        if (error) throw error;
-        
-        const mapped = (data || []).map(e => ({
+        const [
+          eventsRes,
+          usersRes,
+          participantsRes
+        ] = await Promise.all([
+          supabase.from('events').select('*').order('date', { ascending: true }),
+          supabase.from('users').select('id, name, nickname').order('name'),
+          supabase.from('event_participants').select('*')
+        ]);
+
+        if (eventsRes.error) throw eventsRes.error;
+        if (usersRes.error) throw usersRes.error;
+        if (participantsRes.error) throw participantsRes.error;
+
+        const mapped = (eventsRes.data || []).map(e => ({
           ...e,
           desc: e.description || e.desc
         }));
         setEvents(mapped);
+        setUsersList(usersRes.data || []);
+        setParticipants(participantsRes.data || []);
       } catch (err) {
-        console.error('Error loading events:', err);
+        console.error('Error loading calendar data:', err);
       }
     }
-    async function loadUsersAndParticipants() {
-      try {
-        const { data: uData } = await supabase
-          .from('users')
-          .select('id, name, nickname')
-          .order('name');
-        setUsersList(uData || []);
-
-        const { data: pData } = await supabase
-          .from('event_participants')
-          .select('*');
-        setParticipants(pData || []);
-      } catch (err) {
-        console.error('Error loading users/participants:', err);
-      }
-    }
-    loadEvents();
-    loadUsersAndParticipants();
+    loadData();
   }, []);
 
   const firstDay = new Date(yr, mo, 1).getDay();

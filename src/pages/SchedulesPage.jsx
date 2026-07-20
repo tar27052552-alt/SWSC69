@@ -374,12 +374,26 @@ export default function SchedulesPage() {
   useEffect(() => {
     async function loadSchedules() {
       try {
-        // โหลดข้อมูลผู้ใช้จากตาราง users ใน Supabase
-        const { data: usersData, error: usersErr } = await supabase
-          .from('users')
-          .select('id, nickname, name, dept_id, role');
-        if (usersErr) throw usersErr;
-        
+        const [
+          usersRes,
+          schedulesRes,
+          swapsRes,
+          settingsRes
+        ] = await Promise.all([
+          supabase.from('users').select('id, nickname, name, dept_id, role'),
+          supabase.from('schedules').select('*'),
+          supabase.from('duty_swaps').select('*').order('date', { ascending: false }),
+          supabase.from('attendance_settings').select('*')
+        ]);
+
+        if (usersRes.error) throw usersRes.error;
+        if (schedulesRes.error) throw schedulesRes.error;
+
+        const usersData = usersRes.data;
+        const data = schedulesRes.data;
+        const swapsData = swapsRes.data;
+        const settingsData = settingsRes.data;
+
         if (usersData && usersData.length > 0) {
           setUsersList(usersData);
           const nicknames = usersData
@@ -389,12 +403,6 @@ export default function SchedulesPage() {
           const sortedCandidates = Array.from(new Set([...nicknames, '–'])).sort();
           setCandidates(sortedCandidates);
         }
-
-        // โหลดข้อมูลตารางเวร
-        const { data, error } = await supabase
-          .from('schedules')
-          .select('*');
-        if (error) throw error;
 
         if (data && data.length > 0) {
           const grouped = {
@@ -426,23 +434,12 @@ export default function SchedulesPage() {
           if (grouped.pr_news.length > 0) setPRNews(sortDays(grouped.pr_news));
         }
 
-        // โหลดข้อมูลการสลับเวร (duty_swaps)
-        try {
-          const { data: swapsData, error: swapsErr } = await supabase
-            .from('duty_swaps')
-            .select('*')
-            .order('date', { ascending: false });
-          if (!swapsErr && swapsData) {
-            setSwaps(swapsData);
-          }
-        } catch (swapsTableErr) {
-          console.log("duty_swaps table not found or error loading swaps:", swapsTableErr);
+        if (!swapsRes.error && swapsData) {
+          setSwaps(swapsData);
+        } else if (swapsRes.error) {
+          console.log("duty_swaps table not found or error loading swaps:", swapsRes.error);
         }
 
-        // โหลดข้อมูลค่าเริ่มต้นสำหรับวันทำเวร
-        const { data: settingsData } = await supabase
-          .from('attendance_settings')
-          .select('*');
         if (settingsData) {
           const startD = settingsData.find(d => d.key === 'start_date')?.value || '';
           const cleanStartD = settingsData.find(d => d.key === 'clean_duty_start_date')?.value || '';

@@ -447,59 +447,52 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        // Fetch events
-        const { data: eventsData, error: err1 } = await supabase
-          .from('events')
-          .select('*')
-          .order('date', { ascending: true });
-        if (err1) throw err1;
+        const [
+          eventsRes,
+          notifRes,
+          uCountRes,
+          dCountRes,
+          schedulesRes,
+          usersRes,
+          partRes,
+          swapRes,
+          settingsRes
+        ] = await Promise.all([
+          supabase.from('events').select('*').order('date', { ascending: true }),
+          supabase.from('notifications').select('*').order('created_at', { ascending: false }),
+          supabase.from('users').select('*', { count: 'exact', head: true }),
+          supabase.from('departments').select('*', { count: 'exact', head: true }),
+          supabase.from('schedules').select('*'),
+          supabase.from('users').select('id, name, nickname, dept_id'),
+          supabase.from('event_participants').select('*'),
+          supabase.from('duty_swaps').select('*'),
+          supabase.from('attendance_settings').select('*')
+        ]);
 
-        // Fetch notifications
-        const { data: notifData, error: err2 } = await supabase
-          .from('notifications')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (err2) throw err2;
+        if (eventsRes.error) throw eventsRes.error;
+        if (notifRes.error) throw notifRes.error;
+        if (uCountRes.error) throw uCountRes.error;
+        if (dCountRes.error) throw dCountRes.error;
+        if (schedulesRes.error) throw schedulesRes.error;
+        if (usersRes.error) throw usersRes.error;
+        if (partRes.error) throw partRes.error;
+        if (swapRes.error) throw swapRes.error;
 
-        // Fetch users count
-        const { count: uCount, error: err3 } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true });
-        if (err3) throw err3;
+        const eventsData = eventsRes.data;
+        const notifData = notifRes.data;
+        const uCount = uCountRes.count;
+        const dCount = dCountRes.count;
+        const schedulesData = schedulesRes.data;
+        const usersData = usersRes.data;
+        const partData = partRes.data;
+        const swapData = swapRes.data;
+        const settingsData = settingsRes.data;
 
-        // Fetch departments count
-        const { count: dCount, error: err4 } = await supabase
-          .from('departments')
-          .select('*', { count: 'exact', head: true });
-        if (err4) throw err4;
-
-        // Fetch clean schedules and all schedules
-        const { data: schedulesData, error: err5 } = await supabase
-          .from('schedules')
-          .select('*');
-        if (err5) throw err5;
         const cleanData = (schedulesData || []).filter(s => s.type === 'clean_room');
         const greetingData = (schedulesData || []).filter(s => s.type === 'greeting');
 
-        // Fetch users details
-        const { data: usersData, error: err6 } = await supabase
-          .from('users')
-          .select('id, name, nickname, dept_id');
-        if (err6) throw err6;
         setUsersList(usersData || []);
-
-        // Fetch event participants
-        const { data: partData, error: err7 } = await supabase
-          .from('event_participants')
-          .select('*');
-        if (err7) throw err7;
         setEventParticipants(partData || []);
-
-        // Fetch duty swaps
-        const { data: swapData, error: err8 } = await supabase
-          .from('duty_swaps')
-          .select('*');
-        if (err8) throw err8;
         setDutySwaps(swapData || []);
 
         // Fetch settings
@@ -509,9 +502,6 @@ export default function Dashboard() {
         let enabledDays = [];
         let disabledDates = [];
         let schedulesHistory = [];
-        const { data: settingsData } = await supabase
-          .from('attendance_settings')
-          .select('*');
         if (settingsData) {
           startD = settingsData.find(d => d.key === 'start_date')?.value || '';
           setStartDate(startD);

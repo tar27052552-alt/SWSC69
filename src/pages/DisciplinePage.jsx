@@ -156,19 +156,29 @@ export default function DisciplinePage() {
   const [dbExemptNicknames, setDbExemptNicknames] = useState([]);
 
   useEffect(() => {
-    async function loadSettings() {
+    async function loadData() {
       try {
-        const { data, error } = await supabase.from('attendance_settings').select('*');
-        if (error) throw error;
-        if (data) {
-          const days = data.find(d => d.key === 'enabled_days')?.value;
-          const dates = data.find(d => d.key === 'disabled_dates')?.value;
-          const startD = data.find(d => d.key === 'start_date')?.value;
-          const cleanStartD = data.find(d => d.key === 'clean_duty_start_date')?.value;
-          const greetingStartD = data.find(d => d.key === 'greeting_duty_start_date')?.value;
-          const checkInAct = data.find(d => d.key === 'check_in_active')?.value;
-          const greetingAct = data.find(d => d.key === 'greeting_duty_active')?.value;
-          const cleanAct = data.find(d => d.key === 'clean_duty_active')?.value;
+        const [
+          settingsRes,
+          cleanRes,
+          greetingRes
+        ] = await Promise.all([
+          supabase.from('attendance_settings').select('*'),
+          supabase.from('schedules').select('*').eq('type', 'clean_room'),
+          supabase.from('schedules').select('*').eq('type', 'greeting')
+        ]);
+
+        if (settingsRes.error) throw settingsRes.error;
+        
+        if (settingsRes.data) {
+          const days = settingsRes.data.find(d => d.key === 'enabled_days')?.value;
+          const dates = settingsRes.data.find(d => d.key === 'disabled_dates')?.value;
+          const startD = settingsRes.data.find(d => d.key === 'start_date')?.value;
+          const cleanStartD = settingsRes.data.find(d => d.key === 'clean_duty_start_date')?.value;
+          const greetingStartD = settingsRes.data.find(d => d.key === 'greeting_duty_start_date')?.value;
+          const checkInAct = settingsRes.data.find(d => d.key === 'check_in_active')?.value;
+          const greetingAct = settingsRes.data.find(d => d.key === 'greeting_duty_active')?.value;
+          const cleanAct = settingsRes.data.find(d => d.key === 'clean_duty_active')?.value;
 
           if (days) setEnabledDays(days);
           if (dates) setDisabledDates(dates);
@@ -179,39 +189,18 @@ export default function DisciplinePage() {
           if (greetingAct !== undefined) setGreetingActive(greetingAct !== 'false');
           if (cleanAct !== undefined) setCleanActive(cleanAct !== 'false');
         }
-      } catch (err) {
-        console.error('Error loading settings:', err);
-      }
-    }
-    async function loadCleanSchedules() {
-      try {
-        const { data, error } = await supabase
-          .from('schedules')
-          .select('*')
-          .eq('type', 'clean_room');
-        if (!error && data) {
-          setCleanSchedules(data);
+
+        if (!cleanRes.error && cleanRes.data) {
+          setCleanSchedules(cleanRes.data);
+        }
+        if (!greetingRes.error && greetingRes.data) {
+          setGreetingSchedules(greetingRes.data);
         }
       } catch (err) {
-        console.error('Error loading clean schedules:', err);
+        console.error('Error loading settings/schedules:', err);
       }
     }
-    async function loadGreetingSchedules() {
-      try {
-        const { data, error } = await supabase
-          .from('schedules')
-          .select('*')
-          .eq('type', 'greeting');
-        if (!error && data) {
-          setGreetingSchedules(data);
-        }
-      } catch (err) {
-        console.error('Error loading greeting schedules:', err);
-      }
-    }
-    loadSettings();
-    loadCleanSchedules();
-    loadGreetingSchedules();
+    loadData();
   }, []);
 
   const saveStartDate = async (newVal) => {
