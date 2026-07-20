@@ -2207,6 +2207,7 @@
         <a href="javascript:void(0)" class="nav-link">🏘️ ข้อมูลพื้นฐาน <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
         <div class="nav-dropdown">
           <a href="#/news">📰 ข่าวประชาสัมพันธ์</a>
+          <a href="#/policies">🎯 นโยบายสภานักเรียน</a>
           <a href="#/regulations">📜 ระเบียบโรงเรียนสรรพวิทยาคมว่าด้วยคณะกรรมการสภานักเรียน โรงเรียนสรรพวิทยาคม</a>
           <a href="#/manual">📘 คู่มือการปฏิบัติงานสภานักเรียน โรงเรียนสรรพวิทยาคม</a>
           <a href="#/structure">🏛️ โครงสร้างการบริหารงาน</a>
@@ -2252,6 +2253,7 @@
       </div>
       <div class="mobile-dropdown-sub">
         <a href="#/news" onclick="closeMobile()">📰 ข่าวประชาสัมพันธ์</a>
+        <a href="#/policies" onclick="closeMobile()">🎯 นโยบายสภานักเรียน</a>
         <a href="#/regulations" onclick="closeMobile()">📜 ระเบียบสภาฯ</a>
         <a href="#/manual" onclick="closeMobile()">📘 คู่มือปฏิบัติงาน</a>
         <a href="#/structure" onclick="closeMobile()">🏛️ โครงสร้างการบริหารงาน</a>
@@ -2727,6 +2729,27 @@
                 <p style="color:var(--gray-500);font-size:14px;margin:8px 0 20px">ขอบคุณสำหรับการมีส่วนร่วม สภานักเรียนจะนำฟีดแบ็คของคุณเข้าพิจารณาในการประชุมครั้งถัดไป</p>
                 <button class="form-submit" onclick="resetForm()" style="max-width:180px">ส่งเรื่องเพิ่มเติม</button>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: POLICIES -->
+      <div class="page-section" id="policies">
+        <div class="block">
+          <div class="block-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+              <span class="block-head-title">🎯 นโยบายและการขับเคลื่อนการทำงานสภานักเรียน</span>
+              <div style="font-size:13.5px; color:var(--gray-500); margin-top:4px; font-weight:400;">
+                มุ่งมั่นพัฒนาโรงเรียนสรรพวิทยาคม สร้างสรรค์ประโยชน์เพื่อนักเรียนและสังคม
+              </div>
+            </div>
+          </div>
+          <div class="block-body" style="padding:24px 20px;">
+            <div id="policyListGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 22px;">
+              <div class="skel-card"><div class="skel-thumb skel-bg" style="height:140px;"></div><div class="skel-body"><div class="skel-title skel-bg"></div><div class="skel-line skel-bg w-80"></div></div></div>
+              <div class="skel-card"><div class="skel-thumb skel-bg" style="height:140px;"></div><div class="skel-body"><div class="skel-title skel-bg"></div><div class="skel-line skel-bg w-80"></div></div></div>
+              <div class="skel-card"><div class="skel-thumb skel-bg" style="height:140px;"></div><div class="skel-body"><div class="skel-title skel-bg"></div><div class="skel-line skel-bg w-80"></div></div></div>
             </div>
           </div>
         </div>
@@ -4123,6 +4146,157 @@
     document.getElementById('successView').style.display = 'none';
   }
 
+  /* ---- POLICIES ---- */
+  async function loadPolicies() {
+    const defaultPolicies = [
+      {
+        id: 1,
+        title: 'โครงการขยะแลกแต้ม & SWSC Zero Waste',
+        category: 'สิ่งแวดล้อม & สวัสดิการ',
+        icon: '♻️',
+        progress: 100,
+        status: 'ดำเนินการสำเร็จ',
+        status_color: '#10b981',
+        description: 'รณรงค์คัดแยกขยะในโรงเรียน และนำขยะรีไซเคิลมาแลกเป็นแต้มเพื่อนำไปแลกของรางวัลหรือสิทธิพิเศษต่างๆ',
+        highlights: ['จัดตั้งจุดรับขยะแลกแต้มประจำโรงเรียน', 'เชื่อมโยงระบบฐานข้อมูลแต้มสะสมออนไลน์', 'สร้างจิตสำนึกด้านสิ่งแวดล้อมให้แก่นักเรียน'],
+        target: 'นักเรียนทุกระดับชั้น'
+      },
+      {
+        id: 2,
+        title: 'Voice of SWSC: สภาฯ เปิดรับฟังเสียงนักเรียน 24 ชม.',
+        category: 'การมีส่วนร่วม & สิทธิ',
+        icon: '💬',
+        progress: 100,
+        status: 'เปิดใช้งานแล้ว',
+        status_color: '#10b981',
+        description: 'เปิดช่องทางออนไลน์รับฟังความคิดเห็น ปัญหา และข้อเสนอแนะนโยบายจากนักเรียนโดยตรงแบบเรียลไทม์',
+        highlights: ['ระบบส่งข้อเสนอแนะแบบระบุหรือไม่ระบุตัวตน', 'คณะกรรมการสภาฯ นำเข้าประชุมเพื่อหาทางแก้ไข', 'ติดตามสถานะการดำเนินการได้ตลอดเวลา'],
+        target: 'นักเรียนและบุคลากรในโรงเรียน'
+      },
+      {
+        id: 3,
+        title: 'SWSC Open Space & สวัสดิการพื้นที่พักผ่อน',
+        category: 'สวัสดิการ & พักผ่อน',
+        icon: '🛋️',
+        progress: 85,
+        status: 'กำลังดำเนินการ',
+        status_color: '#8b5cf6',
+        description: 'พัฒนาและปรับปรุงพื้นที่พักผ่อนสำหรับนักเรียน จุดบริการชาร์จแบตเตอรี่ และอุปกรณ์นันทนาการช่วงพักกลางวัน',
+        highlights: ['สำรวจความต้องการพื้นที่พักผ่อนของนักเรียน', 'ปรับปรุงจุดชาร์จแบตเตอรี่และโต๊ะม้านั่ง', 'จัดสรรอุปกรณ์กีฬาและเกมกระดานสำหรับพักผ่อน'],
+        target: 'นักเรียนทุกระดับชั้น'
+      },
+      {
+        id: 4,
+        title: 'Academic Hub & คลังเกียรติบัตรออนไลน์',
+        category: 'วิชาการ & พัฒนาตนเอง',
+        icon: '📚',
+        progress: 100,
+        status: 'ดำเนินการสำเร็จ',
+        status_color: '#10b981',
+        description: 'คลังรวบรวมเอกสารวิชาการ ชีทสรุปความรู้ และระบบค้นหาเกียรติบัตรกิจกรรมของนักเรียนผ่านเว็บสภาฯ',
+        highlights: ['ระบบค้นหาเกียรติบัตรกิจกรรมสภาฯ ออนไลน์', 'ดาวน์โหลดเอกสารวิชาการและคู่มือสายเรียน', 'สนับสนุนการเตรียมตัวสอบเข้ามหาวิทยาลัย'],
+        target: 'นักเรียนชั้น ม.1 - ม.6'
+      },
+      {
+        id: 5,
+        title: 'Clean & Positive Discipline (วินัยสร้างสรรค์ สังคมอบอุ่น)',
+        category: 'งานวินัย & ระเบียบ',
+        icon: '🛡️',
+        progress: 90,
+        status: 'กำลังดำเนินการ',
+        status_color: '#3b82f6',
+        description: 'ส่งเสริมระเบียบวินัยเชิงบวก ปรับปรุงระบบปฏิบัติหน้าที่เวรประจำวันของคณะกรรมการสภาฯ ให้มีความโปร่งใส',
+        highlights: ['ระบบสแกนเช็กชื่อปฏิบัติหน้าที่เวรประจำวัน', 'การรณรงค์เคารพกฎระเบียบแบบมิตรภาพพี่ดูแลน้อง', 'การประเมินผลและสรุปสถิติจำนวนผู้ปฏิบัติหน้าที่'],
+        target: 'คณะกรรมการสภานักเรียน & นักเรียน'
+      },
+      {
+        id: 6,
+        title: 'SWSC Creative Festival & กิจกรรมสร้างสรรค์',
+        category: 'กิจกรรม & ศิลปวัฒนธรรม',
+        icon: '🎉',
+        progress: 70,
+        status: 'เตรียมจัดกิจกรรม',
+        status_color: '#f59e0b',
+        description: 'สนับสนุนพื้นที่ให้นักเรียนได้แสดงออกทางด้านดนตรี ศิลปะ และความสามารถพิเศษตลอดปีการศึกษา',
+        highlights: ['งานแสดงดนตรีและเวทีแสดงความสามารถช่วงพักกลางวัน', 'กิจกรรมวันสำคัญและนิทรรศการวิชาการ', 'การประกวดคลิปสร้างสรรค์ส่งเสริมภาพลักษณ์โรงเรียน'],
+        target: 'นักเรียนทุกคนและชมรมต่างๆ'
+      }
+    ];
+
+    try {
+      const data = await sbFetch('web_policies?select=*&order=id.asc');
+      const policies = (Array.isArray(data) && data.length > 0) ? data : defaultPolicies;
+      renderPolicies(policies);
+    } catch {
+      renderPolicies(defaultPolicies);
+    }
+  }
+
+  function renderPolicies(items) {
+    const grid = document.getElementById('policyListGrid');
+    if (!grid) return;
+    grid.innerHTML = items.map(p => {
+      const color = p.status_color || '#8b5cf6';
+      const progress = p.progress || 0;
+      let highlights = [];
+      try {
+        highlights = Array.isArray(p.highlights) 
+          ? p.highlights 
+          : (typeof p.highlights === 'string' ? JSON.parse(p.highlights) : []);
+      } catch (e) {
+        highlights = [];
+      }
+
+      return `
+        <div style="background:#fff; border-radius:16px; border:1px solid var(--gray-200); padding:20px; box-shadow:0 4px 20px rgba(0,0,0,0.03); display:flex; flex-direction:column; transition:transform 0.2s, box-shadow 0.2s;" onmouseenter="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 30px rgba(139,92,246,0.1)';" onmouseleave="this.style.transform='none'; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.03)';">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+            <span style="font-size:32px;">${p.icon || '📌'}</span>
+            <span style="background:${color}15; color:${color}; border:1px solid ${color}40; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700;">
+              ${p.status || 'ดำเนินการ'} (${progress}%)
+            </span>
+          </div>
+
+          <div style="font-size:11px; font-weight:700; color:var(--purple-600); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+            ${p.category || 'นโยบายสภาฯ'}
+          </div>
+
+          <h3 style="font-size:16.5px; font-weight:800; color:var(--gray-900); margin-bottom:8px; line-height:1.4;">
+            ${p.title}
+          </h3>
+
+          <p style="font-size:13px; color:var(--gray-600); line-height:1.6; margin-bottom:14px; flex:1;">
+            ${p.description || ''}
+          </p>
+
+          <!-- Progress Bar -->
+          <div style="margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--gray-500); margin-bottom:4px; font-weight:600;">
+              <span>ความคืบหน้านโยบาย</span>
+              <span>${progress}%</span>
+            </div>
+            <div style="width:100%; height:8px; background:#f1f5f9; border-radius:10px; overflow:hidden;">
+              <div style="width:${progress}%; height:100%; background:linear-gradient(90deg, ${color}, #ec4899); border-radius:10px; transition:width 0.8s ease;"></div>
+            </div>
+          </div>
+
+          ${highlights.length > 0 ? `
+            <div style="background:#f8fafc; border-radius:10px; padding:10px 12px; margin-bottom:12px; border:1px solid #e2e8f0;">
+              <div style="font-size:11.5px; font-weight:700; color:var(--gray-700); margin-bottom:6px;">📌 สรุปการดำเนินงาน:</div>
+              <ul style="margin:0; padding-left:18px; font-size:12px; color:var(--gray-600); line-height:1.6;">
+                ${highlights.map(h => `<li>${h}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+
+          <div style="margin-top:auto; padding-top:10px; border-top:1px dashed var(--gray-200); font-size:11.5px; color:var(--gray-500); display:flex; justify-content:space-between; align-items:center;">
+            <span>👥 กลุ่มเป้าหมาย:</span>
+            <span style="font-weight:700; color:var(--gray-700);">${p.target || 'นักเรียนทุกคน'}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
   /* ---- VIDEOS ---- */
   async function loadVideos() {
     try {
@@ -4399,6 +4573,7 @@
     // Secondary items load in background
     loadObecLine();
     loadVideos();
+    loadPolicies();
     loadEvents().then(count => {
       const el = document.getElementById('statEvents');
       if (el) { 
