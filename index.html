@@ -4148,93 +4148,22 @@
 
   /* ---- POLICIES ---- */
   async function loadPolicies() {
-    const defaultPolicies = [
-      {
-        id: 1,
-        title: 'โครงการขยะแลกแต้ม & SWSC Zero Waste',
-        category: 'สิ่งแวดล้อม & สวัสดิการ',
-        icon: '♻️',
-        progress: 100,
-        status: 'ดำเนินการสำเร็จ',
-        status_color: '#10b981',
-        description: 'รณรงค์คัดแยกขยะในโรงเรียน และนำขยะรีไซเคิลมาแลกเป็นแต้มเพื่อนำไปแลกของรางวัลหรือสิทธิพิเศษต่างๆ',
-        highlights: ['จัดตั้งจุดรับขยะแลกแต้มประจำโรงเรียน', 'เชื่อมโยงระบบฐานข้อมูลแต้มสะสมออนไลน์', 'สร้างจิตสำนึกด้านสิ่งแวดล้อมให้แก่นักเรียน'],
-        target: 'นักเรียนทุกระดับชั้น'
-      },
-      {
-        id: 2,
-        title: 'Voice of SWSC: สภาฯ เปิดรับฟังเสียงนักเรียน 24 ชม.',
-        category: 'การมีส่วนร่วม & สิทธิ',
-        icon: '💬',
-        progress: 100,
-        status: 'เปิดใช้งานแล้ว',
-        status_color: '#10b981',
-        description: 'เปิดช่องทางออนไลน์รับฟังความคิดเห็น ปัญหา และข้อเสนอแนะนโยบายจากนักเรียนโดยตรงแบบเรียลไทม์',
-        highlights: ['ระบบส่งข้อเสนอแนะแบบระบุหรือไม่ระบุตัวตน', 'คณะกรรมการสภาฯ นำเข้าประชุมเพื่อหาทางแก้ไข', 'ติดตามสถานะการดำเนินการได้ตลอดเวลา'],
-        target: 'นักเรียนและบุคลากรในโรงเรียน'
-      },
-      {
-        id: 3,
-        title: 'SWSC Open Space & สวัสดิการพื้นที่พักผ่อน',
-        category: 'สวัสดิการ & พักผ่อน',
-        icon: '🛋️',
-        progress: 85,
-        status: 'กำลังดำเนินการ',
-        status_color: '#8b5cf6',
-        description: 'พัฒนาและปรับปรุงพื้นที่พักผ่อนสำหรับนักเรียน จุดบริการชาร์จแบตเตอรี่ และอุปกรณ์นันทนาการช่วงพักกลางวัน',
-        highlights: ['สำรวจความต้องการพื้นที่พักผ่อนของนักเรียน', 'ปรับปรุงจุดชาร์จแบตเตอรี่และโต๊ะม้านั่ง', 'จัดสรรอุปกรณ์กีฬาและเกมกระดานสำหรับพักผ่อน'],
-        target: 'นักเรียนทุกระดับชั้น'
-      },
-      {
-        id: 4,
-        title: 'Academic Hub & คลังเกียรติบัตรออนไลน์',
-        category: 'วิชาการ & พัฒนาตนเอง',
-        icon: '📚',
-        progress: 100,
-        status: 'ดำเนินการสำเร็จ',
-        status_color: '#10b981',
-        description: 'คลังรวบรวมเอกสารวิชาการ ชีทสรุปความรู้ และระบบค้นหาเกียรติบัตรกิจกรรมของนักเรียนผ่านเว็บสภาฯ',
-        highlights: ['ระบบค้นหาเกียรติบัตรกิจกรรมสภาฯ ออนไลน์', 'ดาวน์โหลดเอกสารวิชาการและคู่มือสายเรียน', 'สนับสนุนการเตรียมตัวสอบเข้ามหาวิทยาลัย'],
-        target: 'นักเรียนชั้น ม.1 - ม.6'
-      },
-      {
-        id: 5,
-        title: 'Clean & Positive Discipline (วินัยสร้างสรรค์ สังคมอบอุ่น)',
-        category: 'งานวินัย & ระเบียบ',
-        icon: '🛡️',
-        progress: 90,
-        status: 'กำลังดำเนินการ',
-        status_color: '#3b82f6',
-        description: 'ส่งเสริมระเบียบวินัยเชิงบวก ปรับปรุงระบบปฏิบัติหน้าที่เวรประจำวันของคณะกรรมการสภาฯ ให้มีความโปร่งใส',
-        highlights: ['ระบบสแกนเช็กชื่อปฏิบัติหน้าที่เวรประจำวัน', 'การรณรงค์เคารพกฎระเบียบแบบมิตรภาพพี่ดูแลน้อง', 'การประเมินผลและสรุปสถิติจำนวนผู้ปฏิบัติหน้าที่'],
-        target: 'คณะกรรมการสภานักเรียน & นักเรียน'
-      },
-      {
-        id: 6,
-        title: 'SWSC Creative Festival & กิจกรรมสร้างสรรค์',
-        category: 'กิจกรรม & ศิลปวัฒนธรรม',
-        icon: '🎉',
-        progress: 70,
-        status: 'เตรียมจัดกิจกรรม',
-        status_color: '#f59e0b',
-        description: 'สนับสนุนพื้นที่ให้นักเรียนได้แสดงออกทางด้านดนตรี ศิลปะ และความสามารถพิเศษตลอดปีการศึกษา',
-        highlights: ['งานแสดงดนตรีและเวทีแสดงความสามารถช่วงพักกลางวัน', 'กิจกรรมวันสำคัญและนิทรรศการวิชาการ', 'การประกวดคลิปสร้างสรรค์ส่งเสริมภาพลักษณ์โรงเรียน'],
-        target: 'นักเรียนทุกคนและชมรมต่างๆ'
-      }
-    ];
-
     try {
       const data = await sbFetch('web_policies?select=*&order=id.asc');
-      const policies = (Array.isArray(data) && data.length > 0) ? data : defaultPolicies;
-      renderPolicies(policies);
-    } catch {
-      renderPolicies(defaultPolicies);
+      renderPolicies(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to load policies:', err);
+      renderPolicies([]);
     }
   }
 
   function renderPolicies(items) {
     const grid = document.getElementById('policyListGrid');
     if (!grid) return;
+    if (!items || !items.length) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:50px 20px; color:var(--gray-500);"><div style="font-size:40px; margin-bottom:10px;">🎯</div>ยังไม่มีข้อมูลนโยบายสภานักเรียนในขณะนี้</div>';
+      return;
+    }
     grid.innerHTML = items.map(p => {
       const color = p.status_color || '#8b5cf6';
       const progress = p.progress || 0;
