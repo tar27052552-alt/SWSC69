@@ -3266,7 +3266,7 @@
       const elStat = document.getElementById('statNews');
       if (elStat) {
         elStat.dataset.target = totalRealCount;
-        if (typeof animateCounter === 'function') animateCounter(elStat, totalRealCount);
+        if (typeof statsVisible !== 'undefined' && statsVisible) animateCounter(elStat, totalRealCount);
         else elStat.textContent = totalRealCount;
       }
 
@@ -4304,12 +4304,15 @@
     requestAnimationFrame(update);
   }
 
+  let statsVisible = false;
+
   function initStatsCounters() {
     const strip = document.getElementById('statsStrip');
     if (!strip) return;
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
+          statsVisible = true;
           strip.querySelectorAll('.stat-number[data-target]').forEach(el => {
             animateCounter(el, parseInt(el.dataset.target) || 0);
           });
@@ -4346,7 +4349,11 @@
     loadVideos();
     loadEvents().then(count => {
       const el = document.getElementById('statEvents');
-      if (el) { el.dataset.target = count || 0; }
+      if (el) { 
+        el.dataset.target = count || 0; 
+        if (typeof statsVisible !== 'undefined' && statsVisible) animateCounter(el, count || 0);
+        else el.textContent = count || 0;
+      }
     });
     loadTeam();
     loadUsers().then(() => {
@@ -4354,6 +4361,8 @@
       if (statMem) {
         const nonAdmins = allUsers.filter(u => u.role !== 'admin');
         statMem.dataset.target = nonAdmins.length;
+        if (typeof statsVisible !== 'undefined' && statsVisible) animateCounter(statMem, nonAdmins.length);
+        else statMem.textContent = nonAdmins.length;
       }
       if (allNews && allNews.length > 0) {
         renderHomeNews(allNews.slice(0, 5));
