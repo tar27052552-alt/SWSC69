@@ -28,6 +28,7 @@ import ReceptionPage from './pages/ReceptionPage';
 import SubmitNewsPage from './pages/SubmitNewsPage';
 import SuggestionsPage from './pages/SuggestionsPage';
 import ManageVideosPage from './pages/ManageVideosPage';
+import ManagePoliciesPage from './pages/ManagePoliciesPage';
 
 function PrivateRoute({ children }) {
   const { user } = useAuth();
@@ -266,6 +267,7 @@ function AppRoutes() {
       <Route path="/admin"      element={<PrivateRoute><AdminPage /></PrivateRoute>} />
       <Route path="/admin-announcements" element={<PrivateRoute><AnnouncementsPage /></PrivateRoute>} />
       <Route path="/admin-videos" element={<PrivateRoute><ManageVideosPage /></PrivateRoute>} />
+      <Route path="/admin-policies" element={<PrivateRoute><ManagePoliciesPage /></PrivateRoute>} />
       <Route path="/discipline" element={<PrivateRoute><DisciplinePage /></PrivateRoute>} />
       <Route path="/my-fines"   element={<PrivateRoute><MyFinesPage /></PrivateRoute>} />
       <Route path="/finance"    element={<PrivateRoute><FinancePage /></PrivateRoute>} />

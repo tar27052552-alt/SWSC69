@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Users, Calendar, Bell, UserCircle,
   Shield, Banknote, BookOpen, Building, Megaphone,
-  Music, FileText, Warehouse, Camera, HandHeart, LogOut, Settings, MapPin, Sparkles, ClipboardList, ChevronDown, User, X, Menu, RotateCw
+  Music, FileText, Warehouse, Camera, HandHeart, LogOut, Settings, MapPin, Sparkles, ClipboardList, ChevronDown, User, X, Menu, RotateCw, Target
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import logoUrl from '../assets/logo.png';
@@ -41,7 +41,7 @@ const NAV = [
 const PAGE_TITLES = {
   '/dashboard': 'หน้าหลัก', '/checkin': 'เช็คชื่อมาโรงเรียน', '/my-attendance': 'ประวัติเช็คชื่อ', '/greeting-duty': 'ส่งรายงานเวรยืนไหว้', '/clean-duty': 'ส่งเวรห้องสภา', '/submit-news': 'ส่งข่าวประชาสัมพันธ์', '/suggestions': 'ข้อเสนอแนะนักเรียน', '/schedules': 'ตารางเวร', '/calendar': 'ปฏิทินกิจกรรม',
   '/my-fines': 'ชำระเงินและค่าปรับ',
-  '/profile': 'ประวัติส่วนตัว', '/settings': 'ตั้งค่าทั่วไป', '/admin': 'จัดการผู้ใช้งาน', '/admin-videos': 'จัดการวิดีโอกิจกรรม',
+  '/profile': 'ประวัติส่วนตัว', '/settings': 'ตั้งค่าทั่วไป', '/admin': 'จัดการผู้ใช้งาน', '/admin-videos': 'จัดการวิดีโอกิจกรรม', '/admin-policies': 'จัดการนโยบายสภาฯ',
   '/finance': 'ฝ่ายการเงิน', '/discipline': 'ฝ่ายปกครอง', '/academic': 'ฝ่ายวิชาการ',
   '/office': 'สนง.กรรมการ', '/pr': 'ประชาสัมพันธ์', '/recreation': 'นันทนาการ',
   '/secretary': 'เลขานุการ', '/facilities': 'อาคารสถานที่', '/av': 'โสตทัศนศึกษา',
@@ -203,6 +203,10 @@ export default function Layout({ children }) {
               <NavLink to="/admin-videos" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
                 <Camera size={15} />
                 <span>จัดการวิดีโอกิจกรรม</span>
+              </NavLink>
+              <NavLink to="/admin-policies" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
+                <Target size={15} />
+                <span>จัดการนโยบายสภาฯ</span>
               </NavLink>
             </div>
           )}
