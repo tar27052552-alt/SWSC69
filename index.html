@@ -919,6 +919,201 @@
     .news-date { color: var(--gray-500); }
     .news-author { color: var(--purple-600); font-weight: 700; }
 
+    /* ---- GLOBAL SEARCH MODAL CSS ---- */
+    .nav-search-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.85);
+      border: 1px solid var(--gray-300);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 13px;
+      color: var(--gray-600);
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-left: 10px;
+    }
+    .nav-search-btn:hover {
+      background: #ffffff;
+      border-color: var(--purple-600);
+      color: var(--purple-700);
+      box-shadow: 0 4px 12px rgba(147,51,234,0.12);
+    }
+    .search-kbd {
+      background: var(--gray-100);
+      border: 1px solid var(--gray-300);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--gray-500);
+    }
+    .mobile-search-btn {
+      width: 100%;
+      padding: 10px 14px;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      font-size: 13.5px;
+      color: var(--gray-700);
+      text-align: left;
+      cursor: pointer;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .search-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      z-index: 99999;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 70px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .search-modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .search-modal-card {
+      width: 92%;
+      max-width: 640px;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 82vh;
+      border: 1px solid rgba(255,255,255,0.2);
+      transform: translateY(-20px) scale(0.98);
+      transition: transform 0.25s ease;
+    }
+    .search-modal-overlay.active .search-modal-card {
+      transform: translateY(0) scale(1);
+    }
+    .search-input-wrap {
+      display: flex;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--gray-200);
+      gap: 12px;
+    }
+    .search-input-wrap input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--gray-900);
+      background: transparent;
+    }
+    .search-close-btn {
+      background: var(--gray-100);
+      border: none;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      color: var(--gray-500);
+      font-size: 14px;
+    }
+    .search-quick-tags {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--gray-200);
+      flex-wrap: wrap;
+      font-size: 12px;
+    }
+    .search-quick-tags .tag-title { color: var(--gray-500); font-weight: 600; }
+    .search-quick-tags button {
+      background: #ffffff;
+      border: 1px solid var(--gray-300);
+      border-radius: 14px;
+      padding: 3px 10px;
+      font-size: 11.5px;
+      color: var(--gray-700);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .search-quick-tags button:hover {
+      border-color: var(--purple-600);
+      color: var(--purple-600);
+    }
+    .search-results-container {
+      padding: 16px 20px;
+      overflow-y: auto;
+      max-height: 58vh;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .search-empty-state {
+      text-align: center;
+      padding: 36px 20px;
+      color: var(--gray-500);
+      font-size: 14px;
+    }
+    .search-res-group-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--purple-600);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .search-res-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
+      border: 1px solid transparent;
+      margin-bottom: 6px;
+    }
+    .search-res-item:hover {
+      background: #f1f5f9;
+      border-color: var(--gray-300);
+      transform: translateX(3px);
+    }
+    .search-res-icon { font-size: 22px; flex-shrink: 0; }
+    .search-res-info { flex: 1; min-width: 0; text-align: left; }
+    .search-res-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--gray-900);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .search-res-desc {
+      font-size: 12px;
+      color: var(--gray-500);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .search-modal-footer {
+      padding: 10px 20px;
+      background: #f8fafc;
+      border-top: 1px solid var(--gray-200);
+      font-size: 11.5px;
+      color: var(--gray-400);
+      display: flex;
+      justify-content: space-between;
+    }
+
     /* category color system */
     .cat-sch  { background: #ede9fe; color: #6d28d9; }
     .cat-evt  { background: #fef3c7; color: #b45309; }
@@ -2239,9 +2434,17 @@
       <li class="nav-item"><a href="#/contact" class="nav-link">📞 ติดต่อเรา</a></li>
 
     </ul>
+    <button class="nav-search-btn" onclick="openGlobalSearch()" title="ค้นหาในเว็บไซต์ (Ctrl + K)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <span>ค้นหา...</span>
+      <kbd class="search-kbd">Ctrl K</kbd>
+    </button>
     <button class="nav-burger" id="burger"><span></span><span></span><span></span></button>
   </nav>
   <div class="mobile-menu" id="mobileMenu">
+    <button class="mobile-search-btn" onclick="closeMobile(); openGlobalSearch();">
+      🔍 ค้นหาข่าว, กิจกรรม, นโยบาย...
+    </button>
     <!-- หน้าแรก -->
     <a href="#/home" onclick="closeMobile()">🏠 หน้าแรก</a>
 
@@ -4146,6 +4349,170 @@
     document.getElementById('successView').style.display = 'none';
   }
 
+  /* ---- GLOBAL SEARCH ---- */
+  function openGlobalSearch() {
+    const modal = document.getElementById('globalSearchModal');
+    if (!modal) return;
+    modal.classList.add('active');
+    document.body.classList.add('modal-open');
+    const input = document.getElementById('globalSearchInput');
+    if (input) {
+      input.value = '';
+      setTimeout(() => input.focus(), 100);
+    }
+    doGlobalSearch('');
+  }
+
+  function closeGlobalSearch() {
+    const modal = document.getElementById('globalSearchModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    document.body.classList.remove('modal-open');
+  }
+
+  function setSearchQuery(query) {
+    const input = document.getElementById('globalSearchInput');
+    if (input) {
+      input.value = query;
+      input.focus();
+      doGlobalSearch(query);
+    }
+  }
+
+  // Hotkey listener (Ctrl + K or Cmd + K)
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      const modal = document.getElementById('globalSearchModal');
+      if (modal && modal.classList.contains('active')) {
+        closeGlobalSearch();
+      } else {
+        openGlobalSearch();
+      }
+    } else if (e.key === 'Escape') {
+      closeGlobalSearch();
+    }
+  });
+
+  function doGlobalSearch(query) {
+    const q = (query || '').trim().toLowerCase();
+    const resBox = document.getElementById('globalSearchResults');
+    if (!resBox) return;
+
+    if (!q) {
+      resBox.innerHTML = `
+        <div class="search-empty-state">
+          <div style="font-size:36px; margin-bottom:8px;">🔍</div>
+          <div>พิมพ์คำค้นหาเพื่อค้นหาข้อมูลทั่วทั้งเว็บไซต์</div>
+          <div style="font-size:12px; color:var(--gray-400); margin-top:4px;">หรือกดคลิกที่แท็กแนะนำด้านบนเพื่อค้นหาด่วน</div>
+        </div>
+      `;
+      return;
+    }
+
+    let newsResults = (allNews || []).filter(n => 
+      (n.headline && n.headline.toLowerCase().includes(q)) || 
+      (n.detail && n.detail.toLowerCase().includes(q)) ||
+      (n.category && n.category.toLowerCase().includes(q))
+    ).slice(0, 4);
+
+    let eventResults = (window.calEvents || []).filter(e =>
+      (e.title && e.title.toLowerCase().includes(q)) ||
+      (e.detail && e.detail.toLowerCase().includes(q))
+    ).slice(0, 4);
+
+    let videoResults = (allVideos || []).filter(v =>
+      (v.title && v.title.toLowerCase().includes(q)) ||
+      (v.description && v.description.toLowerCase().includes(q))
+    ).slice(0, 3);
+
+    // Static sections matching
+    const pages = [
+      { title: 'ระเบียบสภานักเรียน โรงเรียนสรรพวิทยาคม', desc: 'ข้อบังคับและกฎระเบียบเกี่ยวกับสภาฯ', hash: '#/regulations', icon: '📜' },
+      { title: 'คู่มือการปฏิบัติงานสภานักเรียน', desc: 'คู่มือปฏิบัติงานแนวทางและโครงสร้าง', hash: '#/manual', icon: '📘' },
+      { title: 'โครงสร้างการบริหารสภานักเรียน', desc: 'แผนภูมิโครงสร้างคณะกรรมการและฝ่ายงาน', hash: '#/structure', icon: '🏛️' },
+      { title: 'ข้อเสนอแนะและแจ้งเรื่องร้องเรียน', desc: 'ส่งความคิดเห็นถึงสภานักเรียน', hash: '#/suggestions', icon: '💬' },
+      { title: 'คลังเอกสารวิชาการ', desc: 'ดาวน์โหลดเอกสารการเรียนและชีทสรุป', hash: '#/documents', icon: '📑' },
+      { title: 'ค้นหาเกียรติบัตรออนไลน์', desc: 'ระบบค้นหาเกียรติบัตรเข้าร่วมกิจกรรม', hash: '#/certificates', icon: '🎓' },
+      { title: 'นโยบายสภานักเรียน', desc: 'แผนงานและผลงานการขับเคลื่อนนโยบาย', hash: '#/policies', icon: '🎯' }
+    ];
+
+    let pageResults = pages.filter(p => p.title.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q));
+
+    const totalCount = newsResults.length + eventResults.length + videoResults.length + pageResults.length;
+
+    if (totalCount === 0) {
+      resBox.innerHTML = `
+        <div class="search-empty-state">
+          <div style="font-size:36px; margin-bottom:8px;">📭</div>
+          <div>ไม่พบผลลัพธ์ที่ตรงกับ "${query}"</div>
+          <div style="font-size:12px; color:var(--gray-400); margin-top:4px;">ลองเปลี่ยนคำค้นหาเป็นคำอื่นดูครับ</div>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '';
+
+    if (newsResults.length > 0) {
+      html += `<div><div class="search-res-group-title">📰 ข่าวสารประชาสัมพันธ์</div>`;
+      html += newsResults.map(n => `
+        <div class="search-res-item" onclick="closeGlobalSearch(); showNewsPopup('${n.id}');">
+          <span class="search-res-icon">📰</span>
+          <div class="search-res-info">
+            <div class="search-res-title">${n.headline || 'ข่าวสาร'}</div>
+            <div class="search-res-desc">${n.category || 'ทั่วไป'} • ${(n.detail || '').substring(0, 65)}...</div>
+          </div>
+        </div>
+      `).join('');
+      html += `</div>`;
+    }
+
+    if (eventResults.length > 0) {
+      html += `<div><div class="search-res-group-title">📅 กิจกรรมในปฏิทิน</div>`;
+      html += eventResults.map(e => `
+        <div class="search-res-item" onclick="closeGlobalSearch(); location.hash='#/events';">
+          <span class="search-res-icon">📅</span>
+          <div class="search-res-info">
+            <div class="search-res-title">${e.title || 'กิจกรรม'}</div>
+            <div class="search-res-desc">${e.date || ''} • ${e.detail || ''}</div>
+          </div>
+        </div>
+      `).join('');
+      html += `</div>`;
+    }
+
+    if (videoResults.length > 0) {
+      html += `<div><div class="search-res-group-title">🎬 วิดีโอกิจกรรม</div>`;
+      html += videoResults.map(v => `
+        <div class="search-res-item" onclick="closeGlobalSearch(); location.hash='#/videos';">
+          <span class="search-res-icon">🎬</span>
+          <div class="search-res-info">
+            <div class="search-res-title">${v.title || 'วิดีโอ'}</div>
+            <div class="search-res-desc">${v.description || ''}</div>
+          </div>
+        </div>
+      `).join('');
+      html += `</div>`;
+    }
+
+    if (pageResults.length > 0) {
+      html += `<div><div class="search-res-group-title">📑 เมนูและเอกสาร</div>`;
+      html += pageResults.map(p => `
+        <div class="search-res-item" onclick="closeGlobalSearch(); location.hash='${p.hash}';">
+          <span class="search-res-icon">${p.icon}</span>
+          <div class="search-res-info">
+            <div class="search-res-title">${p.title}</div>
+            <div class="search-res-desc">${p.desc}</div>
+          </div>
+        </div>
+      `).join('');
+      html += `</div>`;
+    }
+
+    resBox.innerHTML = html;
+  }
+
   /* ---- POLICIES ---- */
   async function loadPolicies() {
     try {
@@ -4546,6 +4913,39 @@
     <button id="videoViewerClose" onclick="closeVideoPlayer()">✕ ปิดหน้าต่าง</button>
     <div class="video-viewer-ratio">
       <iframe id="videoViewerIframe" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- GLOBAL SEARCH MODAL -->
+<div id="globalSearchModal" class="search-modal-overlay" onclick="if(event.target===this) closeGlobalSearch()">
+  <div class="search-modal-card">
+    <div class="search-input-wrap">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--gray-400); flex-shrink:0;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="globalSearchInput" placeholder="พิมพ์เพื่อค้นหาข่าว, กิจกรรม, นโยบาย, วิดีโอ..." autocomplete="off" oninput="doGlobalSearch(this.value)" />
+      <button class="search-close-btn" onclick="closeGlobalSearch()" title="ปิด (ESC)">✕</button>
+    </div>
+
+    <div class="search-quick-tags" id="searchQuickTags">
+      <span class="tag-title">แท็กแนะนำ:</span>
+      <button onclick="setSearchQuery('ข่าว')">📰 ข่าวสาร</button>
+      <button onclick="setSearchQuery('ปฏิทิน')">📅 กิจกรรม</button>
+      <button onclick="setSearchQuery('ขยะแลกแต้ม')">♻️ ขยะแลกแต้ม</button>
+      <button onclick="setSearchQuery('นโยบาย')">🎯 นโยบาย</button>
+      <button onclick="setSearchQuery('ระเบียบ')">📜 ระเบียบสภา</button>
+    </div>
+
+    <div class="search-results-container" id="globalSearchResults">
+      <div class="search-empty-state">
+        <div style="font-size:36px; margin-bottom:8px;">🔍</div>
+        <div>พิมพ์คำค้นหาเพื่อค้นหาข้อมูลทั่วทั้งเว็บไซต์</div>
+        <div style="font-size:12px; color:var(--gray-400); margin-top:4px;">หรือกดคลิกที่แท็กแนะนำด้านบนเพื่อค้นหาด่วน</div>
+      </div>
+    </div>
+
+    <div class="search-modal-footer">
+      <span>กด <kbd class="search-kbd">ESC</kbd> เพื่อปิด</span>
+      <span>ระบบค้นหา SWSC.OFFICIAL</span>
     </div>
   </div>
 </div>
