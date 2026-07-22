@@ -1646,9 +1646,13 @@
     .empty-icon { font-size: 48px; margin-bottom: 12px; }
 
     /* ==================== RESPONSIVE ==================== */
+    .doc-cover-card { display: none !important; }
+    .desktop-only-frame { display: block !important; }
+
     @media (max-width: 1024px) {
       .layout { grid-template-columns: 1fr; }
       .desktop-only-frame { display: none !important; }
+      .doc-cover-card { display: flex !important; }
     }
     @media (max-width: 768px) {
       nav { padding: 0 20px; }
@@ -2646,8 +2650,8 @@
           </div>
           <div class="block-body" style="padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 20px;">
             
-            <!-- Document Info Card -->
-            <div style="width: 100%; max-width: 600px; background: #f8fafc; border: 1px solid var(--gray-200); border-radius: 16px; padding: 24px; display: flex; gap: 20px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.02); text-align: left;">
+            <!-- Document Info Card (Mobile Only) -->
+            <div class="doc-cover-card" style="width: 100%; max-width: 600px; background: #f8fafc; border: 1px solid var(--gray-200); border-radius: 16px; padding: 24px; display: flex; gap: 20px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.02); text-align: left;">
               <div style="font-size: 54px; flex-shrink: 0;">📜</div>
               <div style="flex: 1;">
                 <h4 style="font-size: 16px; font-weight: 800; color: var(--gray-900); margin-bottom: 6px;">ระเบียบโรงเรียนสรรพวิทยาคม ว่าด้วยคณะกรรมการสภานักเรียน</h4>
@@ -2665,6 +2669,11 @@
 
             <!-- Inline View Frame (Desktop Only) -->
             <div class="desktop-only-frame" style="width: 100%; margin-top: 10px;">
+              <div style="text-align: right; margin-bottom: 15px;">
+                <a href="./regulations.pdf" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--purple-600), var(--purple-800)); color: #fff !important; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 15px rgba(109, 40, 217, 0.2); transition: all 0.3s ease;">
+                  📥 ดาวน์โหลด / เปิดอ่านฉบับเต็ม (PDF)
+                </a>
+              </div>
               <iframe data-src="./regulations.pdf" id="regulationsIframe" src="" width="100%" height="800px" style="border: 1px solid var(--gray-200); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
                 <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./regulations.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
               </iframe>
@@ -2682,8 +2691,8 @@
           </div>
           <div class="block-body" style="padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 20px;">
             
-            <!-- Document Info Card -->
-            <div style="width: 100%; max-width: 600px; background: #f8fafc; border: 1px solid var(--gray-200); border-radius: 16px; padding: 24px; display: flex; gap: 20px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.02); text-align: left;">
+            <!-- Document Info Card (Mobile Only) -->
+            <div class="doc-cover-card" style="width: 100%; max-width: 600px; background: #f8fafc; border: 1px solid var(--gray-200); border-radius: 16px; padding: 24px; display: flex; gap: 20px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.02); text-align: left;">
               <div style="font-size: 54px; flex-shrink: 0;">📘</div>
               <div style="flex: 1;">
                 <h4 style="font-size: 16px; font-weight: 800; color: var(--gray-900); margin-bottom: 6px;">คู่มือการปฏิบัติงานสภานักเรียน โรงเรียนสรรพวิทยาคม</h4>
@@ -2701,6 +2710,11 @@
 
             <!-- Inline View Frame (Desktop Only) -->
             <div class="desktop-only-frame" style="width: 100%; margin-top: 10px;">
+              <div style="text-align: right; margin-bottom: 15px;">
+                <a href="./manual.pdf" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--purple-600), var(--purple-800)); color: #fff !important; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 15px rgba(109, 40, 217, 0.2); transition: all 0.3s ease;">
+                  📥 ดาวน์โหลด / เปิดอ่านคู่มือปฏิบัติงาน (PDF)
+                </a>
+              </div>
               <iframe data-src="./manual.pdf" id="manualIframe" src="" width="100%" height="800px" style="border: 1px solid var(--gray-200); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
                 <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./manual.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
               </iframe>
