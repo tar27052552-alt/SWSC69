@@ -2,6 +2,12 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
+  <script>
+    // Fix broken relative URLs in GitHub Pages subdirectories when missing trailing slash
+    if (!location.pathname.endsWith('/') && !location.pathname.split('/').pop().includes('.')) {
+      location.replace(location.pathname + '/' + location.search + location.hash);
+    }
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SWSC.OFFICIAL | คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม</title>
   <meta name="description" content="SWSC.OFFICIAL — คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม อำเภอแม่สอด จังหวัดตาก" />
@@ -1640,7 +1646,10 @@
     .empty-icon { font-size: 48px; margin-bottom: 12px; }
 
     /* ==================== RESPONSIVE ==================== */
-    @media (max-width: 1024px) { .layout { grid-template-columns: 1fr; } }
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: 1fr; }
+      .desktop-only-frame { display: none !important; }
+    }
     @media (max-width: 768px) {
       nav { padding: 0 20px; }
       .nav-menu { display: none; }
@@ -2227,7 +2236,7 @@
         <div class="nav-dropdown">
           <a href="https://www.sappha.ac.th" target="_blank">🏫 เว็บไซต์โรงเรียนสรรพวิทยาคม</a>
           <a href="https://www.sappha.ac.th/?page_id=2181" target="_blank">♻️ ระบบขยะแลกแต้ม</a>
-          <a href="admin/#/login">🔐 ระบบภายในสภา</a>
+          <a href="./admin/#/login">🔐 ระบบภายในสภา</a>
         </div>
       </li>
       <li class="nav-item">
@@ -2283,7 +2292,7 @@
       <div class="mobile-dropdown-sub">
         <a href="https://www.sappha.ac.th" target="_blank" onclick="closeMobile()">🏫 เว็บไซต์โรงเรียน</a>
         <a href="https://www.sappha.ac.th/?page_id=2181" target="_blank" onclick="closeMobile()">♻️ ระบบขยะแลกแต้ม</a>
-        <a href="admin/#/login" onclick="closeMobile()">🔐 ระบบภายในสภา</a>
+        <a href="./admin/#/login" onclick="closeMobile()">🔐 ระบบภายในสภา</a>
       </div>
     </div>
 
@@ -2635,20 +2644,32 @@
           <div class="block-head">
             <span class="block-head-title">📜 ระเบียบโรงเรียนสรรพวิทยาคมว่าด้วยคณะกรรมการสภานักเรียน</span>
           </div>
-          <div class="block-body" style="padding: 20px;">
-            <div style="text-align: right; margin-bottom: 20px;">
-              <a href="./regulations.pdf" target="_blank" class="btn-download-pdf">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                ดาวน์โหลดฉบับเต็ม (PDF)
-              </a>
+          <div class="block-body" style="padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 20px;">
+            
+            <!-- Document Info Card -->
+            <div style="width: 100%; max-width: 600px; background: #f8fafc; border: 1px solid var(--gray-200); border-radius: 16px; padding: 24px; display: flex; gap: 20px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.02); text-align: left;">
+              <div style="font-size: 54px; flex-shrink: 0;">📜</div>
+              <div style="flex: 1;">
+                <h4 style="font-size: 16px; font-weight: 800; color: var(--gray-900); margin-bottom: 6px;">ระเบียบโรงเรียนสรรพวิทยาคม ว่าด้วยคณะกรรมการสภานักเรียน</h4>
+                <p style="font-size: 13px; color: var(--gray-500); line-height: 1.5; margin-bottom: 12px;">ระเบียบข้อบังคับ โครงสร้าง หน้าที่ และบทบัญญัติการดำเนินงานทั้งหมดของคณะกรรมการสภานักเรียน โรงเรียนสรรพวิทยาคม</p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                  <a href="./regulations.pdf" target="_blank" class="btn-download-pdf" style="margin: 0; background: linear-gradient(135deg, var(--purple-600), var(--purple-700)); padding: 8px 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+                    👁️ เปิดอ่านเอกสาร (PDF)
+                  </a>
+                  <a href="./regulations.pdf" download class="btn-download-pdf" style="margin: 0; background: #ffffff; color: var(--gray-700); border: 1px solid var(--gray-300); padding: 8px 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+                    📥 ดาวน์โหลดไฟล์
+                  </a>
+                </div>
+              </div>
             </div>
-            <iframe src="./regulations.pdf" width="100%" height="800px" style="border: 1px solid var(--gray-200); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
-              <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./regulations.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
-            </iframe>
+
+            <!-- Inline View Frame (Desktop Only) -->
+            <div class="desktop-only-frame" style="width: 100%; margin-top: 10px;">
+              <iframe data-src="./regulations.pdf" id="regulationsIframe" src="" width="100%" height="800px" style="border: 1px solid var(--gray-200); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+                <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./regulations.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
+              </iframe>
+            </div>
+
           </div>
         </div>
       </div>
@@ -2659,20 +2680,32 @@
           <div class="block-head">
             <span class="block-head-title">📘 คู่มือการปฏิบัติงานสภานักเรียน</span>
           </div>
-          <div class="block-body" style="padding: 20px;">
-            <div style="text-align: right; margin-bottom: 20px;">
-              <a href="./manual.pdf" target="_blank" class="btn-download-pdf">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                ดาวน์โหลดคู่มือการปฏิบัติงาน (PDF)
-              </a>
+          <div class="block-body" style="padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 20px;">
+            
+            <!-- Document Info Card -->
+            <div style="width: 100%; max-width: 600px; background: #f8fafc; border: 1px solid var(--gray-200); border-radius: 16px; padding: 24px; display: flex; gap: 20px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.02); text-align: left;">
+              <div style="font-size: 54px; flex-shrink: 0;">📘</div>
+              <div style="flex: 1;">
+                <h4 style="font-size: 16px; font-weight: 800; color: var(--gray-900); margin-bottom: 6px;">คู่มือการปฏิบัติงานสภานักเรียน โรงเรียนสรรพวิทยาคม</h4>
+                <p style="font-size: 13px; color: var(--gray-500); line-height: 1.5; margin-bottom: 12px;">คู่มือคู่คิดสภานักเรียน แนะนำแนวทางปฏิบัติงาน ขั้นตอนการดำเนินงานโครงการของฝ่ายต่าง ๆ</p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                  <a href="./manual.pdf" target="_blank" class="btn-download-pdf" style="margin: 0; background: linear-gradient(135deg, var(--purple-600), var(--purple-700)); padding: 8px 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+                    👁️ เปิดอ่านเอกสาร (PDF)
+                  </a>
+                  <a href="./manual.pdf" download class="btn-download-pdf" style="margin: 0; background: #ffffff; color: var(--gray-700); border: 1px solid var(--gray-300); padding: 8px 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+                    📥 ดาวน์โหลดไฟล์
+                  </a>
+                </div>
+              </div>
             </div>
-            <iframe src="./manual.pdf" width="100%" height="800px" style="border: 1px solid var(--gray-200); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
-              <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./manual.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
-            </iframe>
+
+            <!-- Inline View Frame (Desktop Only) -->
+            <div class="desktop-only-frame" style="width: 100%; margin-top: 10px;">
+              <iframe data-src="./manual.pdf" id="manualIframe" src="" width="100%" height="800px" style="border: 1px solid var(--gray-200); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+                <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./manual.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
+              </iframe>
+            </div>
+
           </div>
         </div>
       </div>
@@ -3201,6 +3234,20 @@
       setTimeout(() => {
         activeSec.classList.add('active-visible');
       }, 20);
+
+      // Lazy load PDF iframes on desktop if they navigate to regulations or manual
+      const id = hash.replace('#/', '');
+      if (id === 'regulations') {
+        const iframe = document.getElementById('regulationsIframe');
+        if (iframe && !iframe.src && window.innerWidth > 1024) {
+          iframe.src = iframe.dataset.src;
+        }
+      } else if (id === 'manual') {
+        const iframe = document.getElementById('manualIframe');
+        if (iframe && !iframe.src && window.innerWidth > 1024) {
+          iframe.src = iframe.dataset.src;
+        }
+      }
     }
 
     document.querySelectorAll(`.nav-menu a[href="${hash}"], .mobile-menu a[href="${hash}"]`).forEach(a => a.classList.add('active'));
