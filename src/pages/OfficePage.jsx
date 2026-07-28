@@ -104,40 +104,40 @@ export default function OfficePage() {
           <span className="card-title">📝 บันทึกการใช้ห้องสภา</span>
           {canManage && <button className="btn btn-primary btn-sm" onClick={() => setModal(true)}><Plus size={13} /> บันทึกการใช้งาน</button>}
         </div>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive">
           <table className="simple-table">
             <thead>
               <tr>
-                <th>#</th>
+                <th style={{ width: 50 }}>#</th>
                 <th>วันที่</th>
                 <th>เวลา</th>
-                <th>ผู้ใช้</th>
+                <th>ผู้ใช้งาน</th>
                 <th>วัตถุประสงค์</th>
-                <th>ทำความสะอาด</th>
-                {canManage && <th>ลบ</th>}
+                <th style={{ textAlign: 'center' }}>ความสะอาด</th>
+                {canManage && <th style={{ textAlign: 'right' }}>จัดการ</th>}
               </tr>
             </thead>
             <tbody>
               {log.map((l, i) => (
                 <tr key={l.id}>
-                  <td style={{ color: '#9e9e9e', fontSize: 12 }}>{i + 1}</td>
-                  <td style={{ fontSize: 13 }}>{l.date}</td>
-                  <td style={{ fontSize: 12 }}>{l.time}</td>
-                  <td style={{ fontWeight: 600, fontSize: 13 }}>{l.by}</td>
-                  <td style={{ fontSize: 13 }}>{l.purpose}</td>
-                  <td>
-                    <span className={`badge ${l.clean ? 'badge-green' : 'badge-red'}`} style={{ fontSize: 11 }}>
-                      {l.clean ? '✓ เรียบร้อย' : '✗ ยังไม่ได้ทำ'}
+                  <td style={{ color: '#94a3b8', fontWeight: 500 }}>{i + 1}</td>
+                  <td style={{ fontWeight: 500 }}>{l.date}</td>
+                  <td style={{ color: '#64748b' }}>{l.time}</td>
+                  <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{l.by}</td>
+                  <td>{l.purpose}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <span className={`badge ${l.clean ? 'badge-green' : 'badge-red'}`}>
+                      {l.clean ? '✓ เรียบร้อย' : '✗ ยังไม่ทำ'}
                     </span>
                   </td>
                   {canManage && (
-                    <td>
+                    <td style={{ textAlign: 'right' }}>
                       <button 
                         className="btn btn-danger btn-sm" 
                         onClick={() => handleDeleteLog(l.id)}
-                        style={{ padding: '4px 8px' }}
+                        title="ลบรายการ"
                       >
-                        <X size={12} />
+                        <X size={14} />
                       </button>
                     </td>
                   )}

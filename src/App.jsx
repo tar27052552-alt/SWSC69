@@ -29,6 +29,7 @@ import SubmitNewsPage from './pages/SubmitNewsPage';
 import SuggestionsPage from './pages/SuggestionsPage';
 import ManageVideosPage from './pages/ManageVideosPage';
 import ManagePoliciesPage from './pages/ManagePoliciesPage';
+import PageTracker from './components/PageTracker';
 
 function PrivateRoute({ children }) {
   const { user } = useAuth();
@@ -416,6 +417,7 @@ export default function App() {
   return (
     <HashRouter>
       <AuthProvider>
+        <PageTracker />
         <AppRoutes />
       </AuthProvider>
     </HashRouter>

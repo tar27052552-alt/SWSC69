@@ -101,25 +101,39 @@ export default function RecreationPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {events.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 0', color: '#9e9e9e' }}>
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8', background: 'white', borderRadius: '20px', border: '1px dashed #cbd5e1' }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🎲</div>
             ยังไม่มีแผนการจัดสันทนาการที่บันทึกไว้
           </div>
         ) : (
           events.map(ev => (
-            <div key={ev.id} className="card" style={{ padding: '16px 20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 15 }}>{ev.title}</div>
-                  <div style={{ fontSize: 12, color: '#9e9e9e', marginTop: 4 }}>
-                    📅 {new Date(ev.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long' })} · 👤 ผู้นำ: {ev.host}
-                  </div>
-                </div>
-                <span className={`badge ${ev.status === 'upcoming' ? 'badge-green' : 'badge-yellow'}`}>
-                  {ev.status === 'upcoming' ? '📅 กำลังจะมาถึง' : '📋 วางแผนอยู่'}
-                </span>
+            <div key={ev.id} className="card" style={{ padding: '20px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+              <div style={{
+                width: '48px', height: '48px', borderRadius: '12px', flexShrink: 0,
+                background: ev.status === 'upcoming' ? 'var(--primary-light)' : '#f1f5f9',
+                color: ev.status === 'upcoming' ? 'var(--primary-dark)' : '#64748b',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px'
+              }}>
+                {ev.status === 'upcoming' ? '🎯' : '📋'}
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {ev.games.map(g => <span key={g} className="badge badge-blue" style={{ fontSize: 12 }}>🎯 {g}</span>)}
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '16px', color: '#1e293b' }}>{ev.title}</div>
+                    <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <span>📅 {new Date(ev.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                      <span>👤 ผู้นำ: <span style={{ fontWeight: 600, color: '#334155' }}>{ev.host}</span></span>
+                    </div>
+                  </div>
+                  <span className={`badge ${ev.status === 'upcoming' ? 'badge-blue' : 'badge-gray'}`}>
+                    {ev.status === 'upcoming' ? 'กำลังจะมาถึง' : 'วางแผนอยู่'}
+                  </span>
+                </div>
+                {ev.games && ev.games.length > 0 && (
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '12px' }}>
+                    {ev.games.map(g => <span key={g} className="badge badge-purple">🎯 {g}</span>)}
+                  </div>
+                )}
               </div>
             </div>
           ))

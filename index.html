@@ -136,7 +136,6 @@
       to   { width: 100%; }
     }
 
-
     /* ==================== STATS COUNTER STRIP ==================== */
     .stats-strip {
       display: flex;
@@ -191,38 +190,40 @@
       letter-spacing: 0.3px;
     }
 
-
-
     /* ==================== NAVBAR ==================== */
     nav {
       position: sticky;
       top: 0;
       z-index: 200;
       height: 60px;
-      background: #111111;
-      border-bottom: 1px solid #333;
+      background: #ffffff;
+      border-bottom: 1px solid #eaeaea;
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 40px;
       transition: box-shadow .3s var(--ease);
     }
-    nav.scrolled { box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+    nav.scrolled { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     .nav-brand {
       display: flex;
       align-items: center;
       gap: 10px;
       text-decoration: none;
     }
-    .nav-logo { width: 38px; height: 38px; object-fit: contain; }
+    
     .nav-brand-name {
       font-family: 'Oswald', sans-serif;
       font-size: 18px;
       font-weight: 600;
-      color: #fff;
+      background: linear-gradient(135deg, var(--purple-600), var(--gold-400), var(--purple-700), var(--gold-500), var(--purple-600));
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: textShine 4s linear infinite;
       letter-spacing: .5px;
     }
-    .nav-brand-name span { color: var(--gold-500); }
+    
     .nav-all-logos {
       height: 44px;
       object-fit: contain;
@@ -244,8 +245,8 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 0 6px;
-      color: #e5e5e5;
+      padding: 0 10px;
+      color: #444444;
       font-size: 13.5px;
       font-weight: 600;
       text-decoration: none;
@@ -253,22 +254,22 @@
       height: 100%;
     }
     .nav-menu a.nav-link:hover, .nav-menu a.nav-link.active {
-      color: #fff;
+      color: var(--purple-700);
     }
     .nav-dropdown {
       position: absolute;
       top: 60px;
       left: 50%;
       transform: translateX(-50%) translateY(10px);
-      background: #1a1a1a;
-      border: 1px solid #333;
+      background: #ffffff;
+      border: 1px solid #eaeaea;
       border-radius: 6px;
       padding: 8px 0;
       min-width: 180px;
       opacity: 0;
       visibility: hidden;
       transition: .2s var(--ease);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
       z-index: 201;
     }
     .nav-item:hover .nav-dropdown {
@@ -281,7 +282,7 @@
       align-items: center;
       gap: 8px;
       padding: 8px 20px;
-      color: #ccc;
+      color: #555555;
       font-size: 13px;
       font-weight: 500;
       text-decoration: none;
@@ -289,71 +290,15 @@
       white-space: nowrap;
     }
     .nav-dropdown a:hover {
-      background: #2a2a2a;
-      color: #fff;
+      background: #f9f9f9;
+      color: var(--purple-700);
     }
-    .nav-search {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      border-left: 1px solid #333;
-      padding-left: 20px;
-      margin-left: 10px;
-    }
-    .nav-search-icon {
-      color: #ccc;
-      cursor: pointer;
-      transition: .2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      background: #2a2a2a;
-    }
-    .nav-search-icon:hover { color: #fff; background: #333; }
-    .nav-cta {
-      background: var(--purple-600);
-      color: var(--white) !important;
-      padding: 6px 16px !important;
-      border-radius: 6px;
-      font-weight: 700 !important;
-      font-size: 13px !important;
-      transition: .2s var(--ease);
-    }
-    .nav-cta:hover { background: var(--purple-700) !important; }
-    .btn-download-pdf {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: linear-gradient(135deg, var(--purple-600), var(--purple-800));
-      color: #fff !important;
-      padding: 10px 24px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 15px;
-      text-decoration: none;
-      box-shadow: 0 4px 15px rgba(109, 40, 217, 0.3);
-      transition: all 0.3s ease;
-    }
+
     .btn-download-pdf:hover {
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(109, 40, 217, 0.5);
     }
-    .btn-zoom {
-      background: var(--purple-50);
-      color: var(--purple-700);
-      border: 1px solid var(--purple-200);
-      border-radius: 8px;
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s;
-    }
+    
     .btn-zoom:hover {
       background: var(--purple-600);
       color: #fff;
@@ -741,7 +686,6 @@
     }
     .doc-icon { font-size: 36px; margin-bottom: 12px; }
     .doc-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-    .doc-desc { font-size: 12px; color: var(--gray-500); }
 
     @media (max-width: 768px) {
       .pr-news-container { flex-direction: column; }
@@ -1204,16 +1148,18 @@
       width: 90%;
       max-width: 900px;
       position: relative;
-      background: #000;
+      background: transparent;
       border-radius: 12px;
-      overflow: hidden;
       box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-      border: 1px solid rgba(255,255,255,0.1);
     }
     .video-viewer-ratio {
       position: relative;
       width: 100%;
       padding-top: 56.25%; /* 16:9 */
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      border: 1px solid rgba(255,255,255,0.1);
     }
     .video-viewer-ratio iframe {
       position: absolute;
@@ -1225,7 +1171,7 @@
     }
     #videoViewerClose {
       position: absolute;
-      top: -45px;
+      top: -40px;
       right: 0;
       color: #fff;
       font-size: 14px;
@@ -1239,6 +1185,7 @@
       align-items: center;
       gap: 4px;
       transition: all 0.2s;
+      z-index: 10;
     }
     #videoViewerClose:hover {
       background: #ef4444;
@@ -1474,6 +1421,10 @@
       overflow: hidden;
     }
     .cal-cell:hover { background: #faf5ff; }
+    .cal-cell.day-selected .cal-num:not(.cal-num-today) {
+      background: rgba(8, 145, 178, 0.15);
+      color: var(--primary);
+    }
     .cal-cell-other { background: var(--gray-50); }
     .cal-cell-today { background: #faf5ff; }
     .cal-num {
@@ -1506,7 +1457,8 @@
       transition: opacity .15s, filter .15s;
       line-height: 1.6;
     }
-    .cal-event-pill:hover { opacity: .85; filter: brightness(1.1); }
+    .cal-event-pill:hover, .cal-event-pill.ev-hover { opacity: 1; filter: brightness(0.9) contrast(1.2); }
+    .cal-event-pill.ev-active { box-shadow: 0 0 0 2px rgba(0,0,0,0.3) inset; filter: brightness(0.9) contrast(1.2); }
     .cal-more {
       font-size: 11px;
       font-weight: 700;
@@ -1517,35 +1469,38 @@
     }
     .cal-more:hover { background: var(--gray-200); color: var(--gray-700); }
 
-    /* Calendar Popup (FULL SCREEN OVERLAY) */
+    /* Calendar Popup (Centered Modal) */
     .cal-popup {
       position: fixed;
       inset: 0;
       z-index: 9999;
-      background: var(--white);
+      background: rgba(0, 0, 0, 0.4);
       display: none;
-      overflow-y: auto;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
       opacity: 0;
       transition: opacity 0.3s ease;
+      backdrop-filter: blur(4px);
     }
     .cal-popup.show {
-      display: block;
+      display: flex;
       opacity: 1;
     }
     .cal-popup-inner {
       background: var(--white);
-      border-radius: 0;
-      padding: 40px;
-      max-width: 100vw;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 500px;
       width: 100%;
-      min-height: 100vh;
+      min-height: auto;
       position: relative;
-      box-shadow: none;
-      transform: translateY(100%);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      transform: scale(0.95) translateY(10px);
       transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .cal-popup.show .cal-popup-inner {
-      transform: translateY(0);
+      transform: scale(1) translateY(0);
     }
     .cal-popup-close {
       position: absolute;
@@ -1564,9 +1519,11 @@
       z-index: 10;
     }
     .cal-popup-close:hover { background: var(--gray-200); color: var(--gray-900); }
-    @media (max-width: 768px) {
-      .cal-popup-inner { padding: 20px; }
-      .cal-popup-close { top: 16px; right: 16px; }
+
+
+    @media(max-width: 768px) {
+      .cal-popup-inner { padding: 24px; max-width: 100%; margin: 0 10px; }
+      .cal-popup-close { top: 12px; right: 12px; }
     }
 
     /* ==================== FOOTER ==================== */
@@ -1664,7 +1621,7 @@
     @media (max-width: 768px) {
       nav { padding: 0 20px; }
       .nav-menu { display: none; }
-      .nav-cta { display: none; }
+      
       .nav-burger { display: flex; }
       .full-hero { height: auto; }
       .scroll-down { display: none !important; }
@@ -1709,15 +1666,6 @@
         display: block !important;
         height: 480px !important;
         margin-top: 15px !important;
-      }
-      .btn-download-pdf {
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        width: 100% !important;
-        padding: 14px 20px !important;
-        font-size: 14px !important;
-        text-align: center !important;
       }
 
       /* Adjust close button for mobile video player overlay */
@@ -1796,6 +1744,8 @@
       opacity: 0.25;
       pointer-events: none;
       animation: float-slow 25s infinite alternate ease-in-out;
+      transform: translateZ(0);
+      will-change: transform, opacity;
     }
     .circle-1 {
       width: 450px;
@@ -1905,10 +1855,11 @@
       background: radial-gradient(circle, rgba(245, 158, 11, 0.4) 0%, rgba(253, 224, 71, 0.18) 50%, rgba(0,0,0,0) 80%);
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 1;
       animation: pulseGlow 6s infinite alternate ease-in-out;
+      transform: translate(-50%, -50%) translateZ(0);
+      will-change: transform, opacity;
     }
     .full-hero img.hero-img {
       position: relative;
@@ -1922,30 +1873,6 @@
     .scroll-down:hover {
       box-shadow: 0 0 25px rgba(245, 158, 11, 0.6), inset 0 0 15px rgba(245, 158, 11, 0.4);
       border-color: rgba(245, 158, 11, 0.5);
-    }
-
-    /* Neon indicator Navbar */
-    nav {
-      background: rgba(17, 17, 17, 0.8) !important;
-      backdrop-filter: blur(16px) !important;
-      -webkit-backdrop-filter: blur(16px) !important;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-    }
-    nav::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.6), rgba(253, 224, 71, 0.6), transparent);
-    }
-    .nav-brand-name {
-      background: linear-gradient(135deg, #fff, #fcd34d, #f59e0b, #fff);
-      background-size: 200% auto;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: textShine 5s linear infinite;
     }
 
     /* Section Header and Title Accents */
@@ -1975,6 +1902,8 @@
       border: 1px solid rgba(255, 255, 255, 0.55) !important;
       box-shadow: 0 15px 35px rgba(245, 158, 11, 0.05), inset 0 0 20px rgba(255,255,255,0.3) !important;
       transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: translateZ(0);
+      will-change: transform;
     }
     .section-wrapper:hover {
       box-shadow: 0 20px 50px rgba(245, 158, 11, 0.08), inset 0 0 25px rgba(255,255,255,0.4) !important;
@@ -2165,7 +2094,6 @@
       opacity: 0.85;
     }
 
-
     /* Floating Back-to-Top Button */
     #backToTop {
       position: fixed;
@@ -2202,7 +2130,23 @@
       transform: translateY(-4px) scale(1.05);
     }
 
+    /* PERFORMANCE OPTIMIZATIONS FOR MOBILE */
+    @media (max-width: 768px) {
+      .section-wrapper, .sap-glass-frame, .cal-popup-inner {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+      }
+      .glass-bg-circle, .full-hero::before {
+        display: none !important;
+      }
+      .reveal-on-scroll {
+        transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+      }
+    }
   </style>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 </head>
 <body>
   <div class="glass-bg-circle circle-1"></div>
@@ -2213,23 +2157,21 @@
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
   </button>
 
-
-
   <!-- NAVBAR -->
   <nav id="navbar">
     <a href="#/home" class="nav-brand">
       <img src="./all-logos.png" alt="School Logos" class="nav-all-logos" onerror="this.style.display='none'"/>
-      <span class="nav-brand-name">SWSC<span>.</span>OFFICIAL</span>
+      <span class="nav-brand-name">SWSC.OFFICIAL</span>
     </a>
     <ul class="nav-menu">
-      <li class="nav-item"><a href="#/home" class="nav-link" style="color: #a855f7;">หน้าแรก</a></li>
+      <li class="nav-item"><a href="#/news" class="nav-link">📰 ข่าวประชาสัมพันธ์</a></li>
       <li class="nav-item">
         <a href="javascript:void(0)" class="nav-link">🏘️ ข้อมูลพื้นฐาน <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
         <div class="nav-dropdown">
-          <a href="#/news">📰 ข่าวประชาสัมพันธ์</a>
+          <a href="#/sap-model">🚀 การขับเคลื่อนกิจกรรม (SAP Model)</a>
           <a href="#/policies">🎯 นโยบายสภานักเรียน</a>
-          <a href="#/regulations">📜 ระเบียบโรงเรียนสรรพวิทยาคมว่าด้วยคณะกรรมการสภานักเรียน โรงเรียนสรรพวิทยาคม</a>
-          <a href="#/manual">📘 คู่มือการปฏิบัติงานสภานักเรียน โรงเรียนสรรพวิทยาคม</a>
+          <a href="#/regulations">📜 ระเบียบสภานักเรียน</a>
+          <a href="#/manual">📘 คู่มือปฏิบัติงาน</a>
           <a href="#/structure">🏛️ โครงสร้างการบริหารงาน</a>
         </div>
       </li>
@@ -2250,35 +2192,29 @@
           <a href="./admin/#/login">🔐 ระบบภายในสภา</a>
         </div>
       </li>
-      <li class="nav-item">
-        <a href="javascript:void(0)" class="nav-link">🎞️ สื่อวีดิทัศน์ <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
-        <div class="nav-dropdown">
-          <a href="#/videos">📺 วิดีโอกิจกรรม</a>
-        </div>
-      </li>
+      <li class="nav-item"><a href="#/videos" class="nav-link">🎞️ สื่อวีดิทัศน์</a></li>
       <li class="nav-item"><a href="#/contact" class="nav-link">📞 ติดต่อเรา</a></li>
 
     </ul>
     <button class="nav-burger" id="burger"><span></span><span></span><span></span></button>
   </nav>
   <div class="mobile-menu" id="mobileMenu">
-    <!-- หน้าแรก -->
-    <a href="#/home" onclick="closeMobile()">🏠 หน้าแรก</a>
+  <a href="#/news" onclick="closeMobile()">📰 ข่าวประชาสัมพันธ์</a>
 
-    <!-- ข้อมูลพื้นฐาน -->
-    <div class="mobile-dropdown-parent">
-      <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
-        <span>🏘️ ข้อมูลพื้นฐาน</span>
-        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-      </div>
-      <div class="mobile-dropdown-sub">
-        <a href="#/news" onclick="closeMobile()">📰 ข่าวประชาสัมพันธ์</a>
-        <a href="#/policies" onclick="closeMobile()">🎯 นโยบายสภานักเรียน</a>
-        <a href="#/regulations" onclick="closeMobile()">📜 ระเบียบสภาฯ</a>
-        <a href="#/manual" onclick="closeMobile()">📘 คู่มือปฏิบัติงาน</a>
-        <a href="#/structure" onclick="closeMobile()">🏛️ โครงสร้างการบริหารงาน</a>
-      </div>
+  <!-- ข้อมูลพื้นฐาน -->
+  <div class="mobile-dropdown-parent">
+    <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
+      <span>🏘️ ข้อมูลพื้นฐาน</span>
+      <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
     </div>
+    <div class="mobile-dropdown-sub">
+      <a href="#/sap-model" onclick="closeMobile()">🚀 การขับเคลื่อนกิจกรรม (SAP)</a>
+      <a href="#/policies" onclick="closeMobile()">🎯 นโยบายสภานักเรียน</a>
+      <a href="#/regulations" onclick="closeMobile()">📜 ระเบียบสภาฯ</a>
+      <a href="#/manual" onclick="closeMobile()">📘 คู่มือปฏิบัติงาน</a>
+      <a href="#/structure" onclick="closeMobile()">🏛️ โครงสร้างการบริหารงาน</a>
+    </div>
+  </div>
 
     <!-- ข้อมูลบริการ -->
     <div class="mobile-dropdown-parent">
@@ -2307,19 +2243,11 @@
       </div>
     </div>
 
-    <!-- สื่อวีดิทัศน์ -->
-    <div class="mobile-dropdown-parent">
-      <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
-        <span>🎞️ สื่อวีดิทัศน์</span>
-        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-      </div>
-      <div class="mobile-dropdown-sub">
-        <a href="#/videos" onclick="closeMobile()">🎬 วิดีโอกิจกรรม</a>
-      </div>
-    </div>
+  <!-- สื่อวีดิทัศน์ -->
+  <a href="#/videos" onclick="closeMobile()">🎞️ สื่อวีดิทัศน์</a>
 
-    <!-- ติดต่อเรา -->
-    <a href="#/contact" onclick="closeMobile()">📞 ติดต่อเรา</a>
+  <!-- ติดต่อเรา -->
+  <a href="#/contact" onclick="closeMobile()">📞 ติดต่อเรา</a>
   </div>
 
   <!-- FULL HERO BANNER -->
@@ -2391,7 +2319,7 @@
         <!-- ===== END ANNOUNCEMENT CAROUSEL ===== -->
 
         <!-- ===== STATS COUNTER STRIP ===== -->
-        <div class="stats-strip" id="statsStrip">
+        <div class="stats-strip" id="statsStrip" data-aos="fade-up">
           <div class="stat-item">
             <div class="stat-icon">📰</div>
             <div class="stat-number" data-target="0" id="statNews">0</div>
@@ -2441,7 +2369,6 @@
             </div>
           </div>
         </div>
-
 
         <!-- OBEC Line -->
         <div class="section-wrapper">
@@ -2547,8 +2474,6 @@
         </div>
       </div>
 
-
-
       <!-- PAGE: CONTACT -->
       <div class="page-section" id="contact">
         <div class="block">
@@ -2608,6 +2533,10 @@
                 <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">📄</div>
                 <div class="doc-title" style="font-size:14px;">เอกสารโครงการ</div>
               </a>
+              <a href="javascript:void(0)" class="doc-card" style="padding: 15px;" onclick="openDocCategory('ต้นแบบเอกสาร', 'academic')">
+                <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">🗂️</div>
+                <div class="doc-title" style="font-size:14px;">ต้นแบบเอกสาร</div>
+              </a>
             </div>
           </div>
         </div>
@@ -2664,7 +2593,7 @@
             </div>
 
             <div class="pdf-frame-container">
-              <iframe data-src="./regulations.pdf" id="regulationsIframe" class="pdf-iframe" src="">
+              <iframe id="regulationsIframe" class="pdf-iframe" src="./regulations.pdf">
                 <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./regulations.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
               </iframe>
             </div>
@@ -2688,7 +2617,7 @@
             </div>
 
             <div class="pdf-frame-container">
-              <iframe data-src="./manual.pdf" id="manualIframe" class="pdf-iframe" src="">
+              <iframe id="manualIframe" class="pdf-iframe" src="./manual.pdf">
                 <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./manual.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
               </iframe>
             </div>
@@ -2703,16 +2632,69 @@
           <div class="block-head">
             <span class="block-head-title">🏛️ โครงสร้างการบริหารกิจกรรมสภานักเรียน</span>
           </div>
-          <div class="block-body" style="padding: 25px 20px; text-align: center;">
-
+          <div class="block-body" style="padding: 25px 20px; text-align: center; display: flex; flex-direction: column; gap: 40px;">
             
-            <!-- Image viewport container -->
+            <!-- Activity Management Structure Diagram (Newly Added) -->
+            <div data-aos="fade-up" style="width: 100%; text-align: center;">
+              <h3 style="font-size: 20px; color: #4c1d95; margin-bottom: 20px; font-weight: 700;">ผังโครงสร้างการบริหารงานกิจกรรม</h3>
+              <div style="position: relative; display: inline-block; width: 100%; max-width: 750px; margin: 0 auto; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid rgba(0,0,0,0.05);">
+                <a href="#" onclick="event.preventDefault(); openImageViewer('./org-structure.jpg', 'โครงสร้างการบริหารงานกิจกรรมสภานักเรียน')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: block;">
+                  <img src="./org-structure.jpg" alt="โครงสร้างการบริหารงานกิจกรรมสภานักเรียน" style="width: 100%; height: auto; display: block; image-rendering: high-quality; image-rendering: -webkit-optimize-contrast;" loading="lazy" />
+                </a>
+              </div>
+            </div>
+            
+            <hr style="border: 0; height: 1px; background: #e5e7eb; width: 80%; margin: 10px auto;">
+
+
+            <!-- Year 2569 -->
             <div id="structureImgContainer" style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
-              <a href="./structure.png" target="_blank" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
-                <img id="structureImg" src="./structure.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
+              <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">คณะกรรมการนักเรียน ปีการศึกษา 2569</h3>
+              <a href="#" onclick="event.preventDefault(); openImageViewer('./structure.png', 'โครงสร้างสภานักเรียน ปีการศึกษา 2569')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
+                <img id="structureImg" src="./structure.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน 2569" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
               </a>
             </div>
+
+            <!-- Year 2568 -->
+            <div style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
+              <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">คณะกรรมการนักเรียน ปีการศึกษา 2568</h3>
+              <a href="#" onclick="event.preventDefault(); openImageViewer('./structure-2568.png', 'โครงสร้างสภานักเรียน ปีการศึกษา 2568')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
+                <img src="./structure-2568.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน 2568" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
+              </a>
+            </div>
+
+            <!-- Year 2567 -->
+            <div style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
+              <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">คณะกรรมการนักเรียน ปีการศึกษา 2567</h3>
+              <a href="#" onclick="event.preventDefault(); openImageViewer('./structure-2567.png', 'โครงสร้างสภานักเรียน ปีการศึกษา 2567')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
+                <img src="./structure-2567.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน 2567" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
+              </a>
+            </div>
+
           </div>
+        </div>
+      </div>
+
+      <!-- PAGE: SAP MODEL -->
+      <div id="sap-model" class="page-section">
+        
+        <div class="page-header" data-aos="fade-down" style="padding-top: 40px; padding-bottom: 10px; margin-bottom: 40px; text-align: center;">
+          <h1 style="color: #4c1d95; text-shadow: 0 2px 10px rgba(76,29,149,0.1); margin-bottom: 10px;">🚀 การขับเคลื่อนกิจกรรมด้วย SAP Model</h1>
+          <p style="color: #6b7280; font-size: 16px;">โรงเรียนสรรพวิทยาคม อำเภอแม่สอด จังหวัดตาก</p>
+        </div>
+        
+        <div class="content-section" data-aos="fade-up" style="max-width: 850px; margin: 0 auto; text-align: center; padding-bottom: 60px;">
+          
+          <!-- Glassmorphism Frame -->
+          <div class="sap-glass-frame" style="position: relative; display: inline-block; width: 100%; padding: 24px; border-radius: 32px; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 25px 50px -12px rgba(109, 40, 217, 0.15), inset 0 0 0 2px rgba(255,255,255,0.5);">
+            
+            <!-- Image with Inner Shadow and Border Radius -->
+            <div style="border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(0,0,0,0.05); background: #000;">
+              <img src="./sap-model.jpg" alt="SAP Model" style="width: 100%; height: auto; display: block; opacity: 0.95; image-rendering: high-quality; image-rendering: -webkit-optimize-contrast;" loading="lazy" />
+            </div>
+            
+          </div>
+
         </div>
       </div>
 
@@ -2793,45 +2775,6 @@
         </div>
       </div>
 
-      <!-- PAGE: CONTACT -->
-      <div class="page-section" id="contact">
-        <div class="block">
-          <div class="block-head"><span class="block-head-title">ช่องทางการติดต่อ</span></div>
-          <div class="block-body">
-            <div class="contact-grid">
-              <a href="https://www.sappha.ac.th" target="_blank" class="contact-card">
-                <div class="contact-icon-box">🏫</div>
-                <div>
-                  <div class="contact-lbl">เว็บไซต์โรงเรียน</div>
-                  <div class="contact-val">www.sappha.ac.th</div>
-                </div>
-              </a>
-              <a href="#" class="contact-card">
-                <div class="contact-icon-box">📘</div>
-                <div>
-                  <div class="contact-lbl">Facebook Page</div>
-                  <div class="contact-val">SWSC Official</div>
-                </div>
-              </a>
-              <a href="#" class="contact-card">
-                <div class="contact-icon-box">💬</div>
-                <div>
-                  <div class="contact-lbl">LINE Official</div>
-                  <div class="contact-val">@SWSC_SAPA</div>
-                </div>
-              </a>
-              <div class="contact-card">
-                <div class="contact-icon-box">📍</div>
-                <div>
-                  <div class="contact-lbl">สถานที่</div>
-                  <div class="contact-val">ห้องสำนักงานสภาฯ ชั้น 1</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Event Detail Popup (Global) -->
       <div class="cal-popup" id="calPopup" style="display:none">
         <div class="cal-popup-inner">
@@ -2896,6 +2839,10 @@
             <a href="#/suggestions" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">กล่องข้อเสนอแนะ</a>
             <a href="#/contact" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">ช่องทางติดต่อสภา</a>
             <a href="https://www.sappha.ac.th" target="_blank" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13.5px; transition: all 0.2s; display: block;" onmouseover="this.style.color='var(--gold-400)'; this.style.transform='translateX(4px)'" onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.transform='none'">เว็บไซต์โรงเรียน</a>
+            
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); width: 100%; color: rgba(255,255,255,0.6); font-size: 13.5px; display: flex; align-items: center; gap: 6px;">
+              👀 ผู้เข้าชมเว็บไซต์: <span id="public-view-counter" style="color: var(--gold-400); font-weight: 700;">...</span>
+            </div>
           </div>
         </div>
 
@@ -2966,7 +2913,7 @@
   /* ---- SUPABASE ---- */
   const SB_URL = 'https://pzlcxctnnhjqpbhwcxqx.supabase.co';
   const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6bGN4Y3RubmhqcXBiaHdjeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMjA0ODgsImV4cCI6MjA5NDY5NjQ4OH0.LsofMV8YVlqFxir2o76Mbw4fNOHljVrealsew4XXQkY';
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzzjkdNczg7aw2p9CU53I58NMzm1oFP-CiiyfAgFdBSQZ7kA9tZ71oFw-N6Q1xles1rxA/exec';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzFTrQ6TZvj6PpUAkXJfAU5asvWveVfhUoLMl4LjRAzNSOm4AaImex2NeVHfeHC6gm9/exec';
 
   async function sbFetch(path) {
     const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
@@ -2976,28 +2923,69 @@
     return r.json();
   }
 
+  // --- View Counter Logic ---
+  async function fetchAndUpdateViewCount() {
+    try {
+      // 1. Increment view for landing page
+      await fetch(`${SB_URL}/rest/v1/rpc/increment_page_view`, {
+        method: 'POST',
+        headers: {
+          apikey: SB_KEY,
+          Authorization: `Bearer ${SB_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ page_path: '/landing' })
+      });
+
+      // 2. Fetch total views
+      const r = await fetch(`${SB_URL}/rest/v1/rpc/get_total_views`, {
+        method: 'POST',
+        headers: {
+          apikey: SB_KEY,
+          Authorization: `Bearer ${SB_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (r.ok) {
+        const total = await r.json();
+        const counterEl = document.getElementById('public-view-counter');
+        if (counterEl && total !== null) {
+          counterEl.textContent = Number(total).toLocaleString();
+        }
+      }
+    } catch (e) {
+      console.error('Failed to update view count:', e);
+    }
+  }
+  
+  // Run when DOM is ready
+  document.addEventListener('DOMContentLoaded', fetchAndUpdateViewCount);
+
+
   function transformGoogleDriveUrl(url) {
     if (!url) return "";
     if (typeof url !== "string") return url;
-    if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("https://lh3.googleusercontent.com/")) {
+    if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("https://wsrv.nl/")) {
       return url;
     }
     if (!url.includes("drive.google.com")) {
       return url;
     }
+    
+    // Using wsrv.nl proxy to bypass Safari/Chrome cross-site cookie blocking for Google Drive
     let match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (match && match[1]) {
-      return `https://lh3.googleusercontent.com/d/${match[1]}`;
+      return `https://wsrv.nl/?url=${encodeURIComponent('https://drive.google.com/uc?export=view&id=' + match[1])}`;
     }
     match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
     if (match && match[1]) {
-      return `https://lh3.googleusercontent.com/d/${match[1]}`;
+      return `https://wsrv.nl/?url=${encodeURIComponent('https://drive.google.com/uc?export=view&id=' + match[1])}`;
     }
     return url;
   }
 
   /* ---- DOCUMENTS MODAL ---- */
-  let cachedDocs = { sec: null, academic: null };
+  let cachedDocs = { sec: null, academic: null, projects: null };
 
   async function openDocCategory(category, type) {
     const overlay = document.getElementById('docModalOverlay');
@@ -3029,23 +3017,377 @@
         }
       }
 
+      if (category === 'เอกสารโครงการ') {
+        let projectsData = cachedDocs.projects;
+        if (!projectsData) {
+          const pRes = await fetch(GAS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Projects" })
+          });
+          const pJson = await pRes.json();
+          if (pJson.success) {
+            projectsData = pJson.data;
+            cachedDocs.projects = projectsData;
+          } else {
+            throw new Error("Failed to load projects");
+          }
+        }
+
+        const projectDocs = data.filter(d => (d.category || '').startsWith('[PROJ:'));
+        
+        window.renderProjectList = function() {
+          title.innerHTML = 'เอกสารโครงการ';
+          if (projectsData.length === 0) {
+            body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);">ยังไม่มีโครงการในระบบ</div>';
+            return;
+          }
+          
+          const projectsHtml = projectsData.map((p, index) => {
+            const docCount = projectDocs.filter(d => d.category.startsWith(`[PROJ:${p.id}]`)).length;
+            if (docCount === 0) return '';
+            
+            return `
+              <div class="project-folder-card" data-aos="fade-up" data-aos-delay="${index * 30}" onclick="renderProjectDocs('${p.id}', '${p.title.replace(/'/g, "\\'")}')">
+                <div class="folder-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <div class="folder-info">
+                  <div class="folder-title" title="${p.title}">${p.title}</div>
+                  <div class="folder-meta">${docCount} รายการ</div>
+                </div>
+                <div class="folder-arrow">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+              </div>
+            `;
+          }).filter(html => html !== '').join('');
+
+          if (projectsHtml === '') {
+            body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);">ยังไม่มีโครงการที่มีเอกสารในระบบ</div>';
+          } else {
+            body.innerHTML = `
+              <style>
+                .project-grid {
+                  display: grid;
+                  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                  gap: 16px;
+                  padding: 8px 0;
+                }
+                .project-folder-card {
+                  background: linear-gradient(145deg, #ffffff, #fcfbfe);
+                  border: 1px solid rgba(139, 92, 246, 0.15);
+                  border-radius: 12px;
+                  padding: 16px;
+                  display: flex;
+                  align-items: center;
+                  gap: 16px;
+                  cursor: pointer;
+                  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+                  position: relative;
+                  overflow: hidden;
+                }
+                .project-folder-card::before {
+                  content: '';
+                  position: absolute;
+                  top: 0; left: 0;
+                  width: 4px; height: 100%;
+                  background: linear-gradient(to bottom, var(--purple-400), var(--gold-400));
+                  opacity: 0;
+                  transition: opacity 0.3s ease;
+                }
+                .project-folder-card:hover {
+                  transform: translateY(-2px);
+                  box-shadow: 0 10px 20px -5px rgba(139, 92, 246, 0.12), 0 4px 6px -2px rgba(139, 92, 246, 0.05);
+                  border-color: rgba(139, 92, 246, 0.3);
+                  background: #ffffff;
+                }
+                .project-folder-card:hover::before {
+                  opacity: 1;
+                }
+                .folder-icon {
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  width: 48px;
+                  height: 48px;
+                  background: rgba(139, 92, 246, 0.06);
+                  color: var(--purple-600);
+                  border-radius: 10px;
+                  flex-shrink: 0;
+                  transition: all 0.3s;
+                }
+                .project-folder-card:hover .folder-icon {
+                  background: linear-gradient(135deg, var(--purple-600), var(--purple-400));
+                  color: white;
+                  transform: scale(1.05) rotate(-4deg);
+                  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+                }
+                .folder-info {
+                  flex: 1;
+                  min-width: 0;
+                }
+                .folder-title {
+                  font-weight: 600;
+                  font-size: 15px;
+                  color: var(--gray-800);
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  margin-bottom: 4px;
+                  transition: color 0.3s;
+                }
+                .project-folder-card:hover .folder-title {
+                  color: var(--purple-700);
+                }
+                .folder-meta {
+                  font-size: 13px;
+                  color: var(--gray-500);
+                  font-weight: 500;
+                }
+                .folder-arrow {
+                  color: var(--gray-300);
+                  transition: all 0.3s;
+                  display: flex;
+                  align-items: center;
+                }
+                .project-folder-card:hover .folder-arrow {
+                  color: var(--purple-500);
+                  transform: translateX(4px);
+                }
+              </style>
+              <div class="project-grid">
+                ${projectsHtml}
+              </div>
+            `;
+          }
+        };
+
+        window.renderProjectDocs = function(projectId, projectTitle) {
+          title.innerHTML = `<button onclick="renderProjectList()" style="background:none; border:none; color:var(--purple-600); cursor:pointer; font-size:14px; margin-right:8px; display:inline-flex; align-items:center;">‹ ย้อนกลับ</button> โครงการ: ${projectTitle}`;
+          const projDocs = projectDocs.filter(d => d.category.startsWith(`[PROJ:${projectId}]`)).reverse();
+          
+          if (projDocs.length === 0) {
+            body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);">ยังไม่มีเอกสารสำหรับโครงการนี้</div>';
+            return;
+          }
+
+          const grouped = projDocs.reduce((acc, curr) => {
+            const existing = acc.find(x => x.title === curr.title);
+            if (existing) {
+              existing.files.push(curr);
+            } else {
+              acc.push({ ...curr, files: [curr] });
+            }
+            return acc;
+          }, []);
+
+          const docsHtml = grouped.map((g, index) => `
+            <div class="doc-file-card" data-aos="fade-up" data-aos-delay="${index * 30}">
+              <div class="doc-file-info">
+                <div class="doc-file-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                </div>
+                <div class="doc-file-title">${g.title}</div>
+              </div>
+              <div class="doc-file-actions">
+                ${g.files.map(f => {
+                  let typeLabel = f.type === 'default' ? 'DOCX' : f.type;
+                  let isPdf = typeLabel === 'PDF';
+                  let bg = isPdf ? '#fef2f2' : '#eff6ff';
+                  let color = isPdf ? '#ef4444' : '#3b82f6';
+                  let border = isPdf ? '#fecaca' : '#bfdbfe';
+                  return `<a href="${f.file_url}" target="_blank" style="text-decoration: none; padding: 6px 12px; border-radius: 8px; background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 12px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 4px;" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter='none'">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    ${typeLabel}
+                  </a>`;
+                }).join('')}
+              </div>
+            </div>
+          `).join('');
+
+          body.innerHTML = `
+            <style>
+              .doc-file-card {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 16px;
+                margin-bottom: 12px;
+                background: #ffffff;
+                border: 1px solid var(--gray-200);
+                border-radius: 12px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                transition: all 0.2s ease;
+              }
+              .doc-file-card:hover {
+                border-color: var(--purple-300);
+                box-shadow: 0 4px 12px rgba(139, 92, 246, 0.08);
+                transform: translateY(-2px);
+              }
+              .doc-file-info {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+              }
+              .doc-file-icon {
+                width: 44px;
+                height: 44px;
+                border-radius: 10px;
+                background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+                color: #6b7280;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+              }
+              .doc-file-card:hover .doc-file-icon {
+                background: linear-gradient(135deg, var(--purple-100), var(--purple-200));
+                color: var(--purple-600);
+              }
+              .doc-file-title {
+                font-weight: 600;
+                color: var(--gray-800);
+                font-size: 15px;
+                line-height: 1.4;
+              }
+              .doc-file-actions {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-left: 16px;
+              }
+              @media (max-width: 600px) {
+                .doc-file-card {
+                  flex-direction: column;
+                  align-items: flex-start;
+                  gap: 12px;
+                }
+                .doc-file-actions {
+                  margin-left: 60px; /* align with text */
+                }
+              }
+            </style>
+            ${docsHtml}
+          `;
+        };
+
+        renderProjectList();
+        return;
+      }
+
       // Filter by category and sort by date descending (approximate using id if date parsing fails)
-      const filtered = data.filter(d => d.category === category).reverse();
+      const filtered = data.filter(d => {
+        if (category === 'เอกสารโครงการ') {
+          return (d.category || '').startsWith('[PROJ:');
+        }
+        return d.category === category || (d.category || '').endsWith(category);
+      }).reverse();
       
       if (filtered.length === 0) {
         body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);">ยังไม่มีเอกสารในหมวดหมู่นี้</div>';
         return;
       }
 
-      body.innerHTML = filtered.map(d => `
-        <a href="${d.file_url}" target="_blank" class="doc-list-item">
-          <div class="doc-list-info">
-            <div class="doc-list-title">${d.title}</div>
-            <div class="doc-list-meta">ประเภท: ${d.type} • อัปโหลดเมื่อ: ${d.date}</div>
+      const grouped = filtered.reduce((acc, curr) => {
+        const existing = acc.find(x => x.title === curr.title);
+        if (existing) {
+          existing.files.push(curr);
+        } else {
+          acc.push({ ...curr, files: [curr] });
+        }
+        return acc;
+      }, []);
+
+      const docsHtml = grouped.map((g, index) => `
+        <div class="doc-file-card" data-aos="fade-up" data-aos-delay="${index * 30}">
+          <div class="doc-file-info">
+            <div class="doc-file-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <div class="doc-file-title">${g.title}</div>
           </div>
-          <div class="doc-download-btn">ดาวน์โหลด</div>
-        </a>
+          <div class="doc-file-actions">
+            ${g.files.map(f => {
+              let typeLabel = f.type === 'default' ? 'DOCX' : f.type;
+              let isPdf = typeLabel === 'PDF';
+              let bg = isPdf ? '#fef2f2' : '#eff6ff';
+              let color = isPdf ? '#ef4444' : '#3b82f6';
+              let border = isPdf ? '#fecaca' : '#bfdbfe';
+              return `<a href="${f.file_url}" target="_blank" style="text-decoration: none; padding: 6px 12px; border-radius: 8px; background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 12px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 4px;" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter='none'">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                ${typeLabel}
+              </a>`;
+            }).join('')}
+          </div>
+        </div>
       `).join('');
+
+      body.innerHTML = `
+        <style>
+          .doc-file-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            margin-bottom: 12px;
+            background: #ffffff;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.2s ease;
+          }
+          .doc-file-card:hover {
+            border-color: var(--purple-300);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.08);
+            transform: translateY(-2px);
+          }
+          .doc-file-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+          }
+          .doc-file-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+          .doc-file-card:hover .doc-file-icon {
+            background: linear-gradient(135deg, var(--purple-100), var(--purple-200));
+            color: var(--purple-600);
+          }
+          .doc-file-title {
+            font-weight: 600;
+            color: var(--gray-800);
+            font-size: 15px;
+            line-height: 1.4;
+          }
+          .doc-file-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-left: 16px;
+          }
+          @media (max-width: 600px) {
+            .doc-file-card {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 12px;
+            }
+            .doc-file-actions {
+              margin-left: 60px; /* align with text */
+            }
+          }
+        </style>
+        ${docsHtml}
+      `;
 
     } catch (err) {
       console.error(err);
@@ -3500,7 +3842,7 @@
     const slidesEl = document.getElementById('carouselSlides');
     if (slidesEl) {
       slidesEl.innerHTML = carouselItems.map(n => {
-        const img = transformGoogleDriveUrl(n.image_url);
+        const img = transformGoogleDriveUrl(n.image_url, 1200);
         return `<div onclick="showNewsPopup('${n.id}')" class="carousel-slide-item" style="
           flex-shrink:0; width:100%; height:100%; cursor:pointer; position:relative; overflow:hidden;
           background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
@@ -3579,15 +3921,15 @@
       toRender = items.slice(0, newsDisplayLimit);
     }
     
-    el.innerHTML = toRender.map(n => {
+    el.innerHTML = toRender.map((n, index) => {
       const m = catMeta(n.category);
       const d = n.for_date || (n.created_at ? new Date(n.created_at).toLocaleDateString('th-TH') : '');
       const author = getAuthorName(n.submitter);
       const thumbHtml = n.image_url 
-        ? `<img src="${transformGoogleDriveUrl(n.image_url)}" data-src="${transformGoogleDriveUrl(n.image_url)}" data-retries="0" referrerpolicy="no-referrer"
+        ? `<img src="${transformGoogleDriveUrl(n.image_url, 600)}" data-src="${transformGoogleDriveUrl(n.image_url, 600)}" data-retries="0" referrerpolicy="no-referrer" loading="lazy"
                onerror="_newsImgError(this)" onload="this.style.opacity='1'; if(this.parentElement) this.parentElement.classList.remove('skel-bg');" style="width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity 0.4s;" />` 
         : m.icon;
-      return `<div class="news-card" onclick="showNewsPopup('${n.id}')">
+      return `<div class="news-card" data-aos="fade-up" data-aos-delay="${index * 50}" onclick="showNewsPopup('${n.id}')">
         <div class="news-card-thumb ${n.image_url ? 'skel-bg' : ''}" style="background:${n.image_url ? 'none' : m.bg}">
           <span class="cat-dot ${m.pill}">${n.category || 'ทั่วไป'}</span>
           ${thumbHtml}
@@ -3708,10 +4050,11 @@
     window._obecItems = items;
     grid.innerHTML = items.map((item, idx) => `
       <div class="obec-card" onclick="openObecViewer(${idx})">
-        <img src="${transformGoogleDriveUrl(item.image_url)}"
-             data-src="${transformGoogleDriveUrl(item.image_url)}"
+        <img src="${transformGoogleDriveUrl(item.image_url, 400)}"
+             data-src="${transformGoogleDriveUrl(item.image_url, 400)}"
              data-retries="0"
              referrerpolicy="no-referrer"
+             loading="lazy"
              alt="${item.title}"
              onerror="_obecImgError(this)"
              onload="this.style.opacity='1';this.style.filter=''"
@@ -3728,7 +4071,7 @@
     if (!items.length) return;
     _obecCurrentIdx = idx;
     const item = items[idx];
-    document.getElementById('obecViewerImg').src = transformGoogleDriveUrl(item.image_url);
+    document.getElementById('obecViewerImg').src = transformGoogleDriveUrl(item.image_url, 1200);
     document.getElementById('obecViewerTitle').textContent = item.title;
     document.getElementById('obecViewerCounter').textContent = `${idx + 1} / ${items.length}`;
     document.getElementById('obecViewerPrev').style.display = items.length > 1 ? 'flex' : 'none';
@@ -3804,27 +4147,63 @@
     const daysInMonth  = new Date(calYear, calMonth+1, 0).getDate();
     const daysInPrev   = new Date(calYear, calMonth, 0).getDate();
 
-    // Update home sidebar event list with up-coming events (Not used since we deleted the sidebar list, but kept for legacy/other pages)
-    const upcoming = calEvents.filter(ev => {
-      if (!ev.date) return false;
-      const evDate = new Date(ev.date + 'T00:00:00');
-      const endDate = ev.end_date ? new Date(ev.end_date + 'T00:00:00') : evDate;
-      return endDate >= new Date(today.setHours(0,0,0,0));
-    }).slice(0, 3);
+    // Initialize global maps for safe event retrieval without passing raw JSON in HTML attributes
+    window.calendarEventsMap = window.calendarEventsMap || {};
+    window.calendarDaysMap = window.calendarDaysMap || {};
 
-    // Map events by day
-    const evByDay = {};
-    calEvents.forEach(ev => {
+    // 1. Sort events: multi-day first (longest duration), then by start date
+    const sortedEvents = [...calEvents].sort((a, b) => {
+      const aStart = new Date(a.date + 'T00:00:00').getTime();
+      const bStart = new Date(b.date + 'T00:00:00').getTime();
+      const aEnd = a.end_date ? new Date(a.end_date + 'T00:00:00').getTime() : aStart;
+      const bEnd = b.end_date ? new Date(b.end_date + 'T00:00:00').getTime() : bStart;
+      const aDur = aEnd - aStart;
+      const bDur = bEnd - bStart;
+      if (bDur !== aDur) return bDur - aDur; 
+      return aStart - bStart;
+    });
+
+    // 2. Allocate slots for each day in current month
+    const daySlots = {}; 
+    for (let d = 1; d <= daysInMonth; d++) daySlots[d] = [];
+
+    sortedEvents.forEach(ev => {
       if (!ev.date) return;
       const startDate = new Date(ev.date + 'T00:00:00');
       const endDate = ev.end_date ? new Date(ev.end_date + 'T00:00:00') : startDate;
       
-      for (let d = 1; d <= daysInMonth; d++) {
-        const curr = new Date(calYear, calMonth, d);
-        if (curr >= startDate && curr <= endDate) {
-          if (!evByDay[d]) evByDay[d] = [];
-          evByDay[d].push(ev);
+      // Map to day of current month (1-31)
+      let startD = -1, endD = -1;
+      
+      if (startDate.getFullYear() === calYear && startDate.getMonth() === calMonth) {
+        startD = startDate.getDate();
+      } else if (startDate < new Date(calYear, calMonth, 1)) {
+        startD = 1; // Started before this month
+      }
+      
+      if (endDate.getFullYear() === calYear && endDate.getMonth() === calMonth) {
+        endD = endDate.getDate();
+      } else if (endDate >= new Date(calYear, calMonth + 1, 1)) {
+        endD = daysInMonth; // Ends after this month
+      }
+      
+      if (startD === -1 || endD === -1 || startD > endD) return; // Not in this month
+
+      // Find first available slot
+      let slot = 0;
+      while (true) {
+        let conflict = false;
+        for (let d = startD; d <= endD; d++) {
+          if (daySlots[d][slot]) { conflict = true; break; }
         }
+        if (!conflict) break;
+        slot++;
+      }
+      
+      // Assign to slot
+      const evObj = { ...ev, _startD: startD, _endD: endD };
+      for (let d = startD; d <= endD; d++) {
+        daySlots[d][slot] = evObj;
       }
     });
 
@@ -3835,34 +4214,64 @@
       cells += `<div class="cal-cell cal-cell-other"><span class="cal-num">${daysInPrev - i}</span></div>`;
     }
 
-    // Initialize global maps for safe event retrieval without passing raw JSON in HTML attributes
-    window.calendarEventsMap = window.calendarEventsMap || {};
-    window.calendarDaysMap = window.calendarDaysMap || {};
-
     // Current month cells
     for (let d = 1; d <= daysInMonth; d++) {
       const isToday = (d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear());
-      const evs = evByDay[d] || [];
       
       const dayKey = `day_${d}`;
-      window.calendarDaysMap[dayKey] = evs;
+      window.calendarDaysMap[dayKey] = daySlots[d].filter(Boolean); // Only real events
 
-      const MAX_SHOW = 2;
-      const shown = evs.slice(0, MAX_SHOW);
-      const more  = evs.length - MAX_SHOW;
+      const MAX_SHOW = 3; // Show up to 3 bars before +More
+      let evHtml = '';
+      let more = 0;
       
-      const evHtml = shown.map(ev => {
+      const dayOfWeek = (firstWeekday + d - 1) % 7;
+      const isStartOfWeek = dayOfWeek === 0;
+      const isEndOfWeek = dayOfWeek === 6;
+      
+      const slotCount = Math.max(daySlots[d].length, 0);
+      
+      for (let s = 0; s < slotCount; s++) {
+        const ev = daySlots[d][s];
+        
+        if (s >= MAX_SHOW) {
+          if (ev) more++;
+          continue;
+        }
+        
+        if (!ev) {
+          // Empty placeholder to maintain slot vertical alignment
+          evHtml += `<div class="cal-event-pill" style="opacity:0; pointer-events:none; margin-bottom:2px; height:24px;"></div>`;
+          continue;
+        }
+        
+        const isStart = d === ev._startD || isStartOfWeek;
+        const isEnd = d === ev._endD || isEndOfWeek;
+        const isMiddle = !isStart && !isEnd;
+        
         const col = calColorFor(ev.type);
-        const timeStr = ev.time ? `${ev.time} ` : '';
+        const timeStr = (isStart && ev.time) ? `${ev.time} ` : '';
         const evKey = `ev_${ev.id || Math.random().toString(36).substr(2, 9)}`;
         window.calendarEventsMap[evKey] = ev;
         
-        return `<div class="cal-event-pill" style="background:${col}33;color:${col};" onclick="event.stopPropagation(); showCalPopupByKey('${evKey}')" title="${ev.title}">${timeStr}${ev.title}</div>`;
-      }).join('');
+        let extraStyle = 'margin-bottom:2px; height:24px; display:flex; align-items:center; overflow:hidden; white-space:nowrap; padding: 2px 6px; box-sizing:border-box;';
+        
+        if (isStart && !isEnd) {
+          extraStyle += ` border-top-right-radius:0; border-bottom-right-radius:0; width:calc(100% + 7px); position:relative; z-index:2; margin-right:-7px;`;
+        } else if (isEnd && !isStart) {
+          extraStyle += ` border-top-left-radius:0; border-bottom-left-radius:0; width:calc(100% + 7px); position:relative; z-index:2; margin-left:-7px; padding-left:7px; color:transparent;`;
+        } else if (isMiddle) {
+          extraStyle += ` border-radius:0; width:calc(100% + 14px); position:relative; z-index:2; margin-left:-7px; margin-right:-7px; padding-left:7px; color:transparent;`;
+        }
+        
+        const textContent = (isMiddle || (!isStart && isEnd)) ? '' : `${timeStr}${ev.title}`;
+        
+        evHtml += `<div class="cal-event-pill" data-evkey="${evKey}" onmouseenter="document.querySelectorAll('.cal-event-pill[data-evkey=\\'${evKey}\\']').forEach(el=>el.classList.add('ev-hover'))" onmouseleave="document.querySelectorAll('.cal-event-pill[data-evkey=\\'${evKey}\\']').forEach(el=>el.classList.remove('ev-hover'))" style="background:${col}33;color:${col}; ${extraStyle}" onclick="event.stopPropagation(); showCalPopupByKey('${evKey}')" title="${ev.title}">${textContent}</div>`;
+      }
       
       const moreHtml = more > 0 ? `<div class="cal-more" onclick="event.stopPropagation(); showDayPopupByKey(${d}, '${dayKey}')">+${more}</div>` : '';
       
-      cells += `<div class="cal-cell${isToday?' cal-cell-today':''}" onclick="showDayPopupByKey(${d}, '${dayKey}')"><span class="cal-num${isToday?' cal-num-today':''}">${d}</span>${evHtml}${moreHtml}</div>`;
+      cells += `<div class="cal-cell${isToday?' cal-cell-today':''}" data-day="${d}" onclick="showDayPopupByKey(${d}, '${dayKey}')"><span class="cal-num${isToday?' cal-num-today':''}">${d}</span>${evHtml}${moreHtml}</div>`;
     }
 
     // Trailing next-month cells
@@ -3886,11 +4295,16 @@
   }
 
   function showCalPopupByKey(key) {
+    document.querySelectorAll('.cal-event-pill').forEach(el => el.classList.remove('ev-active'));
+    document.querySelectorAll(`.cal-event-pill[data-evkey="${key}"]`).forEach(el => el.classList.add('ev-active'));
     const ev = window.calendarEventsMap[key];
     if (ev) showCalPopup(ev);
   }
 
   function showDayPopupByKey(day, key) {
+    document.querySelectorAll('.cal-cell').forEach(el => el.classList.remove('day-selected'));
+    const cell = document.querySelector(`.cal-cell[data-day="${day}"]`);
+    if (cell) cell.classList.add('day-selected');
     const evs = window.calendarDaysMap[key] || [];
     showDayPopup(day, evs);
   }
@@ -3951,6 +4365,8 @@
     pop.classList.remove('show');
     document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
     setTimeout(() => pop.style.display = 'none', 300);
+    document.querySelectorAll('.cal-event-pill').forEach(el => el.classList.remove('ev-active'));
+    document.querySelectorAll('.cal-cell').forEach(el => el.classList.remove('day-selected'));
   }
   document.addEventListener('keydown', e => { 
     if (e.key === 'Escape') {
@@ -4031,7 +4447,6 @@
     }
   }
 
-
   /* ---- SCROLL REVEAL SYSTEM ---- */
   const revealObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -4047,7 +4462,6 @@
       revealObserver.observe(el);
     });
   }
-
 
   /* ---- NEWS POPUP SYSTEM ---- */
   function swapMainNewsImage(url) {
@@ -4285,7 +4699,11 @@
     return match ? match[0] : null;
   }
 
-  function getEmbedUrl(url) {
+  function getEmbedUrl(rawUrl) {
+    if (!rawUrl) return '';
+    const parts = rawUrl.split('||');
+    const url = parts[0];
+    
     const ytId = getYouTubeId(url);
     if (ytId) {
       return `https://www.youtube.com/embed/${ytId}?autoplay=1`;
@@ -4302,15 +4720,38 @@
     return url;
   }
 
-  function getThumbnailUrl(url) {
+  function getThumbnailUrl(rawUrl) {
+    if (!rawUrl) return './logo.png';
+    const parts = rawUrl.split('||');
+    const url = parts[0];
+    const cover = parts.length > 1 ? parts[1] : null;
+    
+    // If a custom cover image is provided, try to transform it if it's a Google Drive link, otherwise return as is
+    if (cover) {
+        if (cover.includes('drive.google.com')) {
+            const transformed = transformGoogleDriveUrl(cover);
+            if (transformed) return transformed;
+        }
+        return cover;
+    }
+    
     const ytId = getYouTubeId(url);
     if (ytId) {
       return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
     }
     if (url.includes('drive.google.com')) {
-      return transformGoogleDriveUrl(url);
+      return transformGoogleDriveUrl(url) || './logo.png';
     }
     return './logo.png';
+  }
+
+  
+  function formatThaiDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date)) return '';
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
   }
 
   function renderVideos(items) {
@@ -4478,7 +4919,6 @@
     }
   }
 
-
   /* ---- COUNTER ANIMATION ---- */
   function animateCounter(el, target, duration = 1800) {
     const start = performance.now();
@@ -4564,6 +5004,61 @@
   });
 </script>
 
+<!-- Generic Image Viewer Modal -->
+<div id="imageViewer" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 99999; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
+  <button onclick="closeImageViewer()" title="ปิด" style="position: fixed; top: 16px; right: 20px; background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 22px; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 100000;">&times;</button>
+  <div id="imageViewerTitle" style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 16px; text-align: center; font-family: 'Noto Sans Thai', sans-serif;"></div>
+  <div style="width: 100%; height: 100%; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding-bottom: 40px;">
+    <img id="imageViewerImg" src="" style="max-width: min(900px, 95vw); width: auto; height: auto; transition: transform 0.2s, max-width 0.2s; transform-origin: top center; cursor: zoom-in;" onclick="toggleImageViewerZoom()" />
+  </div>
+</div>
+
+<script>
+  let imageViewerZoomState = false;
+  function openImageViewer(src, title) {
+    const viewer = document.getElementById('imageViewer');
+    const img = document.getElementById('imageViewerImg');
+    const titleEl = document.getElementById('imageViewerTitle');
+    
+    img.src = src;
+    titleEl.textContent = title;
+    imageViewerZoomState = false;
+    img.style.maxWidth = 'min(900px, 95vw)';
+    img.style.width = 'auto';
+    img.style.cursor = 'zoom-in';
+    
+    document.body.style.overflow = 'hidden'; // Hide body scrollbar
+    viewer.style.display = 'flex';
+  }
+  
+  function closeImageViewer() {
+    document.body.style.overflow = ''; // Restore body scrollbar
+    document.getElementById('imageViewer').style.display = 'none';
+  }
+
+  function toggleImageViewerZoom() {
+    const img = document.getElementById('imageViewerImg');
+    if (!imageViewerZoomState) {
+      imageViewerZoomState = true;
+      img.style.maxWidth = 'none';
+      img.style.width = '100%';
+      img.style.cursor = 'zoom-out';
+    } else {
+      imageViewerZoomState = false;
+      img.style.maxWidth = 'min(900px, 95vw)';
+      img.style.width = 'auto';
+      img.style.cursor = 'zoom-in';
+    }
+  }
+
+  // Handle Escape key for generic viewer
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeImageViewer();
+    }
+  });
+</script>
+
 <!-- Obec Line Viewer Modal -->
 <div id="obecViewer" onclick="if(event.target===this) closeObecViewer()">
   <button id="obecViewerClose" onclick="closeObecViewer()" title="ปิด">✕</button>
@@ -4583,6 +5078,26 @@
     </div>
   </div>
 </div>
+
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script>
+  // Initialize AOS (Animate On Scroll)
+  document.addEventListener("DOMContentLoaded", function() {
+    AOS.init({
+      duration: 800,
+      easing: 'ease-out-cubic',
+      once: true,
+      offset: 50,
+    });
+  });
+
+  // Re-initialize AOS when dynamic content is loaded (e.g., hash changes)
+  window.addEventListener('hashchange', function() {
+    setTimeout(function() {
+      AOS.refresh();
+    }, 100);
+  });
+</script>
 
 </body>
 </html>

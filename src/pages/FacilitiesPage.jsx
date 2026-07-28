@@ -172,43 +172,43 @@ export default function FacilitiesPage() {
         <div className="card-header">
           <span className="card-title">คำขอจัดสถานที่ ({requests.length} รายการ)</span>
         </div>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive">
           <table className="simple-table">
             <thead>
               <tr>
-                <th>#</th>
+                <th style={{ width: 50 }}>#</th>
                 <th>กิจกรรม</th>
                 <th>ผู้ขอ</th>
                 <th>วันที่</th>
                 <th>เวลา</th>
-                <th>เก้าอี้</th>
-                <th>โต๊ะ</th>
+                <th style={{ textAlign: 'center' }}>เก้าอี้</th>
+                <th style={{ textAlign: 'center' }}>โต๊ะ</th>
                 <th>อื่นๆ</th>
-                <th>สถานะ</th>
-                <th>จัดการ</th>
+                <th style={{ textAlign: 'center' }}>สถานะ</th>
+                <th style={{ textAlign: 'right' }}>จัดการ</th>
               </tr>
             </thead>
             <tbody>
               {requests.map((r, i) => (
                 <tr key={r.id}>
-                  <td style={{ color: '#9e9e9e', fontSize: 12 }}>{i + 1}</td>
-                  <td style={{ fontWeight: 600, fontSize: 13 }}>{r.title}</td>
-                  <td style={{ fontSize: 13 }}>{r.requester}</td>
-                  <td style={{ fontSize: 12 }}>{new Date(r.eventDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}</td>
-                  <td style={{ fontSize: 12 }}>{r.time}</td>
-                  <td style={{ textAlign: 'center' }}>{r.chairs}</td>
-                  <td style={{ textAlign: 'center' }}>{r.tables}</td>
-                  <td style={{ fontSize: 12, color: '#757575' }}>{r.other || '–'}</td>
-                  <td>
-                    <span className={`badge ${r.status === 'approved' ? 'badge-green' : 'badge-yellow'}`} style={{ fontSize: 11 }}>
-                      {r.status === 'approved' ? '✅ อนุมัติ' : '⏳ รอดำเนินการ'}
+                  <td style={{ color: '#94a3b8', fontWeight: 500 }}>{i + 1}</td>
+                  <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{r.title}</td>
+                  <td style={{ fontWeight: 500 }}>{r.requester}</td>
+                  <td>{new Date(r.eventDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}</td>
+                  <td style={{ color: '#64748b' }}>{r.time}</td>
+                  <td style={{ textAlign: 'center', fontWeight: 600 }}>{r.chairs}</td>
+                  <td style={{ textAlign: 'center', fontWeight: 600 }}>{r.tables}</td>
+                  <td style={{ color: '#64748b' }}>{r.other || '–'}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <span className={`badge ${r.status === 'approved' ? 'badge-green' : 'badge-yellow'}`}>
+                      {r.status === 'approved' ? '✅ อนุมัติ' : '⏳ รอตรวจ'}
                     </span>
                   </td>
-                  <td>
+                  <td style={{ textAlign: 'right' }}>
                     {r.status === 'pending' && (
-                      <div style={{ display: 'flex', gap: 5 }}>
-                        <button onClick={() => changeStatus(r.id, 'approved')} className="btn btn-success btn-sm" style={{ fontSize: 11 }}>✓ รับงาน</button>
-                        <button onClick={() => handleDeleteRequest(r.id)} className="btn btn-danger btn-sm"><X size={12} /></button>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button onClick={() => changeStatus(r.id, 'approved')} className="btn btn-success btn-sm">✓ รับงาน</button>
+                        <button onClick={() => handleDeleteRequest(r.id)} className="btn btn-danger btn-sm" title="ลบคำขอ"><X size={14} /></button>
                       </div>
                     )}
                   </td>

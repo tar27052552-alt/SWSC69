@@ -32,7 +32,7 @@ export default function SecretaryPage() {
 
   // Forms
   const [meetingForm, setMeetingForm] = useState({ title: '', date: '', time: '12:30', location: 'ห้องสภานักเรียน', file: null, fileName: '', fileBase64: '' });
-  const [docForm, setDocForm] = useState({ title: '', category: 'วาระการประชุม', file: null, fileName: '', fileBase64: '' });
+  const [docForm, setDocForm] = useState({ title: '', category: 'วาระการประชุม', customCategory: '', file: null, fileName: '', fileBase64: '' });
 
   const loadSecData = async () => {
     try {
@@ -194,9 +194,11 @@ export default function SecretaryPage() {
       
       // 2. Write metadata to Google Sheet
       if (uploadResult && uploadResult.url) {
+        const finalCategory = docForm.category === 'อื่นๆ' && docForm.customCategory ? docForm.customCategory : docForm.category;
+
         const docMeta = {
           title: docForm.title || file.name,
-          category: docForm.category || 'อื่นๆ',
+          category: finalCategory || 'อื่นๆ',
           type: ['PDF', 'DOCX', 'XLSX', 'PNG', 'JPG', 'PDF'].includes(fileExt) ? fileExt : 'default',
           size: fileSizeStr,
           uploaded_by: user?.name || user?.nickname || 'เลขานุการ',
@@ -218,7 +220,7 @@ export default function SecretaryPage() {
           }, ...prev]);
           
           setDocModal(false);
-          setDocForm({ title: '', category: 'วาระการประชุม', file: null, fileName: '', fileBase64: '' });
+          setDocForm({ title: '', category: 'วาระการประชุม', customCategory: '', file: null, fileName: '', fileBase64: '' });
           alert("อัปโหลดเอกสารฝ่ายเลขานุการสำเร็จ!");
 
           // Notify Discord (general channel)
@@ -248,7 +250,7 @@ export default function SecretaryPage() {
     if (!window.confirm('คุณแน่ใจหรือไม่ที่จะลบวาระการประชุมนี้?')) return;
     try {
       const res = await deleteSheet('Secretary_Meetings', id);
-      if (res && res.success) {
+      if (res && res.deleted) {
         setMeetings(prev => prev.filter(m => m.id !== id));
         alert('ลบข้อมูลสำเร็จ');
       } else {
@@ -264,7 +266,7 @@ export default function SecretaryPage() {
     if (!window.confirm('คุณแน่ใจหรือไม่ที่จะลบเอกสารนี้?')) return;
     try {
       const res = await deleteSheet('Secretary_Docs', id);
-      if (res && res.success) {
+      if (res && res.deleted) {
         setDocs(prev => prev.filter(d => d.id !== id));
         alert('ลบข้อมูลสำเร็จ');
       } else {
@@ -641,10 +643,25 @@ export default function SecretaryPage() {
               <div>
                 <label className="form-label">หมวดหมู่เอกสาร *</label>
                 <select className="input-field" value={docForm.category} onChange={e => setDocForm(p => ({ ...p, category: e.target.value }))}>
-                  <option value="วาระการประชุม">📑 วาระการประชุม</option>
-                  <option value="สรุปการประชุม">📝 สรุปการประชุม</option>
-                  <option value="อื่นๆ">📁 อื่นๆ</option>
+                  {[...new Set([
+                    "วาระการประชุม",
+                    "สรุปการประชุม",
+                    ...docs.map(d => d.category || '').filter(c => c && c !== 'อื่นๆ')
+                  ])].map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                  <option value="อื่นๆ">➕ อื่นๆ (เพิ่มหมวดหมู่ใหม่)</option>
                 </select>
+                {docForm.category === 'อื่นๆ' && (
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    placeholder="ระบุหมวดหมู่ใหม่..." 
+                    style={{ marginTop: 8 }}
+                    value={docForm.customCategory} 
+                    onChange={e => setDocForm(p => ({ ...p, customCategory: e.target.value }))} 
+                  />
+                )}
               </div>
               
               <div>

@@ -9,7 +9,7 @@ export default function ManageVideosPage() {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ title: '', video_url: '', description: '' });
+  const [form, setForm] = useState({ title: '', video_url: '', cover_url: '', description: '', video_date: new Date().toISOString().split('T')[0] });
   const [editingId, setEditingId] = useState(null);
 
   const loadVideos = async () => {
@@ -39,12 +39,26 @@ export default function ManageVideosPage() {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  const getThumbnailUrl = (url) => {
+  const getThumbnailUrl = (rawUrl) => {
+    if (!rawUrl) return '';
+    const parts = rawUrl.split('||');
+    const url = parts[0];
+    const cover = parts.length > 1 ? parts[1] : null;
+    
+    if (cover) {
+        let match = cover.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+        if (!match) match = cover.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+            return `https://wsrv.nl/?url=${encodeURIComponent('https://drive.google.com/uc?export=view&id=' + match[1])}`;
+        }
+        return cover;
+    }
+
     const ytId = getYouTubeId(url);
     if (ytId) {
       return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
     }
-    return ''; // Return empty so it falls back to a placeholder
+    return '';
   };
 
   const toBase64 = (file) => new Promise((resolve, reject) => {
@@ -53,6 +67,36 @@ export default function ManageVideosPage() {
     reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
   });
+
+  
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert('ไฟล์รูปภาพมีขนาดใหญ่เกินไป (จำกัด 10MB)');
+      e.target.value = '';
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const base64 = await toBase64(file);
+      const fileExt = file.name.split('.').pop();
+      const cleanTitle = (form.title.trim() || 'video-cover').replace(/[/\\?%*:|"<>]/g, '-');
+      const fileName = `${Date.now()}-${cleanTitle}-cover.${fileExt}`;
+      alert('กำลังอัปโหลดรูปหน้าปก...');
+      const result = await uploadFileToDrive(base64, fileName, 'pr');
+      if (!result?.url) throw new Error('อัปโหลดรูปล้มเหลว');
+      setForm(prev => ({ ...prev, cover_url: result.url }));
+      alert('อัปโหลดหน้าปกสำเร็จ!');
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+    } finally {
+      setSubmitting(false);
+      e.target.value = '';
+    }
+  };
 
   const handleVideoUpload = async (e) => {
     const file = e.target.files[0];
@@ -104,9 +148,12 @@ export default function ManageVideosPage() {
     try {
       const data = {
         title: form.title.trim(),
-        video_url: form.video_url.trim(),
+        video_url: form.cover_url && form.cover_url.trim() ? `${form.video_url.trim()}||${form.cover_url.trim()}` : form.video_url.trim(),
         description: form.description.trim(),
       };
+      if (form.video_date) {
+        data.created_at = new Date(form.video_date).toISOString();
+      }
 
       if (editingId) {
         const { error } = await supabase
@@ -123,7 +170,7 @@ export default function ManageVideosPage() {
         alert('เพิ่มวิดีโอสำเร็จ!');
       }
 
-      setForm({ title: '', video_url: '', description: '' });
+      setForm({ title: '', video_url: '', cover_url: '', description: '', video_date: new Date().toISOString().split('T')[0] });
       setEditingId(null);
       loadVideos();
     } catch (err) {
@@ -151,10 +198,13 @@ export default function ManageVideosPage() {
 
   const handleEdit = (video) => {
     setEditingId(video.id);
+    const urls = (video.video_url || '').split('||');
     setForm({
       title: video.title || '',
-      video_url: video.video_url || '',
+      video_url: urls[0] || '',
+      cover_url: urls[1] || '',
       description: video.description || '',
+      video_date: video.created_at ? video.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -174,7 +224,7 @@ export default function ManageVideosPage() {
           {editingId && (
             <button
               style={{ fontSize: 12, padding: '4px 12px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-              onClick={() => { setEditingId(null); setForm({ title: '', video_url: '', description: '' }); }}
+              onClick={() => { setEditingId(null); setForm({ title: '', video_url: '', cover_url: '', description: '', video_date: new Date().toISOString().split('T')[0] }); }}
             >
               <X size={14} /> ยกเลิกการแก้ไข
             </button>
@@ -190,6 +240,16 @@ export default function ManageVideosPage() {
                 placeholder="เช่น วิดีโอสรุปกิจกรรมค่ายสภา, วันสถาปนาโรงเรียน"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>วันที่วิดีโอ/กิจกรรม <span style={{ color: '#ef4444' }}>*</span></label>
+              <input
+                type="date"
+                className="form-ctrl"
+                value={form.video_date}
+                onChange={(e) => setForm({ ...form, video_date: e.target.value })}
                 required
               />
             </div>
@@ -222,6 +282,30 @@ export default function ManageVideosPage() {
                 ⚠️ ข้อจำกัด: ขนาดไฟล์ต้องไม่เกิน 50MB (หากใหญ่กว่านี้ แนะนำให้อัปโหลดเข้า Google Drive โดยตรงแล้วนำลิงก์แชร์มาวางในช่องลิงก์วิดีโอด้านบนแทน)
               </span>
             </div>
+
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>รูปหน้าปกวิดีโอ (ตัวเลือก)</label>
+              <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                <input
+                  type="url"
+                  className="form-ctrl"
+                  placeholder="วางลิงก์รูปภาพ หรืออัปโหลดไฟล์ด้านล่าง..."
+                  value={form.cover_url}
+                  onChange={(e) => setForm({ ...form, cover_url: e.target.value })}
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="form-ctrl"
+                  onChange={handleCoverUpload}
+                  disabled={submitting}
+                />
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 4, display: 'block' }}>
+                * หากเป็นวิดีโอ Google Drive ควรใส่หน้าปก เพื่อไม่ให้แสดงเป็นสีดำ
+              </span>
+            </div>
+
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>คำอธิบายเพิ่มเติม (ไม่บังคับ)</label>
               <textarea

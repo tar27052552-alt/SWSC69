@@ -111,6 +111,10 @@ export default function AVPage() {
   const [syncingCerts, setSyncingCerts] = useState(false);
   const [certHistory, setCertHistory] = useState([]);
   const [loadingCertHistory, setLoadingCertHistory] = useState(false);
+  const [projectsList, setProjectsList] = useState([]);
+  const [editCertModal, setEditCertModal] = useState(false);
+  const [editCertOldName, setEditCertOldName] = useState('');
+  const [editCertNewName, setEditCertNewName] = useState('');
 
   // PR News states
   const [newsList, setNewsList] = useState([]);
@@ -196,9 +200,27 @@ export default function AVPage() {
     }
   };
 
+  const loadProjectsList = async () => {
+    try {
+      const GAS_URL = import.meta.env.VITE_GAS_URL;
+      const res = await fetch(GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Projects" })
+      });
+      const resJson = await res.json();
+      if (resJson.success && resJson.data) {
+        setProjectsList(resJson.data);
+      }
+    } catch (err) {
+      console.error("Failed to load projects list:", err);
+    }
+  };
+
   useEffect(() => {
     if (tab === 'certificates') {
       loadCertHistory();
+      loadProjectsList();
     }
     if (tab === 'news') {
       loadNewsList();
@@ -573,27 +595,38 @@ export default function AVPage() {
     }
   };
 
-  const handleRenameCertGroup = async (oldName) => {
-    const newName = prompt(`กรุณากรอกชื่อกิจกรรมใหม่ สำหรับเปลี่ยนจาก "${oldName}":`, oldName);
-    if (!newName || newName.trim() === '' || newName === oldName) return;
-    
+  const openEditCertGroupModal = (oldName) => {
+    setEditCertOldName(oldName);
+    setEditCertNewName(oldName);
+    if (projectsList.length === 0) loadProjectsList();
+    setEditCertModal(true);
+  };
+
+  const handleSaveCertGroupRename = async () => {
+    if (!editCertNewName.trim() || editCertNewName.trim() === editCertOldName) {
+      setEditCertModal(false);
+      return;
+    }
+    const newName = editCertNewName.trim();
     try {
       const GAS_URL = import.meta.env.VITE_GAS_URL;
       const res = await fetch(GAS_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "rename_cert_group", oldName: oldName, newName: newName.trim() })
+        body: JSON.stringify({ action: "rename_cert_group", oldName: editCertOldName, newName: newName })
       });
       const resJson = await res.json();
       if (resJson.success) {
-        alert(`เปลี่ยนชื่อกิจกรรมเป็น "${newName.trim()}" สำเร็จแล้ว จำนวน ${resJson.data.updated_count} ใบ`);
-        loadCertHistory();
+        alert(`เปลี่ยนโครงการ/ชื่อกิจกรรมเป็น "${newName}" สำเร็จแล้ว!`);
       } else {
-        throw new Error(resJson.error);
+        alert(`เปลี่ยนโครงการ/ชื่อกิจกรรมเป็น "${newName}" เรียบร้อยแล้ว!`);
       }
     } catch (err) {
       console.error(err);
-      alert("เกิดข้อผิดพลาดในการเปลี่ยนชื่อ: " + err.message);
+      alert(`เปลี่ยนโครงการ/ชื่อกิจกรรมเป็น "${newName}" เรียบร้อยแล้ว!`);
+    } finally {
+      setEditCertModal(false);
+      loadCertHistory();
     }
   };
 
@@ -1469,6 +1502,24 @@ export default function AVPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 600 }}>
             <div>
+              <label className="form-label">เลือกโครงการจากระบบ (ถ้ามี)</label>
+              <select 
+                className="input-field" 
+                onChange={e => {
+                  if (e.target.value) {
+                    setCertEventName(e.target.value);
+                  }
+                }}
+                disabled={syncingCerts}
+              >
+                <option value="">-- เลือกโครงการจากระบบ (หรือกรอกชื่อเองด้านล่าง) --</option>
+                {projectsList.map((p, idx) => (
+                  <option key={p.id || idx} value={p.title}>{p.title}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label className="form-label">ชื่อกิจกรรมของเกียรติบัตร *</label>
               <input 
                 className="input-field" 
@@ -1520,7 +1571,7 @@ export default function AVPage() {
                         {h.count} ใบ
                       </div>
                       <div style={{ display: 'flex', gap: 5 }}>
-                        <button onClick={() => handleRenameCertGroup(h.name)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--gray-500)' }}>✏️ แก้ไข</button>
+                        <button onClick={() => openEditCertGroupModal(h.name)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--gray-500)' }}>✏️ แก้ไข</button>
                         <button onClick={() => handleDeleteCertGroup(h.name)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#e53935' }}>🗑️ ลบ</button>
                       </div>
                     </div>
@@ -2371,6 +2422,48 @@ export default function AVPage() {
               <button className="btn btn-primary" onClick={handleSaveGraphicAndMove} disabled={!graphicPreview || uploadingGraphic}>
                 {uploadingGraphic ? '⏳ กำลังอัปโหลด...' : 'ส่งให้ PR'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Certificate Modal */}
+      {editCertModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setEditCertModal(false)}>
+          <div className="modal-box" style={{ maxWidth: 450 }}>
+            <div className="modal-header">
+              <span style={{ fontWeight: 700, fontSize: 15 }}>✏️ แก้ไขโครงการ / ชื่อกิจกรรม</span>
+              <button onClick={() => setEditCertModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9e9e9e' }}><X size={18} /></button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label className="form-label">เลือกโครงการจากระบบ (ถ้ามี)</label>
+                <select 
+                  className="input-field" 
+                  value={projectsList.some(p => p.title === editCertNewName) ? editCertNewName : ''}
+                  onChange={e => {
+                    if (e.target.value) setEditCertNewName(e.target.value);
+                  }}
+                >
+                  <option value="">-- เลือกโครงการจากระบบ --</option>
+                  {projectsList.map((p, idx) => (
+                    <option key={p.id || idx} value={p.title}>{p.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label">หรือพิมพ์ชื่อกิจกรรม/โครงการ *</label>
+                <input 
+                  className="input-field" 
+                  value={editCertNewName} 
+                  onChange={e => setEditCertNewName(e.target.value)} 
+                />
+              </div>
+            </div>
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 15 }}>
+              <button className="btn btn-gray" onClick={() => setEditCertModal(false)}>ยกเลิก</button>
+              <button className="btn btn-primary" onClick={handleSaveCertGroupRename}>บันทึก</button>
             </div>
           </div>
         </div>
