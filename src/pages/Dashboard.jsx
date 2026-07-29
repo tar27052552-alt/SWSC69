@@ -88,6 +88,9 @@ export default function Dashboard() {
   const [conflicts, setConflicts] = useState([]);
   const [conflictModal, setConflictModal] = useState(null);
   const [selectedSub, setSelectedSub] = useState('');
+  const [disabledDates, setDisabledDates] = useState([]);
+  const [substituteDates, setSubstituteDates] = useState([]);
+
 
   const handleSaveSwap = async () => {
     if (!selectedSub || !conflictModal) return;
@@ -532,6 +535,18 @@ export default function Dashboard() {
               ? JSON.parse(disabledDatesRow.value)
               : (disabledDatesRow.value || []);
           }
+          setDisabledDates(disabledDates);
+
+          // Load substitute dates (days marked as working replacements for holidays)
+          const substituteDatesRow = settingsData.find(d => d.key === 'substitute_dates');
+          if (substituteDatesRow) {
+            try {
+              const parsed = typeof substituteDatesRow.value === 'string'
+                ? JSON.parse(substituteDatesRow.value)
+                : (substituteDatesRow.value || []);
+              setSubstituteDates(Array.isArray(parsed) ? parsed : []);
+            } catch (e) { setSubstituteDates([]); }
+          }
           const historyRow = settingsData.find(d => d.key === 'schedules_history');
           if (historyRow?.value) {
             try {
@@ -709,26 +724,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Duty Conflict Alerts */}
-      {conflicts.length > 0 && conflicts.map(c => (
-        <div key={`${c.date}-${c.dutyType}`} style={{ background: 'linear-gradient(to right, #fff3e0, #ffe0b2)', borderRadius: 8, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #ffcc80' }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#e65100', display: 'flex', alignItems: 'center', gap: 6 }}>
-              ⚠️ ตารางงานทับซ้อน (เวรทับซ้อนกิจกรรมภายนอก)
-            </div>
-            <div style={{ fontSize: 13, color: '#e65100', marginTop: 4 }}>
-              {c.originalNickname === user?.nickname ? (
-                <span>คุณมีหน้าที่ <strong>{c.dutyLabel}</strong></span>
-              ) : (
-                <span><strong>{c.originalNickname} ({c.userFullName})</strong> มีหน้าที่ <strong>{c.dutyLabel}</strong></span>
-              )} ในวันที่ <strong>{new Date(c.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })} ({c.dayName})</strong> ซึ่งตรงกับวันที่เดินทางไปกิจกรรม <strong>{c.eventTitle}</strong> นอกสถานที่
-            </div>
-          </div>
-          <button className="btn btn-warning" onClick={() => { setConflictModal(c); setSelectedSub(''); }} style={{ background: '#e65100', border: 'none', color: 'white', cursor: 'pointer', padding: '8px 16px', borderRadius: 6, fontWeight: 600 }}>
-            🔄 สลับเปลี่ยนเวร
-          </button>
-        </div>
-      ))}
+
+
 
       {/* Check-in Banner */}
       {!checkInActive ? (
@@ -952,29 +949,38 @@ export default function Dashboard() {
             {unread.length > 0 && <span className="badge badge-red">{unread.length} ใหม่</span>}
           </div>
           <div>
-            {notifications.map((n, i) => (
-              <div key={n.id} 
-                onClick={() => handleNotificationClick(n)}
-                onMouseEnter={e => e.currentTarget.style.background = n.read ? '#f9f9fb' : 'rgba(0,188,212,0.06)'}
-                onMouseLeave={e => e.currentTarget.style.background = n.read ? 'white' : '#f3f4ff'}
-                style={{
-                  display: 'flex', gap: 12, padding: '10px 16px',
-                  borderBottom: i < notifications.length - 1 ? '1px solid #f0f0f0' : 'none',
-                  background: n.read ? 'white' : '#f3f4ff',
-                  cursor: 'pointer',
-                  transition: 'background 0.15s'
-                }}
-              >
-                <span style={{ fontSize: 16, flexShrink: 0 }}>
-                  {n.type === 'fine' ? '💸' : n.type === 'task' ? '📋' : n.type === 'event' ? '📅' : n.type === 'announcement' ? '📢' : '🔔'}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, lineHeight: 1.5 }}>{n.message}</div>
-                  <div style={{ fontSize: 11, color: '#9e9e9e', marginTop: 2 }}>{n.created_at ? formatRelativeTime(n.created_at) : n.time}</div>
-                </div>
-                {!n.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#00bcd4', flexShrink: 0, marginTop: 4 }} />}
+            {notifications.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: 13 }}>
+                📭 ไม่มีรายการแจ้งเตือนในขณะนี้
               </div>
-            ))}
+            ) : (
+              notifications.slice(0, 5).map((n, i) => {
+                const isLast = i === Math.min(notifications.length, 5) - 1;
+                return (
+                  <div key={n.id} 
+                    onClick={() => handleNotificationClick(n)}
+                    onMouseEnter={e => e.currentTarget.style.background = n.read ? '#f9f9fb' : 'rgba(99,102,241,0.06)'}
+                    onMouseLeave={e => e.currentTarget.style.background = n.read ? 'white' : '#f3f4ff'}
+                    style={{
+                      display: 'flex', gap: 12, padding: '12px 16px',
+                      borderBottom: isLast ? 'none' : '1px solid #f0f0f0',
+                      background: n.read ? 'white' : '#f3f4ff',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s'
+                    }}
+                  >
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>
+                      {n.type === 'fine' ? '💸' : n.type === 'task' ? '📋' : n.type === 'event' ? '📅' : n.type === 'announcement' ? '📢' : '🔔'}
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--text)' }}>{n.message}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>{n.created_at ? formatRelativeTime(n.created_at) : n.time}</div>
+                    </div>
+                    {!n.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, marginTop: 4 }} />}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -996,48 +1002,80 @@ export default function Dashboard() {
         </div>
 
         {/* Calendar */}
-        <div className="card">
-          <div style={{ padding:'12px 16px', borderBottom:'1px solid #f0f0f0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <button className="btn btn-gray btn-sm" onClick={prevMonth}>← ก่อนหน้า</button>
-            <span style={{ fontWeight:700, fontSize:15, color:'#00bcd4' }}>
-              {MONTHS[mo]} {yr + 543}
+        <div className="card" style={{ borderRadius: 16, overflow: 'hidden' }}>
+          <div style={{ padding:'12px 16px', borderBottom:'1px solid #f0f0f0', display:'flex', justifyContent:'space-between', alignItems:'center', background: '#f8fafc' }}>
+            <button className="btn btn-gray btn-sm" onClick={prevMonth} style={{ borderRadius: 8 }}>← เดือนก่อน</button>
+            <span style={{ fontWeight: 800, fontSize: 15, color: '#00838f' }}>
+              📅 ปฏิทินกิจกรรม — {MONTHS[mo]} {yr + 543}
             </span>
-            <button className="btn btn-gray btn-sm" onClick={nextMonth}>ถัดไป →</button>
+            <button className="btn btn-gray btn-sm" onClick={nextMonth} style={{ borderRadius: 8 }}>เดือนถัดไป →</button>
           </div>
           <div style={{ padding:'12px' }}>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', marginBottom:6 }}>
-              {DAYS_TH.map(d => (
-                <div key={d} style={{ textAlign:'center', fontSize:12, fontWeight:700, color:'#9e9e9e', padding:'4px 0' }}>{d}</div>
+              {DAYS_TH.map((d, idx) => (
+                <div key={d} style={{ textAlign:'center', fontSize:12, fontWeight:700, color: idx === 0 ? '#ef4444' : '#64748b', padding:'4px 0' }}>{d}</div>
               ))}
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2 }}>
-              {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`}/>)}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, background: '#f0f0f0', border: '1px solid #e0e0e0', borderRadius: 10, overflow: 'hidden' }}>
+              {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`} style={{ minHeight: 64, background: '#fafafa' }} />)}
               {Array.from({length:daysInMonth}).map((_,i)=>{
                 const day = i+1;
+                const col = (firstDay + i) % 7;
                 const evs = getEvents(day);
                 const ds  = `${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
                 const isToday = ds === todayStr;
                 const isSel   = sel === day;
+                const isHoliday = disabledDates.includes(ds);
+                const substitute = substituteDates.find(s => s.date === ds);
                 return (
                   <div key={day} onClick={()=>setSel(day)} style={{
-                    minHeight:52, padding:'4px', borderRadius:4, cursor:'pointer',
-                    border:`1px solid ${isSel?'#00bcd4': isToday?'#80deea':'#f0f0f0'}`,
-                    background: isSel?'#e0f7fa': isToday?'#f3f4ff':'white',
+                    minHeight: 64, padding: '4px 2px', cursor: 'pointer',
+                    background: isSel ? '#f3e8ff' : isToday ? '#f0fdf4' : isHoliday ? '#fff5f5' : substitute ? '#e0f7fa' : 'white',
+                    overflow: 'hidden', display: 'flex', flexDirection: 'column'
                   }}>
-                    <div style={{
-                      fontSize:12, fontWeight: isToday?700:400,
-                      width:22, height:22, borderRadius:'50%',
-                      background: isToday?'#00bcd4':'transparent',
-                      color: isToday?'white':'#212121',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                    }}>{day}</div>
-                    <div style={{ display:'flex', flexDirection:'column', gap:1, marginTop:2 }}>
-                      {evs.slice(0,2).map(ev=>(
-                        <div key={ev.id} style={{ fontSize:10, background: ev.color+'22', color: ev.color, borderRadius:2, padding:'1px 4px', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-                          {ev.title}
-                        </div>
-                      ))}
-                      {evs.length>2 && <div style={{fontSize:10,color:'#9e9e9e'}}>+{evs.length-2}</div>}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                      <div style={{
+                        fontSize: 11, fontWeight: isToday ? 800 : 700,
+                        width: 20, height: 20, borderRadius: '50%',
+                        background: isToday ? '#00bcd4' : 'transparent',
+                        color: isToday ? 'white' : col === 0 ? '#ef4444' : '#212121',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>{day}</div>
+                      {isHoliday && <span style={{ fontSize: 9, color: '#dc2626', fontWeight: 700 }}>🚫</span>}
+                      {substitute && <span style={{ fontSize: 9, color: '#00838f', fontWeight: 700 }}>🔄</span>}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2 }}>
+                      {evs.slice(0, 2).map(ev => {
+                        const isStart = (ev.date === ds) || (col === 0);
+                        const endDate = ev.end_date || ev.date;
+                        const isEnd = (endDate === ds) || (col === 6);
+                        const barBg = ev.type === 'meeting' ? '#e8eaf6' : ev.type === 'deadline' ? '#fff9c4' : '#ebdcf9';
+                        const barTextColor = ev.type === 'meeting' ? '#283593' : ev.type === 'deadline' ? '#f57f17' : '#6a1b9a';
+
+                        return (
+                          <div
+                            key={ev.id}
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 600,
+                              background: barBg,
+                              color: barTextColor,
+                              padding: '1px 4px',
+                              borderRadius: isStart && isEnd ? 4 : isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : 0,
+                              marginLeft: isStart ? 1 : -1,
+                              marginRight: isEnd ? 1 : -1,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                            title={ev.title}
+                          >
+                            {isStart || col === 0 ? ev.title : '\u00A0'}
+                          </div>
+                        );
+                      })}
+                      {evs.length > 2 && <div style={{ fontSize: 9, color: '#7e57c2', fontWeight: 700, paddingLeft: 2 }}>+{evs.length - 2}</div>}
                     </div>
                   </div>
                 );

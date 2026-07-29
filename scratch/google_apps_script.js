@@ -277,20 +277,29 @@ function uploadFileToDrive(fileBase64, fileName, folderCategory, subFolderName) 
 // ตารางและหัวตารางเริ่มต้น สำหรับระบบ Google Sheets
 const SHEET_SCHEMAS = {
   "Secretary_Meetings": ["id", "title", "date", "time", "location", "agenda", "resolutions", "attendees", "absent", "status", "created_at"],
-  "Secretary_Docs": ["id", "title", "type", "size", "uploaded_by", "date", "file_url", "created_at"],
+  "Secretary_Docs": ["id", "title", "type", "size", "uploaded_by", "date", "file_url", "created_at", "category"],
   "Academic_Projects": ["id", "title", "category", "owner", "budget", "due_date", "status", "description", "created_at"],
-  "Academic_Docs": ["id", "title", "type", "size", "uploaded_by", "date", "file_url", "created_at"]
+  "Academic_Docs": ["id", "title", "type", "size", "uploaded_by", "date", "file_url", "created_at", "category"]
 };
 
 function getSheetAndInit(sheetName) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(sheetName);
+  var expectedHeaders = SHEET_SCHEMAS[sheetName];
   
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
-    var headers = SHEET_SCHEMAS[sheetName];
-    if (headers) {
-      sheet.appendRow(headers);
+    if (expectedHeaders) {
+      sheet.appendRow(expectedHeaders);
+    }
+  } else if (expectedHeaders) {
+    var lastCol = sheet.getLastColumn();
+    if (lastCol < expectedHeaders.length) {
+      // มีคอลัมน์ใหม่ที่ยังไม่ได้เพิ่มลงใน Google Sheet
+      var existingHeaders = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+      for (var i = existingHeaders.length; i < expectedHeaders.length; i++) {
+        sheet.getRange(1, i + 1).setValue(expectedHeaders[i]);
+      }
     }
   }
   return sheet;
@@ -402,6 +411,25 @@ function deleteSheetRow(sheetName, id) {
     throw new Error("Row not found with ID: " + id);
   }
   
+  // ลบไฟล์ใน Google Drive ทิ้งด้วย ถ้ามี (เฉพาะสำหรับตารางที่มีฟิลด์ file_url)
+  try {
+    var headers = SHEET_SCHEMAS[sheetName] || [];
+    var urlColIndex = headers.indexOf("file_url");
+    if (urlColIndex !== -1) {
+      var fileUrl = sheet.getRange(targetRowIndex, urlColIndex + 1).getValue();
+      if (fileUrl) {
+        var fileIdMatch = fileUrl.match(/id=([a-zA-Z0-9_-]+)/) || fileUrl.match(/d\/([a-zA-Z0-9_-]+)/);
+        if (fileIdMatch) {
+          var fileId = fileIdMatch[1];
+          DriveApp.getFileById(fileId).setTrashed(true);
+        }
+      }
+    }
+  } catch (e) {
+    // ข้ามไปถ้าลบไม่สำเร็จ (เช่น ไฟล์ถูกลบไปแล้ว หรือไม่มีสิทธิ)
+    console.error("Failed to delete drive file: " + e.message);
+  }
+
   sheet.deleteRow(targetRowIndex);
   return { id: id, deleted: true };
 }

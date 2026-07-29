@@ -12,6 +12,13 @@
   <title>SWSC.OFFICIAL | คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม</title>
   <meta name="description" content="SWSC.OFFICIAL — คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม อำเภอแม่สอด จังหวัดตาก" />
   <link rel="icon" href="./logo.png" type="image/png" />
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#00bcd4" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="สภา SWSC" />
+  <link rel="apple-touch-icon" href="./logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -307,13 +314,40 @@
     .nav-burger {
       display: none;
       flex-direction: column;
+      justify-content: center;
+      align-items: center;
       gap: 5px;
-      background: none;
+      background: transparent;
       border: none;
+      box-shadow: none;
       cursor: pointer;
-      padding: 4px;
+      padding: 6px;
+      transition: opacity 0.2s ease;
     }
-    .nav-burger span { display: block; width: 22px; height: 2px; background: #fff; border-radius: 2px; }
+    .nav-burger span {
+      display: block;
+      width: 24px;
+      height: 2.5px;
+      background: #334155;
+      border-radius: 3px;
+      transition: all 0.25s ease;
+    }
+    .nav-burger:hover span, .nav-burger:active span {
+      background: #00838f;
+    }
+
+    @media (max-width: 960px) {
+      nav {
+        padding: 0 16px !important;
+      }
+      .nav-menu {
+        display: none !important;
+      }
+      .nav-burger {
+        display: flex !important;
+      }
+    }
+
     .mobile-menu {
       display: none;
       position: fixed;
@@ -1380,18 +1414,19 @@
       margin-left: 4px;
     }
     .cal-wrap {
-      overflow-x: auto;
+      overflow-x: hidden;
       max-width: 100%;
       width: 100%;
       display: block;
-      -webkit-overflow-scrolling: touch;
+      box-sizing: border-box;
     }
     .cal-head-row {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       background: var(--gray-50);
       border-bottom: 1px solid var(--gray-200);
-      min-width: 560px;
+      width: 100%;
+      box-sizing: border-box;
     }
     .cal-hday {
       padding: 10px 0;
@@ -1404,70 +1439,164 @@
     }
     .cal-grid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      grid-auto-rows: 120px;
-      border-left: 1px solid var(--gray-200);
-      min-width: 560px;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 6px;
+      padding: 6px 0;
+      width: 100%;
+      box-sizing: border-box;
     }
     .cal-cell {
-      padding: 6px 6px 4px;
-      border-right: 1px solid var(--gray-200);
-      border-bottom: 1px solid var(--gray-200);
+      min-height: 125px;
+      padding: 8px 6px 6px 6px;
+      background: #ffffff;
+      border: 1px solid #f1f5f9;
+      border-radius: 14px;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 4px;
       cursor: pointer;
-      transition: background .15s;
-      overflow: hidden;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
     }
-    .cal-cell:hover { background: #faf5ff; }
-    .cal-cell.day-selected .cal-num:not(.cal-num-today) {
-      background: rgba(8, 145, 178, 0.15);
-      color: var(--primary);
+    .cal-cell:hover {
+      background: #ffffff;
+      transform: translateY(-3px) scale(1.01);
+      box-shadow: 0 12px 28px rgba(124, 58, 237, 0.1);
+      border-color: rgba(168, 85, 247, 0.3);
+      z-index: 5;
     }
-    .cal-cell-other { background: var(--gray-50); }
-    .cal-cell-today { background: #faf5ff; }
+    .cal-cell-other {
+      background: #fafafa;
+      border-color: transparent;
+      opacity: 0.45;
+    }
+    .cal-cell-today {
+      background: linear-gradient(135deg, rgba(245, 243, 255, 0.8), rgba(238, 242, 255, 0.8));
+      border: 2px solid #a855f7;
+      box-shadow: 0 4px 16px rgba(168, 85, 247, 0.15);
+    }
     .cal-num {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       width: 26px; height: 26px;
-      font-size: 12.5px;
+      font-size: 13px;
       font-weight: 700;
-      color: var(--gray-700);
+      color: #1e293b;
       border-radius: 50%;
       flex-shrink: 0;
-      align-self: flex-start;
+      transition: all 0.2s ease;
     }
-    .cal-cell-other .cal-num { color: var(--gray-300); font-weight: 500; }
+    .cal-cell-other .cal-num { color: #94a3b8; font-weight: 500; }
     .cal-num-today {
-      background: #0891b2;
-      color: var(--white) !important;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: #ffffff !important;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
     }
     .cal-event-pill {
       font-size: 11px;
-      font-weight: 600;
-      color: var(--white);
-      padding: 2px 7px;
-      border-radius: 4px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
       cursor: pointer;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      transition: opacity .15s, filter .15s;
-      line-height: 1.6;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      line-height: 1.5;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
-    .cal-event-pill:hover, .cal-event-pill.ev-hover { opacity: 1; filter: brightness(0.9) contrast(1.2); }
-    .cal-event-pill.ev-active { box-shadow: 0 0 0 2px rgba(0,0,0,0.3) inset; filter: brightness(0.9) contrast(1.2); }
+    .cal-event-pill:hover, .cal-event-pill.ev-hover {
+      transform: scale(1.02);
+      filter: brightness(0.95);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
     .cal-more {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--gray-500);
-      padding: 1px 6px;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #7c3aed;
+      background: #f3e8ff;
+      padding: 2px 8px;
+      border-radius: 12px;
       cursor: pointer;
-      border-radius: 4px;
+      display: inline-block;
+      align-self: flex-start;
+      margin-top: 2px;
+      transition: all 0.2s;
     }
-    .cal-more:hover { background: var(--gray-200); color: var(--gray-700); }
+    .cal-more:hover {
+      background: #7c3aed;
+      color: #ffffff;
+    }
+
+    /* Responsive Mobile Phone Optimization for Calendar Grid */
+    @media (max-width: 640px) {
+      .cal-wrap {
+        padding: 6px 2px !important;
+        overflow-x: hidden !important;
+      }
+      .cal-head-row {
+        margin-bottom: 6px !important;
+        padding: 4px 0 !important;
+        grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+      }
+      .cal-grid {
+        gap: 2px !important;
+        padding: 2px 0 !important;
+        grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+      }
+      .cal-cell {
+        min-height: 58px !important;
+        padding: 3px 1px !important;
+        border-radius: 6px !important;
+        gap: 1px !important;
+      }
+      .cal-num {
+        width: 18px !important;
+        height: 18px !important;
+        font-size: 10px !important;
+      }
+      .cal-hday {
+        font-size: 10px !important;
+        padding: 2px 0 !important;
+      }
+      .cal-event-pill {
+        font-size: 8px !important;
+        padding: 0 2px !important;
+        border-radius: 3px !important;
+        height: 15px !important;
+        line-height: 1.3 !important;
+      }
+      .cal-toolbar {
+        padding: 10px 12px !important;
+      }
+      .cal-title {
+        font-size: 15px !important;
+      }
+      .cal-btn {
+        padding: 4px 10px !important;
+        font-size: 11px !important;
+      }
+      .cal-badge-txt {
+        display: none !important;
+      }
+      .cal-day-badge {
+        max-width: 18px !important;
+      }
+    }
+
+    .cal-day-badge {
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 55px;
+      display: inline-flex;
+      align-items: center;
+    }
 
     /* Calendar Popup (Centered Modal) */
     .cal-popup {
@@ -2392,17 +2521,25 @@
               <a href="#/events" class="block-more">ดูทั้งหมด →</a>
             </div>
             <div class="block-body" style="padding:0">
-              <div class="cal-toolbar" style="justify-content: space-between;">
-                <button class="cal-btn" onclick="calChangeMonth(-1)">← ก่อนหน้า</button>
-                <span class="cal-title" id="homeCalTitle" style="color: #0891b2; font-size: 18px;">ก.ค. 2569</span>
-                <button class="cal-btn" onclick="calChangeMonth(1)">ถัดไป →</button>
-              </div>
-              <div class="cal-wrap">
-                <div class="cal-head-row">
-                  <div class="cal-hday">อา.</div><div class="cal-hday">จ.</div><div class="cal-hday">อ.</div><div class="cal-hday">พ.</div><div class="cal-hday">พฤ.</div><div class="cal-hday">ศ.</div><div class="cal-hday">ส.</div>
+              <div style="border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 24px; overflow: hidden; background: #ffffff; box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.06), 0 0 1px rgba(0,0,0,0.08);">
+                <div class="cal-toolbar" style="display:flex; justify-content: space-between; align-items:center; padding: 18px 24px; background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); border-bottom: 1px solid #f1f5f9;">
+                  <button class="cal-btn" onclick="calChangeMonth(-1)" style="padding: 8px 18px; border-radius: 30px; border: 1px solid #e2e8f0; background: #ffffff; cursor: pointer; font-weight: 700; font-size: 13px; color: #475569; box-shadow: 0 2px 6px rgba(0,0,0,0.03); transition: all 0.25s ease;">‹ เดือนก่อน</button>
+                  <span class="cal-title" id="homeCalTitle" style="font-size: 20px; font-weight: 800; background: linear-gradient(135deg, #7c3aed, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.3px;">กรกฎาคม 2569</span>
+                  <button class="cal-btn" onclick="calChangeMonth(1)" style="padding: 8px 18px; border-radius: 30px; border: 1px solid #e2e8f0; background: #ffffff; cursor: pointer; font-weight: 700; font-size: 13px; color: #475569; box-shadow: 0 2px 6px rgba(0,0,0,0.03); transition: all 0.25s ease;">เดือนถัดไป ›</button>
                 </div>
-                <div class="cal-grid" id="homeCalGrid">
-                  <div class="loader" style="grid-column:1/-1"><div class="spin"></div><span>กำลังโหลดปฏิทิน...</span></div>
+                <div class="cal-wrap" style="padding: 16px;">
+                  <div class="cal-head-row" style="display:grid; grid-template-columns:repeat(7,1fr); padding: 10px 0; background: #fafafa; border-radius: 12px; margin-bottom: 10px; border: 1px solid #f1f5f9; text-align: center;">
+                    <div class="cal-hday" style="color:#ef4444; font-weight:800; font-size:13px; letter-spacing: 0.5px;">อา</div>
+                    <div class="cal-hday" style="color:#64748b; font-weight:700; font-size:13px; letter-spacing: 0.5px;">จ</div>
+                    <div class="cal-hday" style="color:#64748b; font-weight:700; font-size:13px; letter-spacing: 0.5px;">อ</div>
+                    <div class="cal-hday" style="color:#64748b; font-weight:700; font-size:13px; letter-spacing: 0.5px;">พ</div>
+                    <div class="cal-hday" style="color:#64748b; font-weight:700; font-size:13px; letter-spacing: 0.5px;">พฤ</div>
+                    <div class="cal-hday" style="color:#64748b; font-weight:700; font-size:13px; letter-spacing: 0.5px;">ศ</div>
+                    <div class="cal-hday" style="color:#64748b; font-weight:700; font-size:13px; letter-spacing: 0.5px;">ส</div>
+                  </div>
+                  <div class="cal-grid" id="homeCalGrid">
+                    <div class="loader" style="grid-column:1/-1"><div class="spin"></div><span>กำลังโหลดปฏิทิน...</span></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2447,27 +2584,28 @@
             <span class="block-head-title">📅 ปฏิทินกิจกรรม</span>
           </div>
           <div class="block-body" style="padding:0">
-
-            <!-- Calendar Toolbar -->
-            <div class="cal-toolbar" style="justify-content: space-between;">
-              <button class="cal-btn" onclick="calChangeMonth(-1)">← ก่อนหน้า</button>
-              <span class="cal-title" id="calTitle" style="color: #0891b2; font-size: 18px;">ก.ค. 2569</span>
-              <button class="cal-btn" onclick="calChangeMonth(1)">ถัดไป →</button>
-            </div>
-
-            <!-- Calendar Grid -->
-            <div class="cal-wrap">
-              <div class="cal-head-row">
-                <div class="cal-hday">อา.</div>
-                <div class="cal-hday">จ.</div>
-                <div class="cal-hday">อ.</div>
-                <div class="cal-hday">พ.</div>
-                <div class="cal-hday">พฤ.</div>
-                <div class="cal-hday">ศ.</div>
-                <div class="cal-hday">ส.</div>
+            <div style="border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 24px; overflow: hidden; background: #ffffff; box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.06), 0 0 1px rgba(0,0,0,0.08);">
+              <!-- Calendar Toolbar -->
+              <div class="cal-toolbar" style="display:flex; justify-content: space-between; align-items:center; padding: 18px 24px; background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); border-bottom: 1px solid #f1f5f9;">
+                <button class="cal-btn" onclick="calChangeMonth(-1)" style="padding: 8px 18px; border-radius: 30px; border: 1px solid #e2e8f0; background: #ffffff; cursor: pointer; font-weight: 700; font-size: 13px; color: #475569; box-shadow: 0 2px 6px rgba(0,0,0,0.03); transition: all 0.25s ease;">‹ เดือนก่อน</button>
+                <span class="cal-title" id="calTitle" style="font-size: 20px; font-weight: 800; background: linear-gradient(135deg, #7c3aed, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.3px;">กรกฎาคม 2569</span>
+                <button class="cal-btn" onclick="calChangeMonth(1)" style="padding: 8px 18px; border-radius: 30px; border: 1px solid #e2e8f0; background: #ffffff; cursor: pointer; font-weight: 700; font-size: 13px; color: #475569; box-shadow: 0 2px 6px rgba(0,0,0,0.03); transition: all 0.25s ease;">เดือนถัดไป ›</button>
               </div>
-              <div class="cal-grid" id="calGrid">
-                <div class="loader" style="grid-column:1/-1"><div class="spin"></div><span>กำลังโหลดปฏิทิน...</span></div>
+
+              <!-- Calendar Grid -->
+              <div class="cal-wrap" style="padding: 16px;">
+                <div class="cal-head-row" style="display:grid; grid-template-columns:repeat(7,1fr); padding: 10px 0; background: #fafafa; border-radius: 12px; margin-bottom: 10px; border: 1px solid #f1f5f9; text-align: center;">
+                  <div class="cal-hday" style="color:#ef4444; font-weight:800; font-size:13px; letter-spacing: 0.5px;">อา</div>
+                  <div class="cal-hday" style="color:#64748b; font-weight:700; font-size:13px; letter-spacing: 0.5px;">จ</div>
+                  <div class="cal-hday" style="color:#64748b; font-weight:700; font-size:13px; letter-spacing: 0.5px;">อ</div>
+                  <div class="cal-hday" style="color:#64748b; font-weight:700; font-size:13px; letter-spacing: 0.5px;">พ</div>
+                  <div class="cal-hday" style="color:#64748b; font-weight:700; font-size:13px; letter-spacing: 0.5px;">พฤ</div>
+                  <div class="cal-hday" style="color:#64748b; font-weight:700; font-size:13px; letter-spacing: 0.5px;">ศ</div>
+                  <div class="cal-hday" style="color:#64748b; font-weight:700; font-size:13px; letter-spacing: 0.5px;">ส</div>
+                </div>
+                <div class="cal-grid" id="calGrid">
+                  <div class="loader" style="grid-column:1/-1"><div class="spin"></div><span>กำลังโหลดปฏิทิน...</span></div>
+                </div>
               </div>
             </div>
           </div>
@@ -2483,24 +2621,52 @@
           <div class="block-body" style="padding:0">
             <div class="contact-grid">
               <a href="https://www.facebook.com/profile.php?id=100078807302585&locale=th_TH" target="_blank" class="contact-card">
-                <div class="contact-icon" style="background:#1877F2;color:white">f</div>
+                <div class="contact-icon-box" style="background:#1877F2;color:white;box-shadow:0 4px 12px rgba(24,119,242,0.3)">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12c0-5.523-4.477-10-10-10z"></path>
+                  </svg>
+                </div>
                 <div class="contact-info">
-                  <div class="contact-name">Facebook Page</div>
-                  <div class="contact-desc">สภานักเรียนโรงเรียนสรรพวิทยาคม</div>
+                  <div class="contact-lbl">Facebook Page</div>
+                  <div class="contact-val" style="font-size: 14px;">สภานักเรียนโรงเรียนสรรพวิทยาคม</div>
                 </div>
               </a>
               <a href="https://www.sappha.ac.th" target="_blank" class="contact-card">
-                <div class="contact-icon" style="background:var(--purple-600);color:white">🌐</div>
+                <div class="contact-icon-box" style="background:var(--purple-600);color:white;box-shadow:0 4px 12px rgba(124,58,237,0.3)">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                  </svg>
+                </div>
                 <div class="contact-info">
-                  <div class="contact-name">Website</div>
-                  <div class="contact-desc">www.sappha.ac.th</div>
+                  <div class="contact-lbl">Website</div>
+                  <div class="contact-val">www.sappha.ac.th</div>
                 </div>
               </a>
               <a href="mailto:swscsappha@sappha.ac.th" class="contact-card">
-                <div class="contact-icon" style="background:#ea4335;color:white">✉️</div>
+                <div class="contact-icon-box" style="background:#ea4335;color:white;box-shadow:0 4px 12px rgba(234,67,53,0.3)">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                  </svg>
+                </div>
                 <div class="contact-info">
-                  <div class="contact-name">Email</div>
-                  <div class="contact-desc">swscsappha@sappha.ac.th</div>
+                  <div class="contact-lbl">Email</div>
+                  <div class="contact-val">swscsappha@sappha.ac.th</div>
+                </div>
+              </a>
+              <a href="https://www.instagram.com/swsc.official/" target="_blank" class="contact-card">
+                <div class="contact-icon-box" style="background:linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);color:white;box-shadow:0 4px 12px rgba(220,39,67,0.3)">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                  </svg>
+                </div>
+                <div class="contact-info">
+                  <div class="contact-lbl">Instagram</div>
+                  <div class="contact-val">swsc.official</div>
                 </div>
               </a>
 
@@ -2637,7 +2803,7 @@
             <!-- Activity Management Structure Diagram (Newly Added) -->
             <div data-aos="fade-up" style="width: 100%; text-align: center;">
               <h3 style="font-size: 20px; color: #4c1d95; margin-bottom: 20px; font-weight: 700;">ผังโครงสร้างการบริหารงานกิจกรรม</h3>
-              <div style="position: relative; display: inline-block; width: 100%; max-width: 750px; margin: 0 auto; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid rgba(0,0,0,0.05);">
+              <div style="position: relative; display: inline-block; width: 100%; max-width: 900px; margin: 0 auto; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid rgba(0,0,0,0.05);">
                 <a href="#" onclick="event.preventDefault(); openImageViewer('./org-structure.jpg', 'โครงสร้างการบริหารงานกิจกรรมสภานักเรียน')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: block;">
                   <img src="./org-structure.jpg" alt="โครงสร้างการบริหารงานกิจกรรมสภานักเรียน" style="width: 100%; height: auto; display: block; image-rendering: high-quality; image-rendering: -webkit-optimize-contrast;" loading="lazy" />
                 </a>
@@ -2647,9 +2813,17 @@
             <hr style="border: 0; height: 1px; background: #e5e7eb; width: 80%; margin: 10px auto;">
 
 
+            <!-- Advisor Structure 2569 -->
+            <div style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
+              <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">ครูที่ปรึกษาคณะกรรมการสภานักเรียน ปีการศึกษา 2569</h3>
+              <a href="#" onclick="event.preventDefault(); openImageViewer('./advisor-structure-2569.png', 'โครงสร้างครูที่ปรึกษาคณะกรรมการสภานักเรียน ปีการศึกษา 2569')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
+                <img src="./advisor-structure-2569.png" alt="โครงสร้างครูที่ปรึกษาคณะกรรมการสภานักเรียน 2569" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
+              </a>
+            </div>
+
             <!-- Year 2569 -->
             <div id="structureImgContainer" style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
-              <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">คณะกรรมการนักเรียน ปีการศึกษา 2569</h3>
+              <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">คณะกรรมการสภานักเรียน ปีการศึกษา 2569</h3>
               <a href="#" onclick="event.preventDefault(); openImageViewer('./structure.png', 'โครงสร้างสภานักเรียน ปีการศึกษา 2569')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
                 <img id="structureImg" src="./structure.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน 2569" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
               </a>
@@ -2657,7 +2831,7 @@
 
             <!-- Year 2568 -->
             <div style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
-              <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">คณะกรรมการนักเรียน ปีการศึกษา 2568</h3>
+              <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">คณะกรรมการสภานักเรียน ปีการศึกษา 2568</h3>
               <a href="#" onclick="event.preventDefault(); openImageViewer('./structure-2568.png', 'โครงสร้างสภานักเรียน ปีการศึกษา 2568')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
                 <img src="./structure-2568.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน 2568" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
               </a>
@@ -2665,7 +2839,7 @@
 
             <!-- Year 2567 -->
             <div style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
-              <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">คณะกรรมการนักเรียน ปีการศึกษา 2567</h3>
+              <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">คณะกรรมการสภานักเรียน ปีการศึกษา 2567</h3>
               <a href="#" onclick="event.preventDefault(); openImageViewer('./structure-2567.png', 'โครงสร้างสภานักเรียน ปีการศึกษา 2567')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
                 <img src="./structure-2567.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน 2567" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
               </a>
@@ -2690,7 +2864,9 @@
             
             <!-- Image with Inner Shadow and Border Radius -->
             <div style="border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(0,0,0,0.05); background: #000;">
-              <img src="./sap-model.jpg" alt="SAP Model" style="width: 100%; height: auto; display: block; opacity: 0.95; image-rendering: high-quality; image-rendering: -webkit-optimize-contrast;" loading="lazy" />
+              <a href="#" onclick="event.preventDefault(); openImageViewer('./sap-model.png', 'การขับเคลื่อนกิจกรรมด้วย SAP Model')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: block;">
+                <img src="./sap-model.png" alt="SAP Model" style="width: 100%; height: auto; display: block; opacity: 0.95; image-rendering: high-quality; image-rendering: -webkit-optimize-contrast; transition: opacity 0.2s;" loading="lazy" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.95'" />
+              </a>
             </div>
             
           </div>
@@ -3020,149 +3196,81 @@
       if (category === 'เอกสารโครงการ') {
         let projectsData = cachedDocs.projects;
         if (!projectsData) {
-          const pRes = await fetch(GAS_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Projects" })
-          });
-          const pJson = await pRes.json();
-          if (pJson.success) {
-            projectsData = pJson.data;
+          try {
+            const pRes = await fetch(GAS_URL, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain;charset=utf-8" },
+              body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Projects" })
+            });
+            const pJson = await pRes.json();
+            projectsData = (pJson.success && Array.isArray(pJson.data)) ? pJson.data : [];
             cachedDocs.projects = projectsData;
-          } else {
-            throw new Error("Failed to load projects");
+          } catch {
+            projectsData = [];
           }
         }
 
-        const projectDocs = data.filter(d => (d.category || '').startsWith('[PROJ:'));
-        
+        const projectDocs = Array.isArray(data) ? data.filter(d => (d.category || '').startsWith('[PROJ:')) : [];
+
         window.renderProjectList = function() {
           title.innerHTML = 'เอกสารโครงการ';
-          if (projectsData.length === 0) {
-            body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);">ยังไม่มีโครงการในระบบ</div>';
-            return;
-          }
-          
-          const projectsHtml = projectsData.map((p, index) => {
-            const docCount = projectDocs.filter(d => d.category.startsWith(`[PROJ:${p.id}]`)).length;
-            if (docCount === 0) return '';
-            
-            return `
-              <div class="project-folder-card" data-aos="fade-up" data-aos-delay="${index * 30}" onclick="renderProjectDocs('${p.id}', '${p.title.replace(/'/g, "\\'")}')">
-                <div class="folder-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                </div>
-                <div class="folder-info">
-                  <div class="folder-title" title="${p.title}">${p.title}</div>
-                  <div class="folder-meta">${docCount} รายการ</div>
-                </div>
-                <div class="folder-arrow">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-                </div>
-              </div>
-            `;
-          }).filter(html => html !== '').join('');
 
-          if (projectsHtml === '') {
-            body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);">ยังไม่มีโครงการที่มีเอกสารในระบบ</div>';
-          } else {
+          // Case 1: We have projects from Academic_Projects sheet
+          if (Array.isArray(projectsData) && projectsData.length > 0) {
+            const projectsHtml = projectsData.map((p, index) => {
+              const pId = p.id || p.rowIndex || (index + 1);
+              const pTitle = p.title || p.name || 'โครงการไม่มีชื่อ';
+              const docCount = projectDocs.filter(d => (d.category || '').includes(`[PROJ:${pId}]`)).length;
+              const metaStyle = docCount > 0 ? 'color:#7c3aed; background:rgba(124,58,237,0.08);' : 'color:#94a3b8; background:#f8fafc;';
+              return `
+                <div class="project-folder-card" onclick="renderProjectDocs('${pId}', '${pTitle.replace(/'/g, "\\'")}')">
+                  <div class="folder-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                  </div>
+                  <div class="folder-info">
+                    <div class="folder-title" title="${pTitle}">${pTitle}</div>
+                    <div style="${metaStyle} display:inline-block; padding:2px 10px; border-radius:10px; font-size:11px; font-weight:700; margin-top:4px;">
+                      ${docCount > 0 ? `${docCount} รายการเอกสาร` : 'ยังไม่มีเอกสาร'}
+                    </div>
+                  </div>
+                  <div class="folder-arrow">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                  </div>
+                </div>`;
+            }).join('');
+
             body.innerHTML = `
               <style>
-                .project-grid {
-                  display: grid;
-                  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-                  gap: 16px;
-                  padding: 8px 0;
-                }
-                .project-folder-card {
-                  background: linear-gradient(145deg, #ffffff, #fcfbfe);
-                  border: 1px solid rgba(139, 92, 246, 0.15);
-                  border-radius: 12px;
-                  padding: 16px;
-                  display: flex;
-                  align-items: center;
-                  gap: 16px;
-                  cursor: pointer;
-                  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-                  position: relative;
-                  overflow: hidden;
-                }
-                .project-folder-card::before {
-                  content: '';
-                  position: absolute;
-                  top: 0; left: 0;
-                  width: 4px; height: 100%;
-                  background: linear-gradient(to bottom, var(--purple-400), var(--gold-400));
-                  opacity: 0;
-                  transition: opacity 0.3s ease;
-                }
-                .project-folder-card:hover {
-                  transform: translateY(-2px);
-                  box-shadow: 0 10px 20px -5px rgba(139, 92, 246, 0.12), 0 4px 6px -2px rgba(139, 92, 246, 0.05);
-                  border-color: rgba(139, 92, 246, 0.3);
-                  background: #ffffff;
-                }
-                .project-folder-card:hover::before {
-                  opacity: 1;
-                }
-                .folder-icon {
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  width: 48px;
-                  height: 48px;
-                  background: rgba(139, 92, 246, 0.06);
-                  color: var(--purple-600);
-                  border-radius: 10px;
-                  flex-shrink: 0;
-                  transition: all 0.3s;
-                }
-                .project-folder-card:hover .folder-icon {
-                  background: linear-gradient(135deg, var(--purple-600), var(--purple-400));
-                  color: white;
-                  transform: scale(1.05) rotate(-4deg);
-                  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-                }
-                .folder-info {
-                  flex: 1;
-                  min-width: 0;
-                }
-                .folder-title {
-                  font-weight: 600;
-                  font-size: 15px;
-                  color: var(--gray-800);
-                  white-space: nowrap;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  margin-bottom: 4px;
-                  transition: color 0.3s;
-                }
-                .project-folder-card:hover .folder-title {
-                  color: var(--purple-700);
-                }
-                .folder-meta {
-                  font-size: 13px;
-                  color: var(--gray-500);
-                  font-weight: 500;
-                }
-                .folder-arrow {
-                  color: var(--gray-300);
-                  transition: all 0.3s;
-                  display: flex;
-                  align-items: center;
-                }
-                .project-folder-card:hover .folder-arrow {
-                  color: var(--purple-500);
-                  transform: translateX(4px);
-                }
+                .project-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:14px; padding:4px 0; }
+                .project-folder-card { background:#fff; border:1px solid #ede9fe; border-radius:14px; padding:16px; display:flex; align-items:center; gap:14px; cursor:pointer; transition:all 0.25s; box-shadow:0 2px 8px rgba(124,58,237,0.04); }
+                .project-folder-card:hover { transform:translateY(-3px); box-shadow:0 12px 28px rgba(124,58,237,0.12); border-color:rgba(124,58,237,0.3); }
+                .folder-icon { display:flex; align-items:center; justify-content:center; width:44px; height:44px; background:rgba(124,58,237,0.08); color:#7c3aed; border-radius:10px; flex-shrink:0; }
+                .project-folder-card:hover .folder-icon { background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff; }
+                .folder-info { flex:1; min-width:0; }
+                .folder-title { font-weight:700; font-size:15px; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+                .project-folder-card:hover .folder-title { color:#7c3aed; }
+                .folder-arrow { color:#cbd5e1; display:flex; align-items:center; }
               </style>
-              <div class="project-grid">
-                ${projectsHtml}
-              </div>
-            `;
+              <div class="project-grid">${projectsHtml}</div>`;
+            return;
           }
+
+          // Case 2: No projects sheet — show docs directly if any exist
+          if (projectDocs.length > 0) {
+            const docsHtml = projectDocs.map(g => `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:16px; margin-bottom:12px; background:#fff; border:1px solid #e5e7eb; border-radius:12px;">
+                <div style="font-weight:700; color:#1f2937; font-size:14px;">${g.title}</div>
+                <a href="${g.file_url}" target="_blank" style="padding:8px 16px; background:#7c3aed; color:#fff; border-radius:8px; text-decoration:none; font-size:12px; font-weight:700;">ดาวน์โหลด</a>
+              </div>`).join('');
+            body.innerHTML = `<div style="display:flex; flex-direction:column;">${docsHtml}</div>`;
+            return;
+          }
+
+          // Case 3: Nothing at all
+          body.innerHTML = '<div style="text-align:center; padding:40px 20px; color:#94a3b8;"><div style="font-size:48px; margin-bottom:12px;">📂</div><div style="font-weight:600;">ยังไม่มีโครงการในระบบขณะนี้</div></div>';
         };
+
+
 
         window.renderProjectDocs = function(projectId, projectTitle) {
           title.innerHTML = `<button onclick="renderProjectList()" style="background:none; border:none; color:var(--purple-600); cursor:pointer; font-size:14px; margin-right:8px; display:inline-flex; align-items:center;">‹ ย้อนกลับ</button> โครงการ: ${projectTitle}`;
@@ -3658,7 +3766,7 @@
 
   /* ---- HELPERS ---- */
   const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-  const EV_ICONS = { กีฬา:'⚽', วิชาการ:'📚', ดนตรี:'🎵', ศิลปะ:'🎨', ชุมนุม:'👥', ประชุม:'📋', วันหยุด:'🎉' };
+  const EV_ICONS = { กีฬา:'⚽', วิชาการ:'📚', ดนตรี:'🎵', ศิลปะ:'🎨', ชุมนุม:'👥', ประชุม:'📋', วันหยุด:'🎉', ฝ่ายปกครอง:'⚖️', วันเรียนทดแทน:'🔄' };
   function evIcon(t) { const k = Object.keys(EV_ICONS).find(k => (t||'').includes(k)); return k ? EV_ICONS[k] : '✨'; }
   const CAT_META = {
     'ข่าวโรงเรียน': { bg: '#ede9fe22', pill: 'cat-sch', icon: '🏫' },
@@ -4109,7 +4217,7 @@
   let calYear, calMonth, calEvents = [];
 
   function calColorFor(type) {
-    const map = { กีฬา:'#dc2626', วิชาการ:'#0891b2', ดนตรี:'#db2777', ศิลปะ:'#d97706', ชุมนุม:'#059669', ประชุม:'#6d28d9', วันหยุด:'#b45309' };
+    const map = { กีฬา:'#dc2626', วิชาการ:'#0891b2', ดนตรี:'#db2777', ศิลปะ:'#d97706', ชุมนุม:'#059669', ประชุม:'#6d28d9', วันหยุด:'#b45309', ฝ่ายปกครอง:'#1e3a8a', วันเรียนทดแทน:'#0284c7' };
     const k = Object.keys(map).find(k => (type||'').includes(k));
     return k ? map[k] : '#7c3aed';
   }
@@ -4128,18 +4236,28 @@
     renderCalendar();
   }
 
+  let calDisabledDates = [], calSubstituteDates = [];
   async function fetchCalEvents() {
-    const firstDay = `${calYear}-${String(calMonth+1).padStart(2,'0')}-01`;
-    const lastDay  = new Date(calYear, calMonth+1, 0);
-    const lastStr  = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(lastDay.getDate()).padStart(2,'0')}`;
     try {
-      calEvents = await sbFetch(`events?select=*&date=gte.${firstDay}&date=lte.${lastStr}&order=date.asc`) || [];
-    } catch { calEvents = []; }
+      const [evs, settings] = await Promise.all([
+        sbFetch(`events?select=*&order=date.asc`),
+        sbFetch(`attendance_settings?select=*`)
+      ]);
+      calEvents = evs || [];
+      if (settings && Array.isArray(settings)) {
+        const disRow = settings.find(s => s.key === 'disabled_dates');
+        const subRow = settings.find(s => s.key === 'substitute_dates');
+        calDisabledDates = disRow ? (typeof disRow.value === 'string' ? JSON.parse(disRow.value) : (disRow.value || [])) : [];
+        calSubstituteDates = subRow ? (typeof subRow.value === 'string' ? JSON.parse(subRow.value) : (subRow.value || [])) : [];
+      }
+    } catch { calEvents = []; calDisabledDates = []; calSubstituteDates = []; }
   }
 
   function renderCalendar() {
     const thaiYear = calYear + 543;
-    document.getElementById('calTitle').textContent = `${MONTHS[calMonth]} ${thaiYear}`;
+    const fullMonthStr = `${THAI_MONTHS_FULL[calMonth]} ${thaiYear}`;
+    const calTitleEl = document.getElementById('calTitle');
+    if (calTitleEl) calTitleEl.textContent = fullMonthStr;
     const grid = document.getElementById('calGrid');
     const today = new Date();
 
@@ -4217,6 +4335,9 @@
     // Current month cells
     for (let d = 1; d <= daysInMonth; d++) {
       const isToday = (d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear());
+      const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isHoliday = calDisabledDates.includes(ds);
+      const substitute = calSubstituteDates.find(s => s.date === ds);
       
       const dayKey = `day_${d}`;
       window.calendarDaysMap[dayKey] = daySlots[d].filter(Boolean); // Only real events
@@ -4249,12 +4370,18 @@
         const isEnd = d === ev._endD || isEndOfWeek;
         const isMiddle = !isStart && !isEnd;
         
-        const col = calColorFor(ev.type);
+        let barBg = '#ebdcf9', barColor = '#6a1b9a';
+        if (ev.type === 'deadline' || (ev.title||'').includes('กำหนดส่ง')) {
+          barBg = '#fff9c4'; barColor = '#f57f17';
+        } else if (ev.type === 'meeting' || (ev.title||'').includes('ประชุม')) {
+          barBg = '#e8eaf6'; barColor = '#283593';
+        }
+
         const timeStr = (isStart && ev.time) ? `${ev.time} ` : '';
         const evKey = `ev_${ev.id || Math.random().toString(36).substr(2, 9)}`;
         window.calendarEventsMap[evKey] = ev;
         
-        let extraStyle = 'margin-bottom:2px; height:24px; display:flex; align-items:center; overflow:hidden; white-space:nowrap; padding: 2px 6px; box-sizing:border-box;';
+        let extraStyle = 'margin-bottom:2px; height:24px; display:flex; align-items:center; overflow:hidden; white-space:nowrap; padding: 2px 6px; box-sizing:border-box; font-weight:600; font-size:11px;';
         
         if (isStart && !isEnd) {
           extraStyle += ` border-top-right-radius:0; border-bottom-right-radius:0; width:calc(100% + 7px); position:relative; z-index:2; margin-right:-7px;`;
@@ -4266,12 +4393,18 @@
         
         const textContent = (isMiddle || (!isStart && isEnd)) ? '' : `${timeStr}${ev.title}`;
         
-        evHtml += `<div class="cal-event-pill" data-evkey="${evKey}" onmouseenter="document.querySelectorAll('.cal-event-pill[data-evkey=\\'${evKey}\\']').forEach(el=>el.classList.add('ev-hover'))" onmouseleave="document.querySelectorAll('.cal-event-pill[data-evkey=\\'${evKey}\\']').forEach(el=>el.classList.remove('ev-hover'))" style="background:${col}33;color:${col}; ${extraStyle}" onclick="event.stopPropagation(); showCalPopupByKey('${evKey}')" title="${ev.title}">${textContent}</div>`;
+        evHtml += `<div class="cal-event-pill" data-evkey="${evKey}" onmouseenter="document.querySelectorAll('.cal-event-pill[data-evkey=\\'${evKey}\\']').forEach(el=>el.classList.add('ev-hover'))" onmouseleave="document.querySelectorAll('.cal-event-pill[data-evkey=\\'${evKey}\\']').forEach(el=>el.classList.remove('ev-hover'))" style="background:${barBg};color:${barColor}; ${extraStyle}" onclick="event.stopPropagation(); showDayPopupByKey(${d}, '${dayKey}')" title="${ev.title}">${textContent}</div>`;
       }
       
       const moreHtml = more > 0 ? `<div class="cal-more" onclick="event.stopPropagation(); showDayPopupByKey(${d}, '${dayKey}')">+${more}</div>` : '';
+      const cellBgStyle = isHoliday ? 'background:#fff5f5;' : substitute ? 'background:#e0f7fa;' : '';
+      const badgeHtml = isHoliday 
+        ? '<span class="cal-day-badge" style="color:#dc2626;" title="วันหยุดสภา">🚫<span class="cal-badge-txt"> หยุด</span></span>' 
+        : substitute 
+        ? `<span class="cal-day-badge" style="color:#00838f;" title="${substitute.title||'วันหยุดชดเชย'}">🔄<span class="cal-badge-txt"> ชดเชย</span></span>` 
+        : '';
       
-      cells += `<div class="cal-cell${isToday?' cal-cell-today':''}" data-day="${d}" onclick="showDayPopupByKey(${d}, '${dayKey}')"><span class="cal-num${isToday?' cal-num-today':''}">${d}</span>${evHtml}${moreHtml}</div>`;
+      cells += `<div class="cal-cell${isToday?' cal-cell-today':''}" data-day="${d}" onclick="showDayPopupByKey(${d}, '${dayKey}')" style="${cellBgStyle}"><div style="display:flex; justify-content:space-between; align-items:center;"><span class="cal-num${isToday?' cal-num-today':''}">${d}</span>${badgeHtml}</div>${evHtml}${moreHtml}</div>`;
     }
 
     // Trailing next-month cells
@@ -4281,13 +4414,13 @@
       cells += `<div class="cal-cell cal-cell-other"><span class="cal-num">${nextDay++}</span></div>`;
     }
 
-    grid.innerHTML = cells;
+    if (grid) grid.innerHTML = cells;
     
     const homeGrid = document.getElementById('homeCalGrid');
     if (homeGrid) homeGrid.innerHTML = cells;
 
     const hTitle = document.getElementById('homeCalTitle');
-    if (hTitle) hTitle.textContent = `${MONTHS[calMonth]} ${thaiYear}`;
+    if (hTitle) hTitle.textContent = fullMonthStr;
 
     const hEvents = document.getElementById('hStatEvents');
     if (hEvents) hEvents.textContent = calEvents.length;
@@ -4295,10 +4428,10 @@
   }
 
   function showCalPopupByKey(key) {
-    document.querySelectorAll('.cal-event-pill').forEach(el => el.classList.remove('ev-active'));
-    document.querySelectorAll(`.cal-event-pill[data-evkey="${key}"]`).forEach(el => el.classList.add('ev-active'));
     const ev = window.calendarEventsMap[key];
-    if (ev) showCalPopup(ev);
+    if (ev && ev._startD) {
+      showDayPopupByKey(ev._startD, `day_${ev._startD}`);
+    }
   }
 
   function showDayPopupByKey(day, key) {
@@ -4309,50 +4442,55 @@
     showDayPopup(day, evs);
   }
 
-  function showCalPopup(ev) {
-    const d = new Date(ev.date + 'T00:00:00');
-    const col = calColorFor(ev.type);
-    document.getElementById('calPopupContent').innerHTML = `
-      <div style="border-left:4px solid ${col};padding-left:18px;margin-bottom:20px;margin-top:30px;">
-        <div style="font-size:12px;color:var(--gray-500);font-weight:700;text-transform:uppercase;margin-bottom:6px">${ev.type||'กิจกรรม'}</div>
-        <h2 style="font-size:24px;font-weight:800;color:var(--gray-900);line-height:1.3">${ev.title||''}</h2>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:12px;font-size:15px;color:var(--gray-700)">
-        <div>📅 <strong>${d.toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</strong></div>
-        ${ev.time ? `<div>🕐 <strong>${ev.time}</strong></div>` : ''}
-        ${ev.location ? `<div>📍 ${ev.location}</div>` : ''}
-        ${ev.description ? `<div style="margin-top:15px;padding:16px;background:var(--gray-50);border-radius:12px;font-size:14px;line-height:1.7">${ev.description}</div>` : ''}
-      </div>`;
-    const pop = document.getElementById('calPopup');
-    pop.style.display = 'flex';
-    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
-    setTimeout(() => pop.classList.add('show'), 10);
-  }
-
   function showDayPopup(day, evs) {
     const d = new Date(calYear, calMonth, day);
+    const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isHoliday = calDisabledDates.includes(ds);
+    const substitute = calSubstituteDates.find(s => s.date === ds);
+
     let evsList = '';
+    if (isHoliday) {
+      evsList += `<div style="padding:12px 14px; border-radius:10px; background:#fff5f5; border-left:4px solid #ef4444; margin-bottom:12px; font-weight:700; color:#dc2626; font-size:14px; text-align:left;">🚫 วันหยุดสภานักเรียน</div>`;
+    }
+    if (substitute) {
+      evsList += `<div style="padding:12px 14px; border-radius:10px; background:#e0f7fa; border-left:4px solid #00838f; margin-bottom:12px; font-weight:700; color:#00838f; font-size:14px; text-align:left;">🔄 วันเรียนชดเชยตารางเรียนวัน${substitute.substitute_for_day || ''}</div>`;
+    }
     
     if (!evs || evs.length === 0) {
-      evsList = `<div style="text-align:center; padding:30px 20px; color:var(--gray-400); font-size:14px;">ไม่มีกิจกรรมในวันนี้</div>`;
+      if (!isHoliday && !substitute) {
+        evsList += `<div style="text-align:center; padding:30px 20px; color:var(--gray-400); font-size:14px;">ไม่มีกิจกรรมในวันนี้</div>`;
+      }
     } else {
-      evsList = evs.map(ev => {
-        const col = calColorFor(ev.type);
-        const evKey = `ev_popup_${ev.id || Math.random().toString(36).substr(2, 9)}`;
-        window.calendarEventsMap[evKey] = ev;
-        return `<div style="padding:12px 14px;border-radius:10px;background:${col}15;border-left:4px solid ${col};margin-bottom:10px;cursor:pointer;transition:transform 0.15s;text-align:left;" onclick="event.stopPropagation(); showCalPopupByKey('${evKey}')" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
-          <div style="font-size:11px;color:${col};font-weight:800;text-transform:uppercase;margin-bottom:2px;">${ev.type||'กิจกรรม'}</div>
-          <div style="font-size:14px;font-weight:700;color:var(--gray-900);line-height:1.3">${ev.title||''}</div>
-          ${ev.time ? `<div style="font-size:12px;color:var(--gray-500);margin-top:4px">🕐 ${ev.time}</div>` : ''}
+      evsList += evs.map(ev => {
+        let col = '#00bcd4';
+        let barBg = '#ebdcf9', barColor = '#6a1b9a';
+        if (ev.type === 'deadline' || (ev.title||'').includes('กำหนดส่ง')) {
+          barBg = '#fff9c4'; barColor = '#f57f17'; col = '#f57f17';
+        } else if (ev.type === 'meeting' || (ev.title||'').includes('ประชุม')) {
+          barBg = '#e8eaf6'; barColor = '#283593'; col = '#283593';
+        } else {
+          col = '#6a1b9a';
+        }
+
+        const typeLabel = ev.type === 'deadline' ? 'กำหนดส่ง' : ev.type === 'meeting' ? 'ประชุม' : 'กิจกรรม';
+
+        return `<div style="padding:14px 16px; border-radius:12px; background:${barBg}; border-left:5px solid ${col}; margin-bottom:12px; text-align:left;">
+          <div style="font-size:11px; color:${barColor}; font-weight:800; text-transform:uppercase; margin-bottom:4px;">${typeLabel}</div>
+          <div style="font-size:15px; font-weight:800; color:#1e293b; line-height:1.3;">${ev.title||''}</div>
+          ${ev.time ? `<div style="font-size:13px; color:#475569; margin-top:6px; font-weight:600;">🕐 เวลา: ${ev.time}</div>` : ''}
+          ${ev.location ? `<div style="font-size:13px; color:#475569; margin-top:4px; font-weight:600;">📍 สถานที่: ${ev.location}</div>` : ''}
+          ${ev.description || ev.desc ? `<div style="margin-top:8px; padding:10px 12px; background:rgba(255,255,255,0.7); border-radius:8px; font-size:13px; color:#334155; line-height:1.5;">${ev.description || ev.desc}</div>` : ''}
         </div>`;
       }).join('');
     }
 
     document.getElementById('calPopupContent').innerHTML = `
-      <div style="font-size:15px;font-weight:800;color:var(--gray-900);margin-bottom:18px;border-bottom:1px solid var(--gray-100);padding-bottom:10px;text-align:left;">
-        📅 กิจกรรมวันที่ ${d.toLocaleDateString('th-TH',{weekday:'long',day:'numeric',month:'long'})}
+      <div style="font-size:16px; font-weight:800; color:#00838f; margin-bottom:16px; border-bottom:2px solid #e0f7fa; padding-bottom:10px; text-align:left;">
+        📅 รายการกิจกรรมและงานประจำวันที่ ${d.toLocaleDateString('th-TH',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
       </div>
-      ${evsList}`;
+      <div style="max-height: 60vh; overflow-y: auto; padding-right: 4px;">
+        ${evsList}
+      </div>`;
       
     const pop = document.getElementById('calPopup');
     pop.style.display = 'flex';

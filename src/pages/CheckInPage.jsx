@@ -18,6 +18,7 @@ export default function CheckInPage() {
   const [distanceInfo, setDistanceInfo] = useState('');
   const [enabledDays, setEnabledDays] = useState(["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์"]);
   const [disabledDates, setDisabledDates] = useState([]);
+  const [substituteDates, setSubstituteDates] = useState([]);
   const [startDate, setStartDate] = useState('');
   const [checkInActive, setCheckInActive] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
@@ -64,10 +65,12 @@ export default function CheckInPage() {
         if (data) {
           const days = data.find(d => d.key === 'enabled_days')?.value;
           const dates = data.find(d => d.key === 'disabled_dates')?.value;
+          const subDates = data.find(d => d.key === 'substitute_dates')?.value;
           const startD = data.find(d => d.key === 'start_date')?.value;
           const checkInAct = data.find(d => d.key === 'check_in_active')?.value;
           if (days) setEnabledDays(days);
           if (dates) setDisabledDates(dates);
+          if (subDates) setSubstituteDates(subDates);
           if (startD) setStartDate(startD);
           if (checkInAct !== undefined) setCheckInActive(checkInAct !== 'false');
         }
@@ -129,8 +132,16 @@ export default function CheckInPage() {
     };
   }, []);
 
-  const todayStr = toGregorianStr(currentDate);
-  const todayDayName = TH_DAYS[currentDate.getDay()];
+  const todayStr = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + String(currentDate.getDate()).padStart(2, '0');
+  
+  let todayDayName = TH_DAYS[currentDate.getDay()];
+  const subMatch = substituteDates.find(s => (typeof s === 'string' ? s : s.date) === todayStr);
+  let isSubstitute = false;
+  if (subMatch && typeof subMatch !== 'string' && subMatch.replaceDay) {
+    todayDayName = subMatch.replaceDay;
+    isSubstitute = true;
+  }
+
   const isBeforeStart = startDate && todayStr < startDate;
   const isEnabledToday = enabledDays.includes(todayDayName) && !disabledDates.includes(todayStr) && !isBeforeStart;
 
@@ -224,11 +235,14 @@ export default function CheckInPage() {
     const m = now.getMinutes();
     
     // Check duty
-    const dayIndex = now.getDay();
+    const dayIndex = currentDate.getDay();
     const daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
-    const todayName = daysTh[dayIndex];
+    let todayName = daysTh[dayIndex];
+    const sub = substituteDates.find(s => (typeof s === 'string' ? s : s.date) === todayStr);
+    if (sub && typeof sub !== 'string' && sub.replaceDay) {
+      todayName = sub.replaceDay;
+    }
     
-    let hasGreetingDuty = false;
     const todaySchedule = greetingSchedules.find(s => s.day === todayName);
     if (todaySchedule && user?.nickname) {
       const scheduleData = todaySchedule.data || {};
@@ -334,6 +348,17 @@ export default function CheckInPage() {
             }
           }
         }
+
+        // Send personal notification to user
+        await supabase
+          .from('notifications')
+          .insert([{
+            type: isLate ? 'fine' : 'task',
+            user_id: String(user.id),
+            message: isLate 
+              ? `⚠️ คุณเช็คชื่อเข้าโรงเรียนสาย (${minutesLate} นาที) เมื่อเวลา ${timeStr} ค่าปรับ ${finalAmount} บาท`
+              : `📍 คุณเช็คชื่อเข้าโรงเรียนเรียบร้อยแล้ว เมื่อเวลา ${timeStr}`
+          }]);
 
         // Notify Discord
         let embedTitle = `🟢 [เช็คชื่อเข้าแถว] ${user.nickname} เช็คชื่อสำเร็จ`;

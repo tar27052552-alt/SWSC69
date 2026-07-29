@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Save, Bell, AlertCircle, CheckCircle2, XCircle, MessageSquare, Send, Loader } from 'lucide-react';
+import { Lock, Save, Bell, AlertCircle, CheckCircle2, XCircle, MessageSquare, Send, Loader, Smartphone } from 'lucide-react';
 import { supabaseRpc } from '../lib/supabaseRest';
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
@@ -10,7 +10,7 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const [passwords, setPasswords] = useState({ old: '', new: '', confirm: '' });
 
-  const [pushSupported, setPushSupported] = useState('Notification' in window);
+  const pushSupported = 'Notification' in window;
   const [notificationPermission, setNotificationPermission] = useState(
     'Notification' in window ? Notification.permission : 'default'
   );
@@ -396,6 +396,45 @@ export default function SettingsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+
+        {/* PWA Mobile App Card */}
+        <div className="card" style={{ borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(0, 188, 212, 0.3)' }}>
+          <div className="card-header" style={{ background: 'linear-gradient(135deg, #0d0714, #1e0a2e)', color: '#fff', padding: '16px 20px' }}>
+            <span className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e0f7fa', fontSize: 15, fontWeight: 700 }}>
+              <Smartphone size={18} color="#00bcd4" /> 📱 ติดตั้งแอปสภานักเรียนลงมือถือ (Progressive Web App)
+            </span>
+          </div>
+          <div className="card-body" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <p style={{ fontSize: 13, color: '#475569', margin: 0, lineHeight: 1.6 }}>
+                คุณสามารถติดตั้งเว็บไซต์นี้เป็นแอปพลิเคชันบนมือถือ (PWA) เพื่อเปิดใช้งานแบบเต็มจอ แสดงผลรวดเร็ว และเข้าถึงได้สะดวกจากหน้าโฮมสกรีนโดยไม่ต้องดาวน์โหลดผ่าน Store
+              </p>
+
+              {/* iOS Instructions */}
+              <div style={{ background: '#f8fafc', borderRadius: 12, padding: 14, border: '1px solid #e2e8f0' }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                   สำหรับผู้ใช้ iPhone / iPad (iOS Safari):
+                </div>
+                <ol style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: '#475569', lineHeight: 1.7 }}>
+                  <li>เปิดเว็บไซต์นี้ด้วยบราวเซอร์ <strong>Safari</strong> บน iPhone/iPad</li>
+                  <li>กดปุ่ม <strong>แชร์ (Share 📤)</strong> บริเวณแถบเมนูด้านล่างสุด</li>
+                  <li>เลื่อนเมนูลงมาแล้วกดเลือก <strong>"เพิ่มไปยังหน้าจอโฮม" (Add to Home Screen ➕)</strong></li>
+                  <li>กดปุ่ม <strong>"เพิ่ม" (Add)</strong> มุมขวาบน เพื่อสร้างไอคอนแอปบนหน้าโฮมสกรีน</li>
+                </ol>
+              </div>
+
+              {/* Android Instructions */}
+              <div style={{ background: '#e0f7fa', borderRadius: 12, padding: 14, border: '1px solid #b2ebf2' }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#006064', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  🤖 สำหรับผู้ใช้ Android & คอมพิวเตอร์ (Chrome / Edge):
+                </div>
+                <div style={{ fontSize: 12, color: '#00838f', lineHeight: 1.6 }}>
+                  กดปุ่มจุดสามจุด <strong style={{ fontSize: 14 }}>⋮</strong> ด้านบนขวามือ ➡️ เลือก <strong>"เพิ่มลงในหน้าจอหลัก" (Add to Home screen)</strong> หรือ <strong>"ติดตั้งแอป" (Install app)</strong>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

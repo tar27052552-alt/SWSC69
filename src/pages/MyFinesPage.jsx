@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient';
 import { uploadFileToDrive, transformGoogleDriveUrl, verifySlipViaGAS } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 import logoUrl from '../assets/logo.png';
+import promptpayQrUrl from '../assets/promptpay_qr.png';
 
 export default function MyFinesPage() {
   const { user } = useAuth();
@@ -20,10 +21,13 @@ export default function MyFinesPage() {
   const [loadingFees, setLoadingFees] = useState(false);
   const [feePaymentModal, setFeePaymentModal] = useState(null); // fee object being paid
   
-  const PROMPTPAY_ID = '1639800408765'; // PromptPay ID ของสภา (สามารถเปลี่ยนได้)
-  const PROMPTPAY_NAME = 'น.ส. ทิตติกรณ์ แสงหงษ์';
+  const PROMPTPAY_ID = '0954181766';
+  const PROMPTPAY_NAME = 'น.ส. จันทมณี จันทร์แก้วปง';
 
-  const loadMyFines = async () => {
+  const [selectedFineIds, setSelectedFineIds] = useState([]);
+  const [bulkPaymentModal, setBulkPaymentModal] = useState(false);
+
+  const loadMyFines = async (isInitial = false) => {
     if (!user) return;
     if (user.role === 'admin') {
       setFines([]);
@@ -31,7 +35,7 @@ export default function MyFinesPage() {
       return;
     }
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const { data, error } = await supabase
         .from('discipline_fines')
         .select('*')
@@ -72,7 +76,6 @@ export default function MyFinesPage() {
       return;
     }
     try {
-      setLoadingFees(true);
       const { data, error } = await supabase
         .from('finance_fees')
         .select('*')
@@ -109,20 +112,15 @@ export default function MyFinesPage() {
 
   useEffect(() => {
     if (!user) return;
-    loadMyFines();
+    loadMyFines(true);
     loadMyFees();
-
-    const interval = setInterval(() => {
-      loadMyFines();
-      loadMyFees();
-    }, 10000);
 
     const channel = supabase
       .channel('my-fines-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'discipline_fines' }, (payload) => {
         const targetUserId = payload.new ? payload.new.user_id : (payload.old ? payload.old.user_id : null);
         if (targetUserId && String(targetUserId) === String(user.id)) {
-          loadMyFines();
+          loadMyFines(false);
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_fees' }, () => {
@@ -131,7 +129,6 @@ export default function MyFinesPage() {
       .subscribe();
 
     return () => {
-      clearInterval(interval);
       supabase.removeChannel(channel);
     };
   }, [user]);
@@ -213,6 +210,89 @@ export default function MyFinesPage() {
       sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, fields, finalSlipUrl, 'discipline_fines'); // สีเขียวสำหรับสำเร็จ พร้อมพรีวิวสลิป (ค่าปรับ)
     } catch (err) {
       console.error('Error uploading slip:', err);
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+    } finally {
+      setSubmitting(false);
+      setLoadingStatus('');
+    }
+  };
+
+  const handleUploadBulkSlip = async () => {
+    if (submitting) return;
+    if (!slipPreview || selectedFineIds.length === 0) return;
+
+    const selectedFinesList = fines.filter(f => selectedFineIds.includes(f.id));
+    const totalAmount = selectedFinesList.reduce((sum, f) => sum + f.amount, 0);
+
+    setSubmitting(true);
+    setLoadingStatus('กำลังตรวจสอบความถูกต้องของสลิปกับธนาคาร...');
+    try {
+      const apiKey = import.meta.env.VITE_SLIPOK_API_KEY;
+      const branchId = import.meta.env.VITE_SLIPOK_BRANCH_ID;
+
+      if (!apiKey || !branchId) {
+        throw new Error('ระบบตรวจสอบสลิปยังไม่ได้รับการตั้งค่า (Missing SlipOK API Keys)');
+      }
+
+      const slipOkResult = await verifySlipViaGAS(branchId, apiKey, slipPreview, "");
+
+      if (!slipOkResult.success) {
+        let errorMsg = slipOkResult.message || 'สลิปไม่ถูกต้อง';
+        if (slipOkResult.code === 1012) errorMsg = 'สลิปนี้ถูกใช้งานไปแล้ว (สลิปซ้ำ)';
+        else if (slipOkResult.code === 1013) errorMsg = `ยอดเงินในสลิปไม่ตรงกับยอดรวมค่าปรับ (${totalAmount} บาท)`;
+        else if (slipOkResult.code === 1014) errorMsg = 'บัญชีผู้รับเงินไม่ถูกต้อง';
+        
+        alert('❌ ตรวจสอบสลิปไม่ผ่าน: ' + errorMsg);
+        setSubmitting(false);
+        setLoadingStatus('');
+        return;
+      }
+
+      const slipAmount = slipOkResult.data?.amount || 0;
+      if (slipAmount < totalAmount) {
+        alert(`❌ ตรวจสอบสลิปไม่ผ่าน: ยอดเงินในสลิป (${slipAmount} บาท) ไม่เพียงพอสำหรับยอดรวมค่าปรับ (${totalAmount} บาท)`);
+        setSubmitting(false);
+        setLoadingStatus('');
+        return;
+      }
+
+      setLoadingStatus('สลิปถูกต้อง! กำลังบันทึกข้อมูล...');
+      let finalSlipUrl = slipPreview;
+      if (slipPreview && slipPreview.startsWith('data:')) {
+        try {
+          const fileName = `bulk_slip_${user.id}_${Date.now()}.jpg`;
+          const uploadResult = await uploadFileToDrive(slipPreview, fileName, 'slips');
+          if (uploadResult && uploadResult.url) {
+            finalSlipUrl = uploadResult.url;
+          }
+        } catch (uploadErr) {
+          console.error("Failed to upload slip to Google Drive:", uploadErr);
+        }
+      }
+
+      const { error } = await supabase
+        .from('discipline_fines')
+        .update({ payment_status: 'paid', paid: true, payment_slip: finalSlipUrl })
+        .in('id', selectedFineIds);
+        
+      if (error) throw error;
+      
+      setFines(prev => prev.map(f => selectedFineIds.includes(f.id) ? { ...f, paymentStatus: 'paid', paid: true, paymentSlip: finalSlipUrl } : f));
+      setSelectedFineIds([]);
+      setBulkPaymentModal(false);
+      setSlipPreview(null);
+      alert(`✅ ชำระค่าปรับรวม ${selectedFinesList.length} รายการ (รวม ${totalAmount} บาท) เรียบร้อยแล้ว!`);
+
+      const embedTitle = `✅ ชำระค่าปรับรวม ${selectedFinesList.length} รายการสำเร็จ - สภานักเรียน`;
+      const embedDesc = `ระบบทำการตรวจสอบสลิปโอนเงินรวมแบบกลุ่มอนุมัติอัตโนมัติ`;
+      const fields = [
+        { name: '👤 ผู้ชำระ', value: `${user?.name} (${user?.nickname})`, inline: true },
+        { name: '⚖️ รายการที่ชำระ', value: selectedFinesList.map(f => `• ${f.violation} (${f.amount} บ.)`).join('\n'), inline: false },
+        { name: '💵 ยอดรวมสุทธิ', value: `${totalAmount} บาท`, inline: true }
+      ];
+      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, fields, finalSlipUrl, 'discipline_fines');
+    } catch (err) {
+      console.error('Error uploading bulk slip:', err);
       alert('เกิดข้อผิดพลาด: ' + err.message);
     } finally {
       setSubmitting(false);
@@ -676,11 +756,77 @@ export default function MyFinesPage() {
             </div>
           </div>
 
+          {/* Multi-Select Floating Action Banner */}
+          {selectedFineIds.length > 0 && (
+            <div style={{
+              background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+              color: '#ffffff',
+              borderRadius: 16,
+              padding: '14px 20px',
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 8px 24px rgba(79, 70, 229, 0.3)',
+              flexWrap: 'wrap',
+              gap: 12
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 24 }}>💳</span>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 14 }}>
+                    เลือกชำระเงินรวม {selectedFineIds.length} รายการ
+                  </div>
+                  <div style={{ fontSize: 12, opacity: 0.9 }}>
+                    ยอดชำระรวมทั้งสิ้น: <strong style={{ fontSize: 16, color: '#fef08a' }}>
+                      {fines.filter(f => selectedFineIds.includes(f.id)).reduce((sum, f) => sum + f.amount, 0)} บาท
+                    </strong>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  className="btn"
+                  onClick={() => setSelectedFineIds([])}
+                  style={{ background: 'rgba(255,255,255,0.2)', color: '#ffffff', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700 }}
+                >
+                  ยกเลิกเลือก
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => { setSlipPreview(null); setBulkPaymentModal(true); }}
+                  style={{ background: '#ffffff', color: '#4f46e5', fontWeight: 800, borderRadius: 10, padding: '8px 18px', fontSize: 13, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                >
+                  💳 สแกนจ่ายรวมทีเดียว ({fines.filter(f => selectedFineIds.includes(f.id)).reduce((sum, f) => sum + f.amount, 0)} บ.)
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Main Card */}
           <div className="card">
-            <div className="card-header">
-              <span className="card-title">ประวัติการโดนปรับทั้งหมด</span>
-              <div style={{ fontSize: 12, color: '#757575' }}>โดนปรับทั้งหมด {fines.length} ครั้ง (รวม {totalFines} บาท)</div>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span className="card-title">ประวัติการโดนปรับทั้งหมด</span>
+                <div style={{ fontSize: 12, color: '#757575' }}>โดนปรับทั้งหมด {fines.length} ครั้ง (รวม {totalFines} บาท)</div>
+              </div>
+
+              {fines.filter(f => f.paymentStatus === 'unpaid').length > 0 && (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    const unpaidList = fines.filter(f => f.paymentStatus === 'unpaid');
+                    if (selectedFineIds.length === unpaidList.length) {
+                      setSelectedFineIds([]);
+                    } else {
+                      setSelectedFineIds(unpaidList.map(f => f.id));
+                    }
+                  }}
+                  style={{ fontSize: 12, borderRadius: 8, padding: '4px 10px' }}
+                >
+                  {selectedFineIds.length === fines.filter(f => f.paymentStatus === 'unpaid').length ? '☑️ ยกเลิกเลือกทั้งหมด' : '☑️ เลือกค้างชำระทั้งหมด'}
+                </button>
+              )}
             </div>
 
             {loading ? (
@@ -697,6 +843,23 @@ export default function MyFinesPage() {
                 <table className="simple-table">
                   <thead>
                     <tr>
+                      <th style={{ width: 40, textAlign: 'center' }}>
+                        {fines.filter(f => f.paymentStatus === 'unpaid').length > 0 && (
+                          <input
+                            type="checkbox"
+                            checked={selectedFineIds.length === fines.filter(f => f.paymentStatus === 'unpaid').length && selectedFineIds.length > 0}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedFineIds(fines.filter(f => f.paymentStatus === 'unpaid').map(f => f.id));
+                              } else {
+                                setSelectedFineIds([]);
+                              }
+                            }}
+                            style={{ cursor: 'pointer', width: 16, height: 16 }}
+                            title="เลือกค้างชำระทั้งหมด"
+                          />
+                        )}
+                      </th>
                       <th>#</th>
                       <th>ความผิด</th>
                       <th>จำนวนเงิน</th>
@@ -711,7 +874,25 @@ export default function MyFinesPage() {
                     {fines.map((f, i) => {
                       const ps = f.paymentStatus;
                       return (
-                        <tr key={f.id}>
+                        <tr key={f.id} style={{ background: selectedFineIds.includes(f.id) ? '#f0fdf4' : undefined }}>
+                          <td style={{ textAlign: 'center' }}>
+                            {ps === 'unpaid' ? (
+                              <input
+                                type="checkbox"
+                                checked={selectedFineIds.includes(f.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedFineIds(prev => [...prev, f.id]);
+                                  } else {
+                                    setSelectedFineIds(prev => prev.filter(id => id !== f.id));
+                                  }
+                                }}
+                                style={{ cursor: 'pointer', width: 16, height: 16 }}
+                              />
+                            ) : (
+                              <span style={{ color: '#cbd5e1' }}>–</span>
+                            )}
+                          </td>
                           <td style={{ color: '#9e9e9e', fontSize: 12 }}>{i + 1}</td>
                           <td style={{ fontWeight: 600, fontSize: 13 }}>{f.violation}</td>
                           <td>
@@ -734,7 +915,7 @@ export default function MyFinesPage() {
                                 style={{ padding: '4px 10px', fontSize: 12 }}
                                 onClick={() => { setPaymentModal(f); setSlipPreview(null); }}
                               >
-                                💳 จ่ายเงิน
+                                💳 จ่ายแยก
                               </button>
                             )}
                             {ps === 'slip_uploaded' && (
@@ -883,17 +1064,18 @@ export default function MyFinesPage() {
               {paymentModal.paymentStatus === 'unpaid' ? (
                 <>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', width: '100%' }}>
-                    <div style={{ fontSize: 13, color: '#555', fontWeight: 600, marginBottom: 8 }}>QR Code ชำระเงิน PromptPay</div>
-                    <div style={{ background: '#ffffff', padding: 8, borderRadius: 12, border: '1px solid #e0e0e0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'inline-flex', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ fontSize: 13, color: '#475569', fontWeight: 600, marginBottom: 8 }}>QR Code ชำระเงิน PromptPay (ระบุยอดเงินให้อัตโนมัติ)</div>
+                    <div style={{ background: '#ffffff', padding: 12, borderRadius: 18, border: '1.5px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', display: 'inline-flex', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
                       <img
                         src={`https://promptpay.io/${PROMPTPAY_ID}/${paymentModal.amount}`}
-                        alt="PromptPay QR"
-                        style={{ width: 180, height: 180, display: 'block' }}
-                        onError={e => { e.target.style.display='none'; }}
+                        alt="Dynamic PromptPay QR"
+                        style={{ width: 210, height: 210, display: 'block', borderRadius: 8 }}
+                        onError={e => { e.target.src = promptpayQrUrl; }}
                       />
                     </div>
-                    <div style={{ fontSize: 11, color: '#757575' }}>PromptPay (เลขบัตรประชาชน): <strong>1-6398-00408-76-5</strong></div>
-                    <div style={{ fontSize: 13, color: '#006064', fontWeight: 700, marginTop: 4 }}>ชื่อบัญชี: {PROMPTPAY_NAME}</div>
+                    <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>พร้อมเพย์ (PromptPay): <strong style={{ color: '#0f172a' }}>095-418-1766</strong></div>
+                    <div style={{ fontSize: 13.5, color: '#0f172a', fontWeight: 800, marginTop: 2 }}>ชื่อบัญชี: {PROMPTPAY_NAME}</div>
+                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>ธนาคารกรุงไทย (Krungthai Bank)</div>
                   </div>
                   <div style={{ width: '100%' }}>
                     <label style={{
@@ -998,17 +1180,18 @@ export default function MyFinesPage() {
               {!getFeeStatusInfo(feePaymentModal).paid ? (
                 <>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', width: '100%' }}>
-                    <div style={{ fontSize: 13, color: '#555', fontWeight: 600, marginBottom: 8 }}>QR Code ชำระเงิน PromptPay</div>
-                    <div style={{ background: '#ffffff', padding: 8, borderRadius: 12, border: '1px solid #e0e0e0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'inline-flex', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ fontSize: 13, color: '#475569', fontWeight: 600, marginBottom: 8 }}>QR Code ชำระเงิน PromptPay (ระบุยอดเงินให้อัตโนมัติ)</div>
+                    <div style={{ background: '#ffffff', padding: 12, borderRadius: 18, border: '1.5px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', display: 'inline-flex', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
                       <img
                         src={`https://promptpay.io/${PROMPTPAY_ID}/${feePaymentModal.amount}`}
-                        alt="PromptPay QR"
-                        style={{ width: 180, height: 180, display: 'block' }}
-                        onError={e => { e.target.style.display='none'; }}
+                        alt="Dynamic PromptPay QR"
+                        style={{ width: 210, height: 210, display: 'block', borderRadius: 8 }}
+                        onError={e => { e.target.src = promptpayQrUrl; }}
                       />
                     </div>
-                    <div style={{ fontSize: 11, color: '#757575' }}>PromptPay (เลขบัตรประชาชน): <strong>1-6398-00408-76-5</strong></div>
-                    <div style={{ fontSize: 13, color: '#006064', fontWeight: 700, marginTop: 4 }}>ชื่อบัญชี: {PROMPTPAY_NAME}</div>
+                    <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>พร้อมเพย์ (PromptPay): <strong style={{ color: '#0f172a' }}>095-418-1766</strong></div>
+                    <div style={{ fontSize: 13.5, color: '#0f172a', fontWeight: 800, marginTop: 2 }}>ชื่อบัญชี: {PROMPTPAY_NAME}</div>
+                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>ธนาคารกรุงไทย (Krungthai Bank)</div>
                   </div>
                   <div style={{ width: '100%' }}>
                     <label style={{
@@ -1092,6 +1275,129 @@ export default function MyFinesPage() {
                   {submitting ? (loadingStatus || 'กำลังตรวจสอบ...') : '📤 อัปโหลดและตรวจสอบสลิป'}
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Payment Modal */}
+      {bulkPaymentModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setBulkPaymentModal(false)}>
+          <div className="modal-box" style={{ maxWidth: 440 }}>
+            <div className="modal-header">
+              <span style={{ fontWeight: 800, fontSize: 16 }}>💳 ชำระเงินรวม ({selectedFineIds.length} รายการ)</span>
+              <button onClick={() => setBulkPaymentModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9e9e9e' }}><X size={18} /></button>
+            </div>
+
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
+              {/* Summary List */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '12px 16px', width: '100%', fontSize: 12.5 }}>
+                <div style={{ fontWeight: 700, color: '#334155', marginBottom: 6 }}>📋 รายการค่าปรับที่เลือก:</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 110, overflowY: 'auto' }}>
+                  {fines.filter(f => selectedFineIds.includes(f.id)).map((item, idx) => (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                      <span>{idx + 1}. {item.violation} ({item.date})</span>
+                      <strong style={{ color: '#dc2626' }}>{item.amount} บ.</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Total Banner */}
+              <div style={{ background: 'linear-gradient(135deg, #fff7ed, #fef3c7)', border: '1px solid #fde68a', borderRadius: 12, padding: '14px 18px', width: '100%', textAlign: 'center' }}>
+                <div style={{ fontSize: 12, color: '#92400e', fontWeight: 600 }}>ยอดชำระสุทธิรวมทั้งสิ้น</div>
+                <div style={{ fontSize: 26, fontWeight: 900, color: '#b45309' }}>
+                  {fines.filter(f => selectedFineIds.includes(f.id)).reduce((sum, f) => sum + f.amount, 0)} บาท
+                </div>
+              </div>
+
+              {/* Dynamic QR */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', width: '100%' }}>
+                <div style={{ fontSize: 13, color: '#475569', fontWeight: 600, marginBottom: 8 }}>
+                  QR Code ชำระเงินรวม (ระบุยอดเงินให้อัตโนมัติ)
+                </div>
+                <div style={{ background: '#ffffff', padding: 12, borderRadius: 18, border: '1.5px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', display: 'inline-flex', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
+                  <img
+                    src={`https://promptpay.io/${PROMPTPAY_ID}/${fines.filter(f => selectedFineIds.includes(f.id)).reduce((sum, f) => sum + f.amount, 0)}`}
+                    alt="Bulk Dynamic PromptPay QR"
+                    style={{ width: 210, height: 210, display: 'block', borderRadius: 8 }}
+                    onError={e => { e.target.src = promptpayQrUrl; }}
+                  />
+                </div>
+                <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>พร้อมเพย์ (PromptPay): <strong style={{ color: '#0f172a' }}>095-418-1766</strong></div>
+                <div style={{ fontSize: 13.5, color: '#0f172a', fontWeight: 800, marginTop: 2 }}>ชื่อบัญชี: {PROMPTPAY_NAME}</div>
+                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>ธนาคารกรุงไทย (Krungthai Bank)</div>
+              </div>
+
+              {/* Upload Input */}
+              <div style={{ width: '100%' }}>
+                <label style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  padding: '16px 20px',
+                  border: '2px dashed #6366f1',
+                  borderRadius: 14,
+                  background: '#f5f3ff',
+                  color: '#4f46e5',
+                  cursor: 'pointer',
+                  width: '100%',
+                  textAlign: 'center',
+                  fontWeight: 700,
+                  fontSize: 14
+                }}>
+                  <span style={{ fontSize: 24 }}>📤</span>
+                  <span>คลิกเพื่ออัปโหลดสลิปใบเดียวจ่ายรวม</span>
+                  <span style={{ fontSize: 11.5, fontWeight: 400, opacity: 0.8 }}>สแน็ปสลิปที่โอนยอดรวม {fines.filter(f => selectedFineIds.includes(f.id)).reduce((sum, f) => sum + f.amount, 0)} บาท</span>
+                  <input type="file" accept="image/*" onChange={e => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = ev => {
+                      const img = new Image();
+                      img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const maxDim = 800;
+                        if (width > maxDim || height > maxDim) {
+                          if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                          } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                          }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        setSlipPreview(canvas.toDataURL('image/jpeg', 0.7));
+                      };
+                      img.src = ev.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                  }} style={{ display: 'none' }} />
+                </label>
+                {slipPreview && (
+                  <div style={{ marginTop: 12, width: '100%', textAlign: 'center' }}>
+                    <div style={{ fontSize: 12, color: '#2e7d32', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 6 }}>
+                      <span>✅ แนบสลิปเรียบร้อยแล้ว</span>
+                    </div>
+                    <img src={slipPreview} alt="bulk slip preview" style={{ width: '100%', maxHeight: 180, objectFit: 'contain', borderRadius: 8, border: '2px solid #a5d6a7' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-gray" onClick={() => setBulkPaymentModal(false)}>ยกเลิก</button>
+              <button className="btn btn-primary" onClick={handleUploadBulkSlip} disabled={!slipPreview || submitting}>
+                {submitting ? (loadingStatus || 'กำลังตรวจสอบ...') : '📤 อัปโหลดและตรวจสลิปจ่ายรวม'}
+              </button>
             </div>
           </div>
         </div>

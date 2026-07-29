@@ -55,15 +55,8 @@ export default function CleanDutyPage() {
         
         let hasDuty = members.length > 0 && members[0] !== '–';
         const myNickname = user?.nickname || '';
-        let isMyDuty = hasDuty && members.some(n => n === myNickname);
-
-        if (import.meta.env.DEV) {
-          isMyDuty = true;
-          if (members.length === 0 || members[0] === '–') {
-            members = [myNickname, 'ตูน', 'เป้'];
-            hasDuty = true;
-          }
-        }
+        const myName = user?.name || '';
+        let isMyDuty = hasDuty && members.some(n => n === myNickname || n === myName || (myNickname && n.includes(myNickname)));
 
         setDutyMembers(members);
         setHasDutyToday(hasDuty);

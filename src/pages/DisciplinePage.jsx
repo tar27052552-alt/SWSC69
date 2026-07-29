@@ -47,6 +47,17 @@ export default function DisciplinePage() {
   const [paymentModal, setPaymentModal] = useState(null); // fine object being paid
   const [slipPreview, setSlipPreview] = useState(null);
   const [submittingSlip, setSubmittingSlip] = useState(false);
+  const [conflicts, setConflicts] = useState([]);
+  const [showConflictsModal, setShowConflictsModal] = useState(false);
+  const [allSwapsList, setAllSwapsList] = useState([]);
+  const [rawSchedules, setRawSchedules] = useState([]);
+  const [showSwapCreateModal, setShowSwapCreateModal] = useState(false);
+  const [swapForm, setSwapForm] = useState({
+    date: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
+    dutyType: 'greeting_gate1',
+    originalNickname: '',
+    substituteNickname: ''
+  });
   const PROMPTPAY_ID = '1639800408765'; // <-- เปลี่ยนเป็นเบอร์ PromptPay ของสภา
   const PROMPTPAY_NAME = 'น.ส. ทิตติกรณ์ แสงหงษ์';
 
@@ -111,11 +122,263 @@ export default function DisciplinePage() {
     }
   };
 
+  const loadConflictsData = async () => {
+    try {
+      const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+
+      // 1. Fetch all events
+      const { data: eventsData, error: e1 } = await supabase
+        .from('events')
+        .select('*');
+      if (e1) throw e1;
+
+      // Filter active external events (ending today or in the future)
+      const extEvents = (eventsData || []).filter(ev => {
+        const end = ev.end_date || ev.date;
+        return ev.location_category === 'external' && end >= todayStr;
+      });
+
+      if (extEvents.length === 0) {
+        setConflicts([]);
+        return;
+      }
+
+      // 2. Fetch event participants
+      const extEventIds = extEvents.map(e => e.id);
+      const { data: partData, error: e2 } = await supabase
+        .from('event_participants')
+        .select('*')
+        .in('event_id', extEventIds);
+      if (e2) throw e2;
+
+      // 3. Fetch all weekly duty schedule definitions
+      const { data: schedData, error: e3 } = await supabase
+        .from('schedules')
+        .select('*');
+      if (e3) throw e3;
+
+      const cleanScheds = (schedData || []).filter(s => s.type === 'clean_room');
+      const greetingScheds = (schedData || []).filter(s => s.type === 'greeting');
+
+      const TH_DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+
+      const newConflicts = [];
+
+      for (const ev of extEvents) {
+        const evParticipants = (partData || []).filter(p => String(p.event_id) === String(ev.id));
+        const participantUserIds = evParticipants.map(p => String(p.user_id));
+
+        if (participantUserIds.length === 0) continue;
+
+        // Iterate through dates from ev.date to ev.end_date
+        const [sYear, sMonth, sDay] = ev.date.split('-').map(Number);
+        const endStr = ev.end_date || ev.date;
+        const [eYear, eMonth, eDay] = endStr.split('-').map(Number);
+
+        const startDate = new Date(sYear, sMonth - 1, sDay);
+        const endDate = new Date(eYear, eMonth - 1, eDay);
+
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          if (dateStr < todayStr) continue; // Skip past dates
+
+          const dayName = TH_DAYS[d.getDay()];
+
+          // Clean duty members for this day
+          const cleanForDay = cleanScheds.find(s => s.day === dayName);
+          const cleanMembers = cleanForDay?.data?.members || [];
+
+          // Greeting duty members for this day
+          const greetingForDay = greetingScheds.find(s => s.day === dayName);
+          const greetingData = greetingForDay?.data || {};
+          const greetingMembers = [
+            ...(greetingData.gate1 || []),
+            ...(greetingData.gate2 || []),
+            ...(greetingData.gate3 || [])
+          ].filter(n => n && n !== '–');
+
+          for (const u of users) {
+            if (!participantUserIds.includes(String(u.id))) continue;
+
+            // Check clean duty conflict
+            if (cleanMembers.includes(u.nickname)) {
+              newConflicts.push({
+                date: dateStr,
+                dutyType: 'clean_room',
+                originalNickname: u.nickname,
+                userFullName: u.name,
+                dutyLabel: 'เวรห้องสภา',
+                dayName: `${dayName}ที่ ${d.getDate()} ${d.toLocaleDateString('th-TH', { month: 'short' })}`,
+                eventTitle: ev.title
+              });
+            }
+
+            // Check greeting duty conflict
+            ['gate1', 'gate2', 'gate3'].forEach(gate => {
+              const gateMembers = (greetingData[gate] || []).filter(n => n && n !== '–');
+              if (gateMembers.includes(u.nickname)) {
+                const gateLabels = { gate1: 'ประตูไหมไทย', gate2: 'ประตูอำเภอ', gate3: 'ประตูหน้า รร.' };
+                newConflicts.push({
+                  date: dateStr,
+                  dutyType: 'greeting',
+                  gate: gate,
+                  originalNickname: u.nickname,
+                  userFullName: u.name,
+                  dutyLabel: `เวรยืนไหว้ (${gateLabels[gate]})`,
+                  dayName: `${dayName}ที่ ${d.getDate()} ${d.toLocaleDateString('th-TH', { month: 'short' })}`,
+                  eventTitle: ev.title
+                });
+              }
+            });
+          }
+        }
+      }
+
+      setConflicts(newConflicts);
+    } catch (err) {
+      console.error('Error loading conflicts:', err);
+    }
+  };
+
+  const handleAssignSubstitute = async (conflict, substituteNickname) => {
+    try {
+      const dutyTypeKey = conflict.dutyType === 'greeting' 
+        ? `greeting_${conflict.gate || 'gate1'}` 
+        : 'clean_room';
+      
+      const { error: delErr } = await supabase
+        .from('duty_swaps')
+        .delete()
+        .eq('date', conflict.date)
+        .eq('duty_type', dutyTypeKey)
+        .eq('original_nickname', conflict.originalNickname);
+
+      if (delErr) throw delErr;
+
+      if (substituteNickname) {
+        const { error: insErr } = await supabase
+          .from('duty_swaps')
+          .insert([{
+            date: conflict.date,
+            duty_type: dutyTypeKey,
+            original_nickname: conflict.originalNickname,
+            substitute_nickname: substituteNickname
+          }]);
+        if (insErr) throw insErr;
+      }
+
+      await loadExemptionsAndSwaps();
+      await loadConflictsData();
+    } catch (err) {
+      console.error('Error assigning substitute:', err);
+      alert('เกิดข้อผิดพลาดในการตั้งค่าคนทำแทน: ' + err.message);
+    }
+  };
+
+  const handleDeleteSwap = async (id) => {
+    if (!window.confirm('คุณต้องการยกเลิกการสลับเวรนี้ใช่หรือไม่?')) return;
+    try {
+      const { error } = await supabase
+        .from('duty_swaps')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+
+      alert('ยกเลิกการสลับเวรเรียบร้อยแล้ว');
+      loadExemptionsAndSwaps();
+      loadConflictsData();
+    } catch (err) {
+      console.error('Error deleting swap:', err);
+      alert('เกิดข้อผิดพลาดในการยกเลิกสลับเวร: ' + err.message);
+    }
+  };
+
+  const getScheduledNicknames = (dateStr, dutyType) => {
+    if (!dateStr || !dutyType || rawSchedules.length === 0) return [];
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+    const day = daysTh[dateObj.getDay()];
+    if (!day) return [];
+
+    let typeKey = dutyType;
+    let subKey = null;
+    if (dutyType.startsWith('greeting_')) {
+      typeKey = 'greeting';
+      subKey = dutyType.replace('greeting_', '');
+    }
+
+    const row = rawSchedules.find(s => s.type === typeKey && s.day === day);
+    if (!row || !row.data) return [];
+
+    if (subKey && row.data[subKey]) {
+      return Array.isArray(row.data[subKey]) ? row.data[subKey] : [];
+    }
+    if (row.data.members && Array.isArray(row.data.members)) {
+      return row.data.members;
+    }
+    if (row.data.week1 || row.data.week2) {
+      return Array.from(new Set([...(row.data.week1 || []), ...(row.data.week2 || [])]));
+    }
+    return [];
+  };
+
+  useEffect(() => {
+    if (!showSwapCreateModal) return;
+    const scheduled = getScheduledNicknames(swapForm.date, swapForm.dutyType);
+    if (scheduled.length > 0) {
+      if (!scheduled.includes(swapForm.originalNickname)) {
+        setSwapForm(p => ({ ...p, originalNickname: scheduled[0] }));
+      }
+    }
+  }, [swapForm.date, swapForm.dutyType, showSwapCreateModal, rawSchedules]);
+
+  const handleCreateSwap = async (e) => {
+    e?.preventDefault();
+    if (!swapForm.date || !swapForm.dutyType || !swapForm.originalNickname || !swapForm.substituteNickname) {
+      alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
+    }
+    if (swapForm.originalNickname === swapForm.substituteNickname) {
+      alert('ผู้รับผิดชอบเดิมและผู้ปฏิบัติหน้าที่แทนต้องไม่เป็นคนเดียวกัน');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('duty_swaps')
+        .insert([{
+          date: swapForm.date,
+          duty_type: swapForm.dutyType,
+          original_nickname: swapForm.originalNickname,
+          substitute_nickname: swapForm.substituteNickname,
+          created_by: user?.nickname || user?.name || 'ฝ่ายปกครอง'
+        }]);
+
+      if (error) throw error;
+
+      alert('บันทึกการสลับเวรสำเร็จ!');
+      setShowSwapCreateModal(false);
+      loadExemptionsAndSwaps();
+      loadConflictsData();
+    } catch (err) {
+      console.error('Error creating swap:', err);
+      alert('เกิดข้อผิดพลาดในการบันทึกการสลับเวร: ' + err.message);
+    }
+  };
+
+  useEffect(() => {
+    if (users.length > 0) {
+      loadConflictsData();
+    }
+  }, [users]);
+
   useEffect(() => {
     loadFines();
 
     const interval = setInterval(() => {
       loadFines();
+      if (users.length > 0) loadConflictsData();
     }, 10000);
 
     const channel = supabase
@@ -134,14 +397,15 @@ export default function DisciplinePage() {
   const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const todayStr = toGregorianStr();
   const [selectedDate, setSelectedDate] = useState(todayStr);
-  const [manualChecks, setManualChecks] = useState({});
-  const [cleanChecks, setCleanChecks] = useState({});
   const [dbAttendance, setDbAttendance] = useState([]);
   const [dbCleanChecks, setDbCleanChecks] = useState([]);
   const [dbGreetingChecks, setDbGreetingChecks] = useState([]);
   const [enabledDays, setEnabledDays] = useState(["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์"]);
   const [disabledDates, setDisabledDates] = useState([]);
   const [newDisabledDate, setNewDisabledDate] = useState('');
+  const [substituteDates, setSubstituteDates] = useState([]);
+  const [newSubstituteDate, setNewSubstituteDate] = useState('');
+  const [newSubstituteReplaceDay, setNewSubstituteReplaceDay] = useState('จันทร์');
   const [startDate, setStartDate] = useState('');
   const [cleanDutyStartDate, setCleanDutyStartDate] = useState('');
   const [greetingDutyStartDate, setGreetingDutyStartDate] = useState('');
@@ -173,6 +437,7 @@ export default function DisciplinePage() {
         if (settingsRes.data) {
           const days = settingsRes.data.find(d => d.key === 'enabled_days')?.value;
           const dates = settingsRes.data.find(d => d.key === 'disabled_dates')?.value;
+          const subDates = settingsRes.data.find(d => d.key === 'substitute_dates')?.value;
           const startD = settingsRes.data.find(d => d.key === 'start_date')?.value;
           const cleanStartD = settingsRes.data.find(d => d.key === 'clean_duty_start_date')?.value;
           const greetingStartD = settingsRes.data.find(d => d.key === 'greeting_duty_start_date')?.value;
@@ -182,6 +447,7 @@ export default function DisciplinePage() {
 
           if (days) setEnabledDays(days);
           if (dates) setDisabledDates(dates);
+          if (subDates) setSubstituteDates(subDates);
           if (startD) setStartDate(startD);
           if (cleanStartD) setCleanDutyStartDate(cleanStartD);
           if (greetingStartD) setGreetingDutyStartDate(greetingStartD);
@@ -325,6 +591,36 @@ export default function DisciplinePage() {
     }
   };
 
+  const handleAddSubstituteDate = async () => {
+    if (!newSubstituteDate) return;
+    const newObj = { date: newSubstituteDate, replaceDay: newSubstituteReplaceDay };
+    const filtered = substituteDates.filter(s => (typeof s === 'string' ? s : s.date) !== newSubstituteDate);
+    const newDates = [...filtered, newObj];
+    setSubstituteDates(newDates);
+    setNewSubstituteDate('');
+    try {
+      const { error } = await supabase
+        .from('attendance_settings')
+        .upsert([{ key: 'substitute_dates', value: newDates }], { onConflict: 'key' });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error saving substitute dates:', err);
+    }
+  };
+
+  const handleRemoveSubstituteDate = async (dateStr) => {
+    const newDates = substituteDates.filter(s => (typeof s === 'string' ? s : s.date) !== dateStr);
+    setSubstituteDates(newDates);
+    try {
+      const { error } = await supabase
+        .from('attendance_settings')
+        .upsert([{ key: 'substitute_dates', value: newDates }], { onConflict: 'key' });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error removing substitute date:', err);
+    }
+  };
+
 
 
   const loadAttendance = async () => {
@@ -409,6 +705,17 @@ export default function DisciplinePage() {
         .eq('date', selectedDate);
       if (swapErr) throw swapErr;
       setDbDutySwaps(swapData || []);
+
+      const { data: allSwapsData } = await supabase
+        .from('duty_swaps')
+        .select('*')
+        .order('date', { ascending: false });
+      setAllSwapsList(allSwapsData || []);
+
+      const { data: schedsData } = await supabase
+        .from('schedules')
+        .select('*');
+      if (schedsData) setRawSchedules(schedsData);
 
     } catch (err) {
       console.error('Error loading exemptions and swaps:', err);
@@ -517,6 +824,22 @@ export default function DisciplinePage() {
           is_manual: true
         }];
       });
+
+      const statusTextMap = {
+        on_time: 'มาเรียนปกติ',
+        late: 'มาสาย',
+        leave: 'ลางาน/ลาเรียน',
+        missing: 'ขาดเรียน',
+        activity: 'ทำกิจกรรม'
+      };
+
+      await supabase
+        .from('notifications')
+        .insert([{
+          type: 'task',
+          user_id: String(userId),
+          message: `📍 ฝ่ายปกครองบันทึกสถานะเช็คชื่อของคุณวันที่ ${selectedDate}: ${statusTextMap[status] || status}`
+        }]);
     } catch (err) {
       console.error('Error updating manual check-in:', err);
       alert('เกิดข้อผิดพลาดในการบันทึกเวลาเข้าแถว: ' + err.message);
@@ -539,6 +862,18 @@ export default function DisciplinePage() {
         const filtered = prev.filter(x => x.nickname !== nickname);
         return [...filtered, { id: Date.now(), ...record }];
       });
+
+      const u = users.find(x => x.nickname === nickname);
+      if (u) {
+        const cleanText = { done: 'ปฏิบัติหน้าที่แล้ว', missing: 'ขาดเวรทำความสะอาด' }[status] || status;
+        await supabase
+          .from('notifications')
+          .insert([{
+            type: 'task',
+            user_id: String(u.id),
+            message: `🧹 ฝ่ายปกครองบันทึกสถานะเวรห้องสภาของคุณวันที่ ${selectedDate}: ${cleanText}`
+          }]);
+      }
     } catch (err) {
       console.error('Error updating clean duty check:', err);
       alert('เกิดข้อผิดพลาดในการบันทึกเวรห้องสภา: ' + err.message);
@@ -589,6 +924,18 @@ export default function DisciplinePage() {
         const filtered = prev.filter(x => x.nickname !== nickname);
         return [...filtered, { id: Date.now(), ...record }];
       });
+
+      const u = users.find(x => x.nickname === nickname);
+      if (u) {
+        const greetText = { on_time: 'มาปฏิบัติเวรตรงเวลา', late: 'มาปฏิบัติเวรสาย', missing: 'ขาดเวรยืนไหว้' }[status] || status;
+        await supabase
+          .from('notifications')
+          .insert([{
+            type: 'task',
+            user_id: String(u.id),
+            message: `🙏 ฝ่ายปกครองบันทึกสถานะเวรยืนไหว้ของคุณวันที่ ${selectedDate}: ${greetText}`
+          }]);
+      }
 
       // VERY IMPORTANT: If marked as 'done', delete auto-fine for "ไม่ปฏิบัติเวรไหว้"
       if (status === 'done') {
@@ -782,12 +1129,13 @@ export default function DisciplinePage() {
         };
         setFines(prev => [inserted, ...prev]);
 
-        // Insert into notifications
+        // Insert into notifications (targeted for specific user)
         await supabase
           .from('notifications')
           .insert([{
             type: 'fine',
-            message: `💸 บันทึกค่าปรับใหม่: "${inserted.userName} (${inserted.nickname})" - ${inserted.violation} จำนวน ${inserted.amount} บาท`
+            user_id: String(inserted.userId),
+            message: `💸 คุณได้รับแจ้งบันทึกความผิด/ค่าปรับ: ${inserted.violation} จำนวน ${inserted.amount} บาท`
           }]);
 
         // Send Discord embed notification
@@ -913,11 +1261,30 @@ export default function DisciplinePage() {
           <div className="page-title">🛡️ ฝ่ายปกครอง</div>
           <div className="page-subtitle">ระบบบันทึกความผิดและการหักเงินสมาชิกสภานักเรียน</div>
         </div>
-        {canManage && (
-          <button className="btn btn-primary" onClick={() => { initForm(); setModal(true); }}>
-            <Plus size={14}/> บันทึกความผิด
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: 10 }}>
+          {canManage && (
+            <button 
+              className="btn" 
+              onClick={() => setShowConflictsModal(true)} 
+              style={{ 
+                background: conflicts.length > 0 ? '#e65100' : '#ffffff', 
+                color: conflicts.length > 0 ? '#ffffff' : '#555555', 
+                border: conflicts.length > 0 ? 'none' : '1px solid #cccccc',
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 6, 
+                fontWeight: '600'
+              }}
+            >
+              ⚠️ แจ้งเตือนทับซ้อน ({conflicts.length})
+            </button>
+          )}
+          {canManage && (
+            <button className="btn btn-primary" onClick={() => { initForm(); setModal(true); }}>
+              <Plus size={14}/> บันทึกความผิด
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
@@ -945,6 +1312,7 @@ export default function DisciplinePage() {
           <button className={`tab ${activeTab==='checkin'?'active':''}`} onClick={()=>setActiveTab('checkin')} style={{ padding:'8px 16px', background:activeTab==='checkin'?'#00bcd4':'#f5f5f5', color:activeTab==='checkin'?'#fff':'#757575', border:'none', borderRadius:20, fontWeight:600, cursor:'pointer', whiteSpace: 'nowrap' }}>📍 ตรวจสอบการมา รร.</button>
           <button className={`tab ${activeTab==='greeting'?'active':''}`} onClick={()=>setActiveTab('greeting')} style={{ padding:'8px 16px', background:activeTab==='greeting'?'#00bcd4':'#f5f5f5', color:activeTab==='greeting'?'#fff':'#757575', border:'none', borderRadius:20, fontWeight:600, cursor:'pointer', whiteSpace: 'nowrap' }}>🙏 ตรวจสอบเวรยืนไหว้</button>
           <button className={`tab ${activeTab==='clean'?'active':''}`} onClick={()=>setActiveTab('clean')} style={{ padding:'8px 16px', background:activeTab==='clean'?'#00bcd4':'#f5f5f5', color:activeTab==='clean'?'#fff':'#757575', border:'none', borderRadius:20, fontWeight:600, cursor:'pointer', whiteSpace: 'nowrap' }}>🧹 ตรวจสอบเวรห้องสภา</button>
+          <button className={`tab ${activeTab==='swaps'?'active':''}`} onClick={()=>setActiveTab('swaps')} style={{ padding:'8px 16px', background:activeTab==='swaps'?'#00bcd4':'#f5f5f5', color:activeTab==='swaps'?'#fff':'#757575', border:'none', borderRadius:20, fontWeight:600, cursor:'pointer', whiteSpace: 'nowrap' }}>🔄 รายการสลับเวร</button>
         </div>
 
       {/* Settings Panel */}
@@ -1199,6 +1567,83 @@ export default function DisciplinePage() {
                 </div>
               </div>
 
+              {/* Substitute Days settings */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, flexWrap: 'wrap', borderTop: '1px solid #f0f0f0', paddingTop: 16 }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: '#455a64', marginBottom: 8 }}>เพิ่มวันเรียนชดเชย / เช็คชื่อพิเศษ (รายวัน):</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <input
+                      type="date"
+                      className="input-field"
+                      style={{ padding: '6px 12px', fontSize: 13, flex: 1, minWidth: 140 }}
+                      value={newSubstituteDate}
+                      onChange={e => setNewSubstituteDate(e.target.value)}
+                    />
+                    <select
+                      className="input-field"
+                      style={{ padding: '6px 10px', fontSize: 13, width: 'auto' }}
+                      value={newSubstituteReplaceDay}
+                      onChange={e => setNewSubstituteReplaceDay(e.target.value)}
+                    >
+                      <option value="จันทร์">แทนตารางวันจันทร์</option>
+                      <option value="อังคาร">แทนตารางวันอังคาร</option>
+                      <option value="พุธ">แทนตารางวันพุธ</option>
+                      <option value="พฤหัส">แทนตารางวันพฤหัสบดี</option>
+                      <option value="ศุกร์">แทนตารางวันศุกร์</option>
+                    </select>
+                    <button className="btn btn-primary" style={{ padding: '0 16px', fontSize: 13 }} onClick={handleAddSubstituteDate}>
+                      เพิ่ม
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: '#455a64', marginBottom: 8 }}>วันเรียนชดเชยที่เปิดใช้งานอยู่:</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {substituteDates.length === 0 ? (
+                      <span style={{ fontSize: 12, color: '#9e9e9e' }}>ไม่มีวันเรียนชดเชย</span>
+                    ) : (
+                      substituteDates.map(item => {
+                        const dateStr = typeof item === 'string' ? item : item.date;
+                        const replaceDay = typeof item === 'string' ? 'วันเรียนปกติ' : `แทนตารางวัน${item.replaceDay}`;
+                        return (
+                          <span
+                            key={dateStr}
+                            style={{
+                              background: '#e0f7fa',
+                              color: '#00838f',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              padding: '4px 8px',
+                              borderRadius: 4,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4
+                            }}
+                          >
+                            {new Date(dateStr).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })} ({replaceDay})
+                            <button
+                              onClick={() => handleRemoveSubstituteDate(dateStr)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#00838f',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                                fontSize: 10,
+                                marginLeft: 2
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+
 
             </div>
           )}
@@ -1239,7 +1684,6 @@ export default function DisciplinePage() {
               <tbody>
                 {filtered.map((f, i) => {
                   const u = users.find(user => String(user.id) === String(f.userId));
-                  const dept = u && u.deptId ? DEPARTMENTS.find(d => d.id === u.deptId) : null;
                   const ps = f.paymentStatus;
                   return (
                     <tr key={f.id}>
@@ -1448,15 +1892,19 @@ export default function DisciplinePage() {
                   }
 
                   const usersOnDuty = dutyMembers.map(nickname => {
-                    const found = users.find(u => u.nickname === nickname);
-                    if (found) return found;
+                    const swap = dbDutySwaps.find(s => s.date === selectedDate && s.duty_type === 'clean_room' && s.original_nickname === nickname);
+                    const activeNick = swap ? swap.substitute_nickname : nickname;
+                    const found = users.find(u => u.nickname === activeNick);
+                    if (found) return { ...found, isSubbed: !!swap, originalNickname: nickname };
                     return {
-                      id: nickname,
-                      name: `สมาชิก (${nickname})`,
-                      nickname: nickname,
+                      id: activeNick,
+                      name: `สมาชิก (${activeNick})`,
+                      nickname: activeNick,
                       deptId: null,
-                      avatar: nickname.substring(0, 1),
-                      avatarColor: '#9e9e9e'
+                      avatar: activeNick.substring(0, 1),
+                      avatarColor: '#9e9e9e',
+                      isSubbed: !!swap,
+                      originalNickname: nickname
                     };
                   });
 
@@ -1478,7 +1926,10 @@ export default function DisciplinePage() {
                           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                             <div className="avatar" style={{ width:28, height:28, fontSize:12, background: u.avatarColor+'22', color: u.avatarColor }}>{u.avatar}</div>
                             <div>
-                              <div style={{ fontWeight:600, fontSize:13 }}>{u.name}</div>
+                              <div style={{ fontWeight:600, fontSize:13 }}>
+                                {u.name}
+                                {u.isSubbed && <span style={{ fontSize: 11, color: '#2e7d32', marginLeft: 6, fontWeight: 700 }}>(ทำแทน {u.originalNickname})</span>}
+                              </div>
                               <div style={{ fontSize:11, color:'#9e9e9e' }}>"{u.nickname}"</div>
                             </div>
                           </div>
@@ -1721,6 +2172,111 @@ export default function DisciplinePage() {
         </div>
       )}
 
+      {/* Duty Swaps Tab */}
+      {activeTab === 'swaps' && (
+        <div className="card">
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <span className="card-title">🔄 ประวัติและรายการสลับเวรปฏิบัติหน้าที่</span>
+              <div style={{ fontSize: 12, color: '#757575' }}>รายการสลับเวรทั้งหมดในระบบ</div>
+            </div>
+            {canManage && (
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  const todayDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+                  const defaultDuty = 'greeting_gate1';
+                  const sched = getScheduledNicknames(todayDate, defaultDuty);
+                  setSwapForm({
+                    date: todayDate,
+                    dutyType: defaultDuty,
+                    originalNickname: sched[0] || '',
+                    substituteNickname: ''
+                  });
+                  setShowSwapCreateModal(true);
+                }}
+                style={{ background: '#f57c00', border: 'none', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 13, fontWeight: 'bold' }}
+              >
+                <Plus size={16} /> ขอสลับเวร / บันทึกการทำแทน
+              </button>
+            )}
+          </div>
+
+          <div style={{ padding: '8px 0', overflowX: 'auto' }}>
+            {allSwapsList.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#9e9e9e', fontSize: 14 }}>
+                📭 ยังไม่มีการบันทึกข้อมูลการสลับเวรปฏิบัติหน้าที่
+              </div>
+            ) : (
+              <table className="simple-table" style={{ width: '100%', textAlign: 'center' }}>
+                <thead>
+                  <tr>
+                    <th>📅 วันที่</th>
+                    <th>🛡️ ประเภทเวร</th>
+                    <th>👤 คนเดิม</th>
+                    <th>➡️</th>
+                    <th>🤝 คนแทน</th>
+                    <th>📝 ผู้บันทึก</th>
+                    {canManage && <th>⚙️ จัดการ</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {allSwapsList.map((swap) => {
+                    const dutyLabels = {
+                      greeting_gate1: '🙏 ยืนไหว้ - ประตูไหมไทย',
+                      greeting_gate2: '🙏 ยืนไหว้ - ประตูอำเภอ',
+                      greeting_gate3: '🙏 ยืนไหว้ - ประตูหน้า รร.',
+                      clean_room: '🧹 เวรทำความสะอาดห้องสภา',
+                      national_flag: '🚩 เชิญธงชาติ',
+                      color_flag: '🎌 เชิญธงสี'
+                    };
+                    const formattedDate = new Date(swap.date).toLocaleDateString('th-TH', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      weekday: 'short'
+                    });
+
+                    return (
+                      <tr key={swap.id} style={swap.date < todayStr ? { opacity: 0.6 } : {}}>
+                        <td style={{ fontWeight: 600 }}>{formattedDate}</td>
+                        <td>
+                          <span style={{
+                            background: swap.duty_type?.startsWith('greeting') ? '#fff3e0' : '#e8f5e9',
+                            color: swap.duty_type?.startsWith('greeting') ? '#e65100' : '#2e7d32',
+                            padding: '4px 8px',
+                            borderRadius: 12,
+                            fontSize: 11,
+                            fontWeight: 600
+                          }}>
+                            {dutyLabels[swap.duty_type] || swap.duty_type}
+                          </span>
+                        </td>
+                        <td style={{ color: '#c62828', fontWeight: 600 }}>{swap.original_nickname}</td>
+                        <td style={{ color: '#757575' }}>➡️</td>
+                        <td style={{ color: '#2e7d32', fontWeight: 600 }}>{swap.substitute_nickname}</td>
+                        <td style={{ fontSize: 12, color: '#616161' }}>{swap.created_by || '-'}</td>
+                        {canManage && (
+                          <td>
+                            <button
+                              onClick={() => handleDeleteSwap(swap.id)}
+                              className="btn btn-danger"
+                              style={{ padding: '2px 8px', fontSize: 11, background: '#c62828' }}
+                            >
+                              ยกเลิก
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* QR Payment Modal */}
       {paymentModal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setPaymentModal(null)}>
@@ -1889,6 +2445,169 @@ export default function DisciplinePage() {
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000', borderRadius: 8, overflow: 'hidden' }}>
               <img src={transformGoogleDriveUrl(viewPhotoUrl)} alt="expanded proof" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
             </div>
+          </div>
+        </div>
+      )}
+      {/* Conflicts Modal */}
+      {showConflictsModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowConflictsModal(false)} style={{ zIndex: 9999 }}>
+          <div className="modal-box" style={{ maxWidth: 600, padding: 20 }}>
+            <div className="modal-header" style={{ paddingBottom: 15, marginBottom: 15, borderBottom: '1px solid #eee' }}>
+              <span style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                ⚠️ แจ้งเตือนตารางงานทับซ้อน
+              </span>
+              <button onClick={() => setShowConflictsModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9e9e9e' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              {conflicts.length > 0 ? (
+                conflicts.map(c => {
+                  const dutyTypeKey = c.dutyType === 'greeting' ? `greeting_${c.gate || 'gate1'}` : 'clean_room';
+                  const currentSwap = dbDutySwaps.find(s => s.date === c.date && s.duty_type === dutyTypeKey && s.original_nickname === c.originalNickname);
+                  const currentSubNick = currentSwap?.substitute_nickname || '';
+
+                  return (
+                    <div key={`${c.date}-${c.dutyType}-${c.gate || ''}-${c.originalNickname}`} style={{ background: currentSubNick ? '#e8f5e9' : '#fff3e0', borderRadius: 8, padding: '14px 18px', marginBottom: 12, border: `1px solid ${currentSubNick ? '#a5d6a7' : '#ffcc80'}` }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: currentSubNick ? '#2e7d32' : '#e65100', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span>{currentSubNick ? '✅ เปลี่ยนผู้ปฏิบัติหน้าที่แทนแล้ว' : '⚠️ ตารางงานทับซ้อน'}</span>
+                          <span style={{ fontSize: 11, background: currentSubNick ? '#c8e6c9' : '#ffe0b2', color: currentSubNick ? '#1b5e20' : '#e65100', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>
+                            {c.dutyLabel}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 13, color: '#37474f', lineHeight: 1.5, marginBottom: 10 }}>
+                          <strong>{c.originalNickname} ({c.userFullName})</strong> ติดภารกิจไปกิจกรรม <strong>{c.eventTitle}</strong> ในวัน<strong>{c.dayName}</strong>
+                        </div>
+
+                        <div style={{ background: 'rgba(255,255,255,0.85)', borderRadius: 6, padding: '8px 12px', border: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#455a64' }}>👤 เลือกคนมาปฏิบัติหน้าที่แทน:</span>
+                          <select 
+                            className="select-field" 
+                            style={{ width: 'auto', flex: 1, minWidth: 200, padding: '4px 8px', fontSize: 12, background: 'white' }}
+                            value={currentSubNick}
+                            onChange={(e) => handleAssignSubstitute(c, e.target.value)}
+                          >
+                            <option value="">-- ยังไม่มีผู้ทำแทน (ติดขัด) --</option>
+                            {users.filter(u => u.nickname !== c.originalNickname && u.role !== 'admin' && u.nickname !== 'แอดมิน').map(u => (
+                              <option key={u.id} value={u.nickname}>
+                                {u.name} ({u.nickname})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ textAlign: 'center', padding: '20px', color: '#757575' }}>
+                  ไม่มีตารางงานทับซ้อน
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Create Swap Modal */}
+      {showSwapCreateModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowSwapCreateModal(false)} style={{ zIndex: 9999 }}>
+          <div className="modal-box" style={{ maxWidth: 450, padding: 20 }}>
+            <div className="modal-header" style={{ paddingBottom: 15, marginBottom: 15, borderBottom: '1px solid #eee' }}>
+              <span style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                🔄 คำขอสลับเวรปฏิบัติหน้าที่
+              </span>
+              <button onClick={() => setShowSwapCreateModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9e9e9e' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateSwap} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label className="form-label">วันที่สลับเวร *</label>
+                <input
+                  type="date"
+                  className="input-field"
+                  value={swapForm.date}
+                  onChange={(e) => setSwapForm(p => ({ ...p, date: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="form-label">ประเภทเวร *</label>
+                <select
+                  className="select-field"
+                  value={swapForm.dutyType}
+                  onChange={(e) => setSwapForm(p => ({ ...p, dutyType: e.target.value }))}
+                  required
+                >
+                  <option value="greeting_gate1">🙏 เวรยืนไหว้ - ประตูไหมไทย</option>
+                  <option value="greeting_gate2">🙏 เวรยืนไหว้ - ประตูอำเภอ</option>
+                  <option value="greeting_gate3">🙏 เวรยืนไหว้ - ประตูหน้า รร.</option>
+                  <option value="clean_room">🧹 เวรทำความสะอาดห้องสภา</option>
+                  <option value="national_flag">🚩 เวรเชิญธงชาติ</option>
+                  <option value="color_flag">🎌 เวรเชิญธงสี</option>
+                </select>
+              </div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <label className="form-label" style={{ marginBottom: 0 }}>ผู้รับผิดชอบเดิม (คนเดิม) *</label>
+                  {getScheduledNicknames(swapForm.date, swapForm.dutyType).length > 0 && (
+                    <span style={{ fontSize: 11, color: '#e65100', fontWeight: 600 }}>
+                      📌 ผู้มีเวรวันนี้: {getScheduledNicknames(swapForm.date, swapForm.dutyType).join(', ')}
+                    </span>
+                  )}
+                </div>
+                <select
+                  className="select-field"
+                  value={swapForm.originalNickname}
+                  onChange={(e) => setSwapForm(p => ({ ...p, originalNickname: e.target.value }))}
+                  required
+                >
+                  <option value="">-- เลือกผู้รับผิดชอบเดิม --</option>
+                  {getScheduledNicknames(swapForm.date, swapForm.dutyType).length > 0 && (
+                    <optgroup label="📌 ผู้รับผิดชอบเวรตามตารางในวันนี้">
+                      {getScheduledNicknames(swapForm.date, swapForm.dutyType).map(nick => {
+                        const u = users.find(x => x.nickname === nick);
+                        return (
+                          <option key={`sched-${nick}`} value={nick}>
+                            ⭐ {u ? `${u.name} (${u.nickname})` : nick}
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  )}
+                  <optgroup label="👥 สมาชิกทั้งหมด">
+                    {users.filter(u => u.role !== 'admin' && u.nickname !== 'แอดมิน').map(u => (
+                      <option key={u.id} value={u.nickname}>
+                        {u.name} ({u.nickname})
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">ผู้ปฏิบัติหน้าที่แทน (คนแทน) *</label>
+                <select
+                  className="select-field"
+                  value={swapForm.substituteNickname}
+                  onChange={(e) => setSwapForm(p => ({ ...p, substituteNickname: e.target.value }))}
+                  required
+                >
+                  <option value="">-- เลือกผู้ทำแทน --</option>
+                  {users.filter(u => u.nickname !== swapForm.originalNickname && u.role !== 'admin' && u.nickname !== 'แอดมิน').map(u => (
+                    <option key={u.id} value={u.nickname}>
+                      {u.name} ({u.nickname})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="modal-footer" style={{ marginTop: 10 }}>
+                <button type="button" className="btn btn-gray" onClick={() => setShowSwapCreateModal(false)}>ยกเลิก</button>
+                <button type="submit" className="btn btn-primary" style={{ background: '#f57c00', border: 'none' }}>
+                  บันทึกการสลับเวร
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

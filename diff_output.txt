@@ -1,0 +1,1210 @@
+Created At: 2026-07-29T07:25:41Z
+Completed At: 2026-07-29T07:26:18Z
+The following changes were made by the multi_replace_file_content tool to: d:\à¹‚à¸›à¸£à¹€à¸ˆà¸„à¸ªà¸ à¸²\src\pages\DisciplinePage.jsx. If relevant, proactively run terminal commands to execute this code for the USER. Don't ask for permission.
+[diff_block_start]
+@@ -149,274 +149,426 @@
+   const [checkInActive, setCheckInActive] = useState(true);
+   const [greetingActive, setGreetingActive] = useState(true);
+   const [cleanActive, setCleanActive] = useState(true);
+-  const [cleanSchedules, setCleanSchedules] = useState([]);
+-  const [greetingSchedules, setGreetingSchedules] = useState([]);
+-  const [viewPhotoUrl, setViewPhotoUrl] = useState(null);
+-  const [dbDutySwaps, setDbDutySwaps] = useState([]);
+-  const [dbExemptNicknames, setDbExemptNicknames] = useState([]);
+-  const [conflicts, setConflicts] = useState([]);
+-  const [conflictModal, setConflictModal] = useState(null);
+-  const [selectedSub, setSelectedSub] = useState('');
+-
+-  useEffect(() => {
+-    async function loadData() {
+-      try {
+-        const [
+-          settingsRes,
+-          cleanRes,
+-          greetingRes
+-        ] = await Promise.all([
+-          supabase.from('attendance_settings').select('*'),
+-          supabase.from('schedules').select('*').eq('type', 'clean_room'),
+-          supabase.from('schedules').select('*').eq('type', 'greeting')
+-        ]);
+-
+-        if (settingsRes.error) throw settingsRes.error;
+-        
+-        if (settingsRes.data) {
+-          const days = settingsRes.data.find(d => d.key === 'enabled_days')?.value;
+-          const dates = settingsRes.data.find(d => d.key === 'disabled_dates')?.value;
+-          const startD = settingsRes.data.find(d => d.key === 'start_date')?.value;
+-          const cleanStartD = settingsRes.data.find(d => d.key === 'clean_duty_start_date')?.value;
+-          const greetingStartD = settingsRes.data.find(d => d.key === 'greeting_duty_start_date')?.value;
+-          const checkInAct = settingsRes.data.find(d => d.key === 'check_in_active')?.value;
+-          const greetingAct = settingsRes.data.find(d => d.key === 'greeting_duty_active')?.value;
+-          const cleanAct = settingsRes.data.find(d => d.key === 'clean_duty_active')?.value;
+-
+-          if (days) setEnabledDays(days);
+-          if (dates) setDisabledDates(dates);
+-          if (startD) setStartDate(startD);
+-          if (cleanStartD) setCleanDutyStartDate(cleanStartD);
+-          if (greetingStartD) setGreetingDutyStartDate(greetingStartD);
+-          if (checkInAct !== undefined) setCheckInActive(checkInAct !== 'false');
+-          if (greetingAct !== undefined) setGreetingActive(greetingAct !== 'false');
+-          if (cleanAct !== undefined) setCleanActive(cleanAct !== 'false');
+-        }
+-
+-        if (!cleanRes.error && cleanRes.data) {
+-          setCleanSchedules(cleanRes.data);
+-        }
+-        if (!greetingRes.error && greetingRes.data) {
+-          setGreetingSchedules(greetingRes.data);
+-        }
+-      } catch (err) {
+-        console.error('Error loading settings/schedules:', err);
+-      }
+-    }
+-    loadData();
+-  }, []);
+-
+-  const saveStartDate = async (newVal) => {
+-    setStartDate(newVal);
+-    try {
+-      const { error } = await supabase
+-        .from('attendance_settings')
+-        .upsert([{ key: 'start_date', value: newVal }], { onConflict: 'key' });
+-      if (error) throw error;
+-    } catch (err) {
+-      console.error('Error saving start date:', err);
+-    }
+-  };
+-
+-  const saveCleanDutyStartDate = async (newVal) => {
+-    setCleanDutyStartDate(newVal);
+-    try {
+-      const { error } = await supabase
+-        .from('attendance_settings')
+-        .upsert([{ key: 'clean_duty_start_date', value: newVal }], { onConflict: 'key' });
+-      if (error) throw error;
+-    } catch (err) {
+-      console.error('Error saving clean duty start date:', err);
+-    }
+-  };
+-
+-  const saveGreetingDutyStartDate = async (newVal) => {
+-    setGreetingDutyStartDate(newVal);
+-    try {
+-      const { error } = await supabase
+-        .from('attendance_settings')
+-        .upsert([{ key: 'greeting_duty_start_date', value: newVal }], { onConflict: 'key' });
+-      if (error) throw error;
+-    } catch (err) {
+-      console.error('Error saving greeting duty start date:', err);
+-    }
+-  };
+-
+-  const toggleCheckInActive = async () => {
+-    const nextVal = !checkInActive;
+-    setCheckInActive(nextVal);
+-    try {
+-      const { error } = await supabase
+-        .from('attendance_settings')
+-        .upsert([{ key: 'check_in_active', value: String(nextVal) }], { onConflict: 'key' });
+-      if (error) throw error;
+-    } catch (err) {
+-      console.error('Error toggling check-in active state:', err);
+-    }
+-  };
+-
+-  const toggleGreetingActive = async () => {
+-    const nextVal = !greetingActive;
+-    setGreetingActive(nextVal);
+-    try {
+-      const { error } = await supabase
+-        .from('attendance_settings')
+-        .upsert([{ key: 'greeting_duty_active', value: String(nextVal) }], { onConflict: 'key' });
+-      if (error) throw error;
+-    } catch (err) {
+-      console.error('Error toggling greeting active state:', err);
+-    }
+-  };
+-
+-  const toggleCleanActive = async () => {
+-    const nextVal = !cleanActive;
+-    setCleanActive(nextVal);
+-    try {
+-      const { error } = await supabase
+-        .from('attendance_settings')
+-        .upsert([{ key: 'clean_duty_active', value: String(nextVal) }], { onConflict: 'key' });
+-      if (error) throw error;
+-    } catch (err) {
+-      console.error('Error toggling clean active state:', err);
+-    }
+-  };
+-
+-  const saveEnabledDays = async (newDays) => {
+-    setEnabledDays(newDays);
+-    try {
+-      const { error } = await supabase
+-        .from('attendance_settings')
+-        .upsert([{ key: 'enabled_days', value: newDays }], { onConflict: 'key' });
+-      if (error) throw error;
+-    } catch (err) {
+-      console.error('Error saving enabled days:', err);
+-    }
+-  };
+-
+-  const handleToggleDay = (day) => {
+-    const newDays = enabledDays.includes(day)
+-      ? enabledDays.filter(d => d !== day)
+-      : [...enabledDays, day];
+-    saveEnabledDays(newDays);
+-  };
+-
+-  const handleAddDisabledDate = async () => {
+-    if (!newDisabledDate || disabledDates.includes(newDisabledDate)) return;
+-    const newDates = [...disabledDates, newDisabledDate].sort();
+-    setDisabledDates(newDates);
+-    setNewDisabledDate('');
+-    try {
+-      const { error } = await supabase
+-        .from('attendance_settings')
+-        .upsert([{ key: 'disabled_dates', value: newDates }], { onConflict: 'key' });
+-      if (error) throw error;
+-    } catch (err) {
+-      console.error('Error saving disabled dates:', err);
+-    }
+-  };
+-
+-  const handleRemoveDisabledDate = async (dateStr) => {
+-    const newDates = disabledDates.filter(d => d !== dateStr);
+-    setDisabledDates(newDates);
+-    try {
+-      const { error } = await supabase
+-        .from('attendance_settings')
+-        .upsert([{ key: 'disabled_dates', value: newDates }], { onConflict: 'key' });
+-      if (error) throw error;
+-    } catch (err) {
+-      console.error('Error saving disabled dates:', err);
+-    }
+-  };
+-
+-
+-
+-  const loadAttendance = async () => {
+-    try {
+-      const { data, error } = await supabase
+-        .from('student_attendance')
+-        .select('*')
+-        .eq('date', selectedDate);
+-      if (error) throw error;
+-      if (data) {
+-        setDbAttendance(data);
+-      }
+-    } catch (err) {
+-      console.error('Error loading student attendance:', err);
+-    }
+-  };
+-
+-  const loadCleanChecks = async () => {
+-    try {
+-      const { data, error } = await supabase
+-        .from('clean_duty_checks')
+-        .select('*')
+-        .eq('date', selectedDate);
+-      if (error) throw error;
+-      if (data) {
+-        setDbCleanChecks(data);
+-      }
+-    } catch (err) {
+-      console.error('Error loading clean duty checks:', err);
+-    }
+-  };
+-
+-  const loadGreetingChecks = async () => {
+-    try {
+-      const { data, error } = await supabase
+-        .from('greeting_duty_checks')
+-        .select('*')
+-        .eq('date', selectedDate);
+-      if (error) throw error;
+-      if (data) {
+-        setDbGreetingChecks(data);
+-      }
+-    } catch (err) {
+-      console.error('Error loading greeting duty checks:', err);
+-    }
+-  };
+-
+-  const loadExemptionsAndSwaps = async () => {
+-    try {
+-      const { data: eventsData, error: eventsErr } = await supabase
+-        .from('events')
+-        .select('*');
+-      if (eventsErr) throw eventsErr;
+-
+-      const activeExtEventIds = (eventsData || [])
+-        .filter(ev => {
+-          const start = ev.date;
+-          const end = ev.end_date || ev.date;
+-          return ev.location_category === 'external' && selectedDate >= start && selectedDate <= end;
+-        })
+-        .map(ev => ev.id);
+-
+-      if (activeExtEventIds.length > 0) {
+-        const { data: partData, error: partErr } = await supabase
+-          .from('event_participants')
+-          .select('user_id')
+-          .in('event_id', activeExtEventIds);
+-        if (partErr) throw partErr;
+-
+-        const exemptUserIds = (partData || []).map(p => String(p.user_id));
+-        const exemptNicks = users
+-          .filter(u => exemptUserIds.includes(String(u.id)))
+-          .map(u => u.nickname);
+-        setDbExemptNicknames(exemptNicks);
+-      } else {
+-        setDbExemptNicknames([]);
+-      }
+-
+-      const { data: swapData, error: swapErr } = await supabase
+-        .from('duty_swaps')
+-        .select('*')
+-        .eq('date', selectedDate);
+-      if (swapErr) throw swapErr;
+-      setDbDutySwaps(swapData || []);
+-
+-    } catch (err) {
+-      console.error('Error loading exemptions and swaps:', err);
+-    }
+-  };
++import { useState, useEffect } from 'react';
++import { DEPARTMENTS } from '../data/mockData';
++import { useAuth } from '../context/AuthContext';
++import { Plus, Search, X, Save, AlertTriangle, Edit2 } from 'lucide-react';
++import { supabase } from '../supabaseClient';
++import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
++import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
++
++const VIOLATION_TYPES = [
++  'à¸§à¸²à¸‡à¸£à¸­à¸‡à¹€à¸—à¹‰à¸²à¹„à¸¡à¹ˆà¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢ (à¸‚à¹‰à¸²à¸‡)',
++  'à¹€à¸¥à¹ˆà¸™à¹‚à¸—à¸£à¸¨à¸±à¸žà¸—à¹Œà¸£à¸°à¸«à¸§à¹ˆà¸²à¸‡à¹à¸–à¸§',
++  'à¹à¸•à¹ˆà¸‡à¸•à¸±à¸§à¹„à¸¡à¹ˆà¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢ (à¸ˆà¸¸à¸”)',
++  'à¸—à¸£à¸‡à¸œà¸¡à¹„à¸¡à¹ˆà¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢',
++  'à¸à¸£à¸°à¸—à¸³à¸„à¸§à¸²à¸¡à¸œà¸´à¸”à¸•à¸²à¸¡à¸£à¸°à¹€à¸šà¸µà¸¢à¸šà¸„à¸¹à¹ˆà¸¡à¸·à¸­à¸™à¸±à¸à¹€à¸£à¸µà¸¢à¸™',
++  'à¹„à¸¡à¹ˆà¸—à¸³à¹€à¸§à¸£à¸«à¹‰à¸­à¸‡à¸ªà¸ à¸²',
++  'à¹„à¸¡à¹ˆà¸›à¸à¸´à¸šà¸±à¸•à¸´à¹€à¸§à¸£à¹„à¸«à¸§à¹‰',
++  'à¹„à¸¡à¹ˆà¸ªà¹ˆà¸‡à¸£à¸¹à¸›à¹€à¸Šà¹‡à¸„à¸Šà¸·à¹ˆà¸­',
++  'à¸¡à¸²à¸ªà¸²à¸¢ (à¸™à¸²à¸—à¸µ)',
++  'à¸­à¸·à¹ˆà¸™à¹† (à¸£à¸°à¸šà¸¸à¹ƒà¸™à¸«à¸¡à¸²à¸¢à¹€à¸«à¸•à¸¸)',
++];
++
++const FINE_AMOUNTS = { 
++  'à¸§à¸²à¸‡à¸£à¸­à¸‡à¹€à¸—à¹‰à¸²à¹„à¸¡à¹ˆà¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢ (à¸‚à¹‰à¸²à¸‡)': 10,
++  'à¹€à¸¥à¹ˆà¸™à¹‚à¸—à¸£à¸¨à¸±à¸žà¸—à¹Œà¸£à¸°à¸«à¸§à¹ˆà¸²à¸‡à¹à¸–à¸§': 10,
++  'à¹à¸•à¹ˆà¸‡à¸•à¸±à¸§à¹„à¸¡à¹ˆà¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢ (à¸ˆà¸¸à¸”)': 10,
++  'à¸—à¸£à¸‡à¸œà¸¡à¹„à¸¡à¹ˆà¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢': 30,
++  'à¸à¸£à¸°à¸—à¸³à¸„à¸§à¸²à¸¡à¸œà¸´à¸”à¸•à¸²à¸¡à¸£à¸°à¹€à¸šà¸µà¸¢à¸šà¸„à¸¹à¹ˆà¸¡à¸·à¸­à¸™à¸±à¸à¹€à¸£à¸µà¸¢à¸™': 50,
++  'à¹„à¸¡à¹ˆà¸—à¸³à¹€à¸§à¸£à¸«à¹‰à¸­à¸‡à¸ªà¸ à¸²': 30,
++  'à¹„à¸¡à¹ˆà¸›à¸à¸´à¸šà¸±à¸•à¸´à¹€à¸§à¸£à¹„à¸«à¸§à¹‰': 100,
++  'à¹„à¸¡à¹ˆà¸ªà¹ˆà¸‡à¸£à¸¹à¸›à¹€à¸Šà¹‡à¸„à¸Šà¸·à¹ˆà¸­': 20,
++  'à¸¡à¸²à¸ªà¸²à¸¢ (à¸™à¸²à¸—à¸µ)': 5,
++  'à¸­à¸·à¹ˆà¸™à¹† (à¸£à¸°à¸šà¸¸à¹ƒà¸™à¸«à¸¡à¸²à¸¢à¹€à¸«à¸•à¸¸)': 0,
++};
++
++const MOCK_FINES = [];
++
++export default function DisciplinePage() {
++  const { user, isDeptHead, isAdmin, checkInState, cleanDutyState, greetingDutyState } = useAuth();
++  const canManage = isAdmin || user?.deptId === 2;
++  const [activeTab, setActiveTab] = useState('list');
++  const [fines, setFines] = useState(MOCK_FINES);
++  const [users, setUsers] = useState([]);
++  const [search, setSearch] = useState('');
++  const [modal, setModal] = useState(false);
++  const [editingFineId, setEditingFineId] = useState(null);
++  const [form, setForm] = useState({ userId:'', violation: VIOLATION_TYPES[0], multiplier: 1, amount:20, date:'', note:'' });
++  const [paymentModal, setPaymentModal] = useState(null); // fine object being paid
++  const [slipPreview, setSlipPreview] = useState(null);
++  const [submittingSlip, setSubmittingSlip] = useState(false);
++  const PROMPTPAY_ID = '1639800408765'; // <-- à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¹€à¸›à¹‡à¸™à¹€à¸šà¸­à¸£à¹Œ PromptPay à¸‚à¸­à¸‡à¸ªà¸ à¸²
++  const PROMPTPAY_NAME = 'à¸™.à¸ª. à¸—à¸´à¸•à¸•à¸´à¸à¸£à¸“à¹Œ à¹à¸ªà¸‡à¸«à¸‡à¸©à¹Œ';
++
++  useEffect(() => {
++    async function loadUsers() {
++      try {
++        const { data, error } = await supabase
++          .from('users')
++          .select('id, name, nickname, student_id, phone, dept_id, role, position, avatar_color')
++          .order('name', { ascending: true });
++        if (error) throw error;
++        if (data) {
++          const mapped = data.map(r => ({
++            id: r.id,
++            name: r.name,
++            nickname: r.nickname,
++            studentId: r.student_id,
++            phone: r.phone || '',
++            deptId: r.dept_id,
++            role: r.role,
++            position: r.position,
++            avatar: r.avatar || (r.name?.charAt(0) || 'U'),
++            avatarColor: r.avatar_color
++          }));
++          setUsers(mapped);
++        }
++      } catch (err) {
++        console.error('Error loading users:', err);
++      }
++    }
++    loadUsers();
++  }, []);
++
++  const loadFines = async () => {
++    try {
++      const { data, error } = await supabase
++        .from('discipline_fines')
++        .select('*')
++        .order('date', { ascending: false })
++        .order('created_at', { ascending: false });
++      if (error) throw error;
++
++      if (data) {
++        const mapped = data.map(d => ({
++          id: d.id,
++          userId: d.user_id,
++          userName: d.user_name,
++          nickname: d.nickname,
++          violation: d.violation,
++          amount: d.amount,
++          date: d.date,
++          note: d.note,
++          by: d.by,
++          paid: d.paid,
++          paymentStatus: d.payment_status || (d.paid ? 'paid' : 'unpaid'),
++          paymentSlip: d.payment_slip || null,
++        }));
++        setFines(mapped);
++      }
++    } catch (err) {
++      console.error('Error loading discipline fines:', err);
++    }
++  };
++
++  useEffect(() => {
++    loadFines();
++
++    const interval = setInterval(() => {
++      loadFines();
++    }, 10000);
++
++    const channel = supabase
++      .channel('discipline-fines-realtime')
++      .on('postgres_changes', { event: '*', schema: 'public', table: 'discipline_fines' }, () => {
++        loadFines();
++      })
++      .subscribe();
++
++    return () => {
++      clearInterval(interval);
++      supabase.removeChannel(channel);
++    };
++  }, []);
++
++  const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
++  const todayStr = toGregorianStr();
++  const [selectedDate, setSelectedDate] = useState(todayStr);
++  const [manualChecks, setManualChecks] = useState({});
++  const [cleanChecks, setCleanChecks] = useState({});
++  const [dbAttendance, setDbAttendance] = useState([]);
++  const [dbCleanChecks, setDbCleanChecks] = useState([]);
++  const [dbGreetingChecks, setDbGreetingChecks] = useState([]);
++  const [enabledDays, setEnabledDays] = useState(["à¸ˆà¸±à¸™à¸—à¸£à¹Œ", "à¸­à¸±à¸‡à¸„à¸²à¸£", "à¸žà¸¸à¸˜", "à¸žà¸¤à¸«à¸±à¸ª", "à¸¨à¸¸à¸à¸£à¹Œ"]);
++  const [disabledDates, setDisabledDates] = useState([]);
++  const [newDisabledDate, setNewDisabledDate] = useState('');
++  const [startDate, setStartDate] = useState('');
++  const [cleanDutyStartDate, setCleanDutyStartDate] = useState('');
++  const [greetingDutyStartDate, setGreetingDutyStartDate] = useState('');
++  const [showSettings, setShowSettings] = useState(false);
++  const [checkInActive, setCheckInActive] = useState(true);
++  const [greetingActive, setGreetingActive] = useState(true);
++  const [cleanActive, setCleanActive] = useState(true);
++  const [cleanSchedules, setCleanSchedules] = useState([]);
++  const [greetingSchedules, setGreetingSchedules] = useState([]);
++  const [viewPhotoUrl, setViewPhotoUrl] = useState(null);
++  const [dbDutySwaps, setDbDutySwaps] = useState([]);
++  const [dbExemptNicknames, setDbExemptNicknames] = useState([]);
++  const [conflicts, setConflicts] = useState([]);
++  const [conflictModal, setConflictModal] = useState(null);
++  const [showConflictsModal, setShowConflictsModal] = useState(false);
++  const [selectedSub, setSelectedSub] = useState('');
++
++  useEffect(() => {
++    async function loadData() {
++      try {
++        const [
++          settingsRes,
++          cleanRes,
++          greetingRes
++        ] = await Promise.all([
++          supabase.from('attendance_settings').select('*'),
++          supabase.from('schedules').select('*').eq('type', 'clean_room'),
++          supabase.from('schedules').select('*').eq('type', 'greeting')
++        ]);
++
++        if (settingsRes.error) throw settingsRes.error;
++        
++        if (settingsRes.data) {
++          const days = settingsRes.data.find(d => d.key === 'enabled_days')?.value;
++          const dates = settingsRes.data.find(d => d.key === 'disabled_dates')?.value;
++          const startD = settingsRes.data.find(d => d.key === 'start_date')?.value;
++          const cleanStartD = settingsRes.data.find(d => d.key === 'clean_duty_start_date')?.value;
++          const greetingStartD = settingsRes.data.find(d => d.key === 'greeting_duty_start_date')?.value;
++          const checkInAct = settingsRes.data.find(d => d.key === 'check_in_active')?.value;
++          const greetingAct = settingsRes.data.find(d => d.key === 'greeting_duty_active')?.value;
++          const cleanAct = settingsRes.data.find(d => d.key === 'clean_duty_active')?.value;
++
++          if (days) setEnabledDays(days);
++          if (dates) setDisabledDates(dates);
++          if (startD) setStartDate(startD);
++          if (cleanStartD) setCleanDutyStartDate(cleanStartD);
++          if (greetingStartD) setGreetingDutyStartDate(greetingStartD);
++          if (checkInAct !== undefined) setCheckInActive(checkInAct !== 'false');
++          if (greetingAct !== undefined) setGreetingActive(greetingAct !== 'false');
++          if (cleanAct !== undefined) setCleanActive(cleanAct !== 'false');
++        }
++
++        if (!cleanRes.error && cleanRes.data) {
++          setCleanSchedules(cleanRes.data);
++        }
++        if (!greetingRes.error && greetingRes.data) {
++          setGreetingSchedules(greetingRes.data);
++        }
++      } catch (err) {
++        console.error('Error loading settings/schedules:', err);
++      }
++    }
++    loadData();
++  }, []);
++
++  const saveStartDate = async (newVal) => {
++    setStartDate(newVal);
++    try {
++      const { error } = await supabase
++        .from('attendance_settings')
++        .upsert([{ key: 'start_date', value: newVal }], { onConflict: 'key' });
++      if (error) throw error;
++    } catch (err) {
++      console.error('Error saving start date:', err);
++    }
++  };
++
++  const saveCleanDutyStartDate = async (newVal) => {
++    setCleanDutyStartDate(newVal);
++    try {
++      const { error } = await supabase
++        .from('attendance_settings')
++        .upsert([{ key: 'clean_duty_start_date', value: newVal }], { onConflict: 'key' });
++      if (error) throw error;
++    } catch (err) {
++      console.error('Error saving clean duty start date:', err);
++    }
++  };
++
++  const saveGreetingDutyStartDate = async (newVal) => {
++    setGreetingDutyStartDate(newVal);
++    try {
++      const { error } = await supabase
++        .from('attendance_settings')
++        .upsert([{ key: 'greeting_duty_start_date', value: newVal }], { onConflict: 'key' });
++      if (error) throw error;
++    } catch (err) {
++      console.error('Error saving greeting duty start date:', err);
++    }
++  };
++
++  const toggleCheckInActive = async () => {
++    const nextVal = !checkInActive;
++    setCheckInActive(nextVal);
++    try {
++      const { error } = await supabase
++        .from('attendance_settings')
++        .upsert([{ key: 'check_in_active', value: String(nextVal) }], { onConflict: 'key' });
++      if (error) throw error;
++    } catch (err) {
++      console.error('Error toggling check-in active state:', err);
++    }
++  };
++
++  const toggleGreetingActive = async () => {
++    const nextVal = !greetingActive;
++    setGreetingActive(nextVal);
++    try {
++      const { error } = await supabase
++        .from('attendance_settings')
++        .upsert([{ key: 'greeting_duty_active', value: String(nextVal) }], { onConflict: 'key' });
++      if (error) throw error;
++    } catch (err) {
++      console.error('Error toggling greeting active state:', err);
++    }
++  };
++
++  const toggleCleanActive = async () => {
++    const nextVal = !cleanActive;
++    setCleanActive(nextVal);
++    try {
++      const { error } = await supabase
++        .from('attendance_settings')
++        .upsert([{ key: 'clean_duty_active', value: String(nextVal) }], { onConflict: 'key' });
++      if (error) throw error;
++    } catch (err) {
++      console.error('Error toggling clean active state:', err);
++    }
++  };
++
++  const saveEnabledDays = async (newDays) => {
++    setEnabledDays(newDays);
++    try {
++      const { error } = await supabase
++        .from('attendance_settings')
++        .upsert([{ key: 'enabled_days', value: newDays }], { onConflict: 'key' });
++      if (error) throw error;
++    } catch (err) {
++      console.error('Error saving enabled days:', err);
++    }
++  };
++
++  const handleToggleDay = (day) => {
++    const newDays = enabledDays.includes(day)
++      ? enabledDays.filter(d => d !== day)
++      : [...enabledDays, day];
++    saveEnabledDays(newDays);
++  };
++
++  const handleAddDisabledDate = async () => {
++    if (!newDisabledDate || disabledDates.includes(newDisabledDate)) return;
++    const newDates = [...disabledDates, newDisabledDate].sort();
++    setDisabledDates(newDates);
++    setNewDisabledDate('');
++    try {
++      const { error } = await supabase
++        .from('attendance_settings')
++        .upsert([{ key: 'disabled_dates', value: newDates }], { onConflict: 'key' });
++      if (error) throw error;
++    } catch (err) {
++      console.error('Error saving disabled dates:', err);
++    }
++  };
++
++  const handleRemoveDisabledDate = async (dateStr) => {
++    const newDates = disabledDates.filter(d => d !== dateStr);
++    setDisabledDates(newDates);
++    try {
++      const { error } = await supabase
++        .from('attendance_settings')
++        .upsert([{ key: 'disabled_dates', value: newDates }], { onConflict: 'key' });
++      if (error) throw error;
++    } catch (err) {
++      console.error('Error saving disabled dates:', err);
++    }
++  };
++
++
++
++  const loadAttendance = async () => {
++    try {
++      const { data, error } = await supabase
++        .from('student_attendance')
++        .select('*')
++        .eq('date', selectedDate);
++      if (error) throw error;
++      if (data) {
++        setDbAttendance(data);
++      }
++    } catch (err) {
++      console.error('Error loading student attendance:', err);
++    }
++  };
++
++  const loadCleanChecks = async () => {
++    try {
++      const { data, error } = await supabase
++        .from('clean_duty_checks')
++        .select('*')
++        .eq('date', selectedDate);
++      if (error) throw error;
++      if (data) {
++        setDbCleanChecks(data);
++      }
++    } catch (err) {
++      console.error('Error loading clean duty checks:', err);
++    }
++  };
++
++  const loadGreetingChecks = async () => {
++    try {
++      const { data, error } = await supabase
++        .from('greeting_duty_checks')
++        .select('*')
++        .eq('date', selectedDate);
++      if (error) throw error;
++      if (data) {
++        setDbGreetingChecks(data);
++      }
++    } catch (err) {
++      console.error('Error loading greeting duty checks:', err);
++    }
++  };
++
++  const loadExemptionsAndSwaps = async () => {
++    try {
++      const { data: eventsData, error: eventsErr } = await supabase
++        .from('events')
++        .select('*');
++      if (eventsErr) throw eventsErr;
++
++      const activeExtEventIds = (eventsData || [])
++        .filter(ev => {
++          const start = ev.date;
++          const end = ev.end_date || ev.date;
++          return ev.location_category === 'external' && selectedDate >= start && selectedDate <= end;
++        })
++        .map(ev => ev.id);
++
++      if (activeExtEventIds.length > 0) {
++        const { data: partData, error: partErr } = await supabase
++          .from('event_participants')
++          .select('user_id')
++          .in('event_id', activeExtEventIds);
++        if (partErr) throw partErr;
++
++        const exemptUserIds = (partData || []).map(p => String(p.user_id));
++        const exemptNicks = users
++          .filter(u => exemptUserIds.includes(String(u.id)))
++          .map(u => u.nickname);
++        setDbExemptNicknames(exemptNicks);
++      } else {
++        setDbExemptNicknames([]);
++      }
++
++      const { data: swapData, error: swapErr } = await supabase
++        .from('duty_swaps')
++        .select('*')
++        .eq('date', selectedDate);
++      if (swapErr) throw swapErr;
++      setDbDutySwaps(swapData || []);
++
++    } catch (err) {
++      console.error('Error loading exemptions and swaps:', err);
++    }
++  };
+ 
+ 
+   const loadConflictsData = async () => {
+@@ -502,505 +502,6 @@
+       alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”: ' + err.message);
+     }
+   };
+-
+-  useEffect(() => {
+-    loadAttendance();
+-    loadCleanChecks();
+-    loadGreetingChecks();
+-    loadExemptionsAndSwaps();
+-
+-    const interval = setInterval(() => {
+-      loadAttendance();
+-      loadCleanChecks();
+-      loadGreetingChecks();
+-      loadExemptionsAndSwaps();
+-    }, 10000);
+-
+-    const channel = supabase
+-      .channel('discipline-attendance-duty-realtime')
+-      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_attendance' }, (payload) => {
+-        const targetDate = payload.new ? payload.new.date : (payload.old ? payload.old.date : null);
+-        if (targetDate === selectedDate) {
+-          loadAttendance();
+-        }
+-      })
+-      .on('postgres_changes', { event: '*', schema: 'public', table: 'clean_duty_checks' }, (payload) => {
+-        const targetDate = payload.new ? payload.new.date : (payload.old ? payload.old.date : null);
+-        if (targetDate === selectedDate) {
+-          loadCleanChecks();
+-        }
+-      })
+-      .subscribe();
+-
+-    return () => {
+-      clearInterval(interval);
+-      supabase.removeChannel(channel);
+-    };
+-  }, [selectedDate, checkInState, users]);
+-
+-  useEffect(() => {
+-    if (isAdmin) loadConflictsData();
+-  }, [isAdmin]);
+-
+-  const STATUS_COLORS = {
+-    on_time: { bg: '#e8f5e9', col: '#2e7d32', label: 'à¸¡à¸²' },
+-    late:    { bg: '#ffebee', col: '#c62828', label: 'à¸ªà¸²à¸¢' },
+-    leave:   { bg: '#fff8e1', col: '#f57f17', label: 'à¸¥à¸²' },
+-    missing: { bg: '#f5f5f5', col: '#757575', label: 'à¸‚à¸²à¸”' },
+-    activity: { bg: '#e0f7fa', col: '#00838f', label: 'à¸—à¸³à¸à¸´à¸ˆà¸à¸£à¸£à¸¡' },
+-    not_required: { bg: '#f9f9f9', col: '#9e9e9e', label: 'à¹„à¸¡à¹ˆà¸šà¸±à¸‡à¸„à¸±à¸š' },
+-  };
+-
+-  const handleManualCheckIn = async (userId, status) => {
+-    if (status === 'reset') {
+-      if (!window.confirm('à¸„à¸¸à¸“à¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸¥à¸šà¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¹€à¸Šà¹‡à¸„à¸Šà¸·à¹ˆà¸­à¸‚à¸­à¸‡à¸™à¸±à¸à¹€à¸£à¸µà¸¢à¸™à¸„à¸™à¸™à¸µà¹‰ à¹€à¸žà¸·à¹ˆà¸­à¹ƒà¸«à¹‰à¸ªà¸²à¸¡à¸²à¸£à¸–à¹ƒà¸Šà¹‰à¸à¸¥à¹‰à¸­à¸‡à¹€à¸Šà¹‡à¸„à¸Šà¸·à¹ˆà¸­à¹ƒà¸«à¸¡à¹ˆà¹„à¸”à¹‰à¹ƒà¸Šà¹ˆà¸«à¸£à¸·à¸­à¹„à¸¡à¹ˆ?')) return;
+-      try {
+-        const { error } = await supabase
+-          .from('student_attendance')
+-          .delete()
+-          .eq('user_id', String(userId))
+-          .eq('date', selectedDate);
+-        if (error) throw error;
+-        
+-        setDbAttendance(prev => prev.filter(x => String(x.user_id) !== String(userId)));
+-      } catch (err) {
+-        console.error('Error resetting check-in:', err);
+-        alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸£à¸µà¹€à¸‹à¹‡à¸•à¸ªà¸–à¸²à¸™à¸°: ' + err.message);
+-      }
+-      return;
+-    }
+-
+-    let time = '-';
+-    if (status === 'on_time' || status === 'late') {
+-      time = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' à¸™.';
+-    } else if (status === 'leave') {
+-      time = '-';
+-    }
+-
+-    const u = users.find(user => String(user.id) === String(userId));
+-    if (!u) return;
+-
+-    const record = {
+-      user_id: String(userId),
+-      user_name: u.name,
+-      nickname: u.nickname,
+-      date: selectedDate,
+-      time: time,
+-      status: status,
+-      is_manual: true
+-    };
+-
+-    try {
+-      const { error } = await supabase
+-        .from('student_attendance')
+-        .upsert([record], { onConflict: 'user_id,date' });
+-      if (error) throw error;
+-      
+-      setDbAttendance(prev => {
+-        const filtered = prev.filter(x => String(x.user_id) !== String(userId));
+-        return [...filtered, {
+-          id: Date.now(),
+-          user_id: String(userId),
+-          user_name: u.name,
+-          nickname: u.nickname,
+-          date: selectedDate,
+-          time: time,
+-          status: status,
+-          is_manual: true
+-        }];
+-      });
+-    } catch (err) {
+-      console.error('Error updating manual check-in:', err);
+-      alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸šà¸±à¸™à¸—à¸¶à¸à¹€à¸§à¸¥à¸²à¹€à¸‚à¹‰à¸²à¹à¸–à¸§: ' + err.message);
+-    }
+-  };
+-
+-  const handleCleanCheck = async (nickname, status) => {
+-    const record = {
+-      nickname: nickname,
+-      date: selectedDate,
+-      status: status
+-    };
+-
+-    try {
+-      const { error } = await supabase
+-        .from('clean_duty_checks')
+-        .upsert([record], { onConflict: 'nickname,date' });
+-      if (error) throw error;
+-      setDbCleanChecks(prev => {
+-        const filtered = prev.filter(x => x.nickname !== nickname);
+-        return [...filtered, { id: Date.now(), ...record }];
+-      });
+-    } catch (err) {
+-      console.error('Error updating clean duty check:', err);
+-      alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸šà¸±à¸™à¸—à¸¶à¸à¹€à¸§à¸£à¸«à¹‰à¸­à¸‡à¸ªà¸ à¸²: ' + err.message);
+-    }
+-  };
+-
+-  const handleGreetingCheck = async (nickname, gate, status) => {
+-    if (status === 'reset') {
+-      if (!window.confirm('à¸„à¸¸à¸“à¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¸¥à¸šà¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¸£à¸²à¸¢à¸‡à¸²à¸™à¹€à¸§à¸£à¸¢à¸·à¸™à¹„à¸«à¸§à¹‰à¸‚à¸­à¸‡à¸„à¸™à¸™à¸µà¹‰à¸«à¸£à¸·à¸­à¹„à¸¡à¹ˆ?')) return;
+-      try {
+-        const { error } = await supabase
+-          .from('greeting_duty_checks')
+-          .delete()
+-          .eq('nickname', nickname)
+-          .eq('date', selectedDate);
+-        if (error) throw error;
+-        setDbGreetingChecks(prev => prev.filter(x => x.nickname !== nickname));
+-
+-        // Delete auto-fine if marked reset
+-        const { data: userFound } = await supabase.from('users').select('id').eq('nickname', nickname).maybeSingle();
+-        if (userFound) {
+-          await supabase.from('discipline_fines')
+-            .delete()
+-            .eq('user_id', String(userFound.id))
+-            .eq('date', selectedDate)
+-            .eq('violation', 'à¹„à¸¡à¹ˆà¸›à¸à¸´à¸šà¸±à¸•à¸´à¹€à¸§à¸£à¹„à¸«à¸§à¹‰');
+-        }
+-      } catch (err) {
+-        console.error('Error resetting greeting check:', err);
+-        alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸£à¸µà¹€à¸‹à¹‡à¸•à¸ªà¸–à¸²à¸™à¸°: ' + err.message);
+-      }
+-      return;
+-    }
+-
+-    const record = {
+-      nickname: nickname,
+-      date: selectedDate,
+-      gate: gate,
+-      status: status
+-    };
+-
+-    try {
+-      const { error } = await supabase
+-        .from('greeting_duty_checks')
+-        .upsert([record], { onConflict: 'nickname,date' });
+-      if (error) throw error;
+-      setDbGreetingChecks(prev => {
+-        const filtered = prev.filter(x => x.nickname !== nickname);
+-        return [...filtered, { id: Date.now(), ...record }];
+-      });
+-
+-      // VERY IMPORTANT: If marked as 'done', delete auto-fine for "à¹„à¸¡à¹ˆà¸›à¸à¸´à¸šà¸±à¸•à¸´à¹€à¸§à¸£à¹„à¸«à¸§à¹‰"
+-      if (status === 'done') {
+-        const { data: userFound } = await supabase.from('users').select('id').eq('nickname', nickname).maybeSingle();
+-        if (userFound) {
+-          await supabase.from('discipline_fines')
+-            .delete()
+-            .eq('user_id', String(userFound.id))
+-            .eq('date', selectedDate)
+-            .eq('violation', 'à¹„à¸¡à¹ˆà¸›à¸à¸´à¸šà¸±à¸•à¸´à¹€à¸§à¸£à¹„à¸«à¸§à¹‰');
+-        }
+-      }
+-    } catch (err) {
+-      console.error('Error updating greeting duty check:', err);
+-      alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸šà¸±à¸™à¸—à¸¶à¸à¹€à¸§à¸£à¸¢à¸·à¸™à¹„à¸«à¸§à¹‰: ' + err.message);
+-    }
+-  };
+-
+-  // Generate real attendance based on database records
+-  const attendanceData = users.filter(u => u.role !== 'admin' && u.nickname !== 'à¹à¸­à¸”à¸¡à¸´à¸™').map(u => {
+-    const isExempt = dbExemptNicknames.includes(u.nickname);
+-
+-    // 1. Check in database record
+-    const realRec = dbAttendance.find(d => String(d.user_id) === String(u.id) || d.nickname === u.nickname);
+-    if (realRec) {
+-      return {
+-        ...u,
+-        checkInStatus: (isExempt && realRec.status === 'missing') ? 'activity' : realRec.status,
+-        time: (isExempt && realRec.status === 'missing') ? 'à¸—à¸³à¸à¸´à¸ˆà¸à¸£à¸£à¸¡' : realRec.time,
+-        photo: realRec.photo,
+-        isManual: realRec.is_manual
+-      };
+-    }
+-
+-    // 2. Real-time check-in (current day only) â€” à¹ƒà¸Šà¹‰ String() à¸›à¹‰à¸­à¸‡à¸à¸±à¸™ type mismatch
+-    if (selectedDate === todayStr && String(user?.id) === String(u.id) && checkInState) {
+-      return {
+-        ...u,
+-        checkInStatus: checkInState.status,
+-        time: checkInState.time,
+-        photo: checkInState.photo,
+-        isManual: false
+-      };
+-    }
+-
+-    // 3. Check activity exemption
+-    if (isExempt) {
+-      return {
+-        ...u,
+-        checkInStatus: 'activity',
+-        time: 'à¸—à¸³à¸à¸´à¸ˆà¸à¸£à¸£à¸¡',
+-        photo: null,
+-        isManual: false
+-      };
+-    }
+-
+-    // 4. Fallback to blank / clean status (listed as absent until checked)
+-    const isBeforeStart = startDate && selectedDate < startDate;
+-    return {
+-      ...u,
+-      checkInStatus: isBeforeStart ? 'not_required' : 'missing',
+-      time: '-',
+-      photo: null,
+-      isManual: false
+-    };
+-  });
+-
+-  const initForm = () => {
+-    setForm({ userId:'', violation: VIOLATION_TYPES[0], multiplier: 1, amount:20, date: todayStr, note:'' });
+-    setEditingFineId(null);
+-  };
+-
+-  const calculateAmount = (userId, violation, multiplier) => {
+-    let base = FINE_AMOUNTS[violation] || 0;
+-    let total = base * (multiplier || 1);
+-    
+-    // à¸ªà¸²à¸£à¸§à¸±à¸•à¸£à¸™à¸±à¸à¹€à¸£à¸µà¸¢à¸™ (à¸à¹ˆà¸²à¸¢à¸›à¸à¸„à¸£à¸­à¸‡ deptId: 2) à¸ˆà¸°à¹‚à¸”à¸™à¸›à¸£à¸±à¸šà¸„à¸¹à¸“ 2
+-    if (userId) {
+-      const u = users.find(user => String(user.id) === String(userId));
+-      if (u && u.deptId === 2) {
+-        total *= 2;
+-      }
+-    }
+-    return total;
+-  };
+-
+-  const handleViolationChange = (v) => {
+-    setForm(p => ({ ...p, violation: v, amount: calculateAmount(p.userId, v, p.multiplier) }));
+-  };
+-
+-  const handleMultiplierChange = (m) => {
+-    const val = parseInt(m) || 1;
+-    setForm(p => ({ ...p, multiplier: val, amount: calculateAmount(p.userId, p.violation, val) }));
+-  };
+-
+-  const handleUserChange = (uId) => {
+-    setForm(p => ({ ...p, userId: uId, amount: calculateAmount(uId, p.violation, p.multiplier) }));
+-  };
+-
+-  const handleSave = async () => {
+-    if (!form.userId) {
+-      alert('à¸à¸£à¸¸à¸“à¸²à¹€à¸¥à¸·à¸­à¸à¸ªà¸¡à¸²à¸Šà¸´à¸à¸—à¸µà¹ˆà¸—à¸³à¸œà¸´à¸”à¸£à¸°à¹€à¸šà¸µà¸¢à¸šà¸”à¹‰à¸§à¸¢à¸„à¸£à¸±à¸š');
+-      return;
+-    }
+-    const member = users.find(u => String(u.id) === String(form.userId));
+-    if (!member) {
+-      alert('à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¸¡à¸²à¸Šà¸´à¸à¹ƒà¸™à¸£à¸°à¸šà¸šà¸„à¸£à¸±à¸š');
+-      return;
+-    }
+-    if (!form.date) {
+-      alert('à¸à¸£à¸¸à¸“à¸²à¹€à¸¥à¸·à¸­à¸à¸§à¸±à¸™à¸—à¸µà¹ˆà¹€à¸à¸´à¸”à¹€à¸«à¸•à¸¸à¸”à¹‰à¸§à¸¢à¸„à¸£à¸±à¸š');
+-      return;
+-    }
+-
+-    if (editingFineId) {
+-      const updatedFine = {
+-        user_id: String(member.id),
+-        user_name: member.name,
+-        nickname: member.nickname,
+-        violation: form.violation,
+-        amount: parseInt(form.amount),
+-        date: form.date,
+-        note: form.note,
+-        by: user?.nickname || 'à¹„à¸¡à¹ˆà¸£à¸°à¸šà¸¸'
+-      };
+-      try {
+-        const { data, error } = await supabase
+-          .from('discipline_fines')
+-          .update(updatedFine)
+-          .eq('id', editingFineId)
+-          .select();
+-        if (error) throw error;
+-        if (data && data[0]) {
+-          const updated = {
+-            id: data[0].id,
+-            userId: data[0].user_id,
+-            userName: data[0].user_name,
+-            nickname: data[0].nickname,
+-            violation: data[0].violation,
+-            amount: data[0].amount,
+-            date: data[0].date,
+-            note: data[0].note,
+-            by: data[0].by,
+-            paid: data[0].paid,
+-            paymentStatus: data[0].payment_status || (data[0].paid ? 'paid' : 'unpaid'),
+-            paymentSlip: data[0].payment_slip || null
+-          };
+-          setFines(prev => prev.map(f => f.id === editingFineId ? updated : f));
+-          alert('à¹à¸à¹‰à¹„à¸‚à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸„à¹ˆà¸²à¸›à¸£à¸±à¸šà¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§!');
+-        }
+-      } catch (err) {
+-        console.error('Error updating fine:', err);
+-        alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¹à¸à¹‰à¹„à¸‚à¸„à¸§à¸²à¸¡à¸œà¸´à¸”: ' + err.message);
+-      }
+-      setModal(false);
+-      initForm();
+-      return;
+-    }
+-
+-    const newFine = {
+-      user_id: String(member.id),
+-      user_name: member.name,
+-      nickname: member.nickname,
+-      violation: form.violation,
+-      amount: parseInt(form.amount),
+-      date: form.date,
+-      note: form.note,
+-      by: user?.nickname || 'à¹„à¸¡à¹ˆà¸£à¸°à¸šà¸¸',
+-      paid: false
+-    };
+-    try {
+-      const { data, error } = await supabase
+-        .from('discipline_fines')
+-        .insert([newFine])
+-        .select();
+-      if (error) throw error;
+-      if (data && data[0]) {
+-        const inserted = {
+-          id: data[0].id,
+-          userId: data[0].user_id,
+-          userName: data[0].user_name,
+-          nickname: data[0].nickname,
+-          violation: data[0].violation,
+-          amount: data[0].amount,
+-          date: data[0].date,
+-          note: data[0].note,
+-          by: data[0].by,
+-          paid: data[0].paid,
+-          paymentStatus: data[0].payment_status || (data[0].paid ? 'paid' : 'unpaid'),
+-          paymentSlip: data[0].payment_slip || null
+-        };
+-        setFines(prev => [inserted, ...prev]);
+-
+-        // Insert into notifications
+-        await supabase
+-          .from('notifications')
+-          .insert([{
+-            type: 'fine',
+-            message: `ðŸ’¸ à¸šà¸±à¸™à¸—à¸¶à¸à¸„à¹ˆà¸²à¸›à¸£à¸±à¸šà¹ƒà¸«à¸¡à¹ˆ: "${inserted.userName} (${inserted.nickname})" - ${inserted.violation} à¸ˆà¸³à¸™à¸§à¸™ ${inserted.amount} à¸šà¸²à¸—`
+-          }]);
+-
+-        // Send Discord embed notification
+-        const embedTitle = `ðŸ’¸ à¸šà¸±à¸™à¸—à¸¶à¸à¸„à¹ˆà¸²à¸›à¸£à¸±à¸šà¹ƒà¸«à¸¡à¹ˆ - à¸à¹ˆà¸²à¸¢à¸›à¸à¸„à¸£à¸­à¸‡`;
+-        const embedDesc = `à¸¡à¸µà¸à¸²à¸£à¸­à¸­à¸à¹ƒà¸šà¸ªà¸±à¹ˆà¸‡à¸›à¸£à¸±à¸šà¸ªà¸¡à¸²à¸Šà¸´à¸à¸ªà¸ à¸²à¸™à¸±à¸à¹€à¸£à¸µà¸¢à¸™à¹€à¸™à¸·à¹ˆà¸­à¸‡à¸ˆà¸²à¸à¸à¸£à¸°à¸—à¸³à¸„à¸§à¸²à¸¡à¸œà¸´à¸”à¸£à¸°à¹€à¸šà¸µà¸¢à¸š`;
+-        const fields = [
+-          { name: 'ðŸ‘¤ à¸œà¸¹à¹‰à¸£à¸±à¸šà¹‚à¸—à¸©', value: `${inserted.userName} (${inserted.nickname})`, inline: true },
+-          { name: 'âš–ï¸ à¸‚à¹‰à¸­à¸«à¸²à¸„à¸§à¸²à¸¡à¸œà¸´à¸”', value: inserted.violation, inline: true },
+-          { name: 'ðŸ’° à¸¢à¸­à¸”à¹€à¸‡à¸´à¸™à¸„à¹ˆà¸²à¸›à¸£à¸±à¸š', value: `${inserted.amount} à¸šà¸²à¸—`, inline: true },
+-          { name: 'ðŸ“ à¸«à¸¡à¸²à¸¢à¹€à¸«à¸•à¸¸', value: inserted.note || 'à¹„à¸¡à¹ˆà¸¡à¸µ', inline: false },
+-          { name: 'âœï¸ à¸šà¸±à¸™à¸—à¸¶à¸à¹‚à¸”à¸¢', value: inserted.by, inline: true }
+-        ];
+-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15158332, fields, null, 'discipline_fines', [inserted.userId]); // à¸ªà¸µà¹à¸”à¸‡à¸ªà¸³à¸«à¸£à¸±à¸šà¸„à¹ˆà¸²à¸›à¸£à¸±à¸š
+-      }
+-    } catch (err) {
+-      console.error('Error saving fine:', err);
+-      alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸šà¸±à¸™à¸—à¸¶à¸à¸„à¸§à¸²à¸¡à¸œà¸´à¸”: ' + err.message);
+-    }
+-    setModal(false); initForm();
+-  };
+-
+-  const handleEditClick = (f) => {
+-    setEditingFineId(f.id);
+-    setForm({
+-      userId: f.userId,
+-      violation: f.violation,
+-      multiplier: 1,
+-      amount: f.amount,
+-      date: f.date,
+-      note: f.note || ''
+-    });
+-    setModal(true);
+-  };
+-
+-  const togglePaid = async (id) => {
+-    const fine = fines.find(f => f.id === id);
+-    if (!fine) return;
+-    const newPaid = !fine.paid;
+-    const newStatus = newPaid ? 'paid' : 'unpaid';
+-    try {
+-      const { error } = await supabase
+-        .from('discipline_fines')
+-        .update({ paid: newPaid, payment_status: newStatus })
+-        .eq('id', id);
+-      if (error) throw error;
+-      setFines(prev => prev.map(f => f.id === id ? { ...f, paid: newPaid, paymentStatus: newStatus } : f));
+-    } catch (err) {
+-      console.error('Error toggling paid state:', err);
+-      alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸­à¸±à¸›à¹€à¸”à¸•à¸ªà¸–à¸²à¸™à¸°à¸Šà¸³à¸£à¸°à¹€à¸‡à¸´à¸™: ' + err.message);
+-    }
+-  };
+-
+-  const handleUploadSlip = async () => {
+-    if (submittingSlip) return;
+-    if (!slipPreview || !paymentModal) return;
+-    setSubmittingSlip(true);
+-    try {
+-      let finalSlipUrl = slipPreview;
+-      if (slipPreview && slipPreview.startsWith('data:')) {
+-        try {
+-          const fileName = `slip_${paymentModal.id}_${Date.now()}.jpg`;
+-          const uploadResult = await uploadFileToDrive(slipPreview, fileName, 'slips');
+-          if (uploadResult && uploadResult.url) {
+-            finalSlipUrl = uploadResult.url;
+-          }
+-        } catch (uploadErr) {
+-          console.error("Failed to upload slip to Google Drive. Storing locally as Base64 fallback:", uploadErr);
+-        }
+-      }
+-
+-      const { error } = await supabase
+-        .from('discipline_fines')
+-        .update({ payment_status: 'slip_uploaded', payment_slip: finalSlipUrl })
+-        .eq('id', paymentModal.id);
+-      if (error) throw error;
+-      setFines(prev => prev.map(f => f.id === paymentModal.id ? { ...f, paymentStatus: 'slip_uploaded', paymentSlip: finalSlipUrl } : f));
+-      setPaymentModal(null);
+-      setSlipPreview(null);
+-      alert('à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¸ªà¸¥à¸´à¸›à¹€à¸£à¸µà¸¢à¸šà¸£à¹‰à¸­à¸¢à¹à¸¥à¹‰à¸§! à¸£à¸­à¸à¹ˆà¸²à¸¢à¸à¸²à¸£à¹€à¸‡à¸´à¸™à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸„à¸£à¸±à¸š');
+-    } catch (err) {
+-      console.error('Error uploading slip:', err);
+-      alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸­à¸±à¸›à¹‚à¸«à¸¥à¸”à¸ªà¸¥à¸´à¸›: ' + err.message);
+-    } finally {
+-      setSubmittingSlip(false);
+-    }
+-  };
+-
+-  const deleteFine = async (id) => {
+-    try {
+-      const { error } = await supabase
+-        .from('discipline_fines')
+-        .delete()
+-        .eq('id', id);
+-      if (error) throw error;
+-      setFines(prev => prev.filter(f => f.id !== id));
+-    } catch (err) {
+-      console.error('Error deleting fine:', err);
+-      alert('à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”à¹ƒà¸™à¸à¸²à¸£à¸¥à¸šà¸£à¸²à¸¢à¸à¸²à¸£à¸„à¸§à¸²à¸¡à¸œà¸´à¸”: ' + err.message);
+-    }
+-  };
+-
+-  const filtered = fines.filter(f =>
+-    f.userName.includes(search) || f.nickname.includes(search) || f.violation.includes(search)
+-  );
+-
+-  // Summary per user
+-  const summary = users.map(u => {
+-    const myFines = fines.filter(f => String(f.userId) === String(u.id));
+-    return {
+-      ...u, count: myFines.length,
+-      total: myFines.reduce((s, f) => s + f.amount, 0),
+-      unpaid: myFines.filter(f => !f.paid).reduce((s, f) => s + f.amount, 0),
+-    };
+-  }).filter(u => u.count > 0).sort((a,b) => b.total - a.total);
+-
+-  const totalFines = fines.reduce((s,f) => s + f.amount, 0);
+-  const totalUnpaid = fines.filter(f => !f.paid).reduce((s,f) => s + f.amount, 0);
+-
+-  return (
+-    <div>
+-      <div className="page-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+         <div>
+           <div className="page-title">ðŸ›¡ï¸ à¸à¹ˆà¸²à¸¢à¸›à¸à¸„à¸£à¸­à¸‡</div>
+           <div className="page-subtitle">à¸£à¸°à¸šà¸šà¸šà¸±à¸™à¸—à¸¶à¸à¸„à¸§à¸²à¸¡à¸œà¸´à¸”à¹à¸¥à¸°à¸à¸²à¸£à¸«à¸±à¸à¹€à¸‡à¸´à¸™à¸ªà¸¡à¸²à¸Šà¸´à¸à¸ªà¸ à¸²à¸™à¸±à¸à¹€à¸£à¸µà¸¢à¸™</div>
+[diff_block_end]
+
+Please note that the above snippet only shows the MODIFIED lines from the last change. It shows up to 3 lines of unchanged lines before and after the modified lines. The actual file contents may have many more lines not shown.
+
+We did our best to apply changes despite some inaccuracies. Double check if the edit applied is what you intended.

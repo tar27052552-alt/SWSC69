@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Edit2, Lock, Unlock, ChevronDown } from 'lucide-react';
+import { Edit2, Lock, Unlock, ChevronDown, Camera } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
+import logoUrl from '../assets/logo.png';
 const ALL_NAMES = [
   'อ้วน', 'ใบหม่อน', 'กร', 'แปม', 'เจมส์', 'มิก', 'ณโม', 'โฟกัส', 'น้ำภัท', 'โนโน', 'คิว', 'พอใจ',
   'พี', 'ปาล์ม', 'จักร', 'ข้าวปุ้น', 'โต๋', 'น้ำขิง', 'มิวสิค', 'ยู', 'กัปตัน', 'ปลายฟ้า', 'ชัย', 'ใบเตย',
@@ -10,18 +11,79 @@ const ALL_NAMES = [
 ].filter(name => name !== 'แอดมิน').sort();
 
 /* ---- helpers ---- */
-const TagList = ({ names }) => (
-  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center' }}>
-    {names.map((n, i) => (
-      <span key={i} style={{
-        background: n === '–' ? 'transparent' : '#e0f7fa',
-        color: n === '–' ? '#bdbdbd' : '#00838f',
-        border: n === '–' ? '1px dashed #e0e0e0' : '1px solid #b2ebf2',
-        borderRadius: 4, padding: '2px 7px', fontSize: 12, fontWeight: 600,
-      }}>{n}</span>
-    ))}
-  </div>
-);
+const DAY_COLOR_MAP = {
+  'จันทร์':  { bg: '#fff7ed', text: '#9a3412', border: '#ffedd5' },
+  'อังคาร': { bg: '#fdf2f8', text: '#831843', border: '#fbcfe8' },
+  'พุธ':     { bg: '#f0fdf4', text: '#14532d', border: '#bbf7d0' },
+  'พฤหัส':  { bg: '#fff7ed', text: '#7c2d12', border: '#fed7aa' },
+  'ศุกร์':   { bg: '#eff6ff', text: '#1e3a8a', border: '#bfdbfe' },
+};
+
+const DayBadge = ({ day }) => {
+  const style = DAY_COLOR_MAP[day] || { bg: '#f1f5f9', text: '#475569', border: '#e2e8f0' };
+  return (
+    <span style={{
+      background: style.bg,
+      color: style.text,
+      border: `1px solid ${style.border}`,
+      borderRadius: 10,
+      padding: '4px 12px',
+      fontSize: 13,
+      fontWeight: 800,
+      display: 'inline-block',
+      boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+    }}>
+      {day}
+    </span>
+  );
+};
+
+const TagList = ({ names, day, dutyType, swaps = [] }) => {
+  const getThaiDayFromDate = (dateStr) => {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+    return daysTh[dateObj.getDay()] || '';
+  };
+
+  const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', alignItems: 'center' }}>
+      {names.map((n, i) => {
+        const activeSwap = swaps.find(s => {
+          if (s.original_nickname !== n) return false;
+          if (dutyType && s.duty_type !== dutyType && !s.duty_type.startsWith(dutyType)) return false;
+          const sDay = getThaiDayFromDate(s.date);
+          return sDay === day && s.date >= todayStr;
+        });
+
+        if (n === '–') {
+          return <span key={i} style={{ color: '#cbd5e1', fontSize: 13 }}>–</span>;
+        }
+
+        return (
+          <span key={i} style={{
+            background: activeSwap ? '#fff3e0' : '#e0f2fe',
+            color: activeSwap ? '#e65100' : '#0369a1',
+            border: activeSwap ? '1px solid #ffcc80' : '1px solid #bae6fd',
+            borderRadius: 20, padding: '3px 10px', fontSize: 12.5, fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+          }}>
+            {n}
+            {activeSwap && (
+              <span style={{ fontSize: 11, color: '#c62828', fontWeight: 800 }}>
+                ➡️ {activeSwap.substitute_nickname} (แทน)
+              </span>
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
+};
 
 /* ---- Cell editor (Select dropdown) ---- */
 const EditableCell = ({ names, onChange, candidates = ALL_NAMES }) => {
@@ -31,25 +93,25 @@ const EditableCell = ({ names, onChange, candidates = ALL_NAMES }) => {
       <div
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          minHeight: 28, width: '100%', border: '1px solid #00bcd4', borderRadius: 4,
-          padding: '4px 6px', fontSize: 12, background: '#f0fdff', cursor: 'pointer',
+          minHeight: 32, width: '100%', border: '1.5px solid var(--primary)', borderRadius: 8,
+          padding: '5px 10px', fontSize: 12, background: 'var(--primary-light)', cursor: 'pointer',
           display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center', justifyContent: 'center'
         }}
       >
-        {names.length === 0 ? <span style={{ color: '#aaa' }}>คลิกเพื่อเลือก</span> : names.map((n, i) => (
-          <span key={i} style={{ background: '#00838f', color: 'white', padding: '2px 6px', borderRadius: 12, fontSize: 11 }}>{n}</span>
+        {names.length === 0 ? <span style={{ color: '#94a3b8' }}>คลิกเพื่อเลือก</span> : names.map((n, i) => (
+          <span key={i} style={{ background: 'var(--primary)', color: 'white', padding: '2px 8px', borderRadius: 12, fontSize: 11.5, fontWeight: 600 }}>{n}</span>
         ))}
-        <ChevronDown size={14} color="#00bcd4" style={{ marginLeft: 'auto' }} />
+        <ChevronDown size={14} color="var(--primary)" style={{ marginLeft: 'auto' }} />
       </div>
       {isOpen && (
         <div style={{
-          position: 'absolute', top: '100%', left: 0, minWidth: 140, zIndex: 999,
-          background: 'white', border: '1px solid #00bcd4', borderRadius: 6,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxHeight: 200, overflowY: 'auto',
-          display: 'flex', flexDirection: 'column', padding: 4, marginTop: 4
+          position: 'absolute', top: '100%', left: 0, minWidth: 160, zIndex: 999,
+          background: 'white', border: '1px solid var(--border)', borderRadius: 10,
+          boxShadow: 'var(--shadow-lg)', maxHeight: 220, overflowY: 'auto',
+          display: 'flex', flexDirection: 'column', padding: 6, marginTop: 4
         }}>
           {candidates.map(n => (
-            <label key={n} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid #f0f0f0' }}>
+            <label key={n} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid #f1f5f9' }}>
               <input
                 type="checkbox"
                 checked={names.includes(n)}
@@ -64,7 +126,7 @@ const EditableCell = ({ names, onChange, candidates = ALL_NAMES }) => {
           ))}
           <div
             onClick={() => setIsOpen(false)}
-            style={{ textAlign: 'center', padding: '6px', background: '#e0f7fa', color: '#00838f', marginTop: 4, cursor: 'pointer', fontSize: 12, borderRadius: 4, fontWeight: 600 }}
+            style={{ textAlign: 'center', padding: '6px', background: 'var(--primary-light)', color: 'var(--primary)', marginTop: 6, cursor: 'pointer', fontSize: 12, borderRadius: 6, fontWeight: 700 }}
           >
             ปิด
           </div>
@@ -75,212 +137,137 @@ const EditableCell = ({ names, onChange, candidates = ALL_NAMES }) => {
 };
 
 /* ============================================================
-   TABLE COMPONENTS PER DUTY TYPE
+   TABLE COMPONENTS PER DUTY TYPE (MODERNIZED)
    ============================================================ */
 
 /** เวรยืนไหว้ — วัน × 3 ประตู */
-function GreetingTable({ data, editMode, onChange, candidates }) {
+function GreetingTable({ data, editMode, onChange, candidates, swaps }) {
   return (
-    <table className="simple-table schedule-grid" style={{ textAlign: 'center' }}>
-      <thead>
-        <tr>
-          <th style={{ width: 80 }}>วัน</th>
-          <th>🏫 ประตูไหมไทย</th>
-          <th>🏛️ ประตูอำเภอ</th>
-          <th>🚪 ประตูหน้า รร.</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((row, ri) => (
-          <tr key={row.day}>
-            <td style={{ fontWeight: 700, color: '#00838f', whiteSpace: 'nowrap' }}>{row.day}</td>
-            {['gate1', 'gate2', 'gate3'].map(g => (
-              <td key={g} style={{ padding: '8px 10px' }}>
-                {editMode
-                  ? <EditableCell names={row[g]} onChange={v => onChange(ri, g, v)} candidates={candidates} />
-                  : <TagList names={row[g]} />}
-              </td>
-            ))}
+    <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.03)', background: '#ffffff' }}>
+      <table className="simple-table schedule-grid" style={{ textAlign: 'center', width: '100%', margin: 0, borderCollapse: 'separate', borderSpacing: 0 }}>
+        <thead>
+          <tr style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: '#ffffff' }}>
+            <th style={{ width: 100, padding: '14px 16px', color: '#ffffff', fontWeight: 800, fontSize: 13, borderBottom: 'none' }}>วัน</th>
+            <th style={{ padding: '14px 16px', color: '#ffffff', fontWeight: 800, fontSize: 13, borderBottom: 'none' }}>🏫 ประตูไหมไทย</th>
+            <th style={{ padding: '14px 16px', color: '#ffffff', fontWeight: 800, fontSize: 13, borderBottom: 'none' }}>🏛️ ประตูอำเภอ</th>
+            <th style={{ padding: '14px 16px', color: '#ffffff', fontWeight: 800, fontSize: 13, borderBottom: 'none' }}>🚪 ประตูหน้า รร.</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {data.map((row, ri) => (
+            <tr key={row.day} style={{ background: ri % 2 === 0 ? '#ffffff' : '#f8fafc', transition: 'background 0.2s ease' }}>
+              <td style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' }}>
+                <DayBadge day={row.day} />
+              </td>
+              {['gate1', 'gate2', 'gate3'].map(g => (
+                <td key={g} style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' }}>
+                  {editMode
+                    ? <EditableCell names={row[g]} onChange={v => onChange(ri, g, v)} candidates={candidates} />
+                    : <TagList names={row[g]} day={row.day} dutyType={`greeting_${g}`} swaps={swaps} />}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 /** เวรเชิญธงชาติ / ธงสี — วัน × รายชื่อ */
-function SimpleTable({ data, editMode, onChange, label, candidates }) {
+function SimpleTable({ data, editMode, onChange, label, candidates, swaps, dutyType }) {
   return (
-    <table className="simple-table schedule-grid" style={{ textAlign: 'center', maxWidth: 500, margin: '0 auto' }}>
-      <thead>
-        <tr>
-          <th style={{ width: 80 }}>วัน</th>
-          <th>{label}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((row, ri) => (
-          <tr key={row.day}>
-            <td style={{ fontWeight: 700, color: '#00838f', whiteSpace: 'nowrap' }}>{row.day}</td>
-            <td style={{ padding: '8px 10px' }}>
-              {editMode
-                ? <EditableCell names={row.members} onChange={v => onChange(ri, 'members', v)} candidates={candidates} />
-                : <TagList names={row.members} />}
-            </td>
+    <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.03)', background: '#ffffff', maxWidth: 560, margin: '0 auto' }}>
+      <table className="simple-table schedule-grid" style={{ textAlign: 'center', width: '100%', margin: 0, borderCollapse: 'separate', borderSpacing: 0 }}>
+        <thead>
+          <tr style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: '#ffffff' }}>
+            <th style={{ width: 100, padding: '14px 16px', color: '#ffffff', fontWeight: 800, fontSize: 13, borderBottom: 'none' }}>วัน</th>
+            <th style={{ padding: '14px 16px', color: '#ffffff', fontWeight: 800, fontSize: 13, borderBottom: 'none' }}>{label}</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {data.map((row, ri) => (
+            <tr key={row.day} style={{ background: ri % 2 === 0 ? '#ffffff' : '#f8fafc', transition: 'background 0.2s ease' }}>
+              <td style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' }}>
+                <DayBadge day={row.day} />
+              </td>
+              <td style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' }}>
+                {editMode
+                  ? <EditableCell names={row.members} onChange={v => onChange(ri, 'members', v)} candidates={candidates} />
+                  : <TagList names={row.members} day={row.day} dutyType={dutyType} swaps={swaps} />}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 /** เวรทำความสะอาด — วัน × รายชื่อ (หลายคน) */
-function CleanTable({ data, editMode, onChange, candidates }) {
+function CleanTable({ data, editMode, onChange, candidates, swaps }) {
   return (
-    <table className="simple-table schedule-grid" style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
-      <thead>
-        <tr>
-          <th style={{ width: 80 }}>วัน</th>
-          <th>สมาชิกที่รับผิดชอบ</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((row, ri) => (
-          <tr key={row.day}>
-            <td style={{ fontWeight: 700, color: '#00838f', whiteSpace: 'nowrap' }}>{row.day}</td>
-            <td style={{ padding: '10px 16px' }}>
-              {editMode
-                ? <EditableCell names={row.members} onChange={v => onChange(ri, 'members', v)} candidates={candidates} />
-                : <TagList names={row.members} />}
-            </td>
+    <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.03)', background: '#ffffff', maxWidth: 640, margin: '0 auto' }}>
+      <table className="simple-table schedule-grid" style={{ textAlign: 'center', width: '100%', margin: 0, borderCollapse: 'separate', borderSpacing: 0 }}>
+        <thead>
+          <tr style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: '#ffffff' }}>
+            <th style={{ width: 100, padding: '14px 16px', color: '#ffffff', fontWeight: 800, fontSize: 13, borderBottom: 'none' }}>วัน</th>
+            <th style={{ padding: '14px 16px', color: '#ffffff', fontWeight: 800, fontSize: 13, borderBottom: 'none' }}>🧹 สมาชิกสภาที่รับผิดชอบทำความสะอาด</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {data.map((row, ri) => (
+            <tr key={row.day} style={{ background: ri % 2 === 0 ? '#ffffff' : '#f8fafc', transition: 'background 0.2s ease' }}>
+              <td style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' }}>
+                <DayBadge day={row.day} />
+              </td>
+              <td style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' }}>
+                {editMode
+                  ? <EditableCell names={row.members} onChange={v => onChange(ri, 'members', v)} candidates={candidates} />
+                  : <TagList names={row.members} day={row.day} dutyType="clean_room" swaps={swaps} />}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 /** เวรส่งข่าว PR — วัน × week1 / week2 */
-function PRNewsTable({ data, editMode, onChange, candidates }) {
+function PRNewsTable({ data, editMode, onChange, candidates, swaps }) {
   return (
-    <table className="simple-table schedule-grid" style={{ textAlign: 'center' }}>
-      <thead>
-        <tr>
-          <th style={{ width: 80 }}>วัน</th>
-          <th>📅 สัปดาห์คี่ (Week 1)</th>
-          <th>📅 สัปดาห์คู่ (Week 2)</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((row, ri) => (
-          <tr key={row.day}>
-            <td style={{ fontWeight: 700, color: '#00838f', whiteSpace: 'nowrap' }}>{row.day}</td>
-            {['week1', 'week2'].map(w => (
-              <td key={w} style={{ padding: '8px 10px' }}>
-                {editMode
-                  ? <EditableCell names={row[w]} onChange={v => onChange(ri, w, v)} candidates={candidates} />
-                  : <TagList names={row[w]} />}
-              </td>
-            ))}
+    <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.03)', background: '#ffffff' }}>
+      <table className="simple-table schedule-grid" style={{ textAlign: 'center', width: '100%', margin: 0, borderCollapse: 'separate', borderSpacing: 0 }}>
+        <thead>
+          <tr style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: '#ffffff' }}>
+            <th style={{ width: 100, padding: '14px 16px', color: '#ffffff', fontWeight: 800, fontSize: 13, borderBottom: 'none' }}>วัน</th>
+            <th style={{ padding: '14px 16px', color: '#ffffff', fontWeight: 800, fontSize: 13, borderBottom: 'none' }}>📅 สัปดาห์คี่ (Week 1)</th>
+            <th style={{ padding: '14px 16px', color: '#ffffff', fontWeight: 800, fontSize: 13, borderBottom: 'none' }}>📅 สัปดาห์คู่ (Week 2)</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-/* ---- ตารางการสลับเวร (Duty Swaps Table) ---- */
-function SwapsTable({ data, onDelete, currentUser, isAdmin, isDiscipline }) {
-  const dutyLabels = {
-    greeting_gate1: '🙏 ยืนไหว้ - ประตูไหมไทย',
-    greeting_gate2: '🙏 ยืนไหว้ - ประตูอำเภอ',
-    greeting_gate3: '🙏 ยืนไหว้ - ประตูหน้า รร.',
-    national_flag: '🚩 เชิญธงชาติ',
-    color_flag: '🎌 เชิญธงสี'
-  };
-
-  const getRowStyle = (dateStr) => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    if (dateStr < todayStr) return { opacity: 0.6 }; // past swaps
-    return {};
-  };
-
-  return (
-    <div style={{ padding: '10px 16px' }}>
-      {data.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '30px', color: '#9e9e9e', fontSize: 14 }}>
-          📭 ยังไม่มีการบันทึกข้อมูลการสลับเวรปฏิบัติหน้าที่
-        </div>
-      ) : (
-        <table className="simple-table schedule-grid" style={{ width: '100%', textAlign: 'center' }}>
-          <thead>
-            <tr>
-              <th>📅 วันที่</th>
-              <th>🛡️ ประเภทเวร</th>
-              <th>👤 คนเดิม</th>
-              <th>➡️</th>
-              <th>🤝 คนแทน</th>
-              <th>📝 ผู้ขอสลับ / ผู้บันทึก</th>
-              <th>⚙️ จัดการ</th>
+        </thead>
+        <tbody>
+          {data.map((row, ri) => (
+            <tr key={row.day} style={{ background: ri % 2 === 0 ? '#ffffff' : '#f8fafc', transition: 'background 0.2s ease' }}>
+              <td style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' }}>
+                <DayBadge day={row.day} />
+              </td>
+              {['week1', 'week2'].map(w => (
+                <td key={w} style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' }}>
+                  {editMode
+                    ? <EditableCell names={row[w]} onChange={v => onChange(ri, w, v)} candidates={candidates} />
+                    : <TagList names={row[w]} day={row.day} dutyType="pr_news" swaps={swaps} />}
+                </td>
+              ))}
             </tr>
-          </thead>
-          <tbody>
-            {data.map((swap) => {
-              const formattedDate = new Date(swap.date).toLocaleDateString('th-TH', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                weekday: 'short'
-              });
-              
-              const canDelete = isAdmin || isDiscipline || 
-                (currentUser && (
-                  currentUser.nickname === swap.original_nickname || 
-                  currentUser.nickname === swap.created_by || 
-                  currentUser.name === swap.created_by
-                ));
-
-              return (
-                <tr key={swap.id} style={getRowStyle(swap.date)}>
-                  <td style={{ fontWeight: 600 }}>{formattedDate}</td>
-                  <td>
-                    <span style={{
-                      background: swap.duty_type?.startsWith('greeting') ? '#fff3e0' : '#e8f5e9',
-                      color: swap.duty_type?.startsWith('greeting') ? '#e65100' : '#2e7d32',
-                      padding: '4px 8px',
-                      borderRadius: 12,
-                      fontSize: 11,
-                      fontWeight: 600
-                    }}>
-                      {dutyLabels[swap.duty_type] || swap.duty_type}
-                    </span>
-                  </td>
-                  <td style={{ color: '#c62828', fontWeight: 600 }}>{swap.original_nickname}</td>
-                  <td style={{ color: '#757575' }}>➡️</td>
-                  <td style={{ color: '#2e7d32', fontWeight: 600 }}>{swap.substitute_nickname}</td>
-                  <td style={{ fontSize: 12, color: '#616161' }}>{swap.created_by}</td>
-                  <td>
-                    {canDelete ? (
-                      <button
-                        onClick={() => onDelete(swap.id)}
-                        className="btn btn-danger"
-                        style={{ padding: '2px 8px', fontSize: 11, background: '#c62828' }}
-                      >
-                        ยกเลิก
-                      </button>
-                    ) : (
-                      <span style={{ fontSize: 11, color: '#bdbdbd' }}>-</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
+
+
 
 /* ============================================================
    MAIN PAGE
@@ -291,7 +278,6 @@ const TABS = [
   { id: 'color_flag',   label: '🎌 เวรเชิญธงสี',        note: '2 คน/วัน' },
   { id: 'clean_room',   label: '🧹 เวรทำความสะอาด',     note: 'ทำความสะอาดห้องสภา' },
   { id: 'pr_news',      label: '📢 เวรส่งข่าว PR',      note: 'สลับทุก 2 สัปดาห์' },
-  { id: 'swaps',        label: '🔄 การสลับเวร',        note: 'ประวัติและรายการสลับเวรปฏิบัติหน้าที่' },
 ];
 
 
@@ -300,13 +286,14 @@ export default function SchedulesPage() {
   const isDiscipline = user?.deptId === 2;
   const isPR        = user?.deptId === 5;
 
-  // สิทธิ์แก้ไขตามแต่ละ tab
   const canEditTab = (tabId) => {
     if (tabId === 'swaps') return false;
     if (isAdmin || isDiscipline) return true;   // admin / ปกครอง แก้ได้ทุก tab
     if (isPR && tabId === 'pr_news') return true; // PR แก้ได้เฉพาะเวรส่งข่าว
     return false;
   };
+
+  const visibleTabs = TABS;
 
   const [tab, setTab] = useState('greeting');
   const [editMode, setEditMode] = useState(false);
@@ -746,7 +733,7 @@ export default function SchedulesPage() {
     setter(prev => prev.map((r, i) => i === rowIndex ? { ...r, [field]: value } : r));
   };
 
-  const activeTab = TABS.find(t => t.id === tab);
+  const activeTab = visibleTabs.find(t => t.id === tab) || visibleTabs[0];
 
   const thDay = getThaiDayFromDate(newSwap.date);
   const myNickname = user?.nickname || '';
@@ -765,22 +752,382 @@ export default function SchedulesPage() {
     scheduled = colorFlag.find(s => s.day === thDay)?.members || [];
   }
 
+  const exportSchedulePNG = () => {
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.src = logoUrl;
+    logoImg.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const activeTabObj = visibleTabs.find(t => t.id === tab);
+      const tabName = activeTabObj ? activeTabObj.label : 'ตารางเวร';
+
+      let currentTableData = [];
+      if (tab === 'greeting') currentTableData = greeting;
+      else if (tab === 'national_flag') currentTableData = nationalFlag;
+      else if (tab === 'color_flag') currentTableData = colorFlag;
+      else if (tab === 'clean_room') currentTableData = cleanRoom;
+      else if (tab === 'pr_news') currentTableData = prNews;
+
+      const width = 900;
+      const headerHeight = 160;
+      const tableHeaderHeight = 44;
+      const rowHeight = 54;
+      const footerHeight = 65;
+      const totalRows = currentTableData.length > 0 ? currentTableData.length : 5;
+      const height = headerHeight + tableHeaderHeight + (totalRows * rowHeight) + footerHeight;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const drawRoundRect = (x, y, w, h, r) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      };
+
+      // Background
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, width, height);
+
+      // Header Gradient
+      const gradient = ctx.createLinearGradient(0, 0, width, headerHeight);
+      gradient.addColorStop(0, '#4f46e5');
+      gradient.addColorStop(1, '#6366f1');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, headerHeight);
+
+      // Header Logo & Texts
+      ctx.drawImage(logoImg, 35, 25, 105, 105);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px "Noto Sans Thai", sans-serif';
+      ctx.fillText(`ตารางเวรปฏิบัติหน้าที่สภานักเรียน`, 155, 62);
+
+      ctx.fillStyle = '#e0e7ff';
+      ctx.font = 'bold 15px "Noto Sans Thai", sans-serif';
+      ctx.fillText(`${tabName} - ปีการศึกษา 2569`, 155, 90);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.font = 'normal 12px "Noto Sans Thai", sans-serif';
+      const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+      ctx.fillText(`ข้อมูล ณ วันที่: ${dateStr}`, 155, 115);
+
+      // Table Container
+      const startY = headerHeight + 15;
+      const tableX = 35;
+      const tableW = width - 70;
+
+      // Table Header
+      ctx.fillStyle = '#1e1b4b';
+      drawRoundRect(tableX, startY, tableW, tableHeaderHeight, 8);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 13px "Noto Sans Thai", sans-serif';
+      ctx.textAlign = 'center';
+
+      if (tab === 'greeting') {
+        ctx.fillText('วัน', tableX + 65, startY + 27);
+        ctx.fillText('ประตูไหมไทย', tableX + 250, startY + 27);
+        ctx.fillText('ประตูอำเภอ', tableX + 490, startY + 27);
+        ctx.fillText('ประตูหน้า รร.', tableX + 710, startY + 27);
+      } else {
+        ctx.fillText('วัน', tableX + 85, startY + 27);
+        ctx.fillText('รายชื่อผู้รับผิดชอบปฏิบัติหน้าที่', tableX + 480, startY + 27);
+      }
+
+      // Rows
+      let currentY = startY + tableHeaderHeight;
+      const DAY_COLORS = {
+        'จันทร์': '#ea580c',
+        'อังคาร': '#db2777',
+        'พุธ': '#16a34a',
+        'พฤหัส': '#d97706',
+        'ศุกร์': '#2563eb'
+      };
+
+      currentTableData.forEach((row, idx) => {
+        ctx.fillStyle = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+        ctx.fillRect(tableX, currentY, tableW, rowHeight);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.strokeRect(tableX, currentY, tableW, rowHeight);
+
+        // Day badge
+        const dayColor = DAY_COLORS[row.day] || '#475569';
+        ctx.fillStyle = dayColor;
+        drawRoundRect(tableX + 20, currentY + 12, 90, 30, 8);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 13px "Noto Sans Thai", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(row.day, tableX + 65, currentY + 32);
+
+        // Members
+        ctx.font = 'normal 13px "Noto Sans Thai", sans-serif';
+        ctx.fillStyle = '#1e293b';
+
+        if (tab === 'greeting') {
+          const g1 = (row.gate1 || []).filter(x => x !== '–').join(', ') || '–';
+          const g2 = (row.gate2 || []).filter(x => x !== '–').join(', ') || '–';
+          const g3 = (row.gate3 || []).filter(x => x !== '–').join(', ') || '–';
+
+          ctx.fillText(g1, tableX + 250, currentY + 32);
+          ctx.fillText(g2, tableX + 490, currentY + 32);
+          ctx.fillText(g3, tableX + 710, currentY + 32);
+        } else {
+          const members = (row.members || []).filter(x => x !== '–').join(', ') || '–';
+          ctx.fillText(members, tableX + 480, currentY + 32);
+        }
+
+        currentY += rowHeight;
+      });
+
+      // Footer
+      const footerY = height - 30;
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'normal 11px "Noto Sans Thai", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('สภานักเรียนโรงเรียน (SWSC69)', 35, footerY);
+      ctx.textAlign = 'right';
+      ctx.fillText('ใช้สำหรับแจ้งเตือนและสลับเวรปฏิบัติหน้าที่สภาฯ เท่านั้น', width - 35, footerY);
+
+      // Download PNG
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `SWSC_Duty_Schedule_${tabName}.png`;
+      link.href = dataUrl;
+      link.click();
+    };
+  };
+
+  const exportAllCombinedSchedulePNG = () => {
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.src = logoUrl;
+    logoImg.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const width = 1200;
+      const headerHeight = 160;
+      const secHeaderHeight = 40;
+      const tableHeaderHeight = 38;
+      const rowHeight = 44;
+      const daysCount = 5; // จันทร์ - ศุกร์
+      const tableBlockHeight = secHeaderHeight + tableHeaderHeight + (daysCount * rowHeight) + 20;
+      const footerHeight = 60;
+      const height = headerHeight + (tableBlockHeight * 3) + footerHeight;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const drawRoundRect = (x, y, w, h, r) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      };
+
+      // 1. Background
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Main Header Gradient
+      const gradient = ctx.createLinearGradient(0, 0, width, headerHeight);
+      gradient.addColorStop(0, '#3730a3');
+      gradient.addColorStop(1, '#4f46e5');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, headerHeight);
+
+      // Logo & Header Text
+      ctx.drawImage(logoImg, 40, 25, 110, 110);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 24px "Noto Sans Thai", sans-serif';
+      ctx.fillText('ตารางเวรปฏิบัติหน้าที่สภานักเรียน (รวม 3 เวรหลัก)', 170, 62);
+
+      ctx.fillStyle = '#e0e7ff';
+      ctx.font = 'bold 15px "Noto Sans Thai", sans-serif';
+      ctx.fillText('เวรยืนไหว้ต้อนรับ • เวรเชิญธงชาติ • เวรเชิญธงสีประจำโรงเรียน', 170, 92);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.font = 'normal 12.5px "Noto Sans Thai", sans-serif';
+      const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+      ctx.fillText(`ข้อมูล ณ วันที่: ${dateStr}`, 170, 118);
+
+      const DAY_COLORS = {
+        'จันทร์': '#ea580c',
+        'อังคาร': '#db2777',
+        'พุธ': '#16a34a',
+        'พฤหัส': '#d97706',
+        'ศุกร์': '#2563eb'
+      };
+
+      const tableX = 40;
+      const tableW = width - 80;
+      let currentY = headerHeight + 20;
+
+      const renderSectionTable = (title, icon, type, dataRows) => {
+        // Section Title Banner
+        ctx.fillStyle = '#ffffff';
+        drawRoundRect(tableX, currentY, tableW, secHeaderHeight, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#1e1b4b';
+        ctx.font = 'bold 15px "Noto Sans Thai", sans-serif';
+        ctx.fillText(`${icon} ${title}`, tableX + 16, currentY + 25);
+
+        currentY += secHeaderHeight + 6;
+
+        // Table Header
+        ctx.fillStyle = '#312e81';
+        drawRoundRect(tableX, currentY, tableW, tableHeaderHeight, 6);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12.5px "Noto Sans Thai", sans-serif';
+        ctx.textAlign = 'center';
+
+        if (type === 'greeting') {
+          ctx.fillText('วัน', tableX + 70, currentY + 24);
+          ctx.fillText('🏫 ประตูไหมไทย', tableX + 320, currentY + 24);
+          ctx.fillText('🏛️ ประตูอำเภอ', tableX + 640, currentY + 24);
+          ctx.fillText('🚪 ประตูหน้า รร.', tableX + 960, currentY + 24);
+        } else {
+          ctx.fillText('วัน', tableX + 90, currentY + 24);
+          ctx.fillText('รายชื่อผู้รับผิดชอบปฏิบัติหน้าที่', tableX + 640, currentY + 24);
+        }
+
+        currentY += tableHeaderHeight;
+
+        // Rows
+        const days = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์'];
+        days.forEach((dName, idx) => {
+          const rowData = dataRows.find(r => r.day === dName) || {};
+
+          ctx.fillStyle = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+          ctx.fillRect(tableX, currentY, tableW, rowHeight);
+          ctx.strokeStyle = '#e2e8f0';
+          ctx.strokeRect(tableX, currentY, tableW, rowHeight);
+
+          // Day badge
+          const dayColor = DAY_COLORS[dName] || '#475569';
+          ctx.fillStyle = dayColor;
+          drawRoundRect(tableX + 20, currentY + 8, 90, 28, 6);
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 12.5px "Noto Sans Thai", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(dName, tableX + 65, currentY + 26);
+
+          // Content Text
+          ctx.font = 'normal 12.5px "Noto Sans Thai", sans-serif';
+          ctx.fillStyle = '#1e293b';
+
+          if (type === 'greeting') {
+            const g1 = (rowData.gate1 || []).filter(x => x !== '–').join(', ') || '–';
+            const g2 = (rowData.gate2 || []).filter(x => x !== '–').join(', ') || '–';
+            const g3 = (rowData.gate3 || []).filter(x => x !== '–').join(', ') || '–';
+
+            ctx.fillText(g1, tableX + 320, currentY + 26);
+            ctx.fillText(g2, tableX + 640, currentY + 26);
+            ctx.fillText(g3, tableX + 960, currentY + 26);
+          } else {
+            const members = (rowData.members || []).filter(x => x !== '–').join(', ') || '–';
+            ctx.fillText(members, tableX + 640, currentY + 26);
+          }
+
+          currentY += rowHeight;
+        });
+
+        currentY += 18;
+      };
+
+      // Render 3 Sections
+      renderSectionTable('ตารางเวรยืนต้อนรับหน้าประตูโรงเรียน (07:00 - 07:35 น.)', '🙏', 'greeting', greeting);
+      renderSectionTable('ตารางเวรเชิญธงชาติ (ธงใหญ่)', '🚩', 'national_flag', nationalFlag);
+      renderSectionTable('ตารางเวรเชิญธงสีประจำโรงเรียน', '🎌', 'color_flag', colorFlag);
+
+      // Footer
+      const footerY = height - 25;
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'normal 11px "Noto Sans Thai", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('สภานักเรียนโรงเรียน (SWSC69)', 40, footerY);
+      ctx.textAlign = 'right';
+      ctx.fillText('เอกสารตารางเวรปฏิบัติหน้าที่ ใช้สำหรับประสานงานภายในสภานักเรียนเท่านั้น', width - 40, footerY);
+
+      // Download
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `SWSC_Combined_Duties_Schedule_${new Date().toISOString().split('T')[0]}.png`;
+      link.href = dataUrl;
+      link.click();
+    };
+  };
+
   return (
     <div>
       {/* Header */}
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div className="page-title">📋 ตารางเวร</div>
           <div className="page-subtitle">คณะกรรมการสภานักเรียน ปีการศึกษา 2569</div>
         </div>
-        {canEdit && (
+
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button
-            className={`btn ${editMode ? 'btn-danger' : 'btn-primary'}`}
-            onClick={handleToggleEdit}
+            className="btn btn-primary"
+            onClick={exportAllCombinedSchedulePNG}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, borderRadius: 10, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}
           >
-            {editMode ? <><Lock size={14}/> ล็อกตาราง</> : <><Unlock size={14}/> แก้ไขตาราง</>}
+            <Camera size={16} />
+            <span>🌟 บันทึกรวม 3 เวร (PNG)</span>
           </button>
-        )}
+
+          <button
+            className="btn btn-gray"
+            onClick={exportSchedulePNG}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, borderRadius: 10 }}
+          >
+            <Camera size={16} />
+            <span>📸 บันทึกเฉพาะเวรนี้ (PNG)</span>
+          </button>
+
+          {canEdit && (
+            <button
+              className={`btn ${editMode ? 'btn-danger' : 'btn-primary'}`}
+              onClick={handleToggleEdit}
+              style={{ borderRadius: 10 }}
+            >
+              {editMode ? <><Lock size={14}/> ล็อกตาราง</> : <><Unlock size={14}/> แก้ไขตาราง</>}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Edit mode banner */}
@@ -793,10 +1140,10 @@ export default function SchedulesPage() {
 
       {/* Tabs */}
       <div className="tab-bar">
-        {TABS.map(t => (
+        {visibleTabs.map(t => (
           <button
             key={t.id}
-            className={`tab-btn${tab === t.id ? ' active' : ''}`}
+            className={`tab-btn${(activeTab?.id || tab) === t.id ? ' active' : ''}`}
             onClick={() => { setTab(t.id); setEditMode(false); }}
           >
             {t.label}
@@ -805,6 +1152,33 @@ export default function SchedulesPage() {
         ))}
       </div>
 
+      {/* Banner for Active Duty Swaps */}
+      {swaps.filter(s => s.date >= `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`).length > 0 && (
+        <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 8, padding: '12px 16px', marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: '#e65100', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>🔄</span> <span>รายการสลับเวรปฏิบัติหน้าที่ (จัดการโดยฝ่ายปกครอง):</span>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {swaps.filter(s => s.date >= `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`).map(s => {
+              const dutyLabels = {
+                greeting_gate1: 'ยืนไหว้-ประตูไหมไทย',
+                greeting_gate2: 'ยืนไหว้-ประตูอำเภอ',
+                greeting_gate3: 'ยืนไหว้-ประตูหน้า รร.',
+                clean_room: 'เวรห้องสภา',
+                national_flag: 'เชิญธงชาติ',
+                color_flag: 'เชิญธงสี'
+              };
+              const dStr = new Date(s.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+              return (
+                <span key={s.id} style={{ background: 'white', border: '1px solid #ffcc80', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#bf360c', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  📅 <strong>{dStr}</strong> ({dutyLabels[s.duty_type] || s.duty_type}): <span style={{ textDecoration: 'line-through', opacity: 0.7 }}>{s.original_nickname}</span> ➡️ <strong style={{ color: '#2e7d32' }}>{s.substitute_nickname}</strong> (แทน)
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Table card */}
       <div className="card">
         <div className="card-header">
@@ -812,31 +1186,20 @@ export default function SchedulesPage() {
             <span className="card-title">{activeTab?.label}</span>
             <span style={{ fontSize: 12, color: '#9e9e9e', marginLeft: 8 }}>{activeTab?.note}</span>
           </div>
-          {tab === 'swaps' ? (
-            <button
-              className="btn btn-primary"
-              onClick={handleOpenSwapModal}
-              style={{ background: '#f57c00', border: 'none', display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', fontSize: 13 }}
-            >
-              ➕ ขอสลับเวร
-            </button>
-          ) : (
-            !canEdit && (
-              <span style={{ fontSize: 11, color: '#9e9e9e', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Lock size={12}/>
-                {tab === 'pr_news' ? 'แก้ไขได้เฉพาะฝ่าย PR / ปกครอง' : 'แก้ไขได้เฉพาะฝ่ายปกครอง'}
-              </span>
-            )
+          {!canEdit && (
+            <span style={{ fontSize: 11, color: '#9e9e9e', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Lock size={12}/>
+              {tab === 'pr_news' ? 'แก้ไขได้เฉพาะฝ่าย PR / ปกครอง' : 'แก้ไขได้เฉพาะฝ่ายปกครอง'}
+            </span>
           )}
         </div>
 
         <div style={{ padding: '8px 0', overflowX: 'auto' }}>
-          {tab === 'greeting'      && <GreetingTable     data={greeting}     editMode={editMode} onChange={makeUpdater(setGreeting)} candidates={candidates} />}
-          {tab === 'national_flag' && <SimpleTable       data={nationalFlag} editMode={editMode} onChange={makeUpdater(setNationalFlag)} label="ผู้เชิญธงชาติ" candidates={candidates} />}
-          {tab === 'color_flag'    && <SimpleTable       data={colorFlag}    editMode={editMode} onChange={makeUpdater(setColorFlag)} label="ผู้เชิญธงสี" candidates={candidates} />}
-          {tab === 'clean_room'    && <CleanTable        data={cleanRoom}    editMode={editMode} onChange={makeUpdater(setCleanRoom)} candidates={candidates} />}
-          {tab === 'pr_news'       && <PRNewsTable       data={prNews}       editMode={editMode} onChange={makeUpdater(setPRNews)} candidates={candidates} />}
-          {tab === 'swaps'         && <SwapsTable        data={swaps}        onDelete={handleDeleteSwap} currentUser={user} isAdmin={isAdmin} isDiscipline={isDiscipline} />}
+          {tab === 'greeting'      && <GreetingTable     data={greeting}     editMode={editMode} onChange={makeUpdater(setGreeting)} candidates={candidates} swaps={swaps} />}
+          {tab === 'national_flag' && <SimpleTable       data={nationalFlag} editMode={editMode} onChange={makeUpdater(setNationalFlag)} label="ผู้เชิญธงชาติ" candidates={candidates} swaps={swaps} dutyType="national_flag" />}
+          {tab === 'color_flag'    && <SimpleTable       data={colorFlag}    editMode={editMode} onChange={makeUpdater(setColorFlag)} label="ผู้เชิญธงสี" candidates={candidates} swaps={swaps} dutyType="color_flag" />}
+          {tab === 'clean_room'    && <CleanTable        data={cleanRoom}    editMode={editMode} onChange={makeUpdater(setCleanRoom)} candidates={candidates} swaps={swaps} />}
+          {tab === 'pr_news'       && <PRNewsTable       data={prNews}       editMode={editMode} onChange={makeUpdater(setPRNews)} candidates={candidates} swaps={swaps} />}
         </div>
 
         {/* Footer */}

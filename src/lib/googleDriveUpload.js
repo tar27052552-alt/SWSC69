@@ -12,7 +12,7 @@ async function callGAS(action, payload) {
     const response = await fetch(gasUrl, {
       method: "POST",
       headers: {
-        "Content-Type": "text/plain;charset=utf-8", // Using text/plain to avoid preflight OPTIONS check if possible, though doPost handles it too
+        "Content-Type": "text/plain;charset=utf-8",
       },
       body: JSON.stringify({ action, ...payload }),
     });
@@ -29,7 +29,10 @@ async function callGAS(action, payload) {
     return result.data;
   } catch (error) {
     console.error("❌ Google Apps Script Request failed:", error);
-    alert(`เกิดข้อผิดพลาดในการเชื่อมต่อ Google Apps Script: ${error.message}`);
+    // Don't trigger blocking alert popups for background read calls
+    if (action !== "read_sheet") {
+      alert(`เกิดข้อผิดพลาดในการเชื่อมต่อ Google Apps Script: ${error.message}\n(คำแนะนำ: โปรดตรวจสอบว่าได้ตั้งค่า "Who has access" เป็น "Anyone" ใน Google Apps Script แล้วหรือยัง)`);
+    }
     throw error;
   }
 }
@@ -100,27 +103,39 @@ export function transformGoogleDriveUrl(url) {
   if (!url) return "";
   if (typeof url !== "string") return url;
   
-  // หากเป็น Base64 หรือเป็นลิงก์ lh3 อยู่แล้ว หรือไม่ใช่เว็บ Google Drive ให้ส่งกลับตามเดิม
-  if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("https://lh3.googleusercontent.com/")) {
+  if (url.startsWith("data:") || url.startsWith("blob:")) {
     return url;
   }
   
-  if (!url.includes("drive.google.com")) {
-    return url;
+  let fileId = "";
+  let match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) fileId = match[1];
+  
+  if (!fileId) {
+    match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) fileId = match[1];
   }
 
-  // 1. ตรวจสอบรูปแบบ /file/d/FILE_ID/view
-  let match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (match && match[1]) {
-    return `https://lh3.googleusercontent.com/d/${match[1]}`;
+  if (!fileId) {
+    match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) fileId = match[1];
+  }
+
+  if (fileId) {
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
   }
   
-  // 2. ตรวจสอบรูปแบบ uc?id=FILE_ID หรือ open?id=FILE_ID
-  match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (match && match[1]) {
-    return `https://lh3.googleusercontent.com/d/${match[1]}`;
+  return url;
+}
+
+export function getGoogleDriveViewUrl(url) {
+  if (!url || typeof url !== "string") return url;
+  let fileId = "";
+  let match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) fileId = match[1];
+  if (fileId) {
+    return `https://drive.google.com/file/d/${fileId}/view`;
   }
-  
   return url;
 }
 

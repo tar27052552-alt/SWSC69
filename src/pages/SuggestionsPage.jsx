@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
-import { MessageSquare, Trash2, Calendar, User, Tag, Edit2, X, Check } from 'lucide-react';
+import { MessageSquare, Trash2, Calendar, User, Edit2, X, Check } from 'lucide-react';
 
 export default function SuggestionsPage() {
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -28,6 +28,17 @@ export default function SuggestionsPage() {
 
   useEffect(() => {
     loadSuggestions();
+
+    const channel = supabase
+      .channel('suggestions-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'suggestions' }, () => {
+        loadSuggestions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleDelete = async (id) => {

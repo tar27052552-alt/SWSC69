@@ -1,0 +1,808 @@
+Created At: 2026-07-20T13:09:49Z
+Completed At: 2026-07-20T13:09:49Z
+File Path: `file:///d:/%E0%B9%82%E0%B8%9B%E0%B8%A3%E0%B9%80%E0%B8%88%E0%B8%84%E0%B8%AA%E0%B8%A0%E0%B8%B2/index.html`
+Total Lines: 4325
+Total Bytes: 175038
+Showing lines 1 to 800
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: <!DOCTYPE html>
+2: <html lang="th">
+3: <head>
+4:   <meta charset="UTF-8" />
+5:   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+6:   <title>SWSC.OFFICIAL | คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม</title>
+7:   <meta name="description" content="SWSC.OFFICIAL — คณะกรรมการนักเรียนโรงเรียนสรรพวิทยาคม อำเภอแม่สอด จังหวัดตาก" />
+8:   <link rel="icon" href="./logo.png" type="image/png" />
+9:   <link rel="preconnect" href="https://fonts.googleapis.com" />
+10:   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+11:   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+12: 
+13:   <style>
+14:     :root {
+15:       --purple-900: #1e0a2e;
+16:       --purple-800: #2d1046;
+17:       --purple-700: #4a1270;
+18:       --purple-600: #6b21a8;
+19:       --purple-500: #9333ea;
+20:       --purple-400: #a855f7;
+21:       --purple-100: #f3e8ff;
+22:       --gold-500: #f59e0b;
+23:       --gold-400: #fbbf24;
+24:       --gold-300: #fcd34d;
+25:       --white: #ffffff;
+26:       --gray-50:  #fafafa;
+27:       --gray-100: #f4f4f5;
+28:       --gray-200: #e4e4e7;
+29:       --gray-500: #71717a;
+30:       --gray-700: #3f3f46;
+31:       --gray-900: #18181b;
+32:       --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+33:       --shadow-md: 0 4px 16px rgba(0,0,0,.08);
+34:       --shadow-lg: 0 12px 40px rgba(147,51,234,.10);
+35:       --shadow-xl: 0 20px 60px rgba(147,51,234,.15);
+36:       --radius: 12px;
+37:       --radius-lg: 20px;
+38:       --ease: cubic-bezier(.4,0,.2,1);
+39:     }
+40: 
+41:     * { margin:0; padding:0; box-sizing:border-box; }
+42:     html { scroll-behavior:smooth; }
+43:     body {
+44:       font-family: 'Sarabun', sans-serif;
+45:       background: linear-gradient(135deg, #f5f3ff 0%, #fafafa 50%, #fffbeb 100%);
+46:       color: var(--gray-900);
+47:       line-height: 1.65;
+48:       -webkit-font-smoothing: antialiased;
+49:       min-height: 100vh;
+50:     }
+51: 
+52:     /* ==================== LOADING SCREEN ==================== */
+53:     #loadingScreen {
+54:       position: fixed;
+55:       inset: 0;
+56:       z-index: 99999;
+57:       background: #0d0714;
+58:       display: flex;
+59:       flex-direction: column;
+60:       align-items: center;
+61:       justify-content: center;
+62:       gap: 28px;
+63:       transition: opacity 0.7s ease, visibility 0.7s ease;
+64:     }
+65:     #loadingScreen.hidden {
+66:       opacity: 0;
+67:       visibility: hidden;
+68:       pointer-events: none;
+69:     }
+70:     .loader-logo {
+71:       width: 90px;
+72:       height: 90px;
+73:       border-radius: 50%;
+74:       border: 3px solid rgba(245,158,11,0.15);
+75:       border-top-color: var(--gold-400);
+76:       animation: spinLogo 1s linear infinite;
+77:       display: flex;
+78:       align-items: center;
+79:       justify-content: center;
+80:       position: relative;
+81:     }
+82:     .loader-logo::before {
+83:       content: '';
+84:       position: absolute;
+85:       inset: 6px;
+86:       border-radius: 50%;
+87:       border: 2px solid rgba(168,85,247,0.15);
+88:       border-bottom-color: var(--purple-400);
+89:       animation: spinLogo 1.5s linear infinite reverse;
+90:     }
+91:     .loader-logo img {
+92:       width: 48px;
+93:       height: 48px;
+94:       object-fit: contain;
+95:       border-radius: 50%;
+96:     }
+97:     @keyframes spinLogo {
+98:       to { transform: rotate(360deg); }
+99:     }
+100:     .loader-title {
+101:       font-family: 'Oswald', sans-serif;
+102:       font-size: 26px;
+103:       font-weight: 700;
+104:       color: #fff;
+105:       letter-spacing: 2px;
+106:       background: linear-gradient(135deg, #fff, #fcd34d, #f59e0b);
+107:       -webkit-background-clip: text;
+108:       -webkit-text-fill-color: transparent;
+109:     }
+110:     .loader-subtitle {
+111:       font-size: 13px;
+112:       color: rgba(255,255,255,0.45);
+113:       letter-spacing: 0.5px;
+114:     }
+115:     .loader-bar-wrap {
+116:       width: 200px;
+117:       height: 3px;
+118:       background: rgba(255,255,255,0.1);
+119:       border-radius: 99px;
+120:       overflow: hidden;
+121:     }
+122:     .loader-bar {
+123:       height: 100%;
+124:       background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
+125:       border-radius: 99px;
+126:       animation: loadBar 2s ease forwards;
+127:     }
+128:     @keyframes loadBar {
+129:       from { width: 0%; }
+130:       to   { width: 100%; }
+131:     }
+132: 
+133: 
+134:     /* ==================== STATS COUNTER STRIP ==================== */
+135:     .stats-strip {
+136:       display: flex;
+137:       justify-content: center;
+138:       gap: 0;
+139:       flex-wrap: wrap;
+140:       margin: 0 0 28px 0;
+141:       border-radius: 16px;
+142:       overflow: hidden;
+143:       box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+144:     }
+145:     .stat-item {
+146:       flex: 1;
+147:       min-width: 150px;
+148:       padding: 22px 20px;
+149:       text-align: center;
+150:       background: rgba(255,255,255,0.8);
+151:       backdrop-filter: blur(10px);
+152:       border-right: 1px solid rgba(245,158,11,0.15);
+153:       position: relative;
+154:       overflow: hidden;
+155:       transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+156:     }
+157:     .stat-item:last-child { border-right: none; }
+158:     .stat-item:hover {
+159:       transform: translateY(-3px);
+160:       box-shadow: 0 10px 25px rgba(245,158,11,0.12);
+161:     }
+162:     .stat-item::before {
+163:       content: '';
+164:       position: absolute;
+165:       top: 0; left: 0; right: 0;
+166:       height: 3px;
+167:       background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
+168:     }
+169:     .stat-icon {
+170:       font-size: 28px;
+171:       margin-bottom: 6px;
+172:     }
+173:     .stat-number {
+174:       font-family: 'Oswald', sans-serif;
+175:       font-size: 36px;
+176:       font-weight: 700;
+177:       color: var(--gold-500);
+178:       line-height: 1;
+179:       margin-bottom: 4px;
+180:     }
+181:     .stat-label {
+182:       font-size: 12px;
+183:       color: var(--gray-500);
+184:       font-weight: 600;
+185:       letter-spacing: 0.3px;
+186:     }
+187: 
+188: 
+189: 
+190:     /* ==================== NAVBAR ==================== */
+191:     nav {
+192:       position: sticky;
+193:       top: 0;
+194:       z-index: 200;
+195:       height: 60px;
+196:       background: #111111;
+197:       border-bottom: 1px solid #333;
+198:       display: flex;
+199:       align-items: center;
+200:       justify-content: space-between;
+201:       padding: 0 40px;
+202:       transition: box-shadow .3s var(--ease);
+203:     }
+204:     nav.scrolled { box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+205:     .nav-brand {
+206:       display: flex;
+207:       align-items: center;
+208:       gap: 10px;
+209:       text-decoration: none;
+210:     }
+211:     .nav-logo { width: 38px; height: 38px; object-fit: contain; }
+212:     .nav-brand-name {
+213:       font-family: 'Oswald', sans-serif;
+214:       font-size: 18px;
+215:       font-weight: 600;
+216:       color: #fff;
+217:       letter-spacing: .5px;
+218:     }
+219:     .nav-brand-name span { color: var(--gold-500); }
+220:     .nav-all-logos {
+221:       height: 44px;
+222:       object-fit: contain;
+223:     }
+224:     .nav-menu {
+225:       display: flex;
+226:       align-items: center;
+227:       list-style: none;
+228:       gap: 16px;
+229:       height: 100%;
+230:     }
+231:     .nav-item {
+232:       position: relative;
+233:       height: 100%;
+234:       display: flex;
+235:       align-items: center;
+236:     }
+237:     .nav-menu a.nav-link {
+238:       display: flex;
+239:       align-items: center;
+240:       gap: 6px;
+241:       padding: 0 6px;
+242:       color: #e5e5e5;
+243:       font-size: 13.5px;
+244:       font-weight: 600;
+245:       text-decoration: none;
+246:       transition: .2s var(--ease);
+247:       height: 100%;
+248:     }
+249:     .nav-menu a.nav-link:hover, .nav-menu a.nav-link.active {
+250:       color: #fff;
+251:     }
+252:     .nav-dropdown {
+253:       position: absolute;
+254:       top: 60px;
+255:       left: 50%;
+256:       transform: translateX(-50%) translateY(10px);
+257:       background: #1a1a1a;
+258:       border: 1px solid #333;
+259:       border-radius: 6px;
+260:       padding: 8px 0;
+261:       min-width: 180px;
+262:       opacity: 0;
+263:       visibility: hidden;
+264:       transition: .2s var(--ease);
+265:       box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+266:       z-index: 201;
+267:     }
+268:     .nav-item:hover .nav-dropdown {
+269:       opacity: 1;
+270:       visibility: visible;
+271:       transform: translateX(-50%) translateY(0);
+272:     }
+273:     .nav-dropdown a {
+274:       display: flex;
+275:       align-items: center;
+276:       gap: 8px;
+277:       padding: 8px 20px;
+278:       color: #ccc;
+279:       font-size: 13px;
+280:       font-weight: 500;
+281:       text-decoration: none;
+282:       transition: .2s;
+283:       white-space: nowrap;
+284:     }
+285:     .nav-dropdown a:hover {
+286:       background: #2a2a2a;
+287:       color: #fff;
+288:     }
+289:     .nav-search {
+290:       display: flex;
+291:       align-items: center;
+292:       gap: 15px;
+293:       border-left: 1px solid #333;
+294:       padding-left: 20px;
+295:       margin-left: 10px;
+296:     }
+297:     .nav-search-icon {
+298:       color: #ccc;
+299:       cursor: pointer;
+300:       transition: .2s;
+301:       display: flex;
+302:       align-items: center;
+303:       justify-content: center;
+304:       width: 32px; height: 32px;
+305:       border-radius: 50%;
+306:       background: #2a2a2a;
+307:     }
+308:     .nav-search-icon:hover { color: #fff; background: #333; }
+309:     .nav-cta {
+310:       background: var(--purple-600);
+311:       color: var(--white) !important;
+312:       padding: 6px 16px !important;
+313:       border-radius: 6px;
+314:       font-weight: 700 !important;
+315:       font-size: 13px !important;
+316:       transition: .2s var(--ease);
+317:     }
+318:     .nav-cta:hover { background: var(--purple-700) !important; }
+319:     .btn-download-pdf {
+320:       display: inline-flex;
+321:       align-items: center;
+322:       gap: 8px;
+323:       background: linear-gradient(135deg, var(--purple-600), var(--purple-800));
+324:       color: #fff !important;
+325:       padding: 10px 24px;
+326:       border-radius: 8px;
+327:       font-weight: 600;
+328:       font-size: 15px;
+329:       text-decoration: none;
+330:       box-shadow: 0 4px 15px rgba(109, 40, 217, 0.3);
+331:       transition: all 0.3s ease;
+332:     }
+333:     .btn-download-pdf:hover {
+334:       transform: translateY(-2px);
+335:       box-shadow: 0 6px 20px rgba(109, 40, 217, 0.5);
+336:     }
+337:     .btn-zoom {
+338:       background: var(--purple-50);
+339:       color: var(--purple-700);
+340:       border: 1px solid var(--purple-200);
+341:       border-radius: 8px;
+342:       padding: 8px 16px;
+343:       font-size: 13px;
+344:       font-weight: 700;
+345:       cursor: pointer;
+346:       display: inline-flex;
+347:       align-items: center;
+348:       gap: 6px;
+349:       transition: all 0.2s;
+350:     }
+351:     .btn-zoom:hover {
+352:       background: var(--purple-600);
+353:       color: #fff;
+354:       border-color: var(--purple-600);
+355:     }
+356:     .nav-burger {
+357:       display: none;
+358:       flex-direction: column;
+359:       gap: 5px;
+360:       background: none;
+361:       border: none;
+362:       cursor: pointer;
+363:       padding: 4px;
+364:     }
+365:     .nav-burger span { display: block; width: 22px; height: 2px; background: #fff; border-radius: 2px; }
+366:     .mobile-menu {
+367:       display: none;
+368:       position: fixed;
+369:       top: 60px;
+370:       left: 0; right: 0;
+371:       background: var(--white);
+372:       padding: 12px;
+373:       z-index: 199;
+374:       border-bottom: 3px solid var(--purple-500);
+375:       box-shadow: var(--shadow-lg);
+376:       max-height: calc(100vh - 70px);
+377:       overflow-y: auto;
+378:     }
+379:     .mobile-menu.open { display: flex; flex-direction: column; gap: 6px; }
+380:     .mobile-menu a {
+381:       padding: 12px 16px;
+382:       border-radius: 8px;
+383:       color: var(--gray-700);
+384:       font-weight: 600;
+385:       text-decoration: none;
+386:       font-size: 14.5px;
+387:     }
+388:     .mobile-menu a:hover, .mobile-menu a.active {
+389:       background: var(--purple-100);
+390:       color: var(--purple-700);
+391:     }
+392:     
+393:     /* Mobile dropdown accordions */
+394:     .mobile-dropdown-parent {
+395:       display: flex;
+396:       flex-direction: column;
+397:       width: 100%;
+398:       border-radius: 8px;
+399:       overflow: hidden;
+400:     }
+401:     .mobile-dropdown-toggle {
+402:       display: flex;
+403:       justify-content: space-between;
+404:       align-items: center;
+405:       padding: 12px 16px;
+406:       font-size: 14.5px;
+407:       font-weight: 600;
+408:       color: var(--gray-700);
+409:       cursor: pointer;
+410:       user-select: none;
+411:       border-radius: 8px;
+412:       transition: all 0.2s;
+413:     }
+414:     .mobile-dropdown-toggle:hover {
+415:       background: var(--purple-50);
+416:       color: var(--purple-700);
+417:     }
+418:     .dropdown-chevron {
+419:       transition: transform 0.2s ease;
+420:       color: var(--gray-400);
+421:     }
+422:     .mobile-dropdown-parent.active .dropdown-chevron {
+423:       transform: rotate(180deg);
+424:       color: var(--purple-600);
+425:     }
+426:     .mobile-dropdown-parent.active .mobile-dropdown-toggle {
+427:       color: var(--purple-700);
+428:       background: var(--purple-50);
+429:       border-radius: 8px 8px 0 0;
+430:     }
+431:     .mobile-dropdown-sub {
+432:       max-height: 0;
+433:       overflow: hidden;
+434:       transition: max-height 0.25s ease-out;
+435:       display: flex;
+436:       flex-direction: column;
+437:       background: #faf8ff;
+438:       border-radius: 0 0 8px 8px;
+439:     }
+440:     .mobile-dropdown-parent.active .mobile-dropdown-sub {
+441:       max-height: 300px;
+442:     }
+443:     .mobile-dropdown-sub a {
+444:       padding: 10px 16px 10px 32px !important;
+445:       font-size: 13.5px !important;
+446:       font-weight: 600 !important;
+447:       color: var(--gray-600) !important;
+448:       border-radius: 0 !important;
+449:       background: none !important;
+450:       border-bottom: 1px solid rgba(0,0,0,0.02);
+451:     }
+452:     .mobile-dropdown-sub a:hover {
+453:       color: var(--purple-700) !important;
+454:       background: var(--purple-100) !important;
+455:     }
+456:     
+457:     /* Announcement Carousel Heights */
+458:     .announcement-carousel-wrap {
+459:       position: relative;
+460:       overflow: hidden;
+461:       margin-bottom: 28px;
+462:       border-radius: 12px;
+463:       height: 380px;
+464:       width: 100%;
+465:       background: #000;
+466:     }
+467:     @media (max-width: 768px) {
+468:       .announcement-carousel-wrap {
+469:         height: 240px;
+470:       }
+471:       #carouselDots {
+472:         bottom: 68px !important;
+473:       }
+474:     }
+475: 
+476:     /* ==================== FULL HERO BANNER ==================== */
+477:     .full-hero {
+478:       width: 100%;
+479:       position: relative;
+480:       background: var(--gray-900);
+481:       display: flex;
+482:       justify-content: center;
+483:       align-items: center;
+484:     }
+485:     .full-hero img.hero-img {
+486:       width: 100%;
+487:       max-height: calc(100vh - 60px);
+488:       object-fit: contain;
+489:       display: block;
+490:     }
+491:     .scroll-down {
+492:       position: absolute;
+493:       bottom: 20px;
+494:       left: 50%;
+495:       transform: translateX(-50%);
+496:       color: rgba(255,255,255,0.8);
+497:       animation: bounce 2s infinite;
+498:       cursor: pointer;
+499:       display: flex;
+500:       justify-content: center;
+501:       align-items: center;
+502:       padding: 10px;
+503:       z-index: 10;
+504:       background: rgba(0,0,0,0.3);
+505:       border-radius: 50%;
+506:     }
+507:     .scroll-down:hover { color: #fff; }
+508:     @keyframes bounce {
+509:       0%, 20%, 50%, 80%, 100% { transform: translateY(0) translateX(-50%); }
+510:       40% { transform: translateY(-10px) translateX(-50%); }
+511:       60% { transform: translateY(-5px) translateX(-50%); }
+512:     }
+513:     /* ==================== HOMEPAGE NEW SECTIONS ==================== */
+514:     .section-header {
+515:       background: #5b3a6e;
+516:       color: white;
+517:       display: inline-flex;
+518:       align-items: center;
+519:       gap: 8px;
+520:       padding: 6px 16px;
+521:       font-size: 16px;
+522:       font-weight: 700;
+523:       position: relative;
+524:     }
+525:     .section-header::after {
+526:       content: '';
+527:       position: absolute;
+528:       bottom: 0; left: 100%;
+529:       height: 1px;
+530:       width: 100vw;
+531:       background: #5b3a6e;
+532:     }
+533:     .section-wrapper {
+534:       background: rgba(255, 255, 255, 0.5);
+535:       backdrop-filter: blur(10px);
+536:       -webkit-backdrop-filter: blur(10px);
+537:       border: 1px solid rgba(255, 255, 255, 0.4);
+538:       border-radius: var(--radius-lg);
+539:       padding: 28px;
+540:       margin-bottom: 35px;
+541:       box-shadow: 0 10px 30px rgba(107, 33, 168, 0.03);
+542:       overflow: hidden;
+543:       transition: transform 0.4s var(--ease);
+544:     }
+545: 
+546:     /* PR NEWS (1 Large + 4 Small) */
+547:     .pr-news-container {
+548:       display: flex;
+549:       gap: 20px;
+550:       margin-top: 20px;
+551:     }
+552:     .pr-main {
+553:       flex: 1.2;
+554:       display: flex;
+555:       flex-direction: column;
+556:       gap: 12px;
+557:       text-decoration: none;
+558:       color: inherit;
+559:     }
+560:     .pr-main img {
+561:       width: 100%;
+562:       height: auto;
+563:       max-height: 480px;
+564:       aspect-ratio: 4 / 5;
+565:       object-fit: cover;
+566:       border-radius: 4px;
+567:     }
+568:     .pr-tag { font-size: 12px; color: #666; }
+569:     .pr-main h3 { font-size: 20px; font-weight: 700; margin: 0; color: #222; line-height: 1.3; }
+570:     .pr-meta { font-size: 13px; color: #777; }
+571:     .pr-excerpt { font-size: 14.5px; color: #555; line-height: 1.5; }
+572:     .pr-btn {
+573:       align-self: flex-start;
+574:       border: 1px solid #333;
+575:       padding: 6px 16px;
+576:       font-size: 14px;
+577:       border-radius: 4px;
+578:       color: #333;
+579:       transition: .2s;
+580:     }
+581:     .pr-btn:hover { background: #333; color: #fff; }
+582: 
+583:     .pr-side {
+584:       flex: 1;
+585:       display: flex;
+586:       flex-direction: column;
+587:       gap: 15px;
+588:     }
+589:     .pr-item {
+590:       display: flex;
+591:       gap: 15px;
+592:       text-decoration: none;
+593:       color: inherit;
+594:     }
+595:     .pr-item img {
+596:       width: 100px; height: 125px;
+597:       object-fit: cover;
+598:       border-radius: 4px;
+599:     }
+600:     .pr-item-info { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+601:     .pr-item-info h4 { font-size: 16px; font-weight: 700; margin: 0; color: #222; line-height: 1.3; }
+602: 
+603:     /* OBEC LINE GRID */
+604:     .obec-grid {
+605:       display: grid;
+606:       grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+607:       gap: 12px;
+608:       margin-top: 20px;
+609:     }
+610:     .obec-card {
+611:       text-decoration: none;
+612:       cursor: pointer;
+613:     }
+614:     .obec-card img {
+615:       width: 100%;
+616:       aspect-ratio: 1 / 1.414; /* A4 proportion */
+617:       object-fit: cover;
+618:       border-radius: 12px;
+619:       border: 1px solid rgba(255, 255, 255, 0.5);
+620:       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+621:       transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+622:     }
+623:     .obec-card:hover img { 
+624:       transform: translateY(-8px) scale(1.03); 
+625:       box-shadow: 0 20px 40px rgba(107, 33, 168, 0.15); 
+626:     }
+627: 
+628:     /* Obec Line Viewer Modal */
+629:     #obecViewer {
+630:       display: none;
+631:       position: fixed;
+632:       inset: 0;
+633:       background: rgba(0,0,0,0.92);
+634:       z-index: 99999;
+635:       flex-direction: column;
+636:       align-items: center;
+637:       justify-content: center;
+638:       padding: 20px;
+639:     }
+640:     #obecViewer.open { display: flex; }
+641:     #obecViewerImg {
+642:       max-width: min(700px, 95vw);
+643:       max-height: 85vh;
+644:       width: auto;
+645:       height: auto;
+646:       object-fit: contain;
+647:       border-radius: 10px;
+648:       box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+649:       display: block;
+650:     }
+651:     #obecViewerTitle {
+652:       color: #fff;
+653:       font-size: 16px;
+654:       font-weight: 700;
+655:       margin-bottom: 16px;
+656:       text-align: center;
+657:       font-family: 'Noto Sans Thai', sans-serif;
+658:     }
+659:     #obecViewerCounter {
+660:       color: rgba(255,255,255,0.6);
+661:       font-size: 13px;
+662:       margin-top: 14px;
+663:     }
+664:     .obecViewer-nav {
+665:       position: fixed;
+666:       top: 50%;
+667:       transform: translateY(-50%);
+668:       background: rgba(255,255,255,0.12);
+669:       border: none;
+670:       color: #fff;
+671:       font-size: 28px;
+672:       width: 52px;
+673:       height: 52px;
+674:       border-radius: 50%;
+675:       cursor: pointer;
+676:       display: flex;
+677:       align-items: center;
+678:       justify-content: center;
+679:       transition: background 0.2s;
+680:       z-index: 100000;
+681:     }
+682:     .obecViewer-nav:hover { background: rgba(255,255,255,0.25); }
+683:     #obecViewerPrev { left: 16px; }
+684:     #obecViewerNext { right: 16px; }
+685:     #obecViewerClose {
+686:       position: fixed;
+687:       top: 16px;
+688:       right: 20px;
+689:       background: rgba(255,255,255,0.15);
+690:       border: none;
+691:       color: #fff;
+692:       font-size: 22px;
+693:       width: 44px;
+694:       height: 44px;
+695:       border-radius: 50%;
+696:       cursor: pointer;
+697:       display: flex;
+698:       align-items: center;
+699:       justify-content: center;
+700:       transition: background 0.2s;
+701:       z-index: 100000;
+702:     }
+703:     #obecViewerClose:hover { background: rgba(255,0,0,0.4); }
+704:     .obec-footer-links {
+705:       display: flex;
+706:       justify-content: space-between;
+707:       margin-top: 20px;
+708:       font-weight: 700;
+709:       font-size: 15px;
+710:     }
+711:     .obec-footer-links a { color: #333; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+712:     .obec-footer-links a:hover { color: #5b3a6e; }
+713: 
+714:     /* DOCS GRID (Reused from previous) */
+715:     .docs-grid {
+716:       display: grid;
+717:       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+718:       gap: 16px;
+719:     }
+720:     .doc-card {
+721:       background: #fff;
+722:       border: 1px solid var(--gray-200);
+723:       border-radius: 10px;
+724:       padding: 20px;
+725:       text-align: center;
+726:       text-decoration: none;
+727:       color: inherit;
+728:       transition: .2s;
+729:       box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+730:     }
+731:     .doc-card:hover {
+732:       border-color: var(--purple-400);
+733:       transform: translateY(-3px);
+734:       box-shadow: 0 6px 16px rgba(107,33,168,0.1);
+735:     }
+736:     .doc-icon { font-size: 36px; margin-bottom: 12px; }
+737:     .doc-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+738:     .doc-desc { font-size: 12px; color: var(--gray-500); }
+739: 
+740:     @media (max-width: 768px) {
+741:       .pr-news-container { flex-direction: column; }
+742:       .home-grid-2 { grid-template-columns: 1fr !important; }
+743:       .obec-footer-links { flex-direction: column; gap: 10px; }
+744:     }
+745:     /* ==================== PAGE LAYOUT ==================== */
+746:     .layout {
+747:       max-width: 1400px;
+748:       margin: 28px auto 80px;
+749:       padding: 0 40px;
+750:     }
+751: 
+752:     .page-section {
+753:       display: none;
+754:       opacity: 0;
+755:       transform: translateY(15px);
+756:       transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+757:     }
+758:     .page-section.active {
+759:       display: block;
+760:     }
+761:     .page-section.active-visible {
+762:       opacity: 1;
+763:       transform: translateY(0);
+764:     }
+765: 
+766:     /* ==================== CONTENT BLOCK ==================== */
+767:     .block {
+768:       background: rgba(255, 255, 255, 0.7);
+769:       backdrop-filter: blur(10px);
+770:       -webkit-backdrop-filter: blur(10px);
+771:       border: 1px solid rgba(255, 255, 255, 0.5);
+772:       border-radius: var(--radius-lg);
+773:       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+774:       overflow: hidden;
+775:       margin-bottom: 24px;
+776:       transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease);
+777:     }
+778:     .block:hover {
+779:       transform: translateY(-4px);
+780:       box-shadow: 0 20px 40px rgba(147, 51, 234, 0.06);
+781:     }
+782:     .block-head {
+783:       padding: 18px 24px;
+784:       display: flex;
+785:       align-items: center;
+786:       justify-content: space-between;
+787:       border-bottom: 1px solid var(--gray-100);
+788:     }
+789:     .block-head-title {
+790:       font-size: 15px;
+791:       font-weight: 800;
+792:       color: var(--gray-900);
+793:       display: flex;
+794:       align-items: center;
+795:       gap: 8px;
+796:     }
+797:     .block-head-title::before {
+798:       content: '';
+799:       display: block;
+800:       width: 4px;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

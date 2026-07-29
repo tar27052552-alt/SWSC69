@@ -1386,46 +1386,66 @@ export default function AVPage() {
   const NEXT = { backlog:'designing', designing:'wait_pr', wait_pr:'done', done:null };
 
   return (
-    <div>
-      <div className="page-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+    <div style={{ paddingBottom: 40 }}>
+      {/* ── PAGE HEADER ── */}
+      <div className="page-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:16, marginBottom:24 }}>
         <div>
-          <div className="page-title">🎬 ฝ่ายโสตทัศนศึกษา</div>
-          <div className="page-subtitle">คิดคอนเทนต์ ทำกราฟิก/วิดีโอ/ถ่ายภาพ และส่งงานให้ฝ่าย PR ใส่แคปชั่น</div>
+          <div className="page-title" style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 14,
+              background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: 22, boxShadow: '0 4px 14px rgba(139, 92, 246, 0.35)'
+            }}>
+              🎬
+            </div>
+            <div>
+              <span style={{ fontSize: 22, fontWeight: 800 }}>ฝ่ายโสตทัศนศึกษา</span>
+              <div className="page-subtitle" style={{ fontSize: 13, marginTop: 2 }}>
+                วางแผนคอนเทนต์ ออกแบบกราฟิก/ตัดต่อวิดีโอ/ถ่ายภาพ และส่งงานให้ฝ่าย PR ใส่แคปชั่น
+              </div>
+            </div>
+          </div>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button className="btn btn-outline" onClick={exportMonthTasksPNG} style={{ display:'flex', alignItems:'center', gap:6, fontSize:13, padding:'7px 12px' }}>
-            <Camera size={14}/> 📸 สรุปคิวงานเดือนนี้ (PNG)
+        
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+          <button className="btn btn-gray" onClick={exportMonthTasksPNG} style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:13, borderRadius: 10 }}>
+            <Camera size={16}/> <span>📸 สรุปคิวงานเดือนนี้ (PNG)</span>
           </button>
-          <button className="btn btn-primary" onClick={openCreate}>
-            <Plus size={14}/> วางแผนคอนเทนต์
+          <button className="btn btn-primary" onClick={openCreate} style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:13, borderRadius: 10 }}>
+            <Plus size={16}/> <span>วางแผนคอนเทนต์</span>
           </button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="stats-row" style={{ marginBottom:16 }}>
+      {/* ── STATS CARDS ── */}
+      <div className="stats-row" style={{ marginBottom: 24, gridTemplateColumns: 'repeat(4, 1fr)' }}>
         {statusKeys.map(k => {
-          const s = STATUS_CFG[k]; const count = tasks.filter(t=>t.status===k).length;
+          const s = STATUS_CFG[k]; 
+          const count = tasks.filter(t => t.status === k).length;
           return (
-            <div key={k} className="stat-box">
-              <div className="stat-icon-box" style={{ background:s.bg, fontSize:16 }}>
-                {k==='backlog'?'💡':k==='designing'?'✏️':k==='wait_pr'?'📢':'✅'}
+            <div key={k} className="stat-box" style={{ padding: '16px 20px', borderRadius: 16 }}>
+              <div className="stat-icon-box" style={{ background: s.bg, color: s.color, width: 44, height: 44, fontSize: 20, borderRadius: 12 }}>
+                {k === 'backlog' ? '💡' : k === 'designing' ? '🎨' : k === 'wait_pr' ? '📢' : '✅'}
               </div>
-              <div><div className="stat-value" style={{ color:s.color }}>{count}</div><div className="stat-label" style={{ fontSize:11 }}>{s.label}</div></div>
+              <div>
+                <div className="stat-value" style={{ color: s.color, fontSize: 24 }}>{count}</div>
+                <div className="stat-label" style={{ fontSize: 12, fontWeight: 700 }}>{s.label}</div>
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Tabs */}
-      <div className="tab-bar">
+      {/* ── TAB BAR ── */}
+      <div className="tab-bar" style={{ marginBottom: 20, overflowX: 'auto' }}>
         <button className={`tab-btn${tab==='kanban'?' active':''}`} onClick={()=>setTab('kanban')}>🗂 Kanban Board</button>
         <button className={`tab-btn${tab==='calendar'?' active':''}`} onClick={()=>setTab('calendar')}>📅 ปฏิทินคิวงาน</button>
         <button className={`tab-btn${tab==='list'?' active':''}`} onClick={()=>setTab('list')}>📋 รายการ</button>
         <button className={`tab-btn${tab==='wait_pr'?' active':''}`} onClick={()=>setTab('wait_pr')}>
           📢 รอ PR ใส่แคปชั่น
           {tasks.filter(t=>t.status==='wait_pr').length > 0 &&
-            <span style={{ marginLeft:6, background:'#f57f17', color:'white', borderRadius:99, fontSize:10, padding:'1px 6px', fontWeight:700 }}>
+            <span className="badge badge-orange" style={{ marginLeft: 6, fontSize: 10, padding: '2px 8px' }}>
               {tasks.filter(t=>t.status==='wait_pr').length}
             </span>
           }
@@ -1435,53 +1455,109 @@ export default function AVPage() {
         <button className={`tab-btn${tab==='obec'?' active':''}`} onClick={()=>setTab('obec')}>📚 จัดการ Obec Line</button>
       </div>
 
-      {/* Kanban */}
+      {/* ── KANBAN BOARD ── */}
       {tab === 'kanban' && (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:10, overflowX:'auto' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap: 16, width: '100%', overflowX:'auto' }}>
           {statusKeys.map(k => {
             const s = STATUS_CFG[k];
             const col = tasks.filter(t=>t.status===k);
             return (
-              <div key={k} style={{ minWidth:160 }}>
-                <div style={{ padding:'8px 10px', fontWeight:700, fontSize:12, color:s.color, background:'white', border:'1px solid #e0e0e0', borderRadius:'6px 6px 0 0', borderBottom:`3px solid ${s.color}`, display:'flex', justifyContent:'space-between' }}>
-                  <span>{s.label}</span>
-                  <span style={{ background:s.bg, color:s.color, borderRadius:99, fontSize:11, padding:'0 6px' }}>{col.length}</span>
+              <div key={k} style={{ minWidth: 240, display: 'flex', flexDirection: 'column' }}>
+                {/* Column Header */}
+                <div style={{ 
+                  padding: '12px 16px', 
+                  fontWeight: 800, 
+                  fontSize: 13.5, 
+                  color: s.color, 
+                  background: 'white', 
+                  border: '1px solid var(--border)', 
+                  borderTop: `4px solid ${s.color}`,
+                  borderRadius: '14px 14px 0 0', 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  justify: 'space-between',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span>{k === 'backlog' ? '💡' : k === 'designing' ? '🎨' : k === 'wait_pr' ? '📢' : '✅'}</span>
+                    <span>{s.label}</span>
+                  </div>
+                  <span className="badge" style={{ background: s.bg, color: s.color, fontWeight: 800, fontSize: 11 }}>{col.length}</span>
                 </div>
-                <div style={{ background:'#f9f9f9', border:'1px solid #e0e0e0', borderTop:'none', borderRadius:'0 0 6px 6px', padding:8, minHeight:180, display:'flex', flexDirection:'column', gap:8 }}>
-                  {col.map(t => (
-                    <div key={t.id} style={{ background:'white', border:'1px solid #e0e0e0', borderRadius:6, padding:'10px 10px' }}>
-                      <div style={{ fontSize:12, fontWeight:700, marginBottom:5, lineHeight:1.3 }}>{t.title}</div>
-                      <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginBottom:6 }}>
-                        <span className="badge badge-gray" style={{ fontSize:10 }}>{t.type}</span>
-                        <span className={`badge ${PRIORITY_BADGE[t.priority]}`} style={{ fontSize:10 }}>{t.priority}</span>
-                      </div>
-                      <div style={{ fontSize:11, color:'#9e9e9e', marginBottom:6 }}>
-                        👤 {t.assignee} · {new Date(t.dueDate).toLocaleDateString('th-TH',{day:'numeric',month:'short'})}
-                      </div>
-                      {t.caption && (
-                        <div style={{ fontSize:10, color:'#f57f17', marginBottom:6, background:'#fff9c4', padding:'4px 6px', borderRadius:4, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={t.caption}>
-                          💬 {t.caption}
-                        </div>
-                      )}
-                      {getGraphicUrl(t.note) && (
-                        <div style={{ marginTop: 4, marginBottom: 6 }}>
-                          <a href={getGraphicUrl(t.note)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, display: 'flex', alignItems: 'center', gap: 4, color: '#1565c0', textDecoration: 'none', fontWeight: 600 }}>
-                            🖼️ ดูรูปภาพกราฟิก
-                          </a>
-                        </div>
-                      )}
-                      <div style={{ display:'flex', gap:3 }}>
-                        <button onClick={()=>openEdit(t)} style={{ flex:1, fontSize:10, padding:'3px 0', border:'1px solid #e0e0e0', borderRadius:3, background:'#f5f5f5', cursor:'pointer', fontFamily:'inherit' }} title="แก้ไข">✏️</button>
-                        <button onClick={()=>handleDeleteTask(t.id)} style={{ flex:1, fontSize:10, padding:'3px 0', border:'1px solid #ffcdd2', borderRadius:3, background:'#ffebee', cursor:'pointer', color:'#d32f2f', fontFamily:'inherit' }} title="ลบ">🗑️</button>
-                        {NEXT[k] && (
-                          <button onClick={()=>handleTransition(t,NEXT[k])}
-                            style={{ flex:2, fontSize:10, padding:'3px 0', border:`1px solid ${STATUS_CFG[NEXT[k]].color}44`, borderRadius:3, background:STATUS_CFG[NEXT[k]].bg, cursor:'pointer', color:STATUS_CFG[NEXT[k]].color, fontFamily:'inherit', fontWeight:600 }}>
-                            → {STATUS_CFG[NEXT[k]].label}
-                          </button>
-                        )}
-                      </div>
+
+                {/* Column Content Area */}
+                <div style={{ 
+                  background: '#f8fafc', 
+                  border: '1px solid var(--border)', 
+                  borderTop: 'none', 
+                  borderRadius: '0 0 14px 14px', 
+                  padding: 12, 
+                  minHeight: 320, 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: 12 
+                }}>
+                  {col.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-light)', fontSize: 12.5, fontWeight: 500 }}>
+                      ไม่มีงานในคอลัมน์นี้
                     </div>
-                  ))}
+                  ) : (
+                    col.map(t => {
+                      const graphicUrl = getGraphicUrl(t.note);
+                      return (
+                        <div key={t.id} className="card" style={{ 
+                          padding: 14, 
+                          borderRadius: 12, 
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                          border: '1px solid var(--border)',
+                          transition: 'all 0.2s ease'
+                        }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 8, lineHeight: 1.4, color: 'var(--text)' }}>
+                            {t.title}
+                          </div>
+                          
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                            <span className="badge badge-gray" style={{ fontSize: 10.5 }}>{t.type}</span>
+                            <span className={`badge ${PRIORITY_BADGE[t.priority] || 'badge-blue'}`} style={{ fontSize: 10.5 }}>{t.priority}</span>
+                            {t.platform && <span className="badge badge-purple" style={{ fontSize: 10.5 }}>{t.platform}</span>}
+                          </div>
+
+                          {graphicUrl && (
+                            <div style={{ marginBottom: 10, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border-light)', maxHeight: 130, background: '#f1f5f9' }}>
+                              <img 
+                                src={transformGoogleDriveUrl(graphicUrl)} 
+                                alt={t.title}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                              />
+                            </div>
+                          )}
+
+                          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span>👤 {t.assignee || 'ไม่ระบุ'}</span>
+                            <span>•</span>
+                            <span>📅 {new Date(t.dueDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}</span>
+                          </div>
+
+                          {t.caption && (
+                            <div style={{ fontSize: 11, color: '#c2410c', marginBottom: 10, background: '#fff7ed', border: '1px solid #ffedd5', padding: '6px 10px', borderRadius: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.caption}>
+                              💬 {t.caption}
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', gap: 6, paddingTop: 4, borderTop: '1px solid #f1f5f9' }}>
+                            <button onClick={() => openEdit(t)} className="btn btn-gray btn-sm" style={{ padding: '4px 8px', fontSize: 11 }} title="แก้ไข">✏️</button>
+                            <button onClick={() => handleDeleteTask(t.id)} className="btn btn-danger btn-sm" style={{ padding: '4px 8px', fontSize: 11 }} title="ลบ">🗑️</button>
+                            {NEXT[k] && (
+                              <button onClick={() => handleTransition(t, NEXT[k])} className="btn btn-primary btn-sm" style={{ flex: 1, padding: '4px 10px', fontSize: 11, fontWeight: 700 }}>
+                                → {STATUS_CFG[NEXT[k]].label}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             );

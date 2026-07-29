@@ -1,23 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, RefreshCw, X, Trash2, Edit2, ShieldAlert } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
-const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-const DAYS_TH = ['อา','จ','อ','พ','พฤ','ศ','ส'];
-const TYPE_COLORS = { meeting:'#5c6bc0', event:'#43a047', deadline:'#f9a825' };
-const TYPE_LABELS = { meeting:'ประชุม', event:'กิจกรรม', deadline:'กำหนดส่ง' };
-const TYPE_BADGE  = { meeting:'badge-purple', event:'badge-green', deadline:'badge-yellow' };
+const MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const DAYS_TH = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const DAYS_TH_SHORT = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+const TYPE_COLORS = { meeting:'#5c6bc0', event:'#43a047', deadline:'#f9a825', holiday:'#e53935', substitute:'#00bcd4' };
+const TYPE_LABELS = { meeting:'ประชุม', event:'กิจกรรม', deadline:'กำหนดส่ง', holiday:'วันหยุดสภา', substitute:'วันเรียนชดเชย' };
+const TYPE_BADGE  = { meeting:'badge-purple', event:'badge-green', deadline:'badge-yellow', holiday:'badge-red', substitute:'badge-blue' };
 
 export default function CalendarPage() {
   const { user, isPresident, isAdmin } = useAuth();
   const today = new Date();
   const [yr, setYr] = useState(today.getFullYear());
   const [mo, setMo] = useState(today.getMonth());
-  const [sel, setSel] = useState(null);
+  const [sel, setSel] = useState(today.getDate());
+  const [filterType, setFilterType] = useState('all');
   
   const [events, setEvents] = useState([]);
+  const [disabledDates, setDisabledDates] = useState([]);
+  const [substituteDates, setSubstituteDates] = useState([]);
+  const [schedules, setSchedules] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [selectedParticipants, setSelectedParticipants] = useState([]);
@@ -28,8 +34,49 @@ export default function CalendarPage() {
   const [editId, setEditId] = useState(null);
   const [newEv, setNewEv] = useState({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', checkAttendance: false, attendanceStartTime: '07:00', attendanceLimitTime: '08:00', desc: '' });
 
-  // อนุญาตให้ แอดมิน, ประธาน (deptId: 1 หรือ isPresident), หรือ เลขานุการ (deptId: 7) สามารถจัดการปฏิทินได้
   const canManage = isAdmin || isPresident || user?.deptId === 1 || user?.deptId === 7;
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [
+          eventsRes,
+          usersRes,
+          participantsRes,
+          settingsRes,
+          schedulesRes
+        ] = await Promise.all([
+          supabase.from('events').select('*').order('date', { ascending: true }),
+          supabase.from('users').select('id, name, nickname, dept_id').order('name'),
+          supabase.from('event_participants').select('*'),
+          supabase.from('attendance_settings').select('*'),
+          supabase.from('schedules').select('*')
+        ]);
+
+        if (eventsRes.data) {
+          const mapped = eventsRes.data.map(e => ({
+            ...e,
+            desc: e.description || e.desc
+          }));
+          setEvents(mapped);
+        }
+
+        if (usersRes.data) setUsersList(usersRes.data);
+        if (participantsRes.data) setParticipants(participantsRes.data);
+        if (schedulesRes.data) setSchedules(schedulesRes.data);
+
+        if (settingsRes.data) {
+          const disabled = settingsRes.data.find(s => s.key === 'disabled_dates')?.value || [];
+          const substitutes = settingsRes.data.find(s => s.key === 'substitute_dates')?.value || [];
+          setDisabledDates(disabled);
+          setSubstituteDates(substitutes);
+        }
+      } catch (err) {
+        console.error('Error loading calendar data:', err);
+      }
+    }
+    loadData();
+  }, []);
 
   const handleSaveEvent = async () => {
     if (!newEv.title || !newEv.date) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
@@ -41,7 +88,6 @@ export default function CalendarPage() {
       const limitTime = newEv.attendanceLimitTime || '08:00';
       
       if (editId) {
-        // Edit Mode: Update
         const { error } = await supabase
           .from('events')
           .update({
@@ -60,46 +106,20 @@ export default function CalendarPage() {
           
         if (error) throw error;
 
-        // Delete existing participants
-        const { error: delErr } = await supabase
-          .from('event_participants')
-          .delete()
-          .eq('event_id', editId);
-        if (delErr) throw delErr;
+        await supabase.from('event_participants').delete().eq('event_id', editId);
 
-        // Insert new participants
         if (selectedParticipants.length > 0) {
           const participantRecords = selectedParticipants.map(userId => ({
             event_id: editId,
             user_id: userId
           }));
-          const { error: partErr } = await supabase
-            .from('event_participants')
-            .insert(participantRecords);
-          if (partErr) throw partErr;
+          await supabase.from('event_participants').insert(participantRecords);
         }
-
-        // Notify Discord (pr channel)
-        const typeLabel = TYPE_LABELS[newEv.type] || 'กิจกรรม';
-        const embedTitle = `📅 มีการแก้ไขกิจกรรมในปฏิทินสภา`;
-        const embedDesc = `หัวข้อ: **${newEv.title}** (${typeLabel})`;
-        const locLabel = newEv.locationCategory === 'external' ? 'ภายนอกโรงเรียน (นอกสถานที่)' : 'ภายในโรงเรียน';
-        const fields = [
-          { name: "📆 วันที่จัดกิจกรรม", value: newEv.date === (newEv.endDate || newEv.date) 
-              ? new Date(newEv.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-              : `${new Date(newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${new Date(newEv.endDate || newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`, inline: true },
-          { name: "📍 สถานที่จัดกิจกรรม", value: locLabel, inline: true },
-          { name: "📋 เช็คชื่อ / ยกเว้นเข้าแถว", value: isCheckAttendance ? `เช็คชื่อในกิจกรรม (${startTime} - ${limitTime} น.) (ยกเว้นการเข้าแถวปกติ)` : "ไม่ต้องเช็คชื่อ (ไม่ส่งผลต่อการเข้าแถวปกติ)", inline: false },
-          { name: "📝 รายละเอียดเพิ่มเติม", value: newEv.desc || "ไม่มี", inline: false }
-        ];
-        const targetUserIds = usersList.map(u => String(u.id));
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'calendar', targetUserIds.length > 0 ? targetUserIds : null);
 
         alert('แก้ไขกิจกรรมเรียบร้อยแล้ว!');
 
       } else {
-        // Add Mode: Insert
-        const { data: insertedEvent, error } = await supabase
+        const { data, error } = await supabase
           .from('events')
           .insert([{
             title: newEv.title,
@@ -113,36 +133,21 @@ export default function CalendarPage() {
             color: color,
             description: newEv.desc
           }])
-          .select()
-          .single();
-          
+          .select();
+
         if (error) throw error;
+        const newEventId = data[0].id;
 
-        // Insert into notifications
-        if (insertedEvent) {
-          const typeLabel = TYPE_LABELS[newEv.type] || 'กิจกรรม';
-          await supabase
-            .from('notifications')
-            .insert([{
-              type: 'event',
-              message: `📅 เพิ่ม${typeLabel}ใหม่: "${insertedEvent.title}" ในวันที่ ${new Date(insertedEvent.date).toLocaleDateString('th-TH', {day:'numeric',month:'short',year:'numeric'})}`
-            }]);
-        }
-
-        if (selectedParticipants.length > 0 && insertedEvent) {
+        if (selectedParticipants.length > 0) {
           const participantRecords = selectedParticipants.map(userId => ({
-            event_id: insertedEvent.id,
+            event_id: newEventId,
             user_id: userId
           }));
-          const { error: partErr } = await supabase
-            .from('event_participants')
-            .insert(participantRecords);
-          if (partErr) throw partErr;
+          await supabase.from('event_participants').insert(participantRecords);
         }
 
-        // Notify Discord (pr channel)
         const typeLabel = TYPE_LABELS[newEv.type] || 'กิจกรรม';
-        const embedTitle = `📅 มีการเพิ่มกิจกรรมลงในปฏิทินสภาใหม่`;
+        const embedTitle = `📅 ประกาศกิจกรรมใหม่ในปฏิทินสภา`;
         const embedDesc = `หัวข้อ: **${newEv.title}** (${typeLabel})`;
         const locLabel = newEv.locationCategory === 'external' ? 'ภายนอกโรงเรียน (นอกสถานที่)' : 'ภายในโรงเรียน';
         const fields = [
@@ -190,7 +195,6 @@ export default function CalendarPage() {
       desc: ev.desc || ev.description || ''
     });
     
-    // Find participants for this event
     const eventParts = participants.filter(p => p.event_id === ev.id).map(p => p.user_id);
     setSelectedParticipants(eventParts);
     setIsAdding(true);
@@ -214,50 +218,28 @@ export default function CalendarPage() {
     }
   };
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [
-          eventsRes,
-          usersRes,
-          participantsRes
-        ] = await Promise.all([
-          supabase.from('events').select('*').order('date', { ascending: true }),
-          supabase.from('users').select('id, name, nickname').order('name'),
-          supabase.from('event_participants').select('*')
-        ]);
-
-        if (eventsRes.error) throw eventsRes.error;
-        if (usersRes.error) throw usersRes.error;
-        if (participantsRes.error) throw participantsRes.error;
-
-        const mapped = (eventsRes.data || []).map(e => ({
-          ...e,
-          desc: e.description || e.desc
-        }));
-        setEvents(mapped);
-        setUsersList(usersRes.data || []);
-        setParticipants(participantsRes.data || []);
-      } catch (err) {
-        console.error('Error loading calendar data:', err);
-      }
-    }
-    loadData();
-  }, []);
-
   const firstDay = new Date(yr, mo, 1).getDay();
   const daysInMonth = new Date(yr, mo + 1, 0).getDate();
 
   const prevMonth = () => { if (mo===0){setMo(11);setYr(y=>y-1);}else setMo(m=>m-1); };
   const nextMonth = () => { if (mo===11){setMo(0);setYr(y=>y+1);}else setMo(m=>m+1); };
 
-  const getEvents = (day) => {
+  const getEventsForDay = (day) => {
     const ds = `${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     return events.filter(e => {
       const start = e.date;
       const end = e.end_date || e.date;
-      return ds >= start && ds <= end;
+      const matchesDate = ds >= start && ds <= end;
+      if (filterType === 'all') return matchesDate;
+      return matchesDate && e.type === filterType;
     });
+  };
+
+  const getDayStatus = (day) => {
+    const ds = `${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isHoliday = disabledDates.includes(ds);
+    const substitute = substituteDates.find(s => s.date === ds);
+    return { isHoliday, substitute };
   };
 
   const getEventParticipants = (eventId) => {
@@ -268,81 +250,223 @@ export default function CalendarPage() {
     }).filter(Boolean);
   };
 
-  const selEvents = sel ? getEvents(sel) : [];
+  const selEvents = sel ? getEventsForDay(sel) : [];
+  const selDayStatus = sel ? getDayStatus(sel) : { isHoliday: false, substitute: null };
+  const selDayOfWeek = sel ? new Date(yr, mo, sel).getDay() : 0;
+  const selDayName = DAYS_TH[selDayOfWeek];
+
+  // Get duty schedule for selected day
+  const effectiveDayName = selDayStatus.substitute ? selDayStatus.substitute.replaceDay : selDayName.replace('พฤหัสบดี','พฤหัส');
+  const greetingSchedule = schedules.find(s => s.type === 'greeting' && s.day === effectiveDayName);
+  const cleanRoomSchedule = schedules.find(s => s.type === 'clean_room' && s.day === effectiveDayName);
 
   return (
     <div>
-      <div className="page-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+      {/* Hero Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #0d0714 0%, #1e0a2e 40%, #006064 100%)',
+        borderRadius: 20,
+        padding: '24px 28px',
+        color: '#fff',
+        marginBottom: 20,
+        boxShadow: '0 8px 24px rgba(0,188,212,0.15)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 16
+      }}>
         <div>
-          <div className="page-title">📅 ปฏิทินกิจกรรม</div>
-          <div className="page-subtitle">โครงการ กิจกรรม และวันสำคัญของสภานักเรียน</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(0,188,212,0.2)', color: '#00e5ff', padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, marginBottom: 8, border: '1px solid rgba(0,229,255,0.3)' }}>
+            📅 COUNCIL CALENDAR
+          </div>
+          <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: '#ffffff' }}>
+            ปฏิทินกิจกรรม ตารางเวร และวันหยุดสภานักเรียน
+          </h1>
+          <div style={{ fontSize: 13, color: '#b2ebf2', marginTop: 4, fontWeight: 400 }}>
+            ตรวจสอบกิจกรรม การประชุม กำหนดส่งงาน ตารางเวร และวันหยุดสภาฯ รายเดือน
+          </div>
         </div>
+
         {canManage && (
-          <button 
-            className="btn btn-primary" 
-            onClick={() => { 
-              setEditId(null); 
-              setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', desc: '' }); 
-              setSelectedParticipants([]); 
-              setIsAdding(true); 
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setEditId(null);
+              setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', desc: '' });
+              setSelectedParticipants([]);
+              setIsAdding(true);
+            }}
+            style={{
+              background: 'linear-gradient(135deg, #00bcd4 0%, #00838f 100%)',
+              color: '#fff',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: 14,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: '0 4px 14px rgba(0,188,212,0.4)',
+              transition: 'all 0.2s ease'
             }}
           >
-            <Plus size={14}/> เพิ่มกิจกรรม
+            <Plus size={16} /> เพิ่มกิจกรรมใหม่
           </button>
         )}
       </div>
 
-      <div className="grid-layout" style={{ display:'grid', gridTemplateColumns:'1fr 280px', gap:16 }}>
-        {/* Calendar */}
-        <div className="card">
-          {/* Nav header */}
-          <div style={{ padding:'12px 16px', borderBottom:'1px solid #f0f0f0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <button className="btn btn-gray btn-sm" onClick={prevMonth}>← ก่อนหน้า</button>
-            <span style={{ fontWeight:700, fontSize:15, color:'#00bcd4' }}>
+      {/* Filter Tabs */}
+      <div className="card" style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 16 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#475569', marginRight: 4 }}>กรองประเภท:</span>
+          {[
+            { id: 'all', label: 'ทั้งหมด' },
+            { id: 'event', label: '🟢 กิจกรรม' },
+            { id: 'meeting', label: '🟣 ประชุม' },
+            { id: 'deadline', label: '🟡 กำหนดส่ง' },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setFilterType(t.id)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 20,
+                fontSize: 12,
+                fontWeight: 600,
+                border: filterType === t.id ? '1px solid #00bcd4' : '1px solid #e2e8f0',
+                background: filterType === t.id ? '#e0f7fa' : '#f8fafc',
+                color: filterType === t.id ? '#00838f' : '#64748b',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Calendar & Details Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20 }}>
+        {/* Main Calendar Card */}
+        <div className="card" style={{ borderRadius: 20, overflow: 'hidden' }}>
+          {/* Header Month Nav */}
+          <div style={{ padding: '16px 20px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button className="btn btn-gray btn-sm" onClick={prevMonth} style={{ display: 'flex', alignItems: 'center', gap: 4, borderRadius: 10 }}>
+              <ChevronLeft size={16} /> เดือนก่อน
+            </button>
+
+            <div style={{ fontWeight: 800, fontSize: 18, color: '#00838f' }}>
               {MONTHS[mo]} {yr + 543}
-            </span>
-            <button className="btn btn-gray btn-sm" onClick={nextMonth}>ถัดไป →</button>
+            </div>
+
+            <button className="btn btn-gray btn-sm" onClick={nextMonth} style={{ display: 'flex', alignItems: 'center', gap: 4, borderRadius: 10 }}>
+              เดือนถัดไป <ChevronRight size={16} />
+            </button>
           </div>
 
-          <div style={{ padding:'12px' }}>
-            {/* Day headers */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', marginBottom:6 }}>
-              {DAYS_TH.map(d => (
-                <div key={d} style={{ textAlign:'center', fontSize:12, fontWeight:700, color:'#9e9e9e', padding:'4px 0' }}>{d}</div>
+          <div style={{ padding: 16 }}>
+            {/* Weekday headers */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: 8 }}>
+              {DAYS_TH_SHORT.map((d, idx) => (
+                <div key={d} style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: idx === 0 ? '#ef4444' : '#64748b', padding: '6px 0' }}>
+                  {d}
+                </div>
               ))}
             </div>
 
-            {/* Cells */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gridAutoRows:'120px', gap:2 }}>
-              {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`} style={{ minHeight:'120px' }} />)}
-              {Array.from({length:daysInMonth}).map((_,i)=>{
-                const day = i+1;
-                const evs = getEvents(day);
-                const ds  = `${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            {/* Grid Cells */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridAutoRows: '125px', gap: 2, background: '#f0f0f0', border: '1px solid #e0e0e0', borderRadius: 12, overflow: 'hidden' }}>
+              {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} style={{ minHeight: '125px', background: '#fafafa' }} />)}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const col = (firstDay + i) % 7;
+                const evs = getEventsForDay(day);
+                const ds = `${yr}-${String(mo + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const isToday = ds === todayStr;
-                const isSel   = sel === day;
+                const isSel = sel === day;
+                const { isHoliday, substitute } = getDayStatus(day);
+
                 return (
-                  <div key={day} onClick={()=>setSel(day)} style={{
-                    height:'100%', padding:'4px', borderRadius:4, cursor:'pointer',
-                    border:`1px solid ${isSel?'#00bcd4': isToday?'#80deea':'#f0f0f0'}`,
-                    background: isSel?'#e0f7fa': isToday?'#f3f4ff':'white',
-                    overflow: 'hidden', display: 'flex', flexDirection: 'column'
-                  }}>
-                    <div style={{
-                      fontSize:12, fontWeight: isToday?700:400,
-                      width:22, height:22, borderRadius:'50%',
-                      background: isToday?'#00bcd4':'transparent',
-                      color: isToday?'white':'#212121',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                      flexShrink: 0
-                    }}>{day}</div>
-                    <div style={{ display:'flex', flexDirection:'column', gap:1, marginTop:2 }}>
-                      {evs.slice(0,2).map(ev=>(
-                        <div key={ev.id} style={{ fontSize:10, background: ev.color+'22', color: ev.color, borderRadius:2, padding:'1px 4px', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-                          {ev.title}
+                  <div
+                    key={day}
+                    onClick={() => setSel(day)}
+                    style={{
+                      height: '100%',
+                      padding: '6px 2px 4px 2px',
+                      cursor: 'pointer',
+                      background: isSel ? '#f3e8ff' : isToday ? '#f0fdf4' : isHoliday ? '#fff5f5' : substitute ? '#e0f7fa' : 'white',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'all 0.15s ease',
+                      position: 'relative'
+                    }}
+                  >
+                    {/* Date header row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px', marginBottom: 4 }}>
+                      <div style={{
+                        fontSize: 13,
+                        fontWeight: isToday || isSel ? 800 : 700,
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        background: isToday ? '#00bcd4' : 'transparent',
+                        color: isToday ? 'white' : col === 0 ? '#ef4444' : '#1e293b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        {day}
+                      </div>
+
+                      {isHoliday && <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 700 }}>🚫 หยุด</span>}
+                      {substitute && <span style={{ fontSize: 10, color: '#00838f', fontWeight: 700 }}>🔄 ชดเชย</span>}
+                    </div>
+
+                    {/* Event bars inside day cell */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
+                      {evs.slice(0, 3).map(ev => {
+                        const isStart = (ev.date === ds) || (col === 0);
+                        const endDate = ev.end_date || ev.date;
+                        const isEnd = (endDate === ds) || (col === 6);
+                        
+                        // Lavender background like user's screenshot
+                        const barBg = ev.type === 'meeting' ? '#e8eaf6' : ev.type === 'deadline' ? '#fff9c4' : '#ebdcf9';
+                        const barTextColor = ev.type === 'meeting' ? '#283593' : ev.type === 'deadline' ? '#f57f17' : '#6a1b9a';
+
+                        return (
+                          <div
+                            key={ev.id}
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              background: barBg,
+                              color: barTextColor,
+                              padding: '3px 6px',
+                              borderRadius: isStart && isEnd ? 6 : isStart ? '6px 0 0 6px' : isEnd ? '0 6px 6px 0' : 0,
+                              marginLeft: isStart ? 2 : -2,
+                              marginRight: isEnd ? 2 : -2,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              lineHeight: 1.2
+                            }}
+                            title={ev.title}
+                          >
+                            {isStart || col === 0 ? ev.title : '\u00A0'}
+                          </div>
+                        );
+                      })}
+                      {evs.length > 3 && (
+                        <div style={{ fontSize: 10, color: '#7e57c2', fontWeight: 700, paddingLeft: 4 }}>
+                          +{evs.length - 3} รายการ
                         </div>
-                      ))}
-                      {evs.length>2 && <div style={{fontSize:10,color:'#9e9e9e'}}>+{evs.length-2}</div>}
+                      )}
                     </div>
                   </div>
                 );
@@ -351,242 +475,181 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* Side panel */}
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-          {/* Legend */}
-          <div className="card">
-            <div className="card-header"><span className="card-title">ประเภทกิจกรรม</span></div>
-            <div style={{ padding:'12px 16px', display:'flex', flexDirection:'column', gap:8 }}>
-              {Object.entries(TYPE_LABELS).map(([k,v])=>(
-                <div key={k} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <div style={{ width:10, height:10, borderRadius:2, background:TYPE_COLORS[k], flexShrink:0 }}/>
-                  <span style={{ fontSize:13 }}>{v}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Selected day */}
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">
-                {sel ? `${sel} ${MONTHS[mo]} ${yr+543}` : 'คลิกวันเพื่อดูรายละเอียด'}
+        {/* Selected Day Side Details */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Day Inspector Header */}
+          <div className="card" style={{ borderRadius: 20, overflow: 'hidden' }}>
+            <div className="card-header" style={{ background: 'linear-gradient(135deg, #0d0714, #1e0a2e)', color: '#fff', padding: '16px 20px' }}>
+              <span className="card-title" style={{ color: '#e0f7fa', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CalendarIcon size={18} color="#00bcd4" />
+                {sel ? `${sel} ${MONTHS[mo]} ${yr + 543}` : 'เลือกวันที่บนปฏิทิน'}
               </span>
+              <div style={{ fontSize: 12, color: '#b2ebf2', marginTop: 2 }}>
+                {selDayName} {selDayStatus.substitute ? `(แทนตารางวัน${selDayStatus.substitute.replaceDay})` : ''}
+              </div>
             </div>
-            <div style={{ padding:'12px 16px' }}>
-              {selEvents.length>0 ? (
-                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                  {selEvents.map(ev=>(
-                    <div key={ev.id} style={{ padding:'10px 12px', borderRadius:4, background:ev.color+'11', borderLeft:`3px solid ${ev.color}` }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:ev.color }}>{ev.title}</div>
-                      {ev.end_date && ev.end_date !== ev.date && (
-                        <div style={{ fontSize:11, color:'#757575', marginTop:2 }}>📅 {new Date(ev.date).toLocaleDateString('th-TH', {day:'numeric',month:'short'})} - {new Date(ev.end_date).toLocaleDateString('th-TH', {day:'numeric',month:'short',year:'2-digit'})}</div>
-                      )}
-                      <div style={{ fontSize:12, color:'#757575', marginTop:4 }}>{ev.desc}</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
-                        <span className={`badge ${TYPE_BADGE[ev.type]}`}>{TYPE_LABELS[ev.type]}</span>
-                        <span className="badge" style={{ background: ev.location_category === 'external' ? '#e0f7fa' : '#f5f5f5', color: ev.location_category === 'external' ? '#00838f' : '#757575' }}>
-                          {ev.location_category === 'external' ? '🎒 นอกสถานที่' : '🏫 ภายในโรงเรียน'}
-                        </span>
-                        {ev.check_attendance && (
-                          <span className="badge" style={{ background: '#e8f5e9', color: '#2e7d32', border: '1px solid #c8e6c9', fontWeight: 600 }}>
-                            📋 เช็คชื่อ ({ev.attendance_start_time || '07:00'} - {ev.attendance_limit_time || '08:00'})
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Participants list */}
-                      {(() => {
-                        const parts = getEventParticipants(ev.id);
-                        if (parts.length === 0) return null;
-                        return (
-                          <div style={{ marginTop: 8, borderTop: '1px dashed #e0e0e0', paddingTop: 6 }}>
-                            <div style={{ fontSize: 11, color: '#9e9e9e', fontWeight: 600 }}>ผู้เข้าร่วม ({parts.length} คน):</div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 3 }}>
-                              {parts.map(p => (
-                                <span key={p} style={{ fontSize: 10, background: '#f5f5f5', padding: '1px 6px', borderRadius: 4, color: '#616161' }}>{p}</span>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
 
-                      {canManage && (
-                        <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
-                          <button className="btn btn-warning btn-sm" onClick={() => handleEditEvent(ev)} style={{ fontSize: 11, padding: '3px 8px', cursor: 'pointer', background: '#f57c00', border: 'none', color: 'white' }}>
-                            แก้ไขกิจกรรม
-                          </button>
-                          <button className="btn btn-danger btn-sm" onClick={() => handleDeleteEvent(ev.id)} style={{ fontSize: 11, padding: '3px 8px', cursor: 'pointer' }}>
-                            ลบกิจกรรม
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+            <div className="card-body" style={{ padding: 16 }}>
+              {/* Holiday Alert */}
+              {selDayStatus.isHoliday && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 12, padding: '10px 12px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <ShieldAlert size={16} /> 🚫 วันนี้เป็นวันหยุดสภาฯ (งดเช็คชื่อ)
                 </div>
-              ) : sel ? (
-                <div style={{ textAlign:'center', color:'#9e9e9e', fontSize:13, padding:'16px 0' }}>ไม่มีกิจกรรมในวันนี้</div>
-              ) : null}
-            </div>
-          </div>
+              )}
 
-          {/* All events */}
-          <div className="card">
-            <div className="card-header"><span className="card-title">กิจกรรมทั้งหมด</span></div>
-            <div>
-              {events.map((ev,i)=>(
-                <div key={ev.id} style={{ display:'flex', gap:10, padding:'9px 16px', borderBottom: i<events.length-1?'1px solid #f0f0f0':'none', alignItems:'flex-start' }}>
-                  <div style={{ width:8, height:8, borderRadius:'50%', background:ev.color, flexShrink:0, marginTop:4 }}/>
-                  <div>
-                    <div style={{ fontSize:12, fontWeight:600 }}>{ev.title}</div>
-                    <div style={{ fontSize:11, color:'#9e9e9e' }}>
-                      {new Date(ev.date).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'})}
-                    </div>
+              {/* Substitute Alert */}
+              {selDayStatus.substitute && (
+                <div style={{ background: '#e0f7fa', border: '1px solid #b2ebf2', color: '#00838f', borderRadius: 12, padding: '10px 12px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <RefreshCw size={16} /> 🔄 วันเรียนชดเชย (แทนตารางวัน{selDayStatus.substitute.replaceDay})
+                </div>
+              )}
+
+              {/* Events list */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  📋 กิจกรรม/โครงการประจำวัน ({selEvents.length})
+                </div>
+
+                {selEvents.length === 0 ? (
+                  <div style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', padding: '16px 0', background: '#f8fafc', borderRadius: 10 }}>
+                    ไม่มีกิจกรรมในวันนี้
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {selEvents.map(ev => (
+                      <div key={ev.id} style={{ padding: '12px 14px', borderRadius: 12, background: ev.color + '11', borderLeft: `4px solid ${ev.color}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: ev.color }}>{ev.title}</div>
+                          {canManage && (
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button onClick={() => handleEditEvent(ev)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><Edit2 size={13} /></button>
+                              <button onClick={() => handleDeleteEvent(ev.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}><Trash2 size={13} /></button>
+                            </div>
+                          )}
+                        </div>
+
+                        {ev.end_date && ev.end_date !== ev.date && (
+                          <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                            📅 {new Date(ev.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - {new Date(ev.end_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </div>
+                        )}
+
+                        {ev.desc && <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>{ev.desc}</div>}
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+                          <span className={`badge ${TYPE_BADGE[ev.type]}`}>{TYPE_LABELS[ev.type]}</span>
+                          <span className="badge" style={{ background: ev.location_category === 'external' ? '#e0f7fa' : '#f1f5f9', color: ev.location_category === 'external' ? '#00838f' : '#64748b' }}>
+                            {ev.location_category === 'external' ? '🎒 นอกสถานที่' : '🏫 ภายในโรงเรียน'}
+                          </span>
+                        </div>
+
+                        {/* Participants list */}
+                        {(() => {
+                          const parts = getEventParticipants(ev.id);
+                          if (parts.length === 0) return null;
+                          return (
+                            <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px stroke #e2e8f0', fontSize: 11, color: '#475569' }}>
+                              <strong>👥 ผู้เข้าร่วม:</strong> {parts.join(', ')}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Duty Overview */}
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  🙏 เวรประจำวัน ({effectiveDayName})
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#00838f' }}>🙏 เวรยืนไหว้ประตูโรงเรียน</div>
+                    {greetingSchedule?.data ? (
+                      <div style={{ fontSize: 11, color: '#475569', marginTop: 2, lineHeight: 1.4 }}>
+                        ประตูไหมไทย: {(greetingSchedule.data.gate1 || []).join(', ') || '-'}<br />
+                        ประตูอำเภอ: {(greetingSchedule.data.gate2 || []).join(', ') || '-'}<br />
+                        ประตูหน้า รร.: {(greetingSchedule.data.gate3 || []).join(', ') || '-'}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 11, color: '#94a3b8' }}>ไม่มีเวรยืนไหว้ในวันนี้</div>
+                    )}
+                  </div>
+
+                  <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#2e7d32' }}>🧹 เวรทำความสะอาดห้องสภา</div>
+                    {cleanRoomSchedule?.data?.members ? (
+                      <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
+                        {(cleanRoomSchedule.data.members || []).join(', ')}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 11, color: '#94a3b8' }}>ไม่มีเวรทำความสะอาดในวันนี้</div>
+                    )}
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Add Modal */}
+      {/* Add / Edit Event Modal */}
       {isAdding && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex: 1000 }}>
-          <div className="card" style={{ width:'100%', maxWidth: 480, padding: 20, background: 'white', maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 16 }}>
-              <span style={{ fontWeight:700, fontSize:16 }}>{editId ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรมใหม่'}</span>
-              <button onClick={()=>setIsAdding(false)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color: '#9e9e9e' }}>&times;</button>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setIsAdding(false)} style={{ zIndex: 9999 }}>
+          <div className="modal-box" style={{ maxWidth: 500, borderRadius: 20, overflow: 'hidden' }}>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #0d0714, #1e0a2e)', color: '#fff' }}>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>{editId ? '✏️ แก้ไขกิจกรรม' : '➕ เพิ่มกิจกรรมใหม่'}</span>
+              <button onClick={() => setIsAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b2ebf2' }}><X size={18} /></button>
             </div>
-            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <div className="modal-body" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ fontSize:13, fontWeight:600 }}>ชื่อกิจกรรม</label>
-                <input type="text" className="input-field" placeholder="เช่น ประชุมสภาประจำเดือน" value={newEv.title} onChange={e=>setNewEv({...newEv,title:e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }} />
+                <label className="form-label">ชื่อกิจกรรม/โครงการ *</label>
+                <input className="input-field" placeholder="เช่น ประชุมสภาประจำเดือน" value={newEv.title} onChange={e => setNewEv({ ...newEv, title: e.target.value })} style={{ fontSize: 13 }} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label style={{ fontSize:13, fontWeight:600 }}>วันที่เริ่ม</label>
-                  <input type="date" className="input-field" value={newEv.date} onChange={e=>setNewEv({...newEv,date:e.target.value, endDate: e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }} />
+                  <label className="form-label">วันที่เริ่ม *</label>
+                  <input type="date" className="input-field" value={newEv.date} onChange={e => setNewEv({ ...newEv, date: e.target.value, endDate: e.target.value })} style={{ fontSize: 13 }} />
                 </div>
                 <div>
-                  <label style={{ fontSize:13, fontWeight:600 }}>วันที่สิ้นสุด</label>
-                  <input type="date" className="input-field" value={newEv.endDate || newEv.date} onChange={e=>setNewEv({...newEv,endDate:e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }} />
+                  <label className="form-label">วันที่สิ้นสุด</label>
+                  <input type="date" className="input-field" value={newEv.endDate} onChange={e => setNewEv({ ...newEv, endDate: e.target.value })} style={{ fontSize: 13 }} />
                 </div>
               </div>
-              <div>
-                <label style={{ fontSize:13, fontWeight:600 }}>สถานที่จัดกิจกรรม</label>
-                <select className="select-field" value={newEv.locationCategory || 'internal'} onChange={e=>setNewEv({...newEv,locationCategory:e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}>
-                  <option value="internal">🏫 ภายในโรงเรียน</option>
-                  <option value="external">🎒 ภายนอกโรงเรียน (นอกสถานที่)</option>
-                </select>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 8, padding: '6px 10px', background: '#f5f5f5', borderRadius: 6, border: '1px solid #e0e0e0' }}>
-                  <input 
-                    type="checkbox" 
-                    id="chkAttendance"
-                    checked={newEv.locationCategory === 'external' ? false : (newEv.checkAttendance || false)} 
-                    disabled={newEv.locationCategory === 'external'}
-                    onChange={e => setNewEv({ ...newEv, checkAttendance: e.target.checked })}
-                    style={{ cursor: newEv.locationCategory === 'external' ? 'not-allowed' : 'pointer', marginTop: 3 }}
-                  />
-                  <label htmlFor="chkAttendance" style={{ fontSize: 12, fontWeight: 600, color: '#424242', cursor: newEv.locationCategory === 'external' ? 'not-allowed' : 'pointer', userSelect: 'none', lineHeight: '1.4' }}>
-                    📋 เปิดระบบเช็คชื่อสำหรับกิจกรรมนี้
-                    {newEv.locationCategory === 'external' ? (
-                      <span style={{ fontSize: 11, color: '#00838f', marginLeft: 4, fontWeight: 'normal', display: 'block', marginTop: 2 }}>
-                        *กิจกรรมนอกสถานที่ได้รับการยกเว้นแถวปกติโดยอัตโนมัติ (ผู้เข้าร่วมไม่ต้องกดเช็คชื่อ)
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: 11, color: '#757575', marginLeft: 4, fontWeight: 'normal', display: 'block', marginTop: 2 }}>
-                        (ผู้ร่วมกิจกรรมต้องกดลงชื่อด้วยตนเองในระบบ | หากเป็นวันเรียนปกติจะยกเว้นการเข้าแถวเช้าให้อัตโนมัติ)
-                      </span>
-                    )}
-                  </label>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="form-label">ประเภท</label>
+                  <select className="select-field" value={newEv.type} onChange={e => setNewEv({ ...newEv, type: e.target.value })} style={{ fontSize: 13 }}>
+                    <option value="event">กิจกรรม</option>
+                    <option value="meeting">ประชุม</option>
+                    <option value="deadline">กำหนดส่ง</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">สถานที่</label>
+                  <select className="select-field" value={newEv.locationCategory} onChange={e => setNewEv({ ...newEv, locationCategory: e.target.value })} style={{ fontSize: 13 }}>
+                    <option value="internal">🏫 ภายในโรงเรียน</option>
+                    <option value="external">🎒 นอกสถานที่</option>
+                  </select>
                 </div>
               </div>
+
               <div>
-                {newEv.locationCategory !== 'external' && newEv.checkAttendance && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8, padding: '8px 10px', border: '1px dashed #b2dfdb', borderRadius: 6, background: '#e0f2f1' }}>
-                    <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: '#00695c' }}>🕒 เริ่มเช็คชื่อ</label>
-                      <input 
-                        type="time" 
-                        className="input-field" 
-                        value={newEv.attendanceStartTime || '07:00'} 
-                        onChange={e => setNewEv({ ...newEv, attendanceStartTime: e.target.value })} 
-                        style={{ width: '100%', marginTop: 4, padding: '4px 8px', fontSize: 12, border: '1px solid #b2dfdb', borderRadius: 4, background: 'white', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: '#00695c' }}>🕒 จำกัดเวลาสาย</label>
-                      <input 
-                        type="time" 
-                        className="input-field" 
-                        value={newEv.attendanceLimitTime || '08:00'} 
-                        onChange={e => setNewEv({ ...newEv, attendanceLimitTime: e.target.value })} 
-                        style={{ width: '100%', marginTop: 4, padding: '4px 8px', fontSize: 12, border: '1px solid #b2dfdb', borderRadius: 4, background: 'white', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div>
-                <label style={{ fontSize:13, fontWeight:600 }}>ประเภท</label>
-                <select className="select-field" value={newEv.type} onChange={e=>setNewEv({...newEv,type:e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}>
-                  <option value="event">กิจกรรม (สีเขียว)</option>
-                  <option value="meeting">ประชุม (สีม่วง)</option>
-                  <option value="deadline">กำหนดส่ง (สีส้ม)</option>
-                </select>
-              </div>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                  <label style={{ fontSize:13, fontWeight:600 }}>สมาชิกที่เข้าร่วมกิจกรรม</label>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <button 
-                      type="button" 
-                      onClick={() => setSelectedParticipants(usersList.filter(u => u.nickname !== 'แอดมิน').map(u => u.id))} 
-                      style={{ background: 'none', border: 'none', color: 'var(--primary, #00bcd4)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0 }}
-                    >
-                      เลือกทุกคน
-                    </button>
-                    <span style={{ color: '#ccc', fontSize: 11 }}>|</span>
-                    <button 
-                      type="button" 
-                      onClick={() => setSelectedParticipants([])} 
-                      style={{ background: 'none', border: 'none', color: '#ef5350', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0 }}
-                    >
-                      ล้างทั้งหมด
-                    </button>
-                  </div>
-                </div>
-                <div style={{ maxHeight: 110, overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 6, padding: '6px 10px', marginTop: 4, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                  {usersList
-                    .filter(u => u.nickname !== 'แอดมิน')
-                    .map(u => (
-                      <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedParticipants.includes(u.id)}
-                          onChange={() => {
-                            if (selectedParticipants.includes(u.id)) {
-                              setSelectedParticipants(prev => prev.filter(id => id !== u.id));
-                            } else {
-                              setSelectedParticipants(prev => [...prev, u.id]);
-                            }
-                          }}
-                        />
-                        {u.name} ({u.nickname})
-                      </label>
-                    ))
-                  }
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize:13, fontWeight:600 }}>รายละเอียดเพิ่มเติม</label>
-                <textarea className="input-field" rows="2" placeholder="ระบุรายละเอียด..." value={newEv.desc} onChange={e=>setNewEv({...newEv,desc:e.target.value})} style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}></textarea>
+                <label className="form-label">รายละเอียดกิจกรรม</label>
+                <textarea className="input-field" rows="3" placeholder="รายละเอียด..." value={newEv.desc} onChange={e => setNewEv({ ...newEv, desc: e.target.value })} style={{ fontSize: 13 }} />
               </div>
             </div>
-            <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
-              <button className="btn btn-gray" onClick={()=>setIsAdding(false)}>ยกเลิก</button>
-              <button className="btn btn-primary" onClick={handleSaveEvent}>บันทึกกิจกรรม</button>
+
+            <div className="modal-footer" style={{ background: '#f8fafc', padding: '14px 20px', borderTop: '1px solid #e2e8f0' }}>
+              <button className="btn btn-gray" onClick={() => setIsAdding(false)} style={{ borderRadius: 10 }}>ยกเลิก</button>
+              <button className="btn btn-primary" onClick={handleSaveEvent} style={{ background: 'linear-gradient(135deg, #00bcd4, #00838f)', borderRadius: 10, fontWeight: 700 }}>
+                {editId ? 'บันทึกการแก้ไข' : 'เพิ่มกิจกรรม'}
+              </button>
             </div>
           </div>
         </div>

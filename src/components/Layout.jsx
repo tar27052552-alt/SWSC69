@@ -2,12 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  LayoutDashboard, Users, Calendar, Bell, UserCircle,
+  LayoutDashboard, Calendar, Bell, UserCircle,
   Shield, Banknote, BookOpen, Building, Megaphone,
   Music, FileText, Warehouse, Camera, HandHeart, LogOut, Settings, MapPin, Sparkles, ClipboardList, ChevronDown, User, X, Menu, RotateCw, Target
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import logoUrl from '../assets/logo.png';
+import PWAPrompt from './PWAPrompt';
 
 const NAV = [
   { section: 'ทั่วไป', items: [
@@ -90,13 +91,18 @@ export default function Layout({ children }) {
           .select('*')
           .order('created_at', { ascending: false });
         if (!error && data) {
-          setNotifications(data);
+          const myNotifs = data.filter(n => {
+            if (!n.user_id || n.user_id === 'all') return true;
+            return String(n.user_id) === String(user.id);
+          });
+          setNotifications(myNotifs);
         }
       } catch (err) {
         console.error('Error fetching notifications:', err);
       }
     }
     fetchNotifications();
+    checkTomorrowDutyReminder();
 
     const channel = supabase
       .channel('schema-db-changes')
@@ -112,6 +118,88 @@ export default function Layout({ children }) {
     return () => {
       supabase.removeChannel(channel);
     };
+
+    async function checkTomorrowDutyReminder() {
+      if (!user?.nickname) return;
+      try {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const yyyy = tomorrow.getFullYear();
+        const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const dd = String(tomorrow.getDate()).padStart(2, '0');
+        const tomorrowStr = `${yyyy}-${mm}-${dd}`;
+        const daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+        const tomorrowDayName = daysTh[tomorrow.getDay()];
+
+        const { data: existingReminders } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('user_id', String(user.id))
+          .like('message', `%${tomorrowStr}%`);
+
+        if (existingReminders && existingReminders.length > 0) return;
+
+        const myTomorrowDuties = [];
+
+        const { data: swaps } = await supabase
+          .from('duty_swaps')
+          .select('*')
+          .eq('date', tomorrowStr);
+
+        const { data: schedules } = await supabase
+          .from('schedules')
+          .select('*')
+          .eq('day', tomorrowDayName);
+
+        if (schedules) {
+          schedules.forEach(sched => {
+            const data = sched.data || {};
+            const dutyType = sched.type;
+            
+            const isSwappedOut = swaps?.some(s => s.duty_type === dutyType && s.original_nickname === user.nickname);
+            
+            if (!isSwappedOut) {
+              if (dutyType === 'greeting') {
+                const gate1 = data.gate1 || [];
+                const gate2 = data.gate2 || [];
+                const gate3 = data.gate3 || [];
+                if (gate1.includes(user.nickname)) myTomorrowDuties.push('🙏 เวรยืนไหว้ (ประตูไหมไทย)');
+                if (gate2.includes(user.nickname)) myTomorrowDuties.push('🙏 เวรยืนไหว้ (ประตูอำเภอ)');
+                if (gate3.includes(user.nickname)) myTomorrowDuties.push('🙏 เวรยืนไหว้ (ประตูหน้า รร.)');
+              } else if (dutyType === 'clean_room') {
+                const members = data.members || [];
+                if (members.includes(user.nickname)) myTomorrowDuties.push('🧹 เวรทำความสะอาดห้องสภา');
+              } else if (dutyType === 'national_flag') {
+                const members = data.members || [];
+                if (members.includes(user.nickname)) myTomorrowDuties.push('🚩 เวรเชิญธงชาติ');
+              } else if (dutyType === 'color_flag') {
+                const members = data.members || [];
+                if (members.includes(user.nickname)) myTomorrowDuties.push('🎌 เวรเชิญธงสี');
+              }
+            }
+          });
+        }
+
+        swaps?.forEach(s => {
+          if (s.substitute_nickname === user.nickname) {
+            myTomorrowDuties.push(`🔄 ปฏิบัติเวรแทน ${s.original_nickname}`);
+          }
+        });
+
+        if (myTomorrowDuties.length > 0) {
+          const msg = `⏰ แจ้งเตือนเวรวันพรุ่งนี้ (${tomorrowStr}): คุณมีหน้าที่ ${myTomorrowDuties.join(', ')} กรุณาเตรียมตัวมาปฏิบัติหน้าที่ตรงเวลาครับ`;
+          await supabase
+            .from('notifications')
+            .insert([{
+              type: 'task',
+              user_id: String(user.id),
+              message: msg
+            }]);
+        }
+      } catch (err) {
+        console.error('Error checking tomorrow duty reminder:', err);
+      }
+    }
   }, [user, setNotifications]);
 
   useEffect(() => {
@@ -145,9 +233,20 @@ export default function Layout({ children }) {
       {/* ── Sidebar ── */}
       <aside className={`sidebar ${showSidebar ? 'open' : ''}`}>
         {/* Logo */}
-        <div className="sidebar-logo" style={{ gap: '4px', overflow: 'hidden' }}>
-          <img src={logoUrl} alt="SWSC Logo" style={{ width: '70px', height: '70px', objectFit: 'contain', margin: '-15px -15px -15px -20px', flexShrink: 0 }} />
-          <div className="sidebar-logo-text" style={{ marginLeft: '-8px' }}>สภานักเรียน<br /><span style={{ fontSize: 10, fontWeight: 400, opacity: 0.7 }}>Student Council</span></div>
+        <div className="sidebar-logo" style={{ padding: '0 16px', height: 64, gap: 12, display: 'flex', alignItems: 'center' }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: 'white',
+            boxShadow: '0 4px 12px rgba(99,102,241,0.25)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 5, flexShrink: 0
+          }}>
+            <img src={logoUrl} alt="SWSC Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
+          <div className="sidebar-logo-text">
+            <div style={{ fontWeight: 800, fontSize: 14, color: 'white', letterSpacing: '-0.01em' }}>สภานักเรียน</div>
+            <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.6)', fontWeight: 500, marginTop: -1 }}>Student Council</div>
+          </div>
         </div>
 
         {/* User */}
@@ -411,6 +510,8 @@ export default function Layout({ children }) {
           </div>
         </div>
       )}
+      {/* PWA Prompt Banner */}
+      <PWAPrompt />
     </div>
   );
 }

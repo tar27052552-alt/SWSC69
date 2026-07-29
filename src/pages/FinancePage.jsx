@@ -826,42 +826,64 @@ export default function FinancePage() {
   };
   
   return (
-    <div>
-      <div className="page-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+    <div style={{ paddingBottom: 40 }}>
+      {/* ── PAGE HEADER ── */}
+      <div className="page-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:16, marginBottom:24 }}>
         <div>
-          <div className="page-title">💰 ฝ่ายการเงินและพัสดุ</div>
-          <div className="page-subtitle">ระบบเบิกจ่าย บัญชีสภา และพัสดุ</div>
+          <div className="page-title" style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 14,
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: 22, boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+            }}>
+              💰
+            </div>
+            <div>
+              <span style={{ fontSize: 22, fontWeight: 800 }}>ฝ่ายการเงินและพัสดุ</span>
+              <div className="page-subtitle" style={{ fontSize: 13, marginTop: 2 }}>
+                ระบบเบิกจ่าย บัญชีสภานักเรียน การเก็บเงินสมาชิก และตรวจสอบสลิปค่าปรับ
+              </div>
+            </div>
+          </div>
         </div>
-        <button className="btn btn-primary" onClick={()=>{ setForm(initForm); setModal(true); }}>
-          <Plus size={14}/> ยื่นคำขอเบิกเงิน
+
+        <button className="btn btn-primary" onClick={()=>{ setForm(initForm); setModal(true); }} style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:13, borderRadius: 10 }}>
+          <Plus size={16}/> <span>ยื่นคำขอเบิกเงิน</span>
         </button>
       </div>
 
-
-      {/* Stats */}
-      <div className="stats-row" style={{ marginBottom:16 }}>
+      {/* ── STATS CARDS ── */}
+      <div className="stats-row" style={{ marginBottom:24, gridTemplateColumns: 'repeat(4, 1fr)' }}>
         {[
-          { label:'คำขอทั้งหมด', value: requests.length, bg:'#e3f2fd', color:'#1565c0', icon:'📋' },
-          { label:'รออนุมัติ', value: requests.filter(r=>r.status==='pending').length, bg:'#fff8e1', color:'#f57f17', icon:'⏳' },
-          { label:'อนุมัติแล้ว', value: requests.filter(r=>r.status==='approved').length, bg:'#e8f5e9', color:'#2e7d32', icon:'✅' },
-          { label:'ไม่อนุมัติ', value: requests.filter(r=>r.status==='rejected').length, bg:'#fce4ec', color:'#c62828', icon:'❌' },
+          { label:'คำขอทั้งหมด', value: requests.length, bg:'#eff6ff', color:'#2563eb', icon:'📋' },
+          { label:'รออนุมัติ', value: requests.filter(r=>r.status==='pending').length, bg:'#fefce8', color:'#ca8a04', icon:'⏳' },
+          { label:'อนุมัติแล้ว', value: requests.filter(r=>r.status==='approved').length, bg:'#f0fdf4', color:'#16a34a', icon:'✅' },
+          { label:'ไม่อนุมัติ', value: requests.filter(r=>r.status==='rejected').length, bg:'#fef2f2', color:'#dc2626', icon:'❌' },
         ].map(s => (
-          <div key={s.label} className="stat-box">
-            <div className="stat-icon-box" style={{ background:s.bg }}>{s.icon}</div>
+          <div key={s.label} className="stat-box" style={{ padding: '16px 20px', borderRadius: 16 }}>
+            <div className="stat-icon-box" style={{ background: s.bg, color: s.color, width: 44, height: 44, fontSize: 20, borderRadius: 12 }}>
+              {s.icon}
+            </div>
             <div>
-              <div className="stat-value" style={{ color:s.color }}>{s.value}</div>
-              <div className="stat-label">{s.label}</div>
+              <div className="stat-value" style={{ color: s.color, fontSize: 24 }}>{s.value}</div>
+              <div className="stat-label" style={{ fontSize: 12, fontWeight: 700 }}>{s.label}</div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Tabs */}
-      <div className="tabs" style={{ marginBottom: 24, display:'flex', gap:8, borderBottom:'1px solid #eee', paddingBottom:8 }}>
-        <button onClick={()=>setTab('requests')} style={{ padding:'8px 16px', background:tab==='requests'?'#00bcd4':'#f5f5f5', color:tab==='requests'?'#fff':'#757575', border:'none', borderRadius:20, fontWeight:600, cursor:'pointer' }}>📋 คำขอเบิกเงิน</button>
-        <button onClick={()=>setTab('fees')} style={{ padding:'8px 16px', background:tab==='fees'?'#00bcd4':'#f5f5f5', color:tab==='fees'?'#fff':'#757575', border:'none', borderRadius:20, fontWeight:600, cursor:'pointer' }}>💰 เก็บเงินสมาชิก</button>
-        <button onClick={()=>setTab('fines')} style={{ padding:'8px 16px', background:tab==='fines'?'#00bcd4':'#f5f5f5', color:tab==='fines'?'#fff':'#757575', border:'none', borderRadius:20, fontWeight:600, cursor:'pointer' }}>
-          💸 ค่าปรับ {dfines.filter(f=>f.paymentStatus==='slip_uploaded').length > 0 && <span style={{ background:'#e53935', color:'#fff', borderRadius:99, fontSize:11, padding:'1px 6px', marginLeft:4 }}>{dfines.filter(f=>f.paymentStatus==='slip_uploaded').length}</span>}
+      {/* ── TABS ── */}
+      <div className="tab-bar" style={{ marginBottom: 20 }}>
+        <button className={`tab-btn${tab==='requests'?' active':''}`} onClick={()=>setTab('requests')}>📋 คำขอเบิกเงิน</button>
+        <button className={`tab-btn${tab==='fees'?' active':''}`} onClick={()=>setTab('fees')}>💰 เก็บเงินสมาชิก</button>
+        <button className={`tab-btn${tab==='fines'?' active':''}`} onClick={()=>setTab('fines')}>
+          💸 ค่าปรับ 
+          {dfines.filter(f=>f.paymentStatus==='slip_uploaded').length > 0 && 
+            <span className="badge badge-red" style={{ marginLeft: 6, fontSize: 10, padding: '2px 8px' }}>
+              {dfines.filter(f=>f.paymentStatus==='slip_uploaded').length}
+            </span>
+          }
         </button>
       </div>
 

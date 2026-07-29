@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { CheckCircle, XCircle, AlertTriangle, Clock, CalendarDays } from 'lucide-react';
+import { CalendarDays, X } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { transformGoogleDriveUrl, getGoogleDriveViewUrl } from '../lib/googleDriveUpload';
 
 const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
@@ -14,10 +15,11 @@ export default function MyAttendancePage() {
   const [dbRecords, setDbRecords] = useState([]);
   const [enabledDays, setEnabledDays] = useState(["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์"]);
   const [disabledDates, setDisabledDates] = useState([]);
+  const [substituteDates, setSubstituteDates] = useState([]);
   const [startDate, setStartDate] = useState('');
-  const [loadingSettings, setLoadingSettings] = useState(true);
   const [greetingSchedules, setGreetingSchedules] = useState([]);
   const [dbExemptDates, setDbExemptDates] = useState([]);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   useEffect(() => {
     async function loadSettings() {
@@ -27,15 +29,15 @@ export default function MyAttendancePage() {
         if (data) {
           const days = data.find(d => d.key === 'enabled_days')?.value;
           const dates = data.find(d => d.key === 'disabled_dates')?.value;
+          const subDates = data.find(d => d.key === 'substitute_dates')?.value;
           const startD = data.find(d => d.key === 'start_date')?.value;
           if (days) setEnabledDays(days);
           if (dates) setDisabledDates(dates);
+          if (subDates) setSubstituteDates(subDates);
           if (startD) setStartDate(startD);
         }
       } catch (err) {
         console.error('Error loading settings in MyAttendancePage:', err);
-      } finally {
-        setLoadingSettings(false);
       }
     }
     async function loadGreetingSchedules() {
@@ -132,7 +134,12 @@ export default function MyAttendancePage() {
     const date = new Date(year, mon - 1, d);
     const dow = date.getDay();
     const dateStr = toGregorianStr(date);
-    const dayName = daysTh[dow];
+    let dayName = daysTh[dow];
+    
+    const subMatch = substituteDates.find(s => (typeof s === 'string' ? s : s.date) === dateStr);
+    if (subMatch && typeof subMatch !== 'string' && subMatch.replaceDay) {
+      dayName = subMatch.replaceDay;
+    }
 
     const isDayEnabled = enabledDays.includes(dayName);
     const isDateDisabled = disabledDates.includes(dateStr);
@@ -165,6 +172,7 @@ export default function MyAttendancePage() {
         date: dateStr, dayName, hasGreetingDuty,
         status: dbRec.status,
         time: dbRec.time,
+        photo: dbRec.photo || null,
       });
       continue;
     }
@@ -176,6 +184,7 @@ export default function MyAttendancePage() {
           date: dateStr, dayName, hasGreetingDuty,
           status: checkInState.status,
           time: checkInState.time,
+          photo: checkInState.photo || null,
         });
       } else if (isExempt) {
         records.push({
@@ -270,7 +279,7 @@ export default function MyAttendancePage() {
         <div style={{ overflowX: 'auto' }}>
           <table className="simple-table">
             <thead>
-              <tr><th>#</th><th>วันที่</th><th>วัน</th><th>เวลาเช็คชื่อ</th><th>เวรไหว้</th><th>สถานะ</th></tr>
+              <tr><th>#</th><th>วันที่</th><th>วัน</th><th>เวลาเช็คชื่อ</th><th>📷 รูปถ่าย</th><th>เวรไหว้</th><th>สถานะ</th></tr>
             </thead>
             <tbody>
               {records.length === 0 ? (
@@ -287,6 +296,46 @@ export default function MyAttendancePage() {
                       </td>
                       <td style={{ fontSize: 13 }}>{r.dayName}</td>
                       <td style={{ fontSize: 13, fontWeight: 500 }}>{r.time}</td>
+                      <td>
+                        {r.photo ? (
+                          <div style={{ display: 'inline-block' }}>
+                            <img
+                              src={transformGoogleDriveUrl(r.photo)}
+                              alt="Selfie"
+                              onClick={() => setSelectedPhoto(r.photo)}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                if (e.target.nextSibling) e.target.nextSibling.style.display = 'inline-block';
+                              }}
+                              style={{
+                                width: 36,
+                                height: 36,
+                                objectFit: 'cover',
+                                borderRadius: 8,
+                                border: '1px solid #b2ebf2',
+                                cursor: 'pointer',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                              }}
+                              title="คลิกเพื่อดูรูปขยาย"
+                            />
+                            <button
+                              onClick={() => {
+                                const viewUrl = getGoogleDriveViewUrl(r.photo);
+                                if (viewUrl && viewUrl.startsWith('http')) {
+                                  window.open(viewUrl, '_blank');
+                                } else {
+                                  setSelectedPhoto(r.photo);
+                                }
+                              }}
+                              style={{ display: 'none', padding: '3px 8px', fontSize: 11, background: '#e0f7fa', color: '#00838f', border: '1px solid #b2ebf2', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
+                            >
+                              📷 ดูรูป
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: 11, color: '#bdbdbd' }}>–</span>
+                        )}
+                      </td>
                       <td>
                         {r.hasGreetingDuty
                           ? <span className="badge" style={{ background: '#fff3e0', color: '#e65100', borderRadius: 3 }}>🙏 เวรไหว้</span>
@@ -306,6 +355,46 @@ export default function MyAttendancePage() {
           </table>
         </div>
       </div>
+
+      {/* Modal ดูรูปขยาย */}
+      {selectedPhoto && (
+        <div className="modal-overlay" onClick={() => setSelectedPhoto(null)} style={{ zIndex: 9999 }}>
+          <div className="modal-box" style={{ maxWidth: 380, padding: 16, textAlign: 'center' }}>
+            <div className="modal-header" style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 700, fontSize: 15, color: '#37474f' }}>📷 รูปถ่ายการเช็คชื่อ</span>
+              <button onClick={() => setSelectedPhoto(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9e9e9e' }}>
+                <X size={18} />
+              </button>
+            </div>
+            <img
+              src={transformGoogleDriveUrl(selectedPhoto)}
+              alt="Selfie Full"
+              onError={(e) => {
+                let fileId = '';
+                const match = selectedPhoto?.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || selectedPhoto?.match(/[?&]id=([a-zA-Z0-9_-]+)/) || selectedPhoto?.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (match && match[1]) fileId = match[1];
+                if (fileId && !e.target.src.includes('thumbnail')) {
+                  e.target.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+                }
+              }}
+              style={{ width: '100%', maxHeight: 380, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee' }}
+            />
+            {selectedPhoto && (
+              <div style={{ marginTop: 12 }}>
+                <a
+                  href={getGoogleDriveViewUrl(selectedPhoto)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-primary"
+                  style={{ fontSize: 12, padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  🔗 เปิดดูรูปภาพใน Google Drive
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
