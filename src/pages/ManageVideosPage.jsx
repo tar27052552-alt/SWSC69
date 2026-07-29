@@ -76,17 +76,26 @@ export default function ManageVideosPage() {
     return 'other';
   };
 
+  const getGoogleDriveId = (urlStr) => {
+    if (!urlStr) return null;
+    let match = urlStr.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (!match) match = urlStr.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (!match) match = urlStr.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (!match) match = urlStr.match(/\/open\?id=([a-zA-Z0-9_-]+)/);
+    if (!match) match = urlStr.match(/\/uc\?id=([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : null;
+  };
+
   const getThumbnailUrl = (rawUrl) => {
     if (!rawUrl) return '';
     const parts = rawUrl.split('||');
     const url = parts[0];
     const cover = parts.length > 1 ? parts[1] : null;
     
-    if (cover) {
-      let match = cover.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (!match) match = cover.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-      if (match && match[1]) {
-        return `https://wsrv.nl/?url=${encodeURIComponent('https://drive.google.com/uc?export=view&id=' + match[1])}`;
+    if (cover && cover.trim()) {
+      const coverDriveId = getGoogleDriveId(cover);
+      if (coverDriveId) {
+        return `https://drive.google.com/thumbnail?id=${coverDriveId}&sz=w800`;
       }
       return cover;
     }
@@ -95,6 +104,12 @@ export default function ManageVideosPage() {
     if (ytId) {
       return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
     }
+
+    const videoDriveId = getGoogleDriveId(url);
+    if (videoDriveId) {
+      return `https://drive.google.com/thumbnail?id=${videoDriveId}&sz=w800`;
+    }
+
     return '';
   };
 
@@ -722,6 +737,13 @@ export default function ManageVideosPage() {
                           style={{
                             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
                             objectFit: 'cover', transition: 'transform 0.4s ease'
+                          }}
+                          onError={(e) => {
+                            const driveId = getGoogleDriveId(vid.video_url?.split('||')[0]);
+                            if (driveId && !e.target.dataset.triedFallback) {
+                              e.target.dataset.triedFallback = 'true';
+                              e.target.src = `https://lh3.googleusercontent.com/d/${driveId}`;
+                            }
                           }}
                         />
                       ) : (
