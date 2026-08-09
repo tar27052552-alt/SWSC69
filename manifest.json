@@ -1,0 +1,18 @@
+{
+  "short_name": "สภานักเรียน SWSC",
+  "name": "สภานักเรียนโรงเรียนสรรพวิทยาคม (SWSC69)",
+  "icons": [
+    {
+      "src": "./logo.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./admin/#/login",
+  "display": "standalone",
+  "background_color": "#0b0f19",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait",
+  "description": "ระบบสารสนเทศสภานักเรียนโรงเรียนสรรพวิทยาคม (SWSC69)"
+}
