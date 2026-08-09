@@ -2229,6 +2229,16 @@
       opacity: 0.85;
     }
 
+    @media (max-width: 768px) {
+      #particleCanvas { display: none !important; }
+      .stat-item, nav, .glass-card, .modal-card { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #particleCanvas { display: none !important; }
+      *, ::before, ::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+    }
+
     /* Floating Back-to-Top Button */
     #backToTop {
       position: fixed;
@@ -2815,8 +2825,8 @@
             <div data-aos="fade-up" style="width: 100%; text-align: center;">
               <h3 style="font-size: 20px; color: #4c1d95; margin-bottom: 20px; font-weight: 700;">ผังโครงสร้างการบริหารงานกิจกรรม</h3>
               <div style="position: relative; display: inline-block; width: 100%; max-width: 900px; margin: 0 auto; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid rgba(0,0,0,0.05);">
-                <a href="#" onclick="event.preventDefault(); openImageViewer('./org-structure.jpg', 'โครงสร้างการบริหารงานกิจกรรมสภานักเรียน')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: block;">
-                  <img src="/SWSC69/assets/org-structure-BPTbJBz1.jpg" alt="โครงสร้างการบริหารงานกิจกรรมสภานักเรียน" style="width: 100%; height: auto; display: block; image-rendering: high-quality; image-rendering: -webkit-optimize-contrast;" loading="lazy" />
+                <a href="#" onclick="event.preventDefault(); openImageViewer('./org-structure.webp', 'โครงสร้างการบริหารงานกิจกรรมสภานักเรียน')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: block;">
+                  <img src="/SWSC69/assets/org-structure-BzAosM1f.webp" alt="โครงสร้างการบริหารงานกิจกรรมสภานักเรียน" style="width: 100%; height: auto; display: block;" loading="lazy" decoding="async" />
                 </a>
               </div>
             </div>
@@ -2825,34 +2835,34 @@
 
 
             <!-- Advisor Structure 2569 -->
-            <div style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
+            <div style="width: 100%; overflow-x: hidden; border-radius: 8px;">
               <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">ครูที่ปรึกษาคณะกรรมการสภานักเรียน ปีการศึกษา 2569</h3>
-              <a href="#" onclick="event.preventDefault(); openImageViewer('./advisor-structure-2569.png', 'โครงสร้างครูที่ปรึกษาคณะกรรมการสภานักเรียน ปีการศึกษา 2569')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
-                <img src="/SWSC69/assets/advisor-structure-2569-DAtn520d.png" alt="โครงสร้างครูที่ปรึกษาคณะกรรมการสภานักเรียน 2569" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
+              <a href="#" onclick="event.preventDefault(); openImageViewer('./advisor-structure-2569.webp', 'โครงสร้างครูที่ปรึกษาคณะกรรมการสภานักเรียน ปีการศึกษา 2569')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px;">
+                <img src="/SWSC69/assets/advisor-structure-2569-C2MaHVwM.webp" alt="โครงสร้างครูที่ปรึกษาคณะกรรมการสภานักเรียน 2569" loading="lazy" decoding="async" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto;" />
               </a>
             </div>
 
             <!-- Year 2569 -->
-            <div id="structureImgContainer" style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
+            <div id="structureImgContainer" style="width: 100%; overflow-x: hidden; border-radius: 8px;">
               <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">คณะกรรมการสภานักเรียน ปีการศึกษา 2569</h3>
-              <a href="#" onclick="event.preventDefault(); openImageViewer('./structure.png', 'โครงสร้างสภานักเรียน ปีการศึกษา 2569')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
-                <img id="structureImg" src="./structure.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน 2569" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
+              <a href="#" onclick="event.preventDefault(); openImageViewer('./structure.webp', 'โครงสร้างสภานักเรียน ปีการศึกษา 2569')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px;">
+                <img id="structureImg" src="./structure.webp" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน 2569" loading="lazy" decoding="async" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto;" />
               </a>
             </div>
 
             <!-- Year 2568 -->
-            <div style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
+            <div style="width: 100%; overflow-x: hidden; border-radius: 8px;">
               <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">คณะกรรมการสภานักเรียน ปีการศึกษา 2568</h3>
-              <a href="#" onclick="event.preventDefault(); openImageViewer('./structure-2568.png', 'โครงสร้างสภานักเรียน ปีการศึกษา 2568')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
-                <img src="./structure-2568.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน 2568" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
+              <a href="#" onclick="event.preventDefault(); openImageViewer('./structure-2568.webp', 'โครงสร้างสภานักเรียน ปีการศึกษา 2568')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px;">
+                <img src="./structure-2568.webp" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน 2568" loading="lazy" decoding="async" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto;" />
               </a>
             </div>
 
             <!-- Year 2567 -->
-            <div style="width: 100%; overflow-x: hidden; transition: all 0.2s; border-radius: 8px;">
+            <div style="width: 100%; overflow-x: hidden; border-radius: 8px;">
               <h3 style="font-size: 18px; color: var(--purple-700); margin-bottom: 16px; font-weight: 700; text-align: left; border-left: 4px solid var(--purple-500); padding-left: 12px;">คณะกรรมการสภานักเรียน ปีการศึกษา 2567</h3>
-              <a href="#" onclick="event.preventDefault(); openImageViewer('./structure-2567.png', 'โครงสร้างสภานักเรียน ปีการศึกษา 2567')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px; transition: width 0.2s ease;">
-                <img src="./structure-2567.png" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน 2567" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto; transition: width 0.2s ease;" />
+              <a href="#" onclick="event.preventDefault(); openImageViewer('./structure-2567.webp', 'โครงสร้างสภานักเรียน ปีการศึกษา 2567')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: inline-block; width: 100%; max-width: 900px;">
+                <img src="./structure-2567.webp" alt="โครงสร้างการบริหารงานคณะกรรมการสภานักเรียน 2567" loading="lazy" decoding="async" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.08); display: block; max-width: 900px; margin: 0 auto;" />
               </a>
             </div>
 
@@ -2870,13 +2880,13 @@
         
         <div class="content-section" data-aos="fade-up" style="max-width: 850px; margin: 0 auto; text-align: center; padding-bottom: 60px;">
           
-          <!-- Glassmorphism Frame -->
-          <div class="sap-glass-frame" style="position: relative; display: inline-block; width: 100%; padding: 24px; border-radius: 32px; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 25px 50px -12px rgba(109, 40, 217, 0.15), inset 0 0 0 2px rgba(255,255,255,0.5);">
+          <!-- High Performance Clean Frame -->
+          <div class="sap-glass-frame" style="position: relative; display: inline-block; width: 100%; padding: 24px; border-radius: 32px; background: #ffffff; border: 1px solid rgba(109, 40, 217, 0.15); box-shadow: 0 20px 40px -10px rgba(109, 40, 217, 0.1);">
             
             <!-- Image with Inner Shadow and Border Radius -->
-            <div style="border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(0,0,0,0.05); background: #000;">
-              <a href="#" onclick="event.preventDefault(); openImageViewer('./sap-model.png', 'การขับเคลื่อนกิจกรรมด้วย SAP Model')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: block;">
-                <img src="/SWSC69/assets/sap-model-HZoqrpzA.png" alt="SAP Model" style="width: 100%; height: auto; display: block; opacity: 0.95; image-rendering: high-quality; image-rendering: -webkit-optimize-contrast; transition: opacity 0.2s;" loading="lazy" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.95'" />
+            <div style="border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.15); background: #000;">
+              <a href="#" onclick="event.preventDefault(); openImageViewer('./sap-model.webp', 'การขับเคลื่อนกิจกรรมด้วย SAP Model')" title="คลิกเพื่อขยายดูรูปภาพขนาดเต็ม" style="cursor: zoom-in; display: block;">
+                <img src="/SWSC69/assets/sap-model-DT4ezINj.webp" alt="SAP Model" style="width: 100%; height: auto; display: block; opacity: 0.95;" loading="lazy" decoding="async" />
               </a>
             </div>
             
@@ -3987,7 +3997,7 @@
           flex-shrink:0; width:100%; height:100%; cursor:pointer; position:relative; overflow:hidden;
           background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
         ">
-          <img src="${img}" referrerpolicy="no-referrer" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; filter: blur(18px); transform: scale(1.2); opacity: 0.85;" onerror="this.style.display='none'" />
+          <img src="${img}" referrerpolicy="no-referrer" loading="lazy" decoding="async" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; opacity: 0.25;" onerror="this.style.display='none'" />
           <div style="position:absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.1); z-index:1;"></div>
           <img src="${img}" referrerpolicy="no-referrer" style="position:relative; z-index:2; width:100%; height:100%; object-fit:contain; display:block;"
             onerror="this.src='${FALLBACK_IMG}'" />
@@ -5000,32 +5010,43 @@
     document.body.style.overflow = '';
   }
 
-  /* ---- PARTICLES BACKGROUND SYSTEM ---- */
+  /* ---- PARTICLES BACKGROUND SYSTEM (OPTIMIZED FOR LOW CPU) ---- */
   function initParticles() {
     const canvas = document.getElementById('particleCanvas');
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+
+    // Disable particles on mobile, low-spec CPUs, or reduced motion to prevent CPU lag
+    const isMobile = window.innerWidth < 768;
+    const isLowPower = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (isMobile || isLowPower || prefersReducedMotion) {
+      canvas.style.display = 'none';
+      return;
+    }
+
+    const ctx = canvas.getContext('2d', { alpha: true });
     let particles = [];
-    const maxParticles = 40; // ลดจำนวนอนุภาคลงเพื่อลดการกระตุกเวลาเลื่อนหน้าจอ
+    const maxParticles = 18; // Super lightweight particle count
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
 
-    const mouse = { x: null, y: null, radius: 150 };
+    const mouse = { x: null, y: null, radius: 120 };
 
     window.addEventListener('mousemove', (e) => {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
-    });
+    }, { passive: true });
 
     window.addEventListener('mouseout', () => {
       mouse.x = null;
       mouse.y = null;
-    });
+    }, { passive: true });
 
     window.addEventListener('resize', () => {
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
-    });
+    }, { passive: true });
 
     class Particle {
       constructor() {
@@ -5034,10 +5055,10 @@
       reset() {
         this.x = Math.random() * width;
         this.y = Math.random() * height;
-        this.size = Math.random() * 1.8 + 1.2;
-        this.speedX = Math.random() * 0.4 - 0.2;
-        this.speedY = Math.random() * 0.4 - 0.2;
-        this.color = Math.random() > 0.15 ? 'rgba(245, 158, 11, 0.45)' : 'rgba(147, 51, 234, 0.3)';
+        this.size = Math.random() * 1.5 + 1;
+        this.speedX = Math.random() * 0.3 - 0.15;
+        this.speedY = Math.random() * 0.3 - 0.15;
+        this.color = Math.random() > 0.15 ? 'rgba(245, 158, 11, 0.4)' : 'rgba(147, 51, 234, 0.25)';
       }
       update() {
         this.x += this.speedX;
@@ -5052,8 +5073,8 @@
           const distance = Math.hypot(dx, dy);
           if (distance < mouse.radius) {
             const force = (mouse.radius - distance) / mouse.radius;
-            this.x += (dx / distance) * force * 0.6;
-            this.y += (dy / distance) * force * 0.6;
+            this.x += (dx / distance) * force * 0.4;
+            this.y += (dy / distance) * force * 0.4;
           }
         }
       }
@@ -5069,11 +5090,22 @@
       particles.push(new Particle());
     }
 
-    function animate() {
-      if (document.hidden) {
+    let lastFrameTime = 0;
+    const fpsInterval = 1000 / 30; // Throttle rendering to ~30 FPS to save CPU
+
+    function animate(currentTime) {
+      // Pause animation when tab is hidden or when scrolled down past hero section
+      if (document.hidden || window.scrollY > 800) {
         setTimeout(() => requestAnimationFrame(animate), 500);
         return;
       }
+
+      requestAnimationFrame(animate);
+
+      const elapsed = currentTime - lastFrameTime;
+      if (elapsed < fpsInterval) return;
+      lastFrameTime = currentTime - (elapsed % fpsInterval);
+
       ctx.clearRect(0, 0, width, height);
 
       particles.forEach(p => {
@@ -5081,7 +5113,7 @@
         p.draw();
       });
 
-      const maxDistSq = 95 * 95;
+      const maxDistSq = 80 * 80;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
@@ -5093,16 +5125,14 @@
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(245, 158, 11, ${0.12 * (1 - distance / 95)})`;
-            ctx.lineWidth = 0.8;
+            ctx.strokeStyle = `rgba(245, 158, 11, ${0.1 * (1 - distance / 80)})`;
+            ctx.lineWidth = 0.6;
             ctx.stroke();
           }
         }
       }
-
-      requestAnimationFrame(animate);
     }
-    animate();
+    requestAnimationFrame(animate);
   }
 
   /* ---- LOADING SCREEN ---- */
@@ -5278,21 +5308,31 @@
 
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <script>
-  // Initialize AOS (Animate On Scroll)
+  // Initialize AOS (Animate On Scroll) with performance optimizations
   document.addEventListener("DOMContentLoaded", function() {
-    AOS.init({
-      duration: 800,
-      easing: 'ease-out-cubic',
-      once: true,
-      offset: 50,
-    });
+    if (typeof AOS !== 'undefined') {
+      AOS.init({
+        duration: 500,
+        easing: 'ease-out-cubic',
+        once: true,
+        offset: 30,
+        disable: function() {
+          // Disable AOS on mobile devices, low CPU machines, or reduced motion preference
+          return window.innerWidth < 768 || 
+                 (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ||
+                 (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        }
+      });
+    }
   });
 
   // Re-initialize AOS when dynamic content is loaded (e.g., hash changes)
   window.addEventListener('hashchange', function() {
-    setTimeout(function() {
-      AOS.refresh();
-    }, 100);
+    if (typeof AOS !== 'undefined') {
+      setTimeout(function() {
+        AOS.refresh();
+      }, 100);
+    }
   });
 </script>
 
