@@ -408,8 +408,7 @@ img, video, canvas { max-width: 100%; height: auto; }
   .topbar-title { font-size: 15px; }
   .topbar-breadcrumb { display: none; }
   .topbar-user span { display: none; }
-  input, textarea { font-size: 16px !important; }
-  html.is-ios .select-field { font-size: 16px !important; }
+  input, select, textarea, .input-field, .select-field { font-size: 16px !important; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .card { border-radius: 14px; margin-bottom: 12px !important; }
   .card-header { padding: 13px 16px; }
   .card-body, [style*="padding: 24px"], [style*="padding: 20px"] { padding: 14px !important; }

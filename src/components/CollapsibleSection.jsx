@@ -34,8 +34,7 @@ export default function CollapsibleSection({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            type="button"
+          <div
             style={{
               border: 'none',
               background: isOpen ? '#e0f7fa' : '#f1f5f9',
@@ -46,13 +45,12 @@ export default function CollapsibleSection({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
+              pointerEvents: 'none',
               flexShrink: 0
             }}
-            title={isOpen ? 'พับย่อส่วนนี้' : 'ขยายส่วนนี้'}
           >
             {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
+          </div>
 
           <span className="card-title" style={{ margin: 0, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
             {icon && <span>{icon}</span>}

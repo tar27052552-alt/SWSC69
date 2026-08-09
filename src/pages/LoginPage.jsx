@@ -14,7 +14,6 @@ export default function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true); setError('');
-    await new Promise(r => setTimeout(r, 400));
     const result = await login(studentId, password);
     setLoading(false);
     if (result.success) navigate('/dashboard');
