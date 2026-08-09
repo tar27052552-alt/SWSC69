@@ -9,6 +9,20 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    watch: {
+      ignored: [
+        '**/.git/**',
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/*.txt',
+        '**/*.jsonl',
+        '**/*.jpg',
+        '**/*.png',
+        '**/*.cjs',
+      ],
+    },
+  },
   build: {
     rollupOptions: {
       input: {

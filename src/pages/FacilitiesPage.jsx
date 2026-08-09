@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, X, Save, Trash2 } from 'lucide-react';
+import { Plus, CheckCircle, Clock, XCircle, Eye, Trash2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import CollapsibleSection from '../components/CollapsibleSection';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
 const MOCK_REQUESTS = [];
@@ -168,10 +169,10 @@ export default function FacilitiesPage() {
         <button className="btn btn-primary" onClick={() => setModal(true)}><Plus size={14} /> ส่งคำขอจัดสถานที่</button>
       </div>
 
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">คำขอจัดสถานที่ ({requests.length} รายการ)</span>
-        </div>
+      <CollapsibleSection
+        title="คำขอจัดสถานที่"
+        badge={`${requests.length} รายการ`}
+      >
         <div className="table-responsive">
           <table className="simple-table">
             <thead>
@@ -217,7 +218,7 @@ export default function FacilitiesPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </CollapsibleSection>
 
       {modal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>

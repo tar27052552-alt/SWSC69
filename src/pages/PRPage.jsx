@@ -4,6 +4,7 @@ import { Plus, Edit2, Check, Clock, Trash2, CheckCircle, XCircle, Info, Calendar
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 import { transformGoogleDriveUrl } from '../lib/googleDriveUpload';
+import CollapsibleSection from '../components/CollapsibleSection';
 // ----------------------------------------------------------------
 // Tab 1: Caption Queue (งานกราฟิกจากโสตฯ รอใส่แคปชั่น)
 // ----------------------------------------------------------------
@@ -92,6 +93,7 @@ export default function PRPage() {
     return () => clearInterval(interval);
   }, [nowDate]);
 
+  const nowDateStr = nowDate.toLocaleDateString('th-TH', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   const tomorrow = new Date(nowDate); tomorrow.setDate(nowDate.getDate() + 1);
   const tomorrowKey = DAY_MAP[tomorrow.getDay()];
   const tomorrowDateStr = tomorrow.toLocaleDateString('th-TH', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
@@ -115,7 +117,16 @@ export default function PRPage() {
   const [showNewsForm, setShowNewsForm] = useState(false);
   const [newsForm, setNewsForm] = useState({ headline:'', detail:'', category:'ข่าวโรงเรียน' });
   const [newsFormError, setNewsFormError] = useState('');
+  const [isEditingTopic, setIsEditingTopic] = useState(false);
   const [usersList, setUsersList] = useState([]);
+
+  const activeNews = useMemo(() => {
+    return news.filter(n => n.date === tomorrowDateStr || n.date === nowDateStr);
+  }, [news, tomorrowDateStr, nowDateStr]);
+
+  const archiveNews = useMemo(() => {
+    return news.filter(n => n.date !== tomorrowDateStr && n.date !== nowDateStr);
+  }, [news, tomorrowDateStr, nowDateStr]);
 
   const loadPRData = async () => {
     try {
@@ -384,6 +395,7 @@ export default function PRPage() {
       }
 
       alert('บันทึกและกำหนดหัวข้อข่าวให้เวรหาข่าวเรียบร้อยแล้ว!');
+      setIsEditingTopic(false);
       loadPRData();
     } catch (err) {
       console.error('Error submitting daily news:', err);
@@ -491,11 +503,11 @@ export default function PRPage() {
           </div>
 
           {/* รอใส่แคปชั่น */}
-          <div className="card" style={{ marginBottom:16 }}>
-            <div className="card-header">
-              <span className="card-title">⏳ รอใส่แคปชั่น ({queue.length} รายการ)</span>
-              <span style={{ fontSize:12, color:'#9e9e9e' }}>กราฟิกที่โสตฯ ทำเสร็จแล้ว รอ PR ดำเนินการ</span>
-            </div>
+          <CollapsibleSection
+            title="⏳ รอใส่แคปชั่น"
+            badge={`${queue.length} รายการ`}
+            action={<span style={{ fontSize:12, color:'#9e9e9e' }}>กราฟิกที่โสตฯ ทำเสร็จแล้ว รอ PR ดำเนินการ</span>}
+          >
             {queue.length === 0 ? (
               <div style={{ textAlign:'center', padding:'32px', color:'#9e9e9e' }}>🎉 ไม่มีรายการที่รอ — ทำเสร็จหมดแล้ว!</div>
             ) : (
@@ -605,13 +617,14 @@ export default function PRPage() {
                 ))}
               </div>
             )}
-          </div>
+          </CollapsibleSection>
 
           {/* Done */}
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">✅ เสร็จแล้ว / โพสต์แล้ว ({done.length} รายการ)</span>
-            </div>
+          <CollapsibleSection
+            title="✅ เสร็จแล้ว / โพสต์แล้ว"
+            badge={`${done.length} รายการ`}
+            defaultOpen={false}
+          >
             <div style={{ overflowX:'auto' }}>
               <table className="simple-table">
                 <thead><tr><th>#</th><th>รูป</th><th>คอนเทนต์</th><th>แพลตฟอร์ม</th><th>แคปชั่น</th><th>เพลง</th><th>กำหนด</th></tr></thead>
@@ -665,7 +678,7 @@ export default function PRPage() {
               </table>
               {done.length===0 && <div style={{ textAlign:'center', padding:'24px', color:'#9e9e9e', fontSize:13 }}>ยังไม่มีโพสต์ที่เสร็จแล้ว</div>}
             </div>
-          </div>
+          </CollapsibleSection>
         </>
       )}
 
@@ -674,87 +687,135 @@ export default function PRPage() {
           ============================================================ */}
       {tab === 'news_inbox' && (
         <>
-          {/* แจ้งเตือนคนในเวร */}
-          {isMyDutyTomorrow && (
-            <div style={{ background:'#e8f5e9', border:'1px solid #a5d6a7', borderRadius:6, padding:'10px 16px', marginBottom:14, fontSize:13, display:'flex', alignItems:'flex-start', gap:8 }}>
-              <span style={{ fontSize:16 }}>🔔</span>
-              <div>
-                <strong>คุณมีเวรส่งข่าว{tomorrowKey}พรุ่งนี้!</strong> กรุณากรอกข่าวที่จะให้ PR ประกาศก่อนสิ้นวันนี้
-                <div style={{ fontSize:11, color:'#388e3c', marginTop:2 }}>📌 กรอกข่าวก่อน 22.00 น. เพื่อให้ฝ่าย PR เตรียมประกาศทันตอนเช้า</div>
-              </div>
+          {/* ส่วนสร้างหัวข้อข่าว (ฝ่าย PR คิดเอง) - เชื่อมต่อตรงกับระบบส่งข่าวประจำวัน */}
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="card-header">
+              <span className="card-title">💡 ฝ่าย PR: กำหนดหัวข้อข่าวให้คนเวรไปหาข้อมูลประจำวัน</span>
             </div>
-          )}
-
-          {/* เวรพรุ่งนี้ + ขั้นตอนที่ 1: PR กำหนดหัวข้อข่าว */}
-          <div className="card" style={{ marginBottom: 20, border: '1px solid #b2ebf2', background: '#e0f7fa' }}>
-            <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-              <div style={{ fontSize: 32 }}>📋</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, color: '#004d40' }}>
-                  เวรส่งข่าววัน{tomorrowKey} — {tomorrowDateStr}
-                </div>
-                <div style={{ fontSize: 13, color: '#00838f', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  {hasDutyTomorrow ? (
-                    <>
-                      <span>ผู้รับผิดชอบหาข่าวพรุ่งนี้:</span>
-                      <TagList names={dutyMembersList} />
-                    </>
+            <div style={{ padding: '16px 20px' }}>
+              {/* แถบข้อมูลเวรวันพรุ่งนี้ + สถานะการเชื่อมต่อ */}
+              <div style={{ background: '#e0f7fa', border: '1px solid #b2ebf2', borderRadius: 8, padding: '12px 16px', marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#00838f', fontWeight: 600 }}>
+                      📋 เวรส่งข่าววัน{tomorrowKey} ({tomorrowDateStr})
+                    </div>
+                    <div style={{ fontSize: 13, color: '#004d40', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span>คนเวรรับผิดชอบ:</span>
+                      {hasDutyTomorrow ? (
+                        <TagList names={dutyMembersList} />
+                      ) : (
+                        <span style={{ color: '#78909c' }}>ไม่มีตารางเวรส่งข่าวพรุ่งนี้</span>
+                      )}
+                    </div>
+                  </div>
+                  {news.some(n => n.date === tomorrowDateStr && n.headline) ? (
+                    <span className="badge badge-green" style={{ fontSize: 11 }}>
+                      🟢 เชื่อมต่อกับระบบส่งข่าวแล้ว (หัวข้อ: "{news.find(n => n.date === tomorrowDateStr)?.headline}")
+                    </span>
                   ) : (
-                    <span style={{ color: '#78909c' }}>ไม่มีเวรส่งข่าวพรุ่งนี้ (วันหยุด/ไม่มีตารางเวร)</span>
+                    <span className="badge badge-orange" style={{ fontSize: 11 }}>
+                      ⏳ รอ PR ตั้งหัวข้อข่าวประจำวัน
+                    </span>
                   )}
                 </div>
-                <div style={{ fontSize: 12, color: '#0097a7', marginTop: 4 }}>
-                  💡 ลำดับงาน: ฝ่าย PR คิดและตั้งหัวข้อข่าวในหน้านี้ ➔ เวรหาข่าวรับช่วงกรอกเนื้อหาในหน้าส่งข่าว
-                </div>
               </div>
-            </div>
 
-            {/* ฟอร์มขั้นตอนที่ 1: ฝ่าย PR คิดและตั้งหัวข้อข่าว */}
-            <div style={{ padding: '0 20px 20px', borderTop: '1px solid #b2ebf2', background: '#f0fdff' }}>
-              <div style={{ paddingTop: 16, marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                <div style={{ fontWeight: 800, fontSize: 15, color: '#004d40', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>1</span>
-                  <span>ขั้นตอนที่ 1: ฝ่าย PR คิดและตั้งหัวข้อข่าวประจำวันพรุ่งนี้</span>
-                </div>
-                {news.some(n => n.date === tomorrowDateStr && n.headline) ? (
-                  <span className="badge badge-green">ตั้งหัวข้อแล้ว</span>
-                ) : (
-                  <span className="badge badge-orange">กำหนดส่งก่อน 21:00 น.</span>
-                )}
+              <div style={{ fontSize: 13, color: '#616161', marginBottom: 14, lineHeight: 1.5 }}>
+                ฝ่าย PR สามารถสวมบทบาทเป็น <strong>"บรรณาธิการ (Editor)"</strong> โดยการกำหนดหมวดหมู่และหัวข้อข่าวที่ต้องการ เพื่อให้สมาชิกคนเวรของวันพรุ่งนี้ นำหัวข้อไปค้นหาข้อมูลและสรุปข่าวส่งกลับมาในระบบส่งข่าวประชาสัมพันธ์
               </div>
 
               {canManageNews ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-                    <div>
-                      <label className="form-label">หมวดหมู่ข่าว <span style={{ color: '#ef4444' }}>*</span></label>
-                      <select
-                        className="select-field"
-                        value={newsForm.category}
-                        onChange={e => setNewsForm(p => ({ ...p, category: e.target.value }))}
-                      >
-                        {NEWS_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
+                (() => {
+                  const existingTopic = news.find(n => n.date === tomorrowDateStr && n.headline);
+                  if (existingTopic && !isEditingTopic) {
+                    return (
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '16px 20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                              <span className="badge badge-purple" style={{ fontSize: 11 }}>{existingTopic.category}</span>
+                              {existingTopic.detail ? (
+                                <span className="badge badge-green" style={{ fontSize: 11 }}>✅ คนเวรส่งเนื้อหาข่าวแล้ว</span>
+                              ) : (
+                                <span className="badge badge-yellow" style={{ fontSize: 11 }}>⏳ คนเวรกำลังค้นหาข้อมูลส่งเข้าระบบ</span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
+                              📌 {existingTopic.headline}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 6 }}>
+                              กำหนดโดย: <strong>{existingTopic.submitter}</strong> (เมื่อเวลา {existingTopic.submittedAt} น.)
+                            </div>
+                          </div>
 
-                    <div>
-                      <label className="form-label">หัวข้อข่าวที่ฝ่าย PR คิดได้ <span style={{ color: '#ef4444' }}>*</span></label>
-                      <input
-                        className="input-field"
-                        placeholder="เช่น พรุ่งนี้โรงเรียนจัดกิจกรรม... / แจ้งปิดการเรียนการสอน..."
-                        value={newsForm.headline}
-                        onChange={e => { setNewsForm(p => ({ ...p, headline: e.target.value })); setNewsFormError(''); }}
-                      />
-                      {newsFormError && <div style={{ color: '#ef4444', fontSize: 11, marginTop: 3 }}>{newsFormError}</div>}
-                    </div>
-                  </div>
+                          <button
+                            className="btn btn-outline btn-sm"
+                            style={{ borderColor: '#0284c7', color: '#0284c7', padding: '7px 16px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                            onClick={() => {
+                              setNewsForm({
+                                headline: existingTopic.headline,
+                                detail: existingTopic.detail || '',
+                                category: existingTopic.category || 'ข่าวโรงเรียน'
+                              });
+                              setIsEditingTopic(true);
+                            }}
+                          >
+                            <Edit2 size={13} /> แก้ไขหัวข้อข่าวนี้
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                    <button className="btn btn-primary" onClick={handleSubmitNews} style={{ padding: '9px 22px' }}>
-                      <Send size={14}/> บันทึกหัวข้อข่าวให้เวรหาข่าว
-                    </button>
-                  </div>
-                </div>
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                        <div>
+                          <label className="form-label">หมวดหมู่ข่าว <span style={{ color: '#ef4444' }}>*</span></label>
+                          <select
+                            className="select-field"
+                            value={newsForm.category}
+                            onChange={e => setNewsForm(p => ({ ...p, category: e.target.value }))}
+                          >
+                            {NEWS_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="form-label">หัวข้อข่าวที่ฝ่าย PR คิดได้ <span style={{ color: '#ef4444' }}>*</span></label>
+                          <input
+                            className="input-field"
+                            placeholder="เช่น พรุ่งนี้โรงเรียนจัดกิจกรรม... / แจ้งปิดการเรียนการสอน..."
+                            value={newsForm.headline}
+                            onChange={e => { setNewsForm(p => ({ ...p, headline: e.target.value })); setNewsFormError(''); }}
+                          />
+                          {newsFormError && <div style={{ color: '#ef4444', fontSize: 11, marginTop: 3 }}>{newsFormError}</div>}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                        <div style={{ fontSize: 11, color: '#00838f' }}>
+                          💡 เมื่อบันทึกแล้ว ระบบจะส่งหัวข้อข่าวไปยังหน้าส่งข่าวของคนเวร และแจ้งเตือนเข้า Discord ทันที
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          {isEditingTopic && (
+                            <button
+                              className="btn btn-gray btn-sm"
+                              onClick={() => setIsEditingTopic(false)}
+                              style={{ padding: '8px 16px' }}
+                            >
+                              ยกเลิก
+                            </button>
+                          )}
+                          <button className="btn btn-primary" onClick={handleSubmitNews} style={{ padding: '9px 22px' }}>
+                            <Send size={14}/> {existingTopic ? 'บันทึกการแก้ไขหัวข้อข่าว' : 'บันทึก & ส่งสตรีมหัวข้อข่าวให้เวร'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
               ) : (
                 <div style={{ fontSize: 13, color: '#00838f', textAlign: 'center', padding: '12px 0' }}>
                   🔒 เฉพาะสมาชิกฝ่าย PR หรือผู้ดูแลระบบเท่านั้นที่จะคิดและบันทึกหัวข้อข่าวในหน้านี้ได้
@@ -763,25 +824,27 @@ export default function PRPage() {
             </div>
           </div>
 
-          {/* กล่องรับข่าว (PR เห็น + จัดการ) */}
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">📬 ข่าวจากคนเวร รอ PR ประกาศ ({news.length} รายการ)</span>
+          {/* กล่องรับข่าวประจำวัน (เฉพาะที่ส่งสำหรับวันนี้/พรุ่งนี้) */}
+          <CollapsibleSection
+            title={`🌟 ข่าวที่ส่งสำหรับวันนี้ / วันพรุ่งนี้ (${tomorrowKey} ${tomorrowDateStr})`}
+            badge={`${activeNews.length} รายการ`}
+            action={
               <div style={{ display:'flex', gap:8, fontSize:11, color:'#9e9e9e', alignItems:'center' }}>
                 {canManageNews && <span style={{ color:'#00838f' }}>✏️ PR: อนุมัติแล้วนำไปประกาศ</span>}
               </div>
-            </div>
-
-            {news.length === 0 ? (
-              <div style={{ textAlign:'center', padding:'32px', color:'#9e9e9e' }}>📭 ยังไม่มีข่าวส่งมาวันนี้</div>
+            }
+          >
+            {activeNews.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'32px', color:'#9e9e9e' }}>
+                📭 ยังไม่มีข่าวส่งมาสำหรับวันนี้ / วันพรุ่งนี้
+              </div>
             ) : (
               <div>
-                {news.map((item, i) => {
+                {activeNews.map((item, i) => {
                   const s = STATUS_MAP[item.status] || STATUS_MAP.pending;
                   return (
-                    <div key={item.id} style={{ borderBottom: i<news.length-1?'1px solid #f0f0f0':'none', padding:'14px 18px' }}>
+                    <div key={item.id} style={{ borderBottom: i<activeNews.length-1?'1px solid #f0f0f0':'none', padding:'14px 18px' }}>
                       <div style={{ display:'flex', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
-                        {/* Meta */}
                         <div style={{ flex:1, minWidth:220 }}>
                           <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
                             <span className={`badge ${s.badge}`}>{s.icon} {s.label}</span>
@@ -796,7 +859,6 @@ export default function PRPage() {
                           </div>
                         </div>
 
-                        {/* Actions (เฉพาะ PR / admin) */}
                         {canManageNews && (
                           <div style={{ display:'flex', gap:6, alignItems:'center', flexShrink:0 }}>
                             {item.status !== 'approved' && (
@@ -832,7 +894,73 @@ export default function PRPage() {
                 })}
               </div>
             )}
-          </div>
+          </CollapsibleSection>
+
+          {/* กล่องประวัติข่าวทั้งหมด (ข่าวย้อนหลัง) */}
+          <CollapsibleSection
+            title="📜 ประวัติข่าวจากคนเวรย้อนหลังทั้งหมด"
+            badge={`${archiveNews.length} รายการ`}
+            defaultOpen={false}
+          >
+            {archiveNews.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'32px', color:'#9e9e9e' }}>📭 ยังไม่มีประวัติข่าวส่งย้อนหลัง</div>
+            ) : (
+              <div>
+                {archiveNews.map((item, i) => {
+                  const s = STATUS_MAP[item.status] || STATUS_MAP.pending;
+                  return (
+                    <div key={item.id} style={{ borderBottom: i<archiveNews.length-1?'1px solid #f0f0f0':'none', padding:'14px 18px' }}>
+                      <div style={{ display:'flex', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
+                        <div style={{ flex:1, minWidth:220 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
+                            <span className={`badge ${s.badge}`}>{s.icon} {s.label}</span>
+                            <span style={{ fontSize:11, background:'#f5f5f5', borderRadius:4, padding:'2px 8px', color:'#616161' }}>{item.category}</span>
+                          </div>
+                          <div style={{ fontWeight:700, fontSize:14 }}>{item.headline}</div>
+                          {item.detail && (
+                            <div style={{ fontSize:12, color:'#616161', marginTop:4 }}>{item.detail}</div>
+                          )}
+                          <div style={{ fontSize:11, color:'#9e9e9e', marginTop:6 }}>
+                            📤 ส่งโดย <strong>{item.submitter}</strong> · {item.day} {item.date} เวลา {item.submittedAt}
+                          </div>
+                        </div>
+
+                        {canManageNews && (
+                          <div style={{ display:'flex', gap:6, alignItems:'center', flexShrink:0 }}>
+                            {item.status !== 'approved' && (
+                              <button
+                                className="btn btn-sm"
+                                style={{ background:'#e8f5e9', color:'#2e7d32', border:'1px solid #a5d6a7' }}
+                                onClick={() => changeStatus(item.id, 'approved')}
+                              >
+                                <CheckCircle size={12}/> อนุมัติ
+                              </button>
+                            )}
+                            {item.status !== 'rejected' && (
+                              <button
+                                className="btn btn-sm"
+                                style={{ background:'#ffeaea', color:'#c62828', border:'1px solid #ef9a9a' }}
+                                onClick={() => changeStatus(item.id, 'rejected')}
+                              >
+                                <X size={12}/> ไม่ผ่าน
+                              </button>
+                            )}
+                            <button
+                              className="btn btn-sm btn-gray"
+                              onClick={() => deleteNews(item.id)}
+                              title="ลบ"
+                            >
+                              <Trash2 size={12}/>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CollapsibleSection>
         </>
       )}
     </div>

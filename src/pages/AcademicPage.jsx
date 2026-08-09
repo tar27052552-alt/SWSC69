@@ -4,6 +4,7 @@ import { Plus, X, Save, Search, FileText, Upload, Download, Loader, AlertTriangl
 import { readSheet, writeSheet, updateSheet, uploadFileToDrive, deleteSheet } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 import { supabase } from '../supabaseClient';
+import CollapsibleSection from '../components/CollapsibleSection';
 
 const PROJECT_STATUS = {
   planning:    { label:'วางแผน',        badge:'badge-gray'   },
@@ -525,18 +526,18 @@ export default function AcademicPage() {
             return (
               <>
                 {/* Document Templates Card */}
-                <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '20px' }}>
-                  <div className="card-header" style={{ padding: '18px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span className="card-title" style={{ margin: 0 }}>🗂️ ต้นแบบเอกสาร (ดาวน์โหลด)</span>
-                    {canManage && (
-                      <button className="btn btn-primary btn-sm" onClick={() => {
-                        setDocForm({ title: '', category: 'ต้นแบบเอกสาร', projectId: '', file: null, fileName: '', fileBase64: '' });
-                        setDocModal(true);
-                      }}>
-                        <Plus size={14} /> เพิ่มต้นแบบ
-                      </button>
-                    )}
-                  </div>
+                <CollapsibleSection
+                  title="🗂️ ต้นแบบเอกสาร (ดาวน์โหลด)"
+                  badge={`${templateDocs.length} รายการ`}
+                  action={canManage && (
+                    <button className="btn btn-primary btn-sm" onClick={() => {
+                      setDocForm({ title: '', category: 'ต้นแบบเอกสาร', projectId: '', file: null, fileName: '', fileBase64: '' });
+                      setDocModal(true);
+                    }}>
+                      <Plus size={14} /> เพิ่มต้นแบบ
+                    </button>
+                  )}
+                >
                   {templateDocs.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '30px 20px', color: '#9e9e9e' }}>
                       ยังไม่มีไฟล์ต้นแบบเอกสาร
@@ -578,17 +579,18 @@ export default function AcademicPage() {
                       })()}
                     </div>
                   )}
-                </div>
+                </CollapsibleSection>
 
                 {/* Docs Grouped by Project */}
                 {projects.map(p => {
                   const pDocs = docsByProject[p.id];
                   if (!pDocs || pDocs.length === 0) return null;
                   return (
-                    <div key={p.id} className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '20px' }}>
-                      <div className="card-header" style={{ padding: '18px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="card-title" style={{ margin: 0, color: 'var(--purple-700)' }}>📁 โครงการ: {p.title}</span>
-                      </div>
+                    <CollapsibleSection
+                      key={p.id}
+                      title={`📁 โครงการ: ${p.title}`}
+                      badge={`${pDocs.length} เอกสาร`}
+                    >
                       <div style={{ overflowX: 'auto' }}>
                         <table className="simple-table">
                           <thead><tr><th>#</th><th>ชื่อเอกสาร</th><th>หมวดหมู่</th><th>ประเภท</th><th>ขนาด</th><th>อัปโหลดโดย</th><th>วันที่อัปโหลด</th><th>ดาวน์โหลด</th></tr></thead>
@@ -627,15 +629,15 @@ export default function AcademicPage() {
                           </tbody>
                         </table>
                       </div>
-                    </div>
+                    </CollapsibleSection>
                   );
                 })}
 
                 {/* General Docs Card */}
-                <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '20px' }}>
-                  <div className="card-header" style={{ padding: '18px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span className="card-title" style={{ margin: 0 }}>📁 เอกสารทั่วไป (ไม่ระบุโครงการ)</span>
-                  </div>
+                <CollapsibleSection
+                  title="📁 เอกสารทั่วไป (ไม่ระบุโครงการ)"
+                  badge={`${generalDocs.length} เอกสาร`}
+                >
                   {generalDocs.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9e9e9e' }}>
                       ไม่มีเอกสารทั่วไป
@@ -673,7 +675,7 @@ export default function AcademicPage() {
                       </table>
                     </div>
                   )}
-                </div>
+                </CollapsibleSection>
               </>
             );
           })()}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DEPARTMENTS } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Search, X, Save, AlertTriangle, Edit2 } from 'lucide-react';
+import { Plus, Search, X, Save, AlertTriangle, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
@@ -38,6 +38,11 @@ export default function DisciplinePage() {
   const { user, isDeptHead, isAdmin, checkInState, cleanDutyState, greetingDutyState } = useAuth();
   const canManage = isAdmin || user?.deptId === 2;
   const [activeTab, setActiveTab] = useState('list');
+  const [collapsedSections, setCollapsedSections] = useState({});
+
+  const toggleSection = (key) => {
+    setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
   const [fines, setFines] = useState(MOCK_FINES);
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
@@ -145,11 +150,15 @@ export default function DisciplinePage() {
 
       // 2. Fetch event participants
       const extEventIds = extEvents.map(e => e.id);
-      const { data: partData, error: e2 } = await supabase
-        .from('event_participants')
-        .select('*')
-        .in('event_id', extEventIds);
-      if (e2) throw e2;
+      let partData = [];
+      if (extEventIds.length > 0) {
+        const { data: pData, error: e2 } = await supabase
+          .from('event_participants')
+          .select('*')
+          .in('event_id', extEventIds);
+        if (e2) throw e2;
+        partData = pData || [];
+      }
 
       // 3. Fetch all weekly duty schedule definitions
       const { data: schedData, error: e3 } = await supabase

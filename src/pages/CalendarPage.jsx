@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, RefreshCw, X, Trash2, Edit2, ShieldAlert } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, RefreshCw, X, Trash2, Edit2, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 
@@ -32,7 +32,7 @@ export default function CalendarPage() {
   
   const [isAdding, setIsAdding] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [newEv, setNewEv] = useState({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', checkAttendance: false, attendanceStartTime: '07:00', attendanceLimitTime: '08:00', desc: '' });
+  const [newEv, setNewEv] = useState({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', checkAttendance: false, attendanceStartTime: '07:00', attendanceLimitTime: '08:00', desc: '', replaceDay: 'จันทร์' });
 
   const canManage = isAdmin || isPresident || user?.deptId === 1 || user?.deptId === 7;
 
@@ -86,6 +86,42 @@ export default function CalendarPage() {
       const isCheckAttendance = newEv.locationCategory === 'external' ? false : (newEv.checkAttendance || false);
       const startTime = newEv.attendanceStartTime || '07:00';
       const limitTime = newEv.attendanceLimitTime || '08:00';
+
+      // 1. Sync Holiday in attendance_settings
+      if (newEv.type === 'holiday') {
+        const datesToAdd = [];
+        let curr = new Date(newEv.date);
+        const end = new Date(newEv.endDate || newEv.date);
+        while (curr <= end) {
+          const yyyy = curr.getFullYear();
+          const mm = String(curr.getMonth() + 1).padStart(2, '0');
+          const dd = String(curr.getDate()).padStart(2, '0');
+          datesToAdd.push(`${yyyy}-${mm}-${dd}`);
+          curr.setDate(curr.getDate() + 1);
+        }
+
+        const newDisabledDates = Array.from(new Set([...disabledDates, ...datesToAdd])).sort();
+        setDisabledDates(newDisabledDates);
+        await supabase
+          .from('attendance_settings')
+          .upsert([{ key: 'disabled_dates', value: newDisabledDates }], { onConflict: 'key' });
+      }
+
+      // 2. Sync Substitute Date in attendance_settings
+      if (newEv.type === 'substitute') {
+        const newObj = { date: newEv.date, replaceDay: newEv.replaceDay || 'จันทร์' };
+        const filtered = substituteDates.filter(s => (typeof s === 'string' ? s : s.date) !== newEv.date);
+        const newSubstitutes = [...filtered, newObj];
+        setSubstituteDates(newSubstitutes);
+        await supabase
+          .from('attendance_settings')
+          .upsert([{ key: 'substitute_dates', value: newSubstitutes }], { onConflict: 'key' });
+      }
+
+      let eventDesc = newEv.desc || '';
+      if (newEv.type === 'substitute' && !eventDesc.includes('เรียนชดเชย')) {
+        eventDesc = `เรียนชดเชยแทนตารางวัน${newEv.replaceDay || 'จันทร์'} ${eventDesc ? '(' + eventDesc + ')' : ''}`;
+      }
       
       if (editId) {
         const { error } = await supabase
@@ -100,7 +136,7 @@ export default function CalendarPage() {
             attendance_limit_time: limitTime,
             type: newEv.type,
             color: color,
-            description: newEv.desc
+            description: eventDesc
           })
           .eq('id', editId);
           
@@ -116,7 +152,7 @@ export default function CalendarPage() {
           await supabase.from('event_participants').insert(participantRecords);
         }
 
-        alert('แก้ไขกิจกรรมเรียบร้อยแล้ว!');
+        alert('แก้ไขรายการเรียบร้อยแล้ว!');
 
       } else {
         const { data, error } = await supabase
@@ -131,7 +167,7 @@ export default function CalendarPage() {
             attendance_limit_time: limitTime,
             type: newEv.type,
             color: color,
-            description: newEv.desc
+            description: eventDesc
           }])
           .select();
 
@@ -147,26 +183,26 @@ export default function CalendarPage() {
         }
 
         const typeLabel = TYPE_LABELS[newEv.type] || 'กิจกรรม';
-        const embedTitle = `📅 ประกาศกิจกรรมใหม่ในปฏิทินสภา`;
+        const embedTitle = `📅 ประกาศปฏิทินสภาฯ: ${typeLabel}`;
         const embedDesc = `หัวข้อ: **${newEv.title}** (${typeLabel})`;
         const locLabel = newEv.locationCategory === 'external' ? 'ภายนอกโรงเรียน (นอกสถานที่)' : 'ภายในโรงเรียน';
         const fields = [
-          { name: "📆 วันที่จัดกิจกรรม", value: newEv.date === (newEv.endDate || newEv.date) 
+          { name: "📆 วันที่", value: newEv.date === (newEv.endDate || newEv.date) 
               ? new Date(newEv.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
               : `${new Date(newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${new Date(newEv.endDate || newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`, inline: true },
-          { name: "📍 สถานที่จัดกิจกรรม", value: locLabel, inline: true },
-          { name: "📋 เช็คชื่อ / ยกเว้นเข้าแถว", value: isCheckAttendance ? `เช็คชื่อในกิจกรรม (${startTime} - ${limitTime} น.) (ยกเว้นการเข้าแถวปกติ)` : "ไม่ต้องเช็คชื่อ (ไม่ส่งผลต่อการเข้าแถวปกติ)", inline: false },
-          { name: "📝 รายละเอียดเพิ่มเติม", value: newEv.desc || "ไม่มี", inline: false }
+          { name: "📍 สถานที่", value: locLabel, inline: true },
+          { name: "📋 เช็คชื่อ / ยกเว้นเข้าแถว", value: isCheckAttendance ? `เช็คชื่อในกิจกรรม (${startTime} - ${limitTime} น.)` : "ไม่ต้องเช็คชื่อ (ไม่ส่งผลต่อการเข้าแถวปกติ)", inline: false },
+          { name: "📝 รายละเอียดเพิ่มเติม", value: eventDesc || "ไม่มี", inline: false }
         ];
         const targetUserIds = usersList.map(u => String(u.id));
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3447003, fields, null, 'calendar', targetUserIds.length > 0 ? targetUserIds : null);
+        sendDiscordEmbedViaGAS(embedTitle, embedDesc, newEv.type === 'holiday' ? 15158332 : 3447003, fields, null, 'calendar', targetUserIds.length > 0 ? targetUserIds : null);
 
-        alert('เพิ่มกิจกรรมเรียบร้อยแล้ว!');
+        alert('เพิ่มรายการเข้าสู่ปฏิทินเรียบร้อยแล้ว!');
       }
       
       setIsAdding(false);
       setEditId(null);
-      setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', checkAttendance: false, attendanceStartTime: '07:00', attendanceLimitTime: '08:00', desc: '' });
+      setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', checkAttendance: false, attendanceStartTime: '07:00', attendanceLimitTime: '08:00', desc: '', replaceDay: 'จันทร์' });
       setSelectedParticipants([]);
       
       const { data } = await supabase.from('events').select('*').order('date', { ascending: true });
@@ -177,7 +213,7 @@ export default function CalendarPage() {
       
     } catch (err) {
       console.error('Error saving event:', err);
-      alert('ไม่สามารถบันทึกกิจกรรมได้: ' + err.message);
+      alert('ไม่สามารถบันทึกรายการได้: ' + err.message);
     }
   };
 
@@ -192,7 +228,8 @@ export default function CalendarPage() {
       checkAttendance: ev.check_attendance || false,
       attendanceStartTime: ev.attendance_start_time || '07:00',
       attendanceLimitTime: ev.attendance_limit_time || '08:00',
-      desc: ev.desc || ev.description || ''
+      desc: ev.desc || ev.description || '',
+      replaceDay: 'จันทร์'
     });
     
     const eventParts = participants.filter(p => p.event_id === ev.id).map(p => p.user_id);
@@ -201,8 +238,17 @@ export default function CalendarPage() {
   };
 
   const handleDeleteEvent = async (eventId) => {
-    if (!window.confirm('คุณต้องการลบกิจกรรมนี้ออกจากปฏิทินใช่หรือไม่?')) return;
+    if (!window.confirm('คุณต้องการลบรายการนี้ออกจากปฏิทินใช่หรือไม่?')) return;
     try {
+      const targetEv = events.find(e => e.id === eventId);
+      if (targetEv) {
+        if (targetEv.type === 'holiday') {
+          handleRemoveHoliday(targetEv.date);
+        } else if (targetEv.type === 'substitute') {
+          handleRemoveSubstitute(targetEv.date);
+        }
+      }
+
       const { error } = await supabase
         .from('events')
         .delete()
@@ -211,10 +257,34 @@ export default function CalendarPage() {
       
       setEvents(prev => prev.filter(e => e.id !== eventId));
       setParticipants(prev => prev.filter(p => p.event_id !== eventId));
-      alert('ลบกิจกรรมเรียบร้อยแล้ว!');
+      alert('ลบรายการเรียบร้อยแล้ว!');
     } catch (err) {
       console.error('Error deleting event:', err);
-      alert('เกิดข้อผิดพลาดในการลบกิจกรรม: ' + err.message);
+      alert('เกิดข้อผิดพลาดในการลบรายการ: ' + err.message);
+    }
+  };
+
+  const handleRemoveHoliday = async (dateStr) => {
+    try {
+      const updated = disabledDates.filter(d => d !== dateStr);
+      setDisabledDates(updated);
+      await supabase
+        .from('attendance_settings')
+        .upsert([{ key: 'disabled_dates', value: updated }], { onConflict: 'key' });
+    } catch (err) {
+      console.error('Error removing holiday:', err);
+    }
+  };
+
+  const handleRemoveSubstitute = async (dateStr) => {
+    try {
+      const updated = substituteDates.filter(s => (typeof s === 'string' ? s : s.date) !== dateStr);
+      setSubstituteDates(updated);
+      await supabase
+        .from('attendance_settings')
+        .upsert([{ key: 'substitute_dates', value: updated }], { onConflict: 'key' });
+    } catch (err) {
+      console.error('Error removing substitute date:', err);
     }
   };
 
@@ -238,8 +308,8 @@ export default function CalendarPage() {
   const getDayStatus = (day) => {
     const ds = `${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const isHoliday = disabledDates.includes(ds);
-    const substitute = substituteDates.find(s => s.date === ds);
-    return { isHoliday, substitute };
+    const substitute = substituteDates.find(s => (typeof s === 'string' ? s : s.date) === ds);
+    return { isHoliday, substitute: typeof substitute === 'object' ? substitute : null };
   };
 
   const getEventParticipants = (eventId) => {
@@ -250,6 +320,7 @@ export default function CalendarPage() {
     }).filter(Boolean);
   };
 
+  const selDateStr = sel ? `${yr}-${String(mo+1).padStart(2,'0')}-${String(sel).padStart(2,'0')}` : '';
   const selEvents = sel ? getEventsForDay(sel) : [];
   const selDayStatus = sel ? getDayStatus(sel) : { isHoliday: false, substitute: null };
   const selDayOfWeek = sel ? new Date(yr, mo, sel).getDay() : 0;
@@ -259,6 +330,24 @@ export default function CalendarPage() {
   const effectiveDayName = selDayStatus.substitute ? selDayStatus.substitute.replaceDay : selDayName.replace('พฤหัสบดี','พฤหัส');
   const greetingSchedule = schedules.find(s => s.type === 'greeting' && s.day === effectiveDayName);
   const cleanRoomSchedule = schedules.find(s => s.type === 'clean_room' && s.day === effectiveDayName);
+
+  const openAddForType = (type, defaultTitle = '') => {
+    setEditId(null);
+    setNewEv({
+      title: defaultTitle,
+      date: selDateStr || todayStr,
+      endDate: selDateStr || todayStr,
+      type: type,
+      locationCategory: 'internal',
+      checkAttendance: false,
+      attendanceStartTime: '07:00',
+      attendanceLimitTime: '08:00',
+      desc: '',
+      replaceDay: 'จันทร์'
+    });
+    setSelectedParticipants([]);
+    setIsAdding(true);
+  };
 
   return (
     <div>
@@ -281,40 +370,81 @@ export default function CalendarPage() {
             📅 COUNCIL CALENDAR
           </div>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: '#ffffff' }}>
-            ปฏิทินกิจกรรม ตารางเวร และวันหยุดสภานักเรียน
+            ปฏิทินกิจกรรม ตารางเวร วันหยุดสภาฯ และวันเรียนชดเชย
           </h1>
           <div style={{ fontSize: 13, color: '#b2ebf2', marginTop: 4, fontWeight: 400 }}>
-            ตรวจสอบกิจกรรม การประชุม กำหนดส่งงาน ตารางเวร และวันหยุดสภาฯ รายเดือน
+            จัดการและตรวจสอบกิจกรรม การประชุม กำหนดส่งงาน วันหยุดสภาฯ และวันเรียนชดเชย
           </div>
         </div>
 
         {canManage && (
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              setEditId(null);
-              setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', desc: '' });
-              setSelectedParticipants([]);
-              setIsAdding(true);
-            }}
-            style={{
-              background: 'linear-gradient(135deg, #00bcd4 0%, #00838f 100%)',
-              color: '#fff',
-              border: 'none',
-              padding: '10px 20px',
-              borderRadius: 14,
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              boxShadow: '0 4px 14px rgba(0,188,212,0.4)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Plus size={16} /> เพิ่มกิจกรรมใหม่
-          </button>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              className="btn"
+              onClick={() => openAddForType('holiday', 'วันหยุดสภานักเรียน')}
+              style={{
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: '9px 16px',
+                borderRadius: 14,
+                fontWeight: 700,
+                fontSize: 12,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 4px 14px rgba(239,68,68,0.35)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <ShieldAlert size={15} /> + เพิ่มวันหยุด
+            </button>
+
+            <button
+              className="btn"
+              onClick={() => openAddForType('substitute', 'วันเรียนชดเชย')}
+              style={{
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: '9px 16px',
+                borderRadius: 14,
+                fontWeight: 700,
+                fontSize: 12,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 4px 14px rgba(2,132,199,0.35)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <RefreshCw size={15} /> + เพิ่มวันชดเชย
+            </button>
+
+            <button
+              className="btn btn-primary"
+              onClick={() => openAddForType('event', '')}
+              style={{
+                background: 'linear-gradient(135deg, #00bcd4 0%, #00838f 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: '9px 18px',
+                borderRadius: 14,
+                fontWeight: 700,
+                fontSize: 12,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 4px 14px rgba(0,188,212,0.4)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Plus size={16} /> เพิ่มกิจกรรมใหม่
+            </button>
+          </div>
         )}
       </div>
 
@@ -327,6 +457,8 @@ export default function CalendarPage() {
             { id: 'event', label: '🟢 กิจกรรม' },
             { id: 'meeting', label: '🟣 ประชุม' },
             { id: 'deadline', label: '🟡 กำหนดส่ง' },
+            { id: 'holiday', label: '🔴 วันหยุดสภาฯ' },
+            { id: 'substitute', label: '🔵 วันเรียนชดเชย' },
           ].map(t => (
             <button
               key={t.id}
@@ -435,9 +567,8 @@ export default function CalendarPage() {
                         const endDate = ev.end_date || ev.date;
                         const isEnd = (endDate === ds) || (col === 6);
                         
-                        // Lavender background like user's screenshot
-                        const barBg = ev.type === 'meeting' ? '#e8eaf6' : ev.type === 'deadline' ? '#fff9c4' : '#ebdcf9';
-                        const barTextColor = ev.type === 'meeting' ? '#283593' : ev.type === 'deadline' ? '#f57f17' : '#6a1b9a';
+                        const barBg = ev.type === 'holiday' ? '#fee2e2' : ev.type === 'substitute' ? '#e0f7fa' : ev.type === 'meeting' ? '#e8eaf6' : ev.type === 'deadline' ? '#fff9c4' : '#ebdcf9';
+                        const barTextColor = ev.type === 'holiday' ? '#b91c1c' : ev.type === 'substitute' ? '#0369a1' : ev.type === 'meeting' ? '#283593' : ev.type === 'deadline' ? '#f57f17' : '#6a1b9a';
 
                         return (
                           <div
@@ -494,29 +625,66 @@ export default function CalendarPage() {
             </div>
 
             <div className="card-body" style={{ padding: 16 }}>
+              {/* Quick Manage Controls for Admin / President */}
+              {canManage && sel && (
+                <div style={{ marginBottom: 14, padding: '10px 12px', background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>⚙️ จัดการวันที่ {selDateStr}:</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => openAddForType('holiday', 'วันหยุดสภานักเรียน')}
+                      style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', fontSize: 11, fontWeight: 700, borderRadius: 8, padding: '4px 10px' }}
+                    >
+                      + กำหนดเป็นวันหยุด
+                    </button>
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => openAddForType('substitute', 'วันเรียนชดเชย')}
+                      style={{ background: '#e0f7fa', color: '#00838f', border: '1px solid #b2ebf2', fontSize: 11, fontWeight: 700, borderRadius: 8, padding: '4px 10px' }}
+                    >
+                      + กำหนดเป็นวันชดเชย
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Holiday Alert */}
               {selDayStatus.isHoliday && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 12, padding: '10px 12px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <ShieldAlert size={16} /> 🚫 วันนี้เป็นวันหยุดสภาฯ (งดเช็คชื่อ)
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 12, padding: '10px 12px', fontSize: 12, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <ShieldAlert size={16} /> 🚫 วันนี้เป็นวันหยุดสภาฯ (งดเช็คชื่อ)
+                  </div>
+                  {canManage && (
+                    <button onClick={() => handleRemoveHoliday(selDateStr)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 11, underline: 'always', fontWeight: 700 }}>
+                      ยกเลิกวันหยุด
+                    </button>
+                  )}
                 </div>
               )}
 
               {/* Substitute Alert */}
               {selDayStatus.substitute && (
-                <div style={{ background: '#e0f7fa', border: '1px solid #b2ebf2', color: '#00838f', borderRadius: 12, padding: '10px 12px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <RefreshCw size={16} /> 🔄 วันเรียนชดเชย (แทนตารางวัน{selDayStatus.substitute.replaceDay})
+                <div style={{ background: '#e0f7fa', border: '1px solid #b2ebf2', color: '#00838f', borderRadius: 12, padding: '10px 12px', fontSize: 12, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <RefreshCw size={16} /> 🔄 เรียนชดเชย (แทนวัน{selDayStatus.substitute.replaceDay})
+                  </div>
+                  {canManage && (
+                    <button onClick={() => handleRemoveSubstitute(selDateStr)} style={{ background: 'none', border: 'none', color: '#00838f', cursor: 'pointer', fontSize: 11, underline: 'always', fontWeight: 700 }}>
+                      ยกเลิกวันชดเชย
+                    </button>
+                  )}
                 </div>
               )}
 
               {/* Events list */}
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  📋 กิจกรรม/โครงการประจำวัน ({selEvents.length})
+                  📋 รายการในวันนี้ ({selEvents.length})
                 </div>
 
                 {selEvents.length === 0 ? (
                   <div style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', padding: '16px 0', background: '#f8fafc', borderRadius: 10 }}>
-                    ไม่มีกิจกรรมในวันนี้
+                    ไม่มีรายการในวันนี้
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -605,13 +773,13 @@ export default function CalendarPage() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setIsAdding(false)} style={{ zIndex: 9999 }}>
           <div className="modal-box" style={{ maxWidth: 500, borderRadius: 20, overflow: 'hidden' }}>
             <div className="modal-header" style={{ background: 'linear-gradient(135deg, #0d0714, #1e0a2e)', color: '#fff' }}>
-              <span style={{ fontWeight: 700, fontSize: 16 }}>{editId ? '✏️ แก้ไขกิจกรรม' : '➕ เพิ่มกิจกรรมใหม่'}</span>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>{editId ? '✏️ แก้ไขรายการ' : '➕ เพิ่มรายการลงปฏิทิน'}</span>
               <button onClick={() => setIsAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b2ebf2' }}><X size={18} /></button>
             </div>
             <div className="modal-body" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label className="form-label">ชื่อกิจกรรม/โครงการ *</label>
-                <input className="input-field" placeholder="เช่น ประชุมสภาประจำเดือน" value={newEv.title} onChange={e => setNewEv({ ...newEv, title: e.target.value })} style={{ fontSize: 13 }} />
+                <label className="form-label">ชื่อรายการ/โครงการ/วันหยุด *</label>
+                <input className="input-field" placeholder="เช่น ประชุมสภาประจำเดือน, วันหยุดวันแม่แห่งชาติ" value={newEv.title} onChange={e => setNewEv({ ...newEv, title: e.target.value })} style={{ fontSize: 13 }} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -627,11 +795,13 @@ export default function CalendarPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label className="form-label">ประเภท</label>
+                  <label className="form-label">ประเภทรายการ *</label>
                   <select className="select-field" value={newEv.type} onChange={e => setNewEv({ ...newEv, type: e.target.value })} style={{ fontSize: 13 }}>
-                    <option value="event">กิจกรรม</option>
-                    <option value="meeting">ประชุม</option>
-                    <option value="deadline">กำหนดส่ง</option>
+                    <option value="event">🟢 กิจกรรม</option>
+                    <option value="meeting">🟣 ประชุม</option>
+                    <option value="deadline">🟡 กำหนดส่งงาน</option>
+                    <option value="holiday">🔴 วันหยุดสภาฯ (งดเช็คชื่อ)</option>
+                    <option value="substitute">🔵 วันเรียนชดเชย (แทนตารางวันอื่น)</option>
                   </select>
                 </div>
                 <div>
@@ -643,8 +813,32 @@ export default function CalendarPage() {
                 </div>
               </div>
 
+              {/* Special options for Substitute Day */}
+              {newEv.type === 'substitute' && (
+                <div style={{ background: '#e0f7fa', padding: '12px 14px', borderRadius: 12, border: '1px solid #b2ebf2' }}>
+                  <label className="form-label" style={{ color: '#00838f', fontWeight: 700 }}>🔄 เรียนชดเชยแทนตารางของวันไหน?</label>
+                  <select className="select-field" value={newEv.replaceDay} onChange={e => setNewEv({ ...newEv, replaceDay: e.target.value })} style={{ fontSize: 13, background: '#fff' }}>
+                    <option value="จันทร์">วันจันทร์</option>
+                    <option value="อังคาร">วันอังคาร</option>
+                    <option value="พุธ">วันพุธ</option>
+                    <option value="พฤหัส">วันพฤหัสบดี</option>
+                    <option value="ศุกร์">วันศุกร์</option>
+                  </select>
+                  <div style={{ fontSize: 11, color: '#00838f', marginTop: 6 }}>
+                    ℹ️ ระบบจะสลับไปดึงตารางเวรยืนไหว้และเวรทำความสะอาดของวันดังกล่าวให้อัตโนมัติในวันนี้
+                  </div>
+                </div>
+              )}
+
+              {/* Special alert for Holiday */}
+              {newEv.type === 'holiday' && (
+                <div style={{ background: '#fef2f2', padding: '10px 12px', borderRadius: 12, border: '1px solid #fecaca', fontSize: 12, color: '#dc2626', fontWeight: 600 }}>
+                  ℹ️ ระบบจะปิดการเช็คชื่อเข้าแถวในวันดังกล่าวให้อัตโนมัติ (นักเรียนจะไม่โดนปรับขาดเข้าแถว)
+                </div>
+              )}
+
               <div>
-                <label className="form-label">รายละเอียดกิจกรรม</label>
+                <label className="form-label">รายละเอียดเพิ่มเติม</label>
                 <textarea className="input-field" rows="3" placeholder="รายละเอียด..." value={newEv.desc} onChange={e => setNewEv({ ...newEv, desc: e.target.value })} style={{ fontSize: 13 }} />
               </div>
             </div>
@@ -652,7 +846,7 @@ export default function CalendarPage() {
             <div className="modal-footer" style={{ background: '#f8fafc', padding: '14px 20px', borderTop: '1px solid #e2e8f0' }}>
               <button className="btn btn-gray" onClick={() => setIsAdding(false)} style={{ borderRadius: 10 }}>ยกเลิก</button>
               <button className="btn btn-primary" onClick={handleSaveEvent} style={{ background: 'linear-gradient(135deg, #00bcd4, #00838f)', borderRadius: 10, fontWeight: 700 }}>
-                {editId ? 'บันทึกการแก้ไข' : 'เพิ่มกิจกรรม'}
+                {editId ? 'บันทึกการแก้ไข' : 'บันทึกรายการ'}
               </button>
             </div>
           </div>

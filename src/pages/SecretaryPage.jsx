@@ -4,6 +4,7 @@ import { Plus, X, Save, FileText, Download, ChevronDown, ChevronUp, Upload, Load
 import { readSheet, writeSheet, updateSheet, uploadFileToDrive, deleteSheet } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 import { supabase } from '../supabaseClient';
+import CollapsibleSection from '../components/CollapsibleSection';
 
 export default function SecretaryPage() {
   const { user, isAdmin } = useAuth();
@@ -503,63 +504,63 @@ export default function SecretaryPage() {
           <div style={{ fontSize: 14, color: '#757575' }}>กำลังดึงข้อมูลจาก Google Sheets backend...</div>
         </div>
       ) : (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div className="card-header" style={{ padding: '18px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="card-title" style={{ margin: 0 }}>📁 คลังเอกสารสภา (จัดเก็บใน Google Drive โควต้าฟรี)</span>
-              </div>
-              {docs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9e9e9e' }}>
-                  📁 ยังไม่มีไฟล์เอกสารใดๆ บันทึกในคลังฝ่ายเลขา
-                </div>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="simple-table">
-                    <thead><tr><th>#</th><th>ชื่อเอกสาร</th><th>หมวดหมู่</th><th>ประเภท</th><th>ขนาด</th><th>อัปโหลดโดย</th><th>วันที่อัปโหลด</th><th>ดาวน์โหลด</th></tr></thead>
-                    <tbody>
-                      {docs.map((d, i) => (
-                        <tr key={d.id}>
-                          <td style={{ color: '#9e9e9e', fontSize: 12 }}>{i + 1}</td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: 18 }}>{FILE_ICON[d.type] || FILE_ICON.default}</span>
-                              <span style={{ fontWeight: 600, fontSize: 13 }}>{d.title}</span>
-                            </div>
-                          </td>
-                          <td><span className="badge badge-gray" style={{ fontSize: 11, background: '#f5f5f5', color: '#616161' }}>{d.category || 'อื่นๆ'}</span></td>
-                          <td><span className="badge badge-gray" style={{ fontSize: 11 }}>{d.type}</span></td>
-                          <td style={{ fontSize: 12, color: '#9e9e9e' }}>{d.size}</td>
-                          <td style={{ fontSize: 13 }}>{d.uploadedBy}</td>
-                          <td style={{ fontSize: 12, color: '#9e9e9e' }}>{d.date}</td>
-                          <td>
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button 
-                                className="btn btn-gray btn-sm" 
-                                style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                                onClick={() => {
-                                  if (d.fileUrl) window.open(d.fileUrl, '_blank');
-                                  else alert('ไม่พบที่อยู่ไฟล์เอกสาร');
-                                }}
-                              >
-                                <Download size={12} /> เปิด
-                              </button>
-                              {canManage && (
-                                <button 
-                                  className="btn btn-outline btn-sm" 
-                                  style={{ color: '#e53935', borderColor: '#e53935', fontSize: 11, padding: '4px 8px' }}
-                                  onClick={() => handleDeleteDoc(d.id)}
-                                >
-                                  ลบ
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+        <CollapsibleSection
+          title="📁 คลังเอกสารสภา (จัดเก็บใน Google Drive โควต้าฟรี)"
+          badge={`${docs.length} เอกสาร`}
+        >
+          {docs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9e9e9e' }}>
+              📁 ยังไม่มีไฟล์เอกสารใดๆ บันทึกในคลังฝ่ายเลขา
             </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="simple-table">
+                <thead><tr><th>#</th><th>ชื่อเอกสาร</th><th>หมวดหมู่</th><th>ประเภท</th><th>ขนาด</th><th>อัปโหลดโดย</th><th>วันที่อัปโหลด</th><th>ดาวน์โหลด</th></tr></thead>
+                <tbody>
+                  {docs.map((d, i) => (
+                    <tr key={d.id}>
+                      <td style={{ color: '#9e9e9e', fontSize: 12 }}>{i + 1}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 18 }}>{FILE_ICON[d.type] || FILE_ICON.default}</span>
+                          <span style={{ fontWeight: 600, fontSize: 13 }}>{d.title}</span>
+                        </div>
+                      </td>
+                      <td><span className="badge badge-gray" style={{ fontSize: 11, background: '#f5f5f5', color: '#616161' }}>{d.category || 'อื่นๆ'}</span></td>
+                      <td><span className="badge badge-gray" style={{ fontSize: 11 }}>{d.type}</span></td>
+                      <td style={{ fontSize: 12, color: '#9e9e9e' }}>{d.size}</td>
+                      <td style={{ fontSize: 13 }}>{d.uploadedBy}</td>
+                      <td style={{ fontSize: 12, color: '#9e9e9e' }}>{d.date}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button 
+                            className="btn btn-gray btn-sm" 
+                            style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            onClick={() => {
+                              if (d.fileUrl) window.open(d.fileUrl, '_blank');
+                              else alert('ไม่พบที่อยู่ไฟล์เอกสาร');
+                            }}
+                          >
+                            <Download size={12} /> เปิด
+                          </button>
+                          {canManage && (
+                            <button 
+                              className="btn btn-outline btn-sm" 
+                              style={{ color: '#e53935', borderColor: '#e53935', fontSize: 11, padding: '4px 8px' }}
+                              onClick={() => handleDeleteDoc(d.id)}
+                            >
+                              ลบ
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CollapsibleSection>
       )}
 
       {/* Add meeting modal */}

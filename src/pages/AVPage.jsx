@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 import { uploadFileToDrive, transformGoogleDriveUrl, writeSheet } from '../lib/googleDriveUpload';
 import logoUrl from '../assets/logo.png';
+import CollapsibleSection from '../components/CollapsibleSection';
 
 const CONTENT_TYPES = ['กราฟิก', 'วิดีโอ', 'Reel', 'ถ่ายภาพ', 'Live Stream', 'อินโฟกราฟิก'];
 const PLATFORMS     = ['Instagram', 'Facebook Page', 'LINE Official', 'ทั้งหมด'];
@@ -2262,14 +2263,16 @@ export default function AVPage() {
 
       {/* List */}
       {tab === 'list' && (
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title">งานทั้งหมด ({tasks.length})</span>
+        <CollapsibleSection
+          title="งานทั้งหมด"
+          badge={`${tasks.length} รายการ`}
+          action={
             <div style={{ position:'relative' }}>
               <Search size={13} style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', color:'#bdbdbd' }}/>
               <input className="input-field" placeholder="ค้นหา..." value={search} onChange={e=>setSearch(e.target.value)} style={{ paddingLeft:28, padding:'6px 8px 6px 28px', fontSize:12, width:200 }}/>
             </div>
-          </div>
+          }
+        >
           <div style={{ overflowX:'auto' }}>
             <table className="simple-table" style={{ width: '100%', minWidth: 950, tableLayout: 'fixed' }}>
               <thead>
@@ -2352,16 +2355,16 @@ export default function AVPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* Wait PR */}
       {tab === 'wait_pr' && (
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title">📢 งานที่ส่งให้ PR ใส่แคปชั่น</span>
-            <span style={{ fontSize:12, color:'#9e9e9e' }}>PR จะเห็นรายการเหล่านี้ในหน้าของตัวเอง</span>
-          </div>
+        <CollapsibleSection
+          title="📢 งานที่ส่งให้ PR ใส่แคปชั่น"
+          badge={`${tasks.filter(t=>t.status==='wait_pr').length} รายการ`}
+          action={<span style={{ fontSize:12, color:'#9e9e9e' }}>PR จะเห็นรายการเหล่านี้ในหน้าของตัวเอง</span>}
+        >
           {tasks.filter(t=>t.status==='wait_pr').length > 0 ? (
             <div style={{ overflowX:'auto' }}>
               <table className="simple-table" style={{ width: '100%', minWidth: 700, tableLayout: 'fixed' }}>
@@ -2392,7 +2395,7 @@ export default function AVPage() {
           ) : (
             <div style={{ textAlign:'center', padding:'32px', color:'#9e9e9e' }}>ไม่มีงานที่รอ PR ใส่แคปชั่น 🎉</div>
           )}
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* Modal */}

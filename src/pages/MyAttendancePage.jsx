@@ -117,10 +117,14 @@ export default function MyAttendancePage() {
   }, [user, month]);
 
   const STATUS = {
-    on_time: { label: 'มาตรงเวลา', color: '#2e7d32', bg: '#e8f5e9', icon: '✅' },
-    late:    { label: 'มาสาย',     color: '#c62828', bg: '#ffebee', icon: '⚠️' },
-    leave:   { label: 'ลา',       color: '#f57f17', bg: '#fff8e1', icon: '📝' },
-    missing: { label: 'ขาด',      color: '#757575', bg: '#f5f5f5', icon: '❌' },
+    on_time:      { label: 'มาตรงเวลา', color: '#2e7d32', bg: '#e8f5e9', icon: '✅' },
+    late:         { label: 'มาสาย',     color: '#c62828', bg: '#ffebee', icon: '⚠️' },
+    leave:        { label: 'ลา',       color: '#f57f17', bg: '#fff8e1', icon: '📝' },
+    missing:      { label: 'ขาด',      color: '#757575', bg: '#f5f5f5', icon: '❌' },
+    activity:     { label: 'ทำกิจกรรม', color: '#00838f', bg: '#e0f7fa', icon: '🎗️' },
+    holiday:      { label: 'วันหยุด',   color: '#dc2626', bg: '#fef2f2', icon: '🚫' },
+    substitute:   { label: 'วันชดเชย',  color: '#0284c7', bg: '#e0f2fe', icon: '🔄' },
+    not_required: { label: 'ไม่บังคับ', color: '#64748b', bg: '#f1f5f9', icon: '➖' },
   };
 
   // Generate attendance for all weekdays in the selected month
@@ -286,7 +290,7 @@ export default function MyAttendancePage() {
                 <tr><td colSpan="6" style={{ textAlign: 'center', padding: 40, color: '#9e9e9e' }}>ไม่มีข้อมูลในเดือนนี้</td></tr>
               ) : (
                 records.map((r, i) => {
-                  const s = STATUS[r.status];
+                  const s = STATUS[r.status] || { label: r.status || 'ไม่ระบุ', color: '#64748b', bg: '#f1f5f9', icon: 'ℹ️' };
                   return (
                     <tr key={r.date} style={{ background: r.date === todayStr ? '#e3f2fd44' : undefined }}>
                       <td style={{ color: '#9e9e9e', fontSize: 12 }}>{i + 1}</td>

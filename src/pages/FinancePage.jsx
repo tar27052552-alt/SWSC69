@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { DEPARTMENTS } from '../data/mockData';
-import { Plus, X, Save, Search, CheckCircle, Clock, XCircle, Eye, Camera } from 'lucide-react';
+import { Plus, X, Save, Search, CheckCircle, Clock, XCircle, Eye, Camera, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
@@ -41,6 +41,26 @@ export default function FinancePage() {
   const [collectModal, setCollectModal] = useState(null);
   const [collectMode, setCollectMode] = useState('individual');
   const [collectUserId, setCollectUserId] = useState('');
+  const [expandedFeeIds, setExpandedFeeIds] = useState({});
+
+  const toggleFeeExpand = (feeId) => {
+    setExpandedFeeIds(prev => ({
+      ...prev,
+      [feeId]: prev[feeId] === undefined ? false : !prev[feeId]
+    }));
+  };
+
+  const expandAllFees = () => {
+    const allMap = {};
+    fees.forEach(f => { allMap[f.id] = true; });
+    setExpandedFeeIds(allMap);
+  };
+
+  const collapseAllFees = () => {
+    const allMap = {};
+    fees.forEach(f => { allMap[f.id] = false; });
+    setExpandedFeeIds(allMap);
+  };
   
   // Discipline fines
   const [dfines, setDfines] = useState([]);
@@ -956,16 +976,36 @@ export default function FinancePage() {
       {/* Fee Collection Tab */}
       {tab === 'fees' && (
         <div className="card">
-          <div className="card-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div className="card-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap: 'wrap', gap: 10 }}>
             <span className="card-title">💰 รายการเก็บเงินสมาชิก</span>
-            {isFinance && (
-              <button className="btn btn-primary" onClick={() => { setFeeForm({ title:'', amount:'', date:'' }); setFeeModal(true); }}>
-                <Plus size={14}/> สร้างรายการเก็บเงิน
-              </button>
-            )}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              {fees.length > 0 && (
+                <>
+                  <button
+                    className="btn btn-gray btn-sm"
+                    onClick={collapseAllFees}
+                    style={{ fontSize: 12, padding: '4px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                  >
+                    <ChevronUp size={14} /> ย่อทั้งหมด
+                  </button>
+                  <button
+                    className="btn btn-gray btn-sm"
+                    onClick={expandAllFees}
+                    style={{ fontSize: 12, padding: '4px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                  >
+                    <ChevronDown size={14} /> ขยายทั้งหมด
+                  </button>
+                </>
+              )}
+              {isFinance && (
+                <button className="btn btn-primary" onClick={() => { setFeeForm({ title:'', amount:'', date:'' }); setFeeModal(true); }}>
+                  <Plus size={14}/> สร้างรายการเก็บเงิน
+                </button>
+              )}
+            </div>
           </div>
 
-          {fees.map(fee => {
+          {fees.map((fee, idx) => {
             const members = usersList.filter(u => u.role !== 'admin');
             const paidCount = members.filter(u => {
               const p = fee.payments?.[u.id];
@@ -975,124 +1015,150 @@ export default function FinancePage() {
             }).length;
             const totalCollected = paidCount * fee.amount;
             const totalExpected = members.length * fee.amount;
+            const isExpanded = expandedFeeIds[fee.id] ?? (idx === 0);
 
             return (
-              <div key={fee.id} style={{ borderBottom:'1px solid #f0f0f0', padding:'16px 20px' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+              <div key={fee.id} style={{ borderBottom:'1px solid #f0f0f0', padding:'16px 20px', transition: 'background 0.2s' }}>
+                <div 
+                  style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor: 'pointer', userSelect: 'none' }}
+                  onClick={() => toggleFeeExpand(fee.id)}
+                >
                   <div>
-                    <div style={{ fontWeight:700, fontSize:14 }}>{fee.title}</div>
-                    <div style={{ fontSize:12, color:'#9e9e9e' }}>จำนวน: {fee.amount} บาท/คน · วันที่: {fee.date}</div>
+                    <div style={{ fontWeight:700, fontSize:15, color: '#00838f', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span>{fee.title}</span>
+                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: isExpanded ? '#e0f7fa' : '#f1f5f9', color: isExpanded ? '#00838f' : '#64748b', fontWeight: 600 }}>
+                        {isExpanded ? 'ขยายอยู่' : 'ย่อเก็บอยู่'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize:12, color:'#9e9e9e', marginTop: 2 }}>จำนวน: {fee.amount} บาท/คน · วันที่: {fee.date}</div>
                   </div>
-                  <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:13, fontWeight:600, color:'#2e7d32' }}>เก็บแล้ว {totalCollected.toLocaleString()} / {totalExpected.toLocaleString()} บาท</div>
-                    <div style={{ fontSize:12, color:'#757575' }}>{paidCount}/{members.length} คน</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:'#2e7d32' }}>เก็บแล้ว {totalCollected.toLocaleString()} / {totalExpected.toLocaleString()} บาท</div>
+                      <div style={{ fontSize:12, color:'#757575' }}>{paidCount}/{members.length} คน</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleFeeExpand(fee.id); }}
+                      className="btn btn-gray btn-sm"
+                      style={{ borderRadius: '50%', width: 32, height: 32, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                      title={isExpanded ? 'ย่อตารางสมาชิก' : 'ขยายตารางสมาชิก'}
+                    >
+                      {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    </button>
                   </div>
                 </div>
-                <div style={{ background:'#f0f0f0', borderRadius:99, height:6, overflow:'hidden', marginBottom:12 }}>
+
+                <div style={{ background:'#f0f0f0', borderRadius:99, height:6, overflow:'hidden', marginTop: 10, marginBottom: isExpanded ? 12 : 0 }}>
                   <div style={{ height:'100%', width:`${members.length > 0 ? (paidCount/members.length)*100 : 0}%`, background:'#00bcd4', borderRadius:99, transition:'width 0.4s' }}/>
                 </div>
 
-                {isFinance && (
-                  <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap: 'wrap' }}>
-                    <button className="btn btn-primary btn-sm" onClick={() => { setCollectModal(fee.id); setCollectMode('individual'); setCollectUserId(''); }}>
-                      👤 เก็บรายบุคคล
-                    </button>
-                    <button className="btn btn-success btn-sm" onClick={() => { setCollectModal(fee.id); setCollectMode('all'); }}>
-                      👥 เก็บทั้งหมด
-                    </button>
-                    <button className="btn btn-outline btn-sm" onClick={() => exportFeeSummaryPNG(fee)} style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
-                      <Camera size={12} /> 📸 สรุปภาพรวม (PNG)
-                    </button>
+                {/* Collapsible Member Table & Action Buttons */}
+                {isExpanded && (
+                  <div style={{ marginTop: 14 }}>
+                    {isFinance && (
+                      <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap: 'wrap' }}>
+                        <button className="btn btn-primary btn-sm" onClick={() => { setCollectModal(fee.id); setCollectMode('individual'); setCollectUserId(''); }}>
+                          👤 เก็บรายบุคคล
+                        </button>
+                        <button className="btn btn-success btn-sm" onClick={() => { setCollectModal(fee.id); setCollectMode('all'); }}>
+                          👥 เก็บทั้งหมด
+                        </button>
+                        <button className="btn btn-outline btn-sm" onClick={() => exportFeeSummaryPNG(fee)} style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
+                          <Camera size={12} /> 📸 สรุปภาพรวม (PNG)
+                        </button>
+                      </div>
+                    )}
+
+                    <div style={{ overflowX:'auto' }}>
+                      <table className="simple-table">
+                        <thead>
+                          <tr><th>#</th><th>สมาชิก</th><th>ฝ่าย</th><th>สถานะ</th><th>หลักฐาน</th></tr>
+                        </thead>
+                        <tbody>
+                          {members.map((u, i) => {
+                            const dept = DEPARTMENTS.find(d => d.id === u.deptId);
+                            const paymentInfo = fee.payments?.[u.id];
+                            const paid = typeof paymentInfo === 'object' ? paymentInfo.paid : !!paymentInfo;
+                            const slip = typeof paymentInfo === 'object' ? paymentInfo.slip : null;
+                            return (
+                              <tr key={u.id}>
+                                <td style={{ color:'#9e9e9e', fontSize:12 }}>{i+1}</td>
+                                <td>
+                                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                    <div className="avatar" style={{ width:28, height:28, fontSize:12, background: (u.avatarColor || '#00bcd4')+'22', color: u.avatarColor || '#00bcd4' }}>{u.avatar || u.nickname?.slice(0,1)}</div>
+                                    <div>
+                                      <div style={{ fontWeight:600, fontSize:13 }}>{u.name}</div>
+                                      <div style={{ fontSize:11, color:'#9e9e9e' }}>"{u.nickname}"</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>{dept ? <span className="badge" style={{ background:dept.bg, color:dept.color, borderRadius:3 }}>{dept.short}</span> : '–'}</td>
+                                <td style={{ width:120 }}>
+                                  {isFinance ? (
+                                    <select
+                                      value={paid ? 'paid' : 'unpaid'}
+                                      onChange={async (e) => {
+                                        const val = e.target.value === 'paid';
+                                        try {
+                                          let nextPayments = { ...(fee.payments || {}) };
+                                          if (val) {
+                                            if (typeof nextPayments[u.id] === 'object') {
+                                              nextPayments[u.id] = { ...nextPayments[u.id], paid: true, status: 'paid' };
+                                            } else {
+                                              nextPayments[u.id] = true;
+                                            }
+                                          } else {
+                                            delete nextPayments[u.id];
+                                          }
+                                          const { error } = await supabase
+                                            .from('finance_fees')
+                                            .update({ payments: nextPayments })
+                                            .eq('id', fee.id);
+                                          if (error) throw error;
+                                          setFees(prev => prev.map(f => f.id === fee.id ? { ...f, payments: nextPayments } : f));
+                                        } catch (err) {
+                                          console.error('Error updating fee payment:', err);
+                                          alert('เกิดข้อผิดพลาดในการบันทึกการชำระเงิน: ' + err.message);
+                                        }
+                                      }}
+                                      style={{
+                                        background: paid ? '#e8f5e9' : '#ffebee',
+                                        color: paid ? '#2e7d32' : '#c62828',
+                                        border: `1px solid ${paid ? '#2e7d32' : '#c62828'}44`,
+                                        padding:'4px 8px', borderRadius:6, fontSize:12, fontWeight:600, outline:'none', cursor:'pointer', width:'100%'
+                                      }}
+                                    >
+                                      <option value="unpaid">ยังไม่จ่าย</option>
+                                      <option value="paid">จ่ายแล้ว</option>
+                                    </select>
+                                  ) : (
+                                    <span className="badge" style={{ background: paid ? '#e8f5e9' : '#ffebee', color: paid ? '#2e7d32' : '#c62828' }}>
+                                      {paid ? '✅ จ่ายแล้ว' : '❌ ยังไม่จ่าย'}
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  {slip ? (
+                                    <button
+                                      className="btn btn-gray btn-sm"
+                                      style={{ fontSize:11, padding:'4px 8px', display:'inline-flex', alignItems:'center', gap:4 }}
+                                      onClick={() => setFeeSlipModal({ userName: u.name, title: fee.title, amount: fee.amount, date: fee.date, slip })}
+                                    >
+                                      <Eye size={12}/> ดูสลิป
+                                    </button>
+                                  ) : (
+                                    <span style={{ color:'#bdbdbd', fontSize:11 }}>-</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
-
-                <div style={{ overflowX:'auto' }}>
-                  <table className="simple-table">
-                    <thead>
-                      <tr><th>#</th><th>สมาชิก</th><th>ฝ่าย</th><th>สถานะ</th><th>หลักฐาน</th></tr>
-                    </thead>
-                    <tbody>
-                      {members.map((u, i) => {
-                        const dept = DEPARTMENTS.find(d => d.id === u.deptId);
-                        const paymentInfo = fee.payments?.[u.id];
-                        const paid = typeof paymentInfo === 'object' ? paymentInfo.paid : !!paymentInfo;
-                        const slip = typeof paymentInfo === 'object' ? paymentInfo.slip : null;
-                        return (
-                          <tr key={u.id}>
-                            <td style={{ color:'#9e9e9e', fontSize:12 }}>{i+1}</td>
-                            <td>
-                              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                                <div className="avatar" style={{ width:28, height:28, fontSize:12, background: (u.avatarColor || '#00bcd4')+'22', color: u.avatarColor || '#00bcd4' }}>{u.avatar || u.nickname?.slice(0,1)}</div>
-                                <div>
-                                  <div style={{ fontWeight:600, fontSize:13 }}>{u.name}</div>
-                                  <div style={{ fontSize:11, color:'#9e9e9e' }}>"{u.nickname}"</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td>{dept ? <span className="badge" style={{ background:dept.bg, color:dept.color, borderRadius:3 }}>{dept.short}</span> : '–'}</td>
-                            <td style={{ width:120 }}>
-                              {isFinance ? (
-                                <select
-                                  value={paid ? 'paid' : 'unpaid'}
-                                  onChange={async (e) => {
-                                    const val = e.target.value === 'paid';
-                                    try {
-                                      let nextPayments = { ...(fee.payments || {}) };
-                                      if (val) {
-                                        if (typeof nextPayments[u.id] === 'object') {
-                                          nextPayments[u.id] = { ...nextPayments[u.id], paid: true, status: 'paid' };
-                                        } else {
-                                          nextPayments[u.id] = true;
-                                        }
-                                      } else {
-                                        delete nextPayments[u.id];
-                                      }
-                                      const { error } = await supabase
-                                        .from('finance_fees')
-                                        .update({ payments: nextPayments })
-                                        .eq('id', fee.id);
-                                      if (error) throw error;
-                                      setFees(prev => prev.map(f => f.id === fee.id ? { ...f, payments: nextPayments } : f));
-                                    } catch (err) {
-                                      console.error('Error updating fee payment:', err);
-                                      alert('เกิดข้อผิดพลาดในการบันทึกการชำระเงิน: ' + err.message);
-                                    }
-                                  }}
-                                  style={{
-                                    background: paid ? '#e8f5e9' : '#ffebee',
-                                    color: paid ? '#2e7d32' : '#c62828',
-                                    border: `1px solid ${paid ? '#2e7d32' : '#c62828'}44`,
-                                    padding:'4px 8px', borderRadius:6, fontSize:12, fontWeight:600, outline:'none', cursor:'pointer', width:'100%'
-                                  }}
-                                >
-                                  <option value="unpaid">ยังไม่จ่าย</option>
-                                  <option value="paid">จ่ายแล้ว</option>
-                                </select>
-                              ) : (
-                                <span className="badge" style={{ background: paid ? '#e8f5e9' : '#ffebee', color: paid ? '#2e7d32' : '#c62828' }}>
-                                  {paid ? '✅ จ่ายแล้ว' : '❌ ยังไม่จ่าย'}
-                                </span>
-                              )}
-                            </td>
-                            <td>
-                              {slip ? (
-                                <button
-                                  className="btn btn-gray btn-sm"
-                                  style={{ fontSize:11, padding:'4px 8px', display:'inline-flex', alignItems:'center', gap:4 }}
-                                  onClick={() => setFeeSlipModal({ userName: u.name, title: fee.title, amount: fee.amount, date: fee.date, slip })}
-                                >
-                                  <Eye size={12}/> ดูสลิป
-                                </button>
-                              ) : (
-                                <span style={{ color:'#bdbdbd', fontSize:11 }}>-</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             );
           })}
