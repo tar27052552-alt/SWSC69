@@ -174,6 +174,19 @@ export default function Dashboard() {
         datesToCheck.push(dateStr);
       }
 
+      if (datesToCheck.length === 0) return;
+
+      // Batch query across all dates to be checked in 1 parallel round-trip
+      const [checksRes, finesRes, attRes] = await Promise.all([
+        supabase.from('greeting_duty_checks').select('date, nickname').in('date', datesToCheck),
+        supabase.from('discipline_fines').select('date, nickname').eq('violation', 'ไม่ปฏิบัติเวรไหว้').in('date', datesToCheck),
+        supabase.from('student_attendance').select('date, user_id').eq('status', 'leave').in('date', datesToCheck)
+      ]);
+
+      const allChecks = checksRes.data || [];
+      const allFines = finesRes.data || [];
+      const allAttendance = attRes.data || [];
+
       for (const dateStr of datesToCheck) {
         // Find exempt users for this date (external events participants)
         const activeExtEventIds = (eventsList || [])
@@ -210,30 +223,9 @@ export default function Dashboard() {
 
         if (dutyMembers.length === 0) continue;
 
-        // Fetch submissions for this day
-        const { data: checks } = await supabase
-          .from('greeting_duty_checks')
-          .select('nickname')
-          .eq('date', dateStr);
-
-        const submittedNicknames = (checks || []).map(c => c.nickname);
-
-        // Fetch existing fines for "ไม่ปฏิบัติเวรไหว้"
-        const { data: existingFines } = await supabase
-          .from('discipline_fines')
-          .select('nickname')
-          .eq('date', dateStr)
-          .eq('violation', 'ไม่ปฏิบัติเวรไหว้');
-
-        const finedNicknames = (existingFines || []).map(f => f.nickname);
-
-        // Find users who are marked as "leave" on this date
-        const { data: attendanceData } = await supabase
-          .from('student_attendance')
-          .select('user_id')
-          .eq('date', dateStr)
-          .eq('status', 'leave');
-        const leaveUserIds = (attendanceData || []).map(att => String(att.user_id));
+        const submittedNicknames = allChecks.filter(c => c.date === dateStr).map(c => c.nickname);
+        const finedNicknames = allFines.filter(f => f.date === dateStr).map(f => f.nickname);
+        const leaveUserIds = allAttendance.filter(att => att.date === dateStr).map(att => String(att.user_id));
 
         for (const { nickname, gate } of dutyMembers) {
           const u = usersData.find(usr => usr.nickname === nickname);
@@ -342,6 +334,19 @@ export default function Dashboard() {
         datesToCheck.push(dateStr);
       }
 
+      if (datesToCheck.length === 0) return;
+
+      // Batch query across all dates to be checked in 1 parallel round-trip
+      const [checksRes, finesRes, attRes] = await Promise.all([
+        supabase.from('clean_duty_checks').select('date, nickname').in('date', datesToCheck),
+        supabase.from('discipline_fines').select('date, nickname').eq('violation', 'ไม่ทำเวรห้องสภา').in('date', datesToCheck),
+        supabase.from('student_attendance').select('date, user_id').eq('status', 'leave').in('date', datesToCheck)
+      ]);
+
+      const allChecks = checksRes.data || [];
+      const allFines = finesRes.data || [];
+      const allAttendance = attRes.data || [];
+
       for (const dateStr of datesToCheck) {
         // Find exempt users for this date (external events participants)
         const activeExtEventIds = (eventsList || [])
@@ -363,28 +368,9 @@ export default function Dashboard() {
         const dutyMembers = scheduleData.members || [];
         if (dutyMembers.length === 0 || dutyMembers[0] === '–') continue;
 
-        const { data: checks } = await supabase
-          .from('clean_duty_checks')
-          .select('nickname')
-          .eq('date', dateStr);
-
-        const submittedNicknames = (checks || []).map(c => c.nickname);
-
-        const { data: existingFines } = await supabase
-          .from('discipline_fines')
-          .select('nickname')
-          .eq('date', dateStr)
-          .eq('violation', 'ไม่ทำเวรห้องสภา');
-
-        const finedNicknames = (existingFines || []).map(f => f.nickname);
-
-        // Find users who are marked as "leave" on this date
-        const { data: attendanceData } = await supabase
-          .from('student_attendance')
-          .select('user_id')
-          .eq('date', dateStr)
-          .eq('status', 'leave');
-        const leaveUserIds = (attendanceData || []).map(att => String(att.user_id));
+        const submittedNicknames = allChecks.filter(c => c.date === dateStr).map(c => c.nickname);
+        const finedNicknames = allFines.filter(f => f.date === dateStr).map(f => f.nickname);
+        const leaveUserIds = allAttendance.filter(att => att.date === dateStr).map(att => String(att.user_id));
 
         for (const nickname of dutyMembers) {
           if (nickname === '–') continue;
@@ -713,14 +699,43 @@ export default function Dashboard() {
 
   return (
     <div>
-      {/* Welcome */}
-      <div className="card" style={{ marginBottom: 16, padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '4px solid #00bcd4' }}>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>{greet}, {user?.nickname || user?.name?.split(' ')[0]}! 👋</div>
-          <div style={{ fontSize: 12, color: '#757575', marginTop: 2 }}>{user?.position} · {user?.dept?.name || (user?.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ส่วนกลาง')}</div>
-        </div>
-        <div style={{ fontSize: 12, color: '#9e9e9e', textAlign: 'right' }}>
-          {today.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+      {/* Welcome Hero Banner */}
+      <div className="card" style={{
+        marginBottom: 20,
+        padding: '24px 28px',
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
+        borderRadius: 20,
+        color: '#ffffff',
+        boxShadow: '0 12px 32px rgba(49, 46, 129, 0.28)',
+        position: 'relative',
+        overflow: 'hidden',
+        border: '1px solid rgba(255,255,255,0.12)'
+      }}>
+        <div style={{
+          position: 'absolute', right: -30, top: -30, width: 180, height: 180,
+          background: 'radial-gradient(circle, rgba(99,102,241,0.35) 0%, rgba(0,0,0,0) 70%)',
+          borderRadius: '50%', pointerEvents: 'none'
+        }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, position: 'relative', zIndex: 2 }}>
+          <div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', background: 'rgba(255,255,255,0.15)', borderRadius: 99, fontSize: 11.5, fontWeight: 600, color: '#e0e7ff', marginBottom: 8, backdropFilter: 'blur(8px)' }}>
+              <span>✨ คณะกรรมการนักเรียน SWSC69</span>
+            </div>
+            <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: '#ffffff' }}>
+              {greet}, {user?.nickname || user?.name?.split(' ')[0]}! 👋
+            </h1>
+            <div style={{ fontSize: 13, color: '#c7d2fe', marginTop: 4, fontWeight: 500 }}>
+              {user?.position || 'กรรมการสภา'} · {user?.dept?.name || (user?.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ส่วนกลาง')}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', background: 'rgba(255,255,255,0.1)', padding: '10px 16px', borderRadius: 12, backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.12)' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#ffffff' }}>
+              {today.toLocaleDateString('th-TH', { weekday: 'long' })}
+            </div>
+            <div style={{ fontSize: 11.5, color: '#a5b4fc', marginTop: 2 }}>
+              {today.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1011,12 +1026,12 @@ export default function Dashboard() {
             <button className="btn btn-gray btn-sm" onClick={nextMonth} style={{ borderRadius: 8 }}>เดือนถัดไป →</button>
           </div>
           <div style={{ padding:'12px' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', marginBottom:6 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap: 2, padding: '0 1px', marginBottom:6 }}>
               {DAYS_TH.map((d, idx) => (
                 <div key={d} style={{ textAlign:'center', fontSize:12, fontWeight:700, color: idx === 0 ? '#ef4444' : '#64748b', padding:'4px 0' }}>{d}</div>
               ))}
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, background: '#f0f0f0', border: '1px solid #e0e0e0', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gridAutoRows: 'minmax(64px, 1fr)', gap:2, background: '#f0f0f0', border: '1px solid #e0e0e0', borderRadius: 10, overflow: 'hidden' }}>
               {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`} style={{ minHeight: 64, background: '#fafafa' }} />)}
               {Array.from({length:daysInMonth}).map((_,i)=>{
                 const day = i+1;
@@ -1080,6 +1095,10 @@ export default function Dashboard() {
                   </div>
                 );
               })}
+              {/* Trailing empty cells */}
+              {Array.from({ length: (Math.ceil((firstDay + daysInMonth) / 7) * 7) - (firstDay + daysInMonth) }).map((_, i) => (
+                <div key={`empty-end-${i}`} style={{ minHeight: 64, background: '#fafafa' }} />
+              ))}
             </div>
           </div>
         </div>

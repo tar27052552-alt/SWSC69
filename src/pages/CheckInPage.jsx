@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { CheckCircle, AlertTriangle, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { supabaseRpc } from '../lib/supabaseRest';
 import CameraCapture from '../components/CameraCapture';
 import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
@@ -136,10 +137,8 @@ export default function CheckInPage() {
   
   let todayDayName = TH_DAYS[currentDate.getDay()];
   const subMatch = substituteDates.find(s => (typeof s === 'string' ? s : s.date) === todayStr);
-  let isSubstitute = false;
   if (subMatch && typeof subMatch !== 'string' && subMatch.replaceDay) {
     todayDayName = subMatch.replaceDay;
-    isSubstitute = true;
   }
 
   const isBeforeStart = startDate && todayStr < startDate;
@@ -243,6 +242,7 @@ export default function CheckInPage() {
       todayName = sub.replaceDay;
     }
     
+    let hasGreetingDuty = false;
     const todaySchedule = greetingSchedules.find(s => s.day === todayName);
     if (todaySchedule && user?.nickname) {
       const scheduleData = todaySchedule.data || {};
@@ -309,10 +309,31 @@ export default function CheckInPage() {
             const diffMs = now - limitDate;
             minutesLate = Math.ceil(diffMs / (1000 * 60));
           }
+        }
 
-          if (minutesLate > 0) {
-            const dateStr = toGregorianStr(now);
-            // Check if fine already exists for this user, date and violation
+        // Call secure server-side RPC function for fine computation & notification insertion
+        const dateStr = toGregorianStr(now);
+        try {
+          const rpcRes = await supabaseRpc('record_checkin_and_fine', {
+            p_user_id: user.id,
+            p_user_name: user.name,
+            p_nickname: user.nickname,
+            p_dept_id: user.deptId || null,
+            p_date: dateStr,
+            p_time: timeStr,
+            p_is_late: isLate,
+            p_minutes_late: minutesLate
+          });
+          if (rpcRes && typeof rpcRes.amount === 'number') {
+            finalAmount = rpcRes.amount;
+          }
+        } catch (rpcErr) {
+          console.warn('RPC record_checkin_and_fine fallback to direct insert:', rpcErr);
+          if (isLate && minutesLate > 0) {
+            const baseAmount = 5;
+            finalAmount = baseAmount * minutesLate;
+            if (user.deptId === 2) finalAmount *= 2;
+
             const { data: existingFine } = await supabase
               .from('discipline_fines')
               .select('id')
@@ -321,14 +342,6 @@ export default function CheckInPage() {
               .eq('violation', 'มาสาย (นาที)');
 
             if (!existingFine || existingFine.length === 0) {
-              const baseAmount = 5; // 5 Baht per minute
-              finalAmount = baseAmount * minutesLate;
-
-              // 2x fine multiplier for Discipline dept (deptId === 2)
-              if (user.deptId === 2) {
-                finalAmount *= 2;
-              }
-
               const fineRecord = {
                 user_id: String(user.id),
                 user_name: user.name,
@@ -341,24 +354,20 @@ export default function CheckInPage() {
                 paid: false
               };
               await supabase.from('discipline_fines').insert([fineRecord]);
-            } else {
-              const baseAmount = 5;
-              finalAmount = baseAmount * minutesLate;
-              if (user.deptId === 2) finalAmount *= 2;
             }
           }
-        }
 
-        // Send personal notification to user
-        await supabase
-          .from('notifications')
-          .insert([{
-            type: isLate ? 'fine' : 'task',
-            user_id: String(user.id),
-            message: isLate 
-              ? `⚠️ คุณเช็คชื่อเข้าโรงเรียนสาย (${minutesLate} นาที) เมื่อเวลา ${timeStr} ค่าปรับ ${finalAmount} บาท`
-              : `📍 คุณเช็คชื่อเข้าโรงเรียนเรียบร้อยแล้ว เมื่อเวลา ${timeStr}`
-          }]);
+          // Fallback notification
+          await supabase
+            .from('notifications')
+            .insert([{
+              type: isLate ? 'fine' : 'task',
+              user_id: String(user.id),
+              message: isLate 
+                ? `⚠️ คุณเช็คชื่อเข้าโรงเรียนสาย (${minutesLate} นาที) เมื่อเวลา ${timeStr} ค่าปรับ ${finalAmount} บาท`
+                : `📍 คุณเช็คชื่อเข้าโรงเรียนเรียบร้อยแล้ว เมื่อเวลา ${timeStr}`
+            }]);
+        }
 
         // Notify Discord
         let embedTitle = `🟢 [เช็คชื่อเข้าแถว] ${user.nickname} เช็คชื่อสำเร็จ`;

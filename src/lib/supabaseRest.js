@@ -21,7 +21,14 @@ export async function supabaseRpc(fnName, args) {
   });
 
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
+  }
   if (!res.ok) {
     const message = (data && (data.message || data.error_description || data.error)) || res.statusText;
     throw new Error(message);
@@ -38,7 +45,14 @@ export async function supabaseSelect(table, queryString) {
     },
   });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
+  }
   if (!res.ok) {
     const message = (data && (data.message || data.error_description || data.error)) || res.statusText;
     throw new Error(message);
@@ -59,7 +73,14 @@ export async function supabaseUpsert(table, rows) {
     body: JSON.stringify(rows),
   });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
+  }
   if (!res.ok) {
     const message = (data && (data.message || data.error_description || data.error)) || res.statusText;
     throw new Error(message);
@@ -78,7 +99,14 @@ export async function supabaseDelete(table, queryString) {
     },
   });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
+  }
   if (!res.ok) {
     const message = (data && (data.message || data.error_description || data.error)) || res.statusText;
     throw new Error(message);
@@ -99,7 +127,14 @@ export async function supabaseUpdate(table, row, queryString) {
     body: JSON.stringify(row),
   });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
+  }
   if (!res.ok) {
     const message = (data && (data.message || data.error_description || data.error)) || res.statusText;
     throw new Error(message);

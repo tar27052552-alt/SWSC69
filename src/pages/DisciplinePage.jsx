@@ -265,6 +265,15 @@ export default function DisciplinePage() {
             substitute_nickname: substituteNickname
           }]);
         if (insErr) throw insErr;
+
+        const subUser = users.find(u => u.nickname === substituteNickname || u.name === substituteNickname);
+        if (subUser) {
+          await supabase.from('notifications').insert([{
+            type: 'task',
+            user_id: String(subUser.id),
+            message: `🔄 คุณได้รับมอบหมายให้ปฏิบัติเวรแทน ${conflict.originalNickname} ในวันที่ ${conflict.date}`
+          }]);
+        }
       }
 
       await loadExemptionsAndSwaps();
@@ -356,6 +365,15 @@ export default function DisciplinePage() {
         }]);
 
       if (error) throw error;
+
+      const subUser = users.find(u => u.nickname === swapForm.substituteNickname || u.name === swapForm.substituteNickname);
+      if (subUser) {
+        await supabase.from('notifications').insert([{
+          type: 'task',
+          user_id: String(subUser.id),
+          message: `🔄 คุณได้รับมอบหมายให้ปฏิบัติเวรแทน ${swapForm.originalNickname} ในวันที่ ${swapForm.date}`
+        }]);
+      }
 
       alert('บันทึกการสลับเวรสำเร็จ!');
       setShowSwapCreateModal(false);
@@ -768,7 +786,7 @@ export default function DisciplinePage() {
 
   const handleManualCheckIn = async (userId, status) => {
     if (status === 'reset') {
-      if (!window.confirm('คุณต้องการลบประวัติการเช็คชื่อของนักเรียนคนนี้ เพื่อให้สามารถใช้กล้องเช็คชื่อใหม่ได้ใช่หรือไม่?')) return;
+      if (!window.confirm('คุณต้องการลบประวัติการเช็คชื่อและค่าปรับของนักเรียนคนนี้ในวันนี้ใช่หรือไม่?')) return;
       try {
         const { error } = await supabase
           .from('student_attendance')
@@ -777,7 +795,14 @@ export default function DisciplinePage() {
           .eq('date', selectedDate);
         if (error) throw error;
         
+        await supabase
+          .from('discipline_fines')
+          .delete()
+          .eq('user_id', String(userId))
+          .eq('date', selectedDate);
+
         setDbAttendance(prev => prev.filter(x => String(x.user_id) !== String(userId)));
+        setFines(prev => prev.filter(x => !(String(x.userId || x.user_id) === String(userId) && x.date === selectedDate)));
       } catch (err) {
         console.error('Error resetting check-in:', err);
         alert('เกิดข้อผิดพลาดในการรีเซ็ตสถานะ: ' + err.message);
@@ -810,6 +835,16 @@ export default function DisciplinePage() {
         .from('student_attendance')
         .upsert([record], { onConflict: 'user_id,date' });
       if (error) throw error;
+      
+      // If status changed to non-late, remove auto fines for this date
+      if (['on_time', 'leave', 'activity', 'not_required'].includes(status)) {
+        await supabase
+          .from('discipline_fines')
+          .delete()
+          .eq('user_id', String(userId))
+          .eq('date', selectedDate);
+        setFines(prev => prev.filter(x => !(String(x.userId || x.user_id) === String(userId) && x.date === selectedDate)));
+      }
       
       setDbAttendance(prev => {
         const filtered = prev.filter(x => String(x.user_id) !== String(userId));
@@ -1246,13 +1281,13 @@ export default function DisciplinePage() {
     const myFines = fines.filter(f => String(f.userId) === String(u.id));
     return {
       ...u, count: myFines.length,
-      total: myFines.reduce((s, f) => s + f.amount, 0),
-      unpaid: myFines.filter(f => !f.paid).reduce((s, f) => s + f.amount, 0),
+      total: (myFines || []).reduce((s, f) => s + Number(f.amount || 0), 0),
+      unpaid: (myFines || []).filter(f => !f.paid).reduce((s, f) => s + Number(f.amount || 0), 0),
     };
   }).filter(u => u.count > 0).sort((a,b) => b.total - a.total);
 
-  const totalFines = fines.reduce((s,f) => s + f.amount, 0);
-  const totalUnpaid = fines.filter(f => !f.paid).reduce((s,f) => s + f.amount, 0);
+  const totalFines = (fines || []).reduce((s,f) => s + Number(f.amount || 0), 0);
+  const totalUnpaid = (fines || []).filter(f => !f.paid).reduce((s,f) => s + Number(f.amount || 0), 0);
 
   return (
     <div>

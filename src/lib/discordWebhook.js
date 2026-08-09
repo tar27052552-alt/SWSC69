@@ -16,11 +16,15 @@ export async function sendDiscordEmbedViaGAS(title, description, colorDecimal = 
   }
   
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
     const response = await fetch(gasUrl, {
       method: "POST",
       headers: {
         "Content-Type": "text/plain;charset=utf-8",
       },
+      signal: controller.signal,
       body: JSON.stringify({
         action: "send_discord_message",
         title: title,
@@ -32,6 +36,7 @@ export async function sendDiscordEmbedViaGAS(title, description, colorDecimal = 
         targetUserIds: targetUserIds
       }),
     });
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status}`);

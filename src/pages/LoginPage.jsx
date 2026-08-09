@@ -73,7 +73,7 @@ export default function LoginPage() {
           {/* Form */}
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div>
-              <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5, color: '#334155', marginBottom: 6 }}>
+              <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5, color: '#334155', marginBottom: 6, display: 'block' }}>
                 รหัสประจำตัวนักเรียน
               </label>
               <input
@@ -83,21 +83,24 @@ export default function LoginPage() {
                 value={studentId}
                 onChange={e => setStudentId(e.target.value)}
                 required
+                autoComplete="username"
+                inputMode="numeric"
                 id="login-student-id"
                 style={{
-                  height: 46,
-                  fontSize: 14,
+                  height: 48,
+                  fontSize: 16, // 16px prevents iOS Safari auto-zoom
                   borderRadius: 12,
                   paddingLeft: 14,
                   background: '#f8fafc',
                   border: '1.5px solid #e2e8f0',
-                  color: '#0f172a'
+                  color: '#0f172a',
+                  touchAction: 'manipulation'
                 }}
               />
             </div>
 
             <div>
-              <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5, color: '#334155', marginBottom: 6 }}>
+              <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5, color: '#334155', marginBottom: 6, display: 'block' }}>
                 รหัสผ่าน
               </label>
               <input
@@ -107,15 +110,17 @@ export default function LoginPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
                 id="login-password"
                 style={{
-                  height: 46,
-                  fontSize: 14,
+                  height: 48,
+                  fontSize: 16, // 16px prevents iOS Safari auto-zoom
                   borderRadius: 12,
                   paddingLeft: 14,
                   background: '#f8fafc',
                   border: '1.5px solid #e2e8f0',
-                  color: '#0f172a'
+                  color: '#0f172a',
+                  touchAction: 'manipulation'
                 }}
               />
             </div>
@@ -135,12 +140,14 @@ export default function LoginPage() {
                 width: '100%',
                 justifyContent: 'center',
                 marginTop: 4,
-                height: 46,
+                height: 48,
                 borderRadius: 12,
-                fontSize: 14.5,
+                fontSize: 15,
                 fontWeight: 700,
                 background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-                boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)'
+                boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
               id="login-submit"
             >

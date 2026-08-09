@@ -774,9 +774,9 @@ export default function FinancePage() {
 
           ctx.fillStyle = '#e53935';
           ctx.font = 'normal 12px "Noto Sans Thai", sans-serif';
-          let displayViolation = item.violation;
-          if (ctx.measureText(displayViolation).width > 240) {
-            while (ctx.measureText(displayViolation + '...').width > 240) {
+          let displayViolation = item.violation || '';
+          if (displayViolation && ctx.measureText(displayViolation).width > 240) {
+            while (displayViolation.length > 0 && ctx.measureText(displayViolation + '...').width > 240) {
               displayViolation = displayViolation.slice(0, -1);
             }
             displayViolation += '...';

@@ -79,11 +79,30 @@ export default function Layout({ children }) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
+
+  const isDeptRoute = ['/finance', '/discipline', '/academic', '/office', '/pr', '/recreation', '/secretary', '/facilities', '/av', '/reception'].includes(path);
+  const [deptOpen, setDeptOpen] = useState(() => isDeptRoute || true);
   const userMenuRef = useRef(null);
   const notifRef = useRef(null);
 
   useEffect(() => {
     if (!user) return;
+
+    function triggerBrowserNotification(title, body, notifId) {
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(title, {
+            body,
+            icon: logoUrl || '/logo.png',
+            badge: logoUrl || '/logo.png',
+            tag: notifId ? String(notifId) : undefined
+          });
+        } catch (err) {
+          console.error('Error triggering browser notification:', err);
+        }
+      }
+    }
+
     async function fetchNotifications() {
       try {
         const { data, error } = await supabase
@@ -101,23 +120,87 @@ export default function Layout({ children }) {
         console.error('Error fetching notifications:', err);
       }
     }
-    fetchNotifications();
-    checkTomorrowDutyReminder();
 
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications' },
-        () => {
-          fetchNotifications();
+    async function checkTodayDutyReminder() {
+      if (!user?.nickname) return;
+      try {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        const daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+        const todayDayName = daysTh[today.getDay()];
+
+        const { data: existingReminders } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('user_id', String(user.id))
+          .like('message', `%วันนี้ (${todayStr})%`);
+
+        if (existingReminders && existingReminders.length > 0) return;
+
+        const myTodayDuties = [];
+
+        const { data: swaps } = await supabase
+          .from('duty_swaps')
+          .select('*')
+          .eq('date', todayStr);
+
+        const { data: schedules } = await supabase
+          .from('schedules')
+          .select('*')
+          .eq('day', todayDayName);
+
+        if (schedules) {
+          schedules.forEach(sched => {
+            const data = sched.data || {};
+            const dutyType = sched.type;
+            const isSwappedOut = swaps?.some(s => s.duty_type === dutyType && s.original_nickname === user.nickname);
+            
+            if (!isSwappedOut) {
+              if (dutyType === 'greeting') {
+                const gate1 = data.gate1 || [];
+                const gate2 = data.gate2 || [];
+                const gate3 = data.gate3 || [];
+                if (gate1.includes(user.nickname)) myTodayDuties.push('🙏 เวรยืนไหว้ (ประตูไหมไทย)');
+                if (gate2.includes(user.nickname)) myTodayDuties.push('🙏 เวรยืนไหว้ (ประตูอำเภอ)');
+                if (gate3.includes(user.nickname)) myTodayDuties.push('🙏 เวรยืนไหว้ (ประตูหน้า รร.)');
+              } else if (dutyType === 'clean_room') {
+                const members = data.members || [];
+                if (members.includes(user.nickname)) myTodayDuties.push('🧹 เวรทำความสะอาดห้องสภา');
+              } else if (dutyType === 'national_flag') {
+                const members = data.members || [];
+                if (members.includes(user.nickname)) myTodayDuties.push('🚩 เวรเชิญธงชาติ');
+              } else if (dutyType === 'color_flag') {
+                const members = data.members || [];
+                if (members.includes(user.nickname)) myTodayDuties.push('🎌 เวรเชิญธงสี');
+              }
+            }
+          });
         }
-      )
-      .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+        swaps?.forEach(s => {
+          if (s.substitute_nickname === user.nickname) {
+            myTodayDuties.push(`🔄 ปฏิบัติเวรแทน ${s.original_nickname}`);
+          }
+        });
+
+        if (myTodayDuties.length > 0) {
+          const msg = `🔔 แจ้งเตือนเวรวันนี้ (${todayStr}): คุณมีหน้าที่ ${myTodayDuties.join(', ')} กรุณาปฏิบัติหน้าที่ตรงเวลาครับ`;
+          await supabase
+            .from('notifications')
+            .insert([{
+              type: 'task',
+              user_id: String(user.id),
+              message: msg
+            }]);
+          triggerBrowserNotification('SWSC.OFFICIAL - แจ้งเตือนเวรวันนี้ 🔔', msg);
+        }
+      } catch (err) {
+        console.error('Error checking today duty reminder:', err);
+      }
+    }
 
     async function checkTomorrowDutyReminder() {
       if (!user?.nickname) return;
@@ -195,11 +278,37 @@ export default function Layout({ children }) {
               user_id: String(user.id),
               message: msg
             }]);
+          triggerBrowserNotification('SWSC.OFFICIAL - แจ้งเตือนเวรวันพรุ่งนี้ ⏰', msg);
         }
       } catch (err) {
         console.error('Error checking tomorrow duty reminder:', err);
       }
     }
+
+    fetchNotifications();
+    checkTodayDutyReminder();
+    checkTomorrowDutyReminder();
+
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        (payload) => {
+          fetchNotifications();
+          if (payload.eventType === 'INSERT') {
+            const newNotif = payload.new;
+            if (newNotif && (!newNotif.user_id || newNotif.user_id === 'all' || String(newNotif.user_id) === String(user.id))) {
+              triggerBrowserNotification('SWSC.OFFICIAL - การแจ้งเตือนใหม่ 🔔', newNotif.message || 'คุณมีรายการแจ้งเตือนใหม่ในระบบ', newNotif.id);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, setNotifications]);
 
   useEffect(() => {
@@ -233,20 +342,26 @@ export default function Layout({ children }) {
       {/* ── Sidebar ── */}
       <aside className={`sidebar ${showSidebar ? 'open' : ''}`}>
         {/* Logo */}
-        <div className="sidebar-logo" style={{ padding: '0 16px', height: 64, gap: 12, display: 'flex', alignItems: 'center' }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 12,
-            background: 'white',
-            boxShadow: '0 4px 12px rgba(99,102,241,0.25)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 5, flexShrink: 0
-          }}>
-            <img src={logoUrl} alt="SWSC Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        <div className="sidebar-logo" style={{ padding: '0 16px', height: 64, gap: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 12,
+              background: 'white',
+              boxShadow: '0 4px 12px rgba(99,102,241,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 5, flexShrink: 0
+            }}>
+              <img src={logoUrl} alt="SWSC Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            </div>
+            <div className="sidebar-logo-text">
+              <div style={{ fontWeight: 800, fontSize: 14, color: 'white', letterSpacing: '-0.01em' }}>สภานักเรียน</div>
+              <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.6)', fontWeight: 500, marginTop: -1 }}>Student Council</div>
+            </div>
           </div>
-          <div className="sidebar-logo-text">
-            <div style={{ fontWeight: 800, fontSize: 14, color: 'white', letterSpacing: '-0.01em' }}>สภานักเรียน</div>
-            <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.6)', fontWeight: 500, marginTop: -1 }}>Student Council</div>
-          </div>
+
+          <button className="sidebar-close-btn" onClick={() => setShowSidebar(false)} aria-label="ปิดเมนู">
+            <X size={20} color="white" />
+          </button>
         </div>
 
         {/* User */}
@@ -271,22 +386,42 @@ export default function Layout({ children }) {
 
         {/* Nav */}
         <nav className="sidebar-nav">
-          {NAV.map(sec => (
-            <div key={sec.section}>
-              <div className="nav-section">{sec.section}</div>
-              {sec.items.map(item => {
-                const isSecretaryOrAcademic = item.to === '/secretary' || item.to === '/academic';
-                if (item.deptId && !isAdmin && !isPresident && user?.deptId !== item.deptId && !isSecretaryOrAcademic) return null;
-                if (item.to === '/my-fines' && user?.role === 'admin') return null;
-                return (
-                  <NavLink key={item.to} to={item.to} className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
-                    <item.icon size={15} />
-                    <span>{item.label}</span>
-                  </NavLink>
-                );
-              })}
-            </div>
-          ))}
+          {NAV.map(sec => {
+            const isDeptSection = sec.section === 'ฝ่ายงาน';
+            const isOpen = isDeptSection ? deptOpen : true;
+            return (
+              <div key={sec.section}>
+                <div 
+                  className="nav-section"
+                  onClick={isDeptSection ? () => setDeptOpen(prev => !prev) : undefined}
+                  style={isDeptSection ? { cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' } : undefined}
+                >
+                  <span>{sec.section}</span>
+                  {isDeptSection && (
+                    <ChevronDown 
+                      size={13} 
+                      style={{ 
+                        transform: deptOpen ? 'rotate(180deg)' : 'rotate(0deg)', 
+                        transition: 'transform 0.2s ease',
+                        opacity: 0.7 
+                      }} 
+                    />
+                  )}
+                </div>
+                {isOpen && sec.items.map(item => {
+                  const isSecretaryOrAcademic = item.to === '/secretary' || item.to === '/academic';
+                  if (item.deptId && !isAdmin && !isPresident && user?.deptId !== item.deptId && !isSecretaryOrAcademic) return null;
+                  if (item.to === '/my-fines' && user?.role === 'admin') return null;
+                  return (
+                    <NavLink key={item.to} to={item.to} className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
+                      <item.icon size={15} />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            );
+          })}
 
           {isAdmin && (
             <div>
@@ -327,8 +462,8 @@ export default function Layout({ children }) {
         {/* Top bar */}
         <header className="topbar">
           <div className="topbar-title">
-            <button className="mobile-menu-btn" onClick={() => setShowSidebar(true)}>
-              <Menu size={20} />
+            <button className="mobile-menu-btn" onClick={() => setShowSidebar(prev => !prev)} aria-label="เปิดปิดเมนู">
+              <Menu size={22} />
             </button>
             <div style={{ display:'flex', alignItems:'center' }}>
               สภานักเรียน
@@ -371,6 +506,21 @@ export default function Layout({ children }) {
                       <span style={{ fontWeight:700, fontSize:15 }}>🔔 การแจ้งเตือน</span>
                       {unread > 0 && <button onClick={markAllRead} style={{ background:'none', border:'none', color:'var(--primary)', fontSize:13, fontWeight:600, cursor:'pointer' }}>อ่านทั้งหมด</button>}
                     </div>
+                    {typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
+                      <div style={{ padding: '8px 16px', background: '#eff6ff', borderBottom: '1px solid #dbeafe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, color: '#1e40af', fontWeight: 600 }}>เปิดรับแจ้งเตือนแบบป๊อบอัพบนอุปกรณ์</span>
+                        <button 
+                          onClick={() => {
+                            Notification.requestPermission().then(() => {
+                              window.location.reload();
+                            });
+                          }}
+                          style={{ padding: '4px 10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          เปิดใช้งาน
+                        </button>
+                      </div>
+                    )}
                     <div className="notif-body">
                       {notifs.length === 0 ? (
                         <div style={{ padding:32, textAlign:'center', color:'#9e9e9e', fontSize:14 }}>ไม่มีการแจ้งเตือน</div>

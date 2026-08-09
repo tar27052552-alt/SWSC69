@@ -907,11 +907,11 @@ export default function AVPage() {
   };
 
   const handleSaveGraphicAndMove = async () => {
-    if (!uploadModalTask || !graphicPreview || uploadingGraphic) return;
+    if (!uploadModalTask || uploadingGraphic) return;
     setUploadingGraphic(true);
     try {
-      let finalGraphicUrl = graphicPreview;
-      if (graphicPreview.startsWith('data:')) {
+      let finalGraphicUrl = graphicPreview || '';
+      if (graphicPreview && graphicPreview.startsWith('data:')) {
         const ext = getExtensionFromBase64(graphicPreview);
         const isVid = graphicPreview.startsWith('data:video/');
         const prefix = isVid ? 'video' : 'graphic';
@@ -924,7 +924,9 @@ export default function AVPage() {
       }
       
       const cleanNote = getCleanNote(uploadModalTask.note);
-      const newNote = cleanNote ? `${cleanNote} [Graphic]: ${finalGraphicUrl}` : `[Graphic]: ${finalGraphicUrl}`;
+      const newNote = finalGraphicUrl 
+        ? (cleanNote ? `${cleanNote} [Graphic]: ${finalGraphicUrl}` : `[Graphic]: ${finalGraphicUrl}`)
+        : cleanNote;
 
       const { error: avError } = await supabase
         .from('av_tasks')
@@ -1327,8 +1329,8 @@ export default function AVPage() {
             let displayName = isDone ? `✓ ${task.title}` : task.title;
             const maxTextWidth = cellWidth - 20;
 
-            if (ctx.measureText(displayName).width > maxTextWidth) {
-              while (ctx.measureText(displayName + '...').width > maxTextWidth) {
+            if (maxTextWidth > 10 && ctx.measureText(displayName).width > maxTextWidth) {
+              while (displayName.length > 0 && ctx.measureText(displayName + '...').width > maxTextWidth) {
                 displayName = displayName.slice(0, -1);
               }
               displayName += '...';
@@ -1381,9 +1383,18 @@ export default function AVPage() {
   };
 
   const statusKeys = Object.keys(STATUS_CFG);
-  const filtered   = tasks.filter(t => t.title.includes(search) || t.assignee.includes(search));
+  const sortedTasks = [...tasks].sort((a, b) => {
+    const da = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+    const db = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+    return da - db;
+  });
+  const filtered = sortedTasks.filter(t => 
+    (t.title || '').toLowerCase().includes(search.toLowerCase()) || 
+    (t.assignee || '').toLowerCase().includes(search.toLowerCase())
+  );
 
   const NEXT = { backlog:'designing', designing:'wait_pr', wait_pr:'done', done:null };
+  const PREV = { backlog:null, designing:'backlog', wait_pr:'designing', done:'wait_pr' };
 
   return (
     <div style={{ paddingBottom: 40 }}>
@@ -1460,7 +1471,7 @@ export default function AVPage() {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap: 16, width: '100%', overflowX:'auto' }}>
           {statusKeys.map(k => {
             const s = STATUS_CFG[k];
-            const col = tasks.filter(t=>t.status===k);
+            const col = sortedTasks.filter(t=>t.status===k);
             return (
               <div key={k} style={{ minWidth: 240, display: 'flex', flexDirection: 'column' }}>
                 {/* Column Header */}
@@ -1512,7 +1523,22 @@ export default function AVPage() {
                           border: '1px solid var(--border)',
                           transition: 'all 0.2s ease'
                         }}>
-                          <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 8, lineHeight: 1.4, color: 'var(--text)' }}>
+                          <div 
+                            title={t.title}
+                            style={{ 
+                              fontSize: 13.5, 
+                              fontWeight: 700, 
+                              marginBottom: 8, 
+                              lineHeight: 1.4, 
+                              color: 'var(--text)',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              minHeight: 38,
+                              maxHeight: 38
+                            }}
+                          >
                             {t.title}
                           </div>
                           
@@ -1545,9 +1571,14 @@ export default function AVPage() {
                             </div>
                           )}
 
-                          <div style={{ display: 'flex', gap: 6, paddingTop: 4, borderTop: '1px solid #f1f5f9' }}>
+                          <div style={{ display: 'flex', gap: 6, paddingTop: 4, borderTop: '1px solid #f1f5f9', flexWrap: 'wrap' }}>
                             <button onClick={() => openEdit(t)} className="btn btn-gray btn-sm" style={{ padding: '4px 8px', fontSize: 11 }} title="แก้ไข">✏️</button>
                             <button onClick={() => handleDeleteTask(t.id)} className="btn btn-danger btn-sm" style={{ padding: '4px 8px', fontSize: 11 }} title="ลบ">🗑️</button>
+                            {PREV[k] && (
+                              <button onClick={() => moveStatus(t.id, PREV[k])} className="btn btn-gray btn-sm" style={{ padding: '4px 8px', fontSize: 11, fontWeight: 700 }} title={`ถอยกลับเป็น ${STATUS_CFG[PREV[k]].label}`}>
+                                ← {STATUS_CFG[PREV[k]].label}
+                              </button>
+                            )}
                             {NEXT[k] && (
                               <button onClick={() => handleTransition(t, NEXT[k])} className="btn btn-primary btn-sm" style={{ flex: 1, padding: '4px 10px', fontSize: 11, fontWeight: 700 }}>
                                 → {STATUS_CFG[NEXT[k]].label}
@@ -2083,7 +2114,23 @@ export default function AVPage() {
           setMo(d.getMonth());
         };
         const getTasksForDate = (dateStr) => {
-          return tasks.filter(t => t.dueDate === dateStr);
+          return tasks.filter(t => {
+            const raw = (t.dueDate || t.due_date || '').toString().trim();
+            if (!raw) return false;
+            if (raw.startsWith(dateStr)) return true;
+            try {
+              const d = new Date(raw);
+              if (!isNaN(d.getTime())) {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}` === dateStr;
+              }
+            } catch (e) {
+              console.error(e);
+            }
+            return false;
+          });
         };
         const getFormattedDateStr = (day) => {
           return `${yr}-${String(mo + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -2120,16 +2167,16 @@ export default function AVPage() {
             </div>
 
             {/* Week Day Titles */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, marginBottom: 8, borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>
-              {['จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์', 'อาทิตย์'].map(day => (
-                <div key={day} style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, padding: '0 1px', marginBottom: 8, borderBottom: '1px solid var(--border)', paddingBottom: 6 }}>
+              {['จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์', 'อาทิตย์'].map((day, idx) => (
+                <div key={day} style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: idx >= 5 ? '#ef4444' : 'var(--text-muted)' }}>
                   {day}
                 </div>
               ))}
             </div>
 
             {/* Grid Cells */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, background: 'var(--border)', padding: 1, borderRadius: 8, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 'minmax(110px, 1fr)', gap: 2, background: 'var(--border)', padding: 1, borderRadius: 8, overflow: 'hidden' }}>
               {/* Empty cells before the first day */}
               {Array.from({ length: firstDayAdjusted }).map((_, idx) => (
                 <div key={`empty-${idx}`} style={{ background: '#f5f5f7', minHeight: 110 }} />
@@ -2172,7 +2219,7 @@ export default function AVPage() {
                     </div>
 
                     {/* Tasks */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto', maxHeight: 80 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto', maxHeight: 110 }}>
                       {dayTasks.map(t => {
                         const typeColor = AV_TYPE_COLORS[t.type] || '#ff6b8b';
                         return (
@@ -2203,6 +2250,11 @@ export default function AVPage() {
                   </div>
                 );
               })}
+
+              {/* Trailing empty cells after the last day */}
+              {Array.from({ length: (Math.ceil((firstDayAdjusted + daysInMonth) / 7) * 7) - (firstDayAdjusted + daysInMonth) }).map((_, idx) => (
+                <div key={`empty-end-${idx}`} style={{ background: '#f5f5f7', minHeight: 110 }} />
+              ))}
             </div>
           </div>
         );
@@ -2219,31 +2271,77 @@ export default function AVPage() {
             </div>
           </div>
           <div style={{ overflowX:'auto' }}>
-            <table className="simple-table">
-              <thead><tr><th>#</th><th>คอนเทนต์</th><th>ประเภท</th><th>แพลตฟอร์ม</th><th>ความสำคัญ</th><th>ผู้รับผิดชอบ</th><th>กำหนด</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+            <table className="simple-table" style={{ width: '100%', minWidth: 950, tableLayout: 'fixed' }}>
+              <thead>
+                <tr>
+                  <th style={{ width: 45, textAlign: 'center' }}>#</th>
+                  <th style={{ width: '28%', textAlign: 'left' }}>คอนเทนต์ / รายละเอียด</th>
+                  <th style={{ width: 90 }}>ประเภท</th>
+                  <th style={{ width: 110 }}>แพลตฟอร์ม</th>
+                  <th style={{ width: 90 }}>ความสำคัญ</th>
+                  <th style={{ width: 130 }}>ผู้รับผิดชอบ</th>
+                  <th style={{ width: 100 }}>กำหนดส่ง</th>
+                  <th style={{ width: 140 }}>สถานะ</th>
+                  <th style={{ width: 80, textAlign: 'center' }}>จัดการ</th>
+                </tr>
+              </thead>
               <tbody>
                 {filtered.map((t,i) => {
                   const s = STATUS_CFG[t.status];
                   return (
                     <tr key={t.id}>
-                      <td style={{ color:'#9e9e9e', fontSize:12 }}>{i+1}</td>
-                      <td>
-                        <div style={{ fontWeight:600, fontSize:13 }}>{t.title}</div>
-                        {t.note && <div style={{ fontSize:11, color:'#9e9e9e' }}>{t.note}</div>}
+                      <td style={{ color:'#9e9e9e', fontSize:12, textAlign: 'center' }}>{i+1}</td>
+                      <td style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                        <div 
+                          title={t.title}
+                          style={{ 
+                            fontWeight:600, 
+                            fontSize:13, 
+                            lineHeight: 1.4, 
+                            color: 'var(--text)',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          {t.title}
+                        </div>
+                        {t.note && <div style={{ fontSize:11, color:'#9e9e9e', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getCleanNote(t.note)}>{t.note}</div>}
                         {t.caption && (
-                          <div style={{ fontSize:11, color:'#f57f17', marginTop:3 }}>
+                          <div style={{ fontSize:11, color:'#f57f17', marginTop:3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.caption}>
                             💬 แคปชั่น: <span style={{ color: '#555' }}>{t.caption}</span> {t.song && <span style={{ color: '#777', marginLeft: 8 }}>🎵 {t.song}</span>}
                           </div>
                         )}
                       </td>
                       <td><span className="badge badge-gray" style={{ fontSize:11 }}>{t.type}</span></td>
                       <td style={{ fontSize:12 }}>{t.platform}</td>
-                      <td><span className={`badge ${PRIORITY_BADGE[t.priority]}`} style={{ fontSize:11 }}>{t.priority}</span></td>
-                      <td style={{ fontSize:13 }}>{t.assignee}</td>
-                      <td style={{ fontSize:12 }}>{new Date(t.dueDate).toLocaleDateString('th-TH',{day:'numeric',month:'short'})}</td>
-                      <td><span className="badge" style={{ background:s.bg, color:s.color, fontSize:11 }}>{s.label}</span></td>
+                      <td><span className={`badge ${PRIORITY_BADGE[t.priority] || 'badge-blue'}`} style={{ fontSize:11 }}>{t.priority}</span></td>
+                      <td style={{ fontSize:13, wordBreak: 'break-word' }}>{t.assignee || 'ไม่ระบุ'}</td>
+                      <td style={{ fontSize:12, whiteSpace: 'nowrap' }}>{new Date(t.dueDate).toLocaleDateString('th-TH',{day:'numeric',month:'short'})}</td>
                       <td>
-                        <div style={{ display:'flex', gap:5 }}>
+                        <select 
+                          value={t.status} 
+                          onChange={(e) => moveStatus(t.id, e.target.value)}
+                          style={{ 
+                            background: s.bg, 
+                            color: s.color, 
+                            border: `1px solid ${s.color}`, 
+                            borderRadius: 6, 
+                            padding: '3px 8px', 
+                            fontSize: 11, 
+                            fontWeight: 700, 
+                            cursor: 'pointer',
+                            maxWidth: '100%'
+                          }}
+                        >
+                          {statusKeys.map(sk => (
+                            <option key={sk} value={sk}>{STATUS_CFG[sk].label}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display:'flex', gap:5, justifyContent: 'center' }}>
                           <button onClick={()=>openEdit(t)} className="btn btn-gray btn-sm"><Edit2 size={12}/></button>
                           <button onClick={()=>handleDeleteTask(t.id)} className="btn btn-danger btn-sm"><X size={12}/></button>
                         </div>
@@ -2265,21 +2363,32 @@ export default function AVPage() {
             <span style={{ fontSize:12, color:'#9e9e9e' }}>PR จะเห็นรายการเหล่านี้ในหน้าของตัวเอง</span>
           </div>
           {tasks.filter(t=>t.status==='wait_pr').length > 0 ? (
-            <table className="simple-table">
-              <thead><tr><th>#</th><th>คอนเทนต์</th><th>ประเภท</th><th>แพลตฟอร์ม</th><th>ผู้ทำ</th><th>กำหนด</th></tr></thead>
-              <tbody>
-                {tasks.filter(t=>t.status==='wait_pr').map((t,i) => (
-                  <tr key={t.id}>
-                    <td style={{ color:'#9e9e9e', fontSize:12 }}>{i+1}</td>
-                    <td style={{ fontWeight:600, fontSize:13 }}>{t.title}</td>
-                    <td><span className="badge badge-gray" style={{ fontSize:11 }}>{t.type}</span></td>
-                    <td style={{ fontSize:12 }}>{t.platform}</td>
-                    <td style={{ fontSize:13 }}>{t.assignee}</td>
-                    <td style={{ fontSize:12 }}>{new Date(t.dueDate).toLocaleDateString('th-TH',{day:'numeric',month:'short'})}</td>
+            <div style={{ overflowX:'auto' }}>
+              <table className="simple-table" style={{ width: '100%', minWidth: 700, tableLayout: 'fixed' }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 45, textAlign: 'center' }}>#</th>
+                    <th style={{ width: '40%', textAlign: 'left' }}>คอนเทนต์</th>
+                    <th style={{ width: 100 }}>ประเภท</th>
+                    <th style={{ width: 110 }}>แพลตฟอร์ม</th>
+                    <th style={{ width: 140 }}>ผู้ทำ</th>
+                    <th style={{ width: 110 }}>กำหนด</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {tasks.filter(t=>t.status==='wait_pr').map((t,i) => (
+                    <tr key={t.id}>
+                      <td style={{ color:'#9e9e9e', fontSize:12, textAlign: 'center' }}>{i+1}</td>
+                      <td style={{ fontWeight:600, fontSize:13, wordBreak: 'break-word' }}>{t.title}</td>
+                      <td><span className="badge badge-gray" style={{ fontSize:11 }}>{t.type}</span></td>
+                      <td style={{ fontSize:12 }}>{t.platform}</td>
+                      <td style={{ fontSize:13, wordBreak: 'break-word' }}>{t.assignee}</td>
+                      <td style={{ fontSize:12, whiteSpace: 'nowrap' }}>{new Date(t.dueDate).toLocaleDateString('th-TH',{day:'numeric',month:'short'})}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <div style={{ textAlign:'center', padding:'32px', color:'#9e9e9e' }}>ไม่มีงานที่รอ PR ใส่แคปชั่น 🎉</div>
           )}
@@ -2432,16 +2541,35 @@ export default function AVPage() {
       {/* Upload Graphic Modal */}
       {uploadModalTask && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&!uploadingGraphic&&setUploadModalTask(null)}>
-          <div className="modal-box" style={{ maxWidth: 400 }}>
+          <div className="modal-box" style={{ maxWidth: 420 }}>
             <div className="modal-header">
-              <span style={{ fontWeight: 700, fontSize: 15 }}>📤 อัปโหลดไฟล์กราฟิก/วิดีโอ (ก่อนส่งให้ PR)</span>
+              <span style={{ fontWeight: 700, fontSize: 15 }}>📢 ส่งงานให้ฝ่าย PR (ระบุลิงก์หรือรูปภาพ)</span>
               <button onClick={() => !uploadingGraphic&&setUploadModalTask(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9e9e9e' }}><X size={18} /></button>
             </div>
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ fontSize: 13, color: '#616161' }}>ชื่องาน: <strong>{uploadModalTask.title}</strong></div>
-              <div style={{ border: '2px dashed #ccc', borderRadius: 8, padding: 24, textAlign: 'center', cursor: 'pointer', background: '#fafafa', position: 'relative' }} onClick={() => document.getElementById('graphic-upload-input').click()}>
-                <Camera size={28} style={{ color: '#9e9e9e', marginBottom: 8 }} />
-                <div style={{ fontSize: 12, color: '#757575' }}>คลิกเพื่ออัปโหลดรูปภาพหรือวิดีโอ *</div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#475569' }}>🎨 ใส่ลิงก์ Canva หรือ Google Drive (ถ้ามี):</span>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="https://canva.link/... หรือ https://drive.google.com/..."
+                  value={graphicPreview && !graphicPreview.startsWith('data:') ? graphicPreview : ''}
+                  onChange={(e) => {
+                    const val = e.target.value.trim();
+                    setGraphicPreview(val || null);
+                    setGraphicFile(null);
+                  }}
+                  style={{ fontSize: 12, padding: '8px 12px' }}
+                />
+              </div>
+
+              <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>— หรืออัปโหลดไฟล์รูปภาพ/วิดีโอ (ไม่บังคับ) —</div>
+
+              <div style={{ border: '2px dashed #cbd5e1', borderRadius: 8, padding: 18, textAlign: 'center', cursor: 'pointer', background: '#f8fafc', position: 'relative' }} onClick={() => document.getElementById('graphic-upload-input').click()}>
+                <Camera size={24} style={{ color: '#94a3b8', marginBottom: 6 }} />
+                <div style={{ fontSize: 12, color: '#64748b' }}>คลิกเพื่ออัปโหลดไฟล์รูปภาพ หรือ วิดีโอ (ถ้ามี)</div>
                 <input
                   id="graphic-upload-input"
                   type="file"
@@ -2451,7 +2579,7 @@ export default function AVPage() {
                     const file = e.target.files[0];
                     if (file) {
                       if (file.size > 15 * 1024 * 1024) {
-                        alert("ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 15MB) กรุณาใช้ไฟล์วิดีโอที่สั้นลง หรือนำลิงก์ Drive มาใส่ในช่องด้านล่างแทน");
+                        alert("ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 15MB) กรุณาใช้ไฟล์วิดีโอที่สั้นลง หรือนำลิงก์ Canva / Drive มาใส่แทน");
                         return;
                       }
                       const reader = new FileReader();
@@ -2464,39 +2592,29 @@ export default function AVPage() {
                   }}
                 />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#616161' }}>หรือใส่ลิงก์ Google Drive โดยตรง:</span>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="https://drive.google.com/file/d/..."
-                  value={graphicPreview && !graphicPreview.startsWith('data:') ? graphicPreview : ''}
-                  onChange={(e) => {
-                    const val = e.target.value.trim();
-                    setGraphicPreview(val || null);
-                    setGraphicFile(null);
-                  }}
-                  style={{ fontSize: 12, padding: '6px 10px' }}
-                />
-              </div>
+
               {graphicPreview && (
-                <div style={{ textAlign: 'center', marginTop: 8 }}>
-                  {isVideo(graphicPreview) ? (
+                <div style={{ textAlign: 'center', marginTop: 4 }}>
+                  {graphicPreview.includes('canva.link') || graphicPreview.includes('canva.com') ? (
+                    <div style={{ padding: '8px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 12, color: '#166534', fontWeight: 600 }}>
+                      🔗 แนบลิงก์ Canva เรียบร้อยแล้ว
+                    </div>
+                  ) : isVideo(graphicPreview) ? (
                     graphicPreview.startsWith('data:') ? (
-                      <video src={graphicPreview} controls style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6, border: '1px solid #e0e0e0' }} />
+                      <video src={graphicPreview} controls style={{ maxWidth: '100%', maxHeight: 180, borderRadius: 6, border: '1px solid #e0e0e0' }} />
                     ) : (
-                      <iframe src={getDrivePreviewUrl(graphicPreview)} style={{ width: '100%', height: 200, border: 'none', borderRadius: 6 }} allow="autoplay" />
+                      <iframe src={getDrivePreviewUrl(graphicPreview)} style={{ width: '100%', height: 180, border: 'none', borderRadius: 6 }} allow="autoplay" />
                     )
                   ) : (
-                    <img src={graphicPreview.startsWith('data:') ? graphicPreview : transformGoogleDriveUrl(graphicPreview)} alt="Graphic Preview" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6, border: '1px solid #e0e0e0', objectFit: 'contain' }} />
+                    <img src={graphicPreview.startsWith('data:') ? graphicPreview : transformGoogleDriveUrl(graphicPreview)} alt="Graphic Preview" style={{ maxWidth: '100%', maxHeight: 180, borderRadius: 6, border: '1px solid #e0e0e0', objectFit: 'contain' }} />
                   )}
                 </div>
               )}
             </div>
-            <div className="modal-footer" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+            <div className="modal-footer" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
               <button className="btn btn-gray" onClick={() => setUploadModalTask(null)} disabled={uploadingGraphic}>ยกเลิก</button>
-              <button className="btn btn-primary" onClick={handleSaveGraphicAndMove} disabled={!graphicPreview || uploadingGraphic}>
-                {uploadingGraphic ? '⏳ กำลังอัปโหลด...' : 'ส่งให้ PR'}
+              <button className="btn btn-primary" onClick={handleSaveGraphicAndMove} disabled={uploadingGraphic}>
+                {uploadingGraphic ? '⏳ กำลังส่งงาน...' : 'ส่งให้ PR'}
               </button>
             </div>
           </div>

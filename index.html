@@ -588,9 +588,15 @@
     /* OBEC LINE GRID */
     .obec-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      grid-template-columns: repeat(8, 1fr);
       gap: 12px;
       margin-top: 20px;
+    }
+    @media (max-width: 1024px) {
+      .obec-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .obec-grid { grid-template-columns: repeat(2, 1fr); }
     }
     .obec-card {
       text-decoration: none;
@@ -2506,7 +2512,12 @@
             Obec Line
           </div>
           <div class="obec-grid">
-            <div style="grid-column: 1/-1; text-align:center; padding:20px; color:var(--gray-500);">กำลังโหลดข้อมูล...</div>
+            ${Array(8).fill(0).map(() => `
+              <div class="obec-card skel-bg" style="border-radius:12px; overflow:hidden;">
+                <div style="width:100%; aspect-ratio:1/1.414; background:#e2e8f0;"></div>
+                <div style="height:14px; margin:8px 12px; background:#e2e8f0; border-radius:4px;"></div>
+              </div>
+            `).join('')}
           </div>
           <div class="obec-footer-links">
             <a href="https://drive.google.com/drive/folders/1Ts11XqYXpXern2H2uPAsHFM27SYKSAjY?usp=sharing" target="_blank"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg> อ่าน Obec Line เพิ่มเติม</a>
@@ -3138,24 +3149,45 @@
   document.addEventListener('DOMContentLoaded', fetchAndUpdateViewCount);
 
 
-  function transformGoogleDriveUrl(url) {
+  function transformGoogleDriveUrl(url, width) {
     if (!url) return "";
     if (typeof url !== "string") return url;
-    if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("https://wsrv.nl/")) {
+    if (url.startsWith("data:") || url.startsWith("blob:")) {
       return url;
     }
-    if (!url.includes("drive.google.com")) {
+    // If already routed through wsrv.nl, check if width param is needed
+    if (url.startsWith("https://wsrv.nl/")) {
+      if (width && !url.includes("&w=")) {
+        return `${url}&w=${width}&q=85&output=webp`;
+      }
       return url;
     }
     
-    // Using wsrv.nl proxy to bypass Safari/Chrome cross-site cookie blocking for Google Drive
+    // High quality (q=85) WebP for sharp document text rendering on Retina/4K displays
+    const params = width ? `&w=${width}&q=85&output=webp` : `&q=90&output=webp`;
+
+    if (!url.includes("drive.google.com")) {
+      if (url.startsWith("http")) {
+        return `https://wsrv.nl/?url=${encodeURIComponent(url)}${params}`;
+      }
+      return url;
+    }
+    
+    // Using wsrv.nl proxy to bypass Safari/Chrome cookie blocking & fast high-quality WebP compression
+    let fileId = null;
     let match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (match && match[1]) {
-      return `https://wsrv.nl/?url=${encodeURIComponent('https://drive.google.com/uc?export=view&id=' + match[1])}`;
+      fileId = match[1];
+    } else {
+      match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        fileId = match[1];
+      }
     }
-    match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    if (match && match[1]) {
-      return `https://wsrv.nl/?url=${encodeURIComponent('https://drive.google.com/uc?export=view&id=' + match[1])}`;
+
+    if (fileId) {
+      const driveDirect = 'https://drive.google.com/uc?export=view&id=' + fileId;
+      return `https://wsrv.nl/?url=${encodeURIComponent(driveDirect)}${params}`;
     }
     return url;
   }
@@ -4080,7 +4112,7 @@
   /* ---- OBEC LINE ---- */
   async function loadObecLine() {
     try {
-      const data = await sbFetch(`obec_line?select=*&order=created_at.desc&limit=14`) || [];
+      const data = await sbFetch(`obec_line?select=*&order=created_at.desc&limit=16`) || [];
       renderObecLine(data);
         initScrollReveal();
     } catch (err) {
@@ -4090,61 +4122,39 @@
     }
   }
 
-  // Obec image retry queue
-  const _obecRetrySet = new Set();
-  function _obecRetryLoop() {
-    if (_obecRetrySet.size === 0) return;
-    _obecRetrySet.forEach(img => {
-      const src = img.getAttribute('data-src');
-      if (!src) { _obecRetrySet.delete(img); return; }
-      // Replace img node to bypass browser cache for this URL
-      const clone = img.cloneNode(false);
-      clone.setAttribute('data-src', src);
-      clone.setAttribute('data-retries', parseInt(img.getAttribute('data-retries') || '0') + 1);
-      clone.onerror = function() { _obecImgError(this); };
-      clone.onload  = function() { this.style.opacity = '1'; this.style.filter = ''; };
-      img.parentNode && img.parentNode.replaceChild(clone, img);
-      _obecRetrySet.delete(img);
-      // Set src AFTER replacing so browser sees it as a fresh element
-      setTimeout(() => { clone.src = src; }, 50);
-    });
-  }
-  setInterval(_obecRetryLoop, 20000); // retry every 20 seconds
-
+  // Obec image error handler with fast fallback
   function _obecImgError(img) {
+    if (!img) return;
     const retries = parseInt(img.getAttribute('data-retries') || '0');
-    if (retries >= 10) return; // give up after 10 tries (~3 min)
-    img.style.opacity = '0.25';
-    img.style.filter = 'grayscale(1)';
-    _obecRetrySet.add(img);
+    if (retries >= 2) {
+      img.src = './hero-group.png';
+      img.style.opacity = '1';
+      img.style.filter = '';
+      return;
+    }
+    img.setAttribute('data-retries', retries + 1);
+    const src = img.getAttribute('data-src');
+    if (src) {
+      setTimeout(() => { if (img && img.parentNode) img.src = src; }, 2000);
+    }
   }
 
-  // News image retry (same mechanism as obec)
-  const _newsRetrySet = new Set();
-  function _newsRetryLoop() {
-    if (_newsRetrySet.size === 0) return;
-    _newsRetrySet.forEach(img => {
-      const src = img.getAttribute('data-src');
-      if (!src) { _newsRetrySet.delete(img); return; }
-      const clone = img.cloneNode(false);
-      clone.setAttribute('data-src', src);
-      clone.setAttribute('data-retries', parseInt(img.getAttribute('data-retries') || '0') + 1);
-      clone.onerror = function() { _newsImgError(this); };
-      clone.onload  = function() { this.style.opacity = '1'; this.style.filter = ''; };
-      img.parentNode && img.parentNode.replaceChild(clone, img);
-      _newsRetrySet.delete(img);
-      setTimeout(() => { clone.src = src; }, 50);
-    });
-  }
-  setInterval(_newsRetryLoop, 20000);
-
+  // News image error handler with fast fallback
   function _newsImgError(img) {
-    if (img && img.parentElement) img.parentElement.classList.remove('skel-bg');
+    if (!img) return;
+    if (img.parentElement) img.parentElement.classList.remove('skel-bg');
     const retries = parseInt(img.getAttribute('data-retries') || '0');
-    if (retries >= 10) return;
-    img.style.opacity = '0.25';
-    img.style.filter = 'grayscale(1)';
-    _newsRetrySet.add(img);
+    if (retries >= 2) {
+      img.src = './hero-group.png';
+      img.style.opacity = '1';
+      img.style.filter = '';
+      return;
+    }
+    img.setAttribute('data-retries', retries + 1);
+    const src = img.getAttribute('data-src');
+    if (src) {
+      setTimeout(() => { if (img && img.parentNode) img.src = src; }, 2000);
+    }
   }
 
   function renderObecLine(items) {
@@ -4156,36 +4166,67 @@
     }
     // Store items globally for modal navigation
     window._obecItems = items;
-    grid.innerHTML = items.map((item, idx) => `
-      <div class="obec-card" onclick="openObecViewer(${idx})">
-        <img src="${transformGoogleDriveUrl(item.image_url, 400)}"
-             data-src="${transformGoogleDriveUrl(item.image_url, 400)}"
-             data-retries="0"
-             referrerpolicy="no-referrer"
-             loading="lazy"
-             alt="${item.title}"
-             onerror="_obecImgError(this)"
-             onload="this.style.opacity='1';this.style.filter=''"
-             style="opacity:0.5; transition: opacity 0.4s;" />
-        <div style="text-align:center; font-size:12px; color:#6b7280; margin-top:6px; font-weight:600;">${item.title}</div>
-      </div>
-    `).join('');
+    grid.innerHTML = items.map((item, idx) => {
+      // 500px width @ 85% WebP quality for sharp Retina text on iPads/PCs while keeping size ~40KB
+      const thumbUrl = transformGoogleDriveUrl(item.image_url, 500);
+      const isTopRow = idx < 8;
+      return `
+        <div class="obec-card" onclick="openObecViewer(${idx})">
+          <img src="${thumbUrl}"
+               data-src="${thumbUrl}"
+               data-retries="0"
+               referrerpolicy="no-referrer"
+               loading="${isTopRow ? 'eager' : 'lazy'}"
+               ${isTopRow ? 'fetchpriority="high"' : ''}
+               alt="${item.title}"
+               onerror="_obecImgError(this)"
+               onload="this.style.opacity='1';this.style.filter=''"
+               style="opacity:0.5; transition: opacity 0.3s;" />
+          <div style="text-align:center; font-size:12px; color:#6b7280; margin-top:6px; font-weight:600;">${item.title}</div>
+        </div>
+      `;
+    }).join('');
   }
 
-  // Obec Line Viewer
+  // Obec Line Viewer with Instant Image Preloading
   let _obecCurrentIdx = 0;
+
+  function preloadObecNeighborImages(idx) {
+    const items = window._obecItems || [];
+    if (!items.length) return;
+    const nextIdx = (idx + 1) % items.length;
+    const prevIdx = (idx - 1 + items.length) % items.length;
+    
+    // Background preload next & prev full-res images so next/prev clicks are instant
+    const imgNext = new Image();
+    imgNext.src = transformGoogleDriveUrl(items[nextIdx].image_url, 1080);
+    
+    const imgPrev = new Image();
+    imgPrev.src = transformGoogleDriveUrl(items[prevIdx].image_url, 1080);
+  }
+
   function openObecViewer(idx) {
     const items = window._obecItems || [];
     if (!items.length) return;
     _obecCurrentIdx = idx;
     const item = items[idx];
-    document.getElementById('obecViewerImg').src = transformGoogleDriveUrl(item.image_url, 1200);
+    const imgEl = document.getElementById('obecViewerImg');
+    
+    // 1080px resolution for ultra-sharp document text with fast load speed
+    const targetSrc = transformGoogleDriveUrl(item.image_url, 1080);
+    if (imgEl.src !== targetSrc) {
+      imgEl.src = targetSrc;
+    }
+    
     document.getElementById('obecViewerTitle').textContent = item.title;
     document.getElementById('obecViewerCounter').textContent = `${idx + 1} / ${items.length}`;
     document.getElementById('obecViewerPrev').style.display = items.length > 1 ? 'flex' : 'none';
     document.getElementById('obecViewerNext').style.display = items.length > 1 ? 'flex' : 'none';
     document.getElementById('obecViewer').classList.add('open');
     document.body.style.overflow = 'hidden';
+    
+    // Preload neighbor images in background
+    preloadObecNeighborImages(idx);
   }
   function closeObecViewer() {
     document.getElementById('obecViewer').classList.remove('open');
@@ -4309,10 +4350,10 @@
 
       // Find first available slot
       let slot = 0;
-      while (true) {
+      while (slot < 100) {
         let conflict = false;
         for (let d = startD; d <= endD; d++) {
-          if (daySlots[d][slot]) { conflict = true; break; }
+          if (daySlots[d] && daySlots[d][slot]) { conflict = true; break; }
         }
         if (!conflict) break;
         slot++;
@@ -4709,27 +4750,39 @@
 
   /* ---- SUGGESTIONS ---- */
   async function submitSug() {
-    const name = document.getElementById('sugName').value.trim();
-    const type = document.getElementById('sugType').value;
-    const msg  = document.getElementById('sugMessage').value.trim();
+    const elName = document.getElementById('sugName');
+    const elType = document.getElementById('sugType');
+    const elMsg  = document.getElementById('sugMessage');
+    const name = elName ? elName.value.trim() : '';
+    const type = elType ? elType.value : 'ทั่วไป';
+    const msg  = elMsg  ? elMsg.value.trim()  : '';
     if (!msg) { alert('กรุณากรอกรายละเอียดก่อนส่ง'); return; }
     const btn = document.getElementById('sugSubmit');
-    btn.disabled = true; btn.textContent = '⏳ กำลังส่ง...';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังส่ง...'; }
     try {
       await fetch(`${SB_URL}/rest/v1/suggestions`, {
         method: 'POST',
         headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
         body: JSON.stringify({ name: name || 'ไม่ระบุชื่อ', type, message: msg })
       });
-    } catch {}
-    document.getElementById('formView').style.display = 'none';
-    document.getElementById('successView').style.display = 'block';
-    btn.disabled = false; btn.textContent = 'ส่งข้อเสนอแนะสภา';
+    } catch (err) {
+      console.error('Error submitting suggestion:', err);
+    }
+    const formV = document.getElementById('formView');
+    const succV = document.getElementById('successView');
+    if (formV) formV.style.display = 'none';
+    if (succV) succV.style.display = 'block';
+    if (btn) { btn.disabled = false; btn.textContent = 'ส่งข้อเสนอแนะสภา'; }
   }
   function resetForm() {
-    ['sugName','sugMessage'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('formView').style.display = '';
-    document.getElementById('successView').style.display = 'none';
+    ['sugName','sugMessage'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const formV = document.getElementById('formView');
+    const succV = document.getElementById('successView');
+    if (formV) formV.style.display = '';
+    if (succV) succV.style.display = 'none';
   }
 
   /* ---- POLICIES ---- */
@@ -5017,6 +5070,10 @@
     }
 
     function animate() {
+      if (document.hidden) {
+        setTimeout(() => requestAnimationFrame(animate), 500);
+        return;
+      }
       ctx.clearRect(0, 0, width, height);
 
       particles.forEach(p => {
@@ -5024,13 +5081,15 @@
         p.draw();
       });
 
+      const maxDistSq = 95 * 95;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
-          const distance = Math.hypot(dx, dy);
+          const distSq = dx * dx + dy * dy;
 
-          if (distance < 95) {
+          if (distSq < maxDistSq) {
+            const distance = Math.sqrt(distSq);
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
@@ -5143,10 +5202,10 @@
 </script>
 
 <!-- Generic Image Viewer Modal -->
-<div id="imageViewer" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 99999; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
+<div id="imageViewer" onclick="if(event.target===this) closeImageViewer()" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 99999; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
   <button onclick="closeImageViewer()" title="ปิด" style="position: fixed; top: 16px; right: 20px; background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 22px; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 100000;">&times;</button>
   <div id="imageViewerTitle" style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 16px; text-align: center; font-family: 'Noto Sans Thai', sans-serif;"></div>
-  <div style="width: 100%; height: 100%; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding-bottom: 40px;">
+  <div onclick="if(event.target===this) closeImageViewer()" style="width: 100%; height: 100%; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding-bottom: 40px;">
     <img id="imageViewerImg" src="" style="max-width: min(900px, 95vw); width: auto; height: auto; transition: transform 0.2s, max-width 0.2s; transform-origin: top center; cursor: zoom-in;" onclick="toggleImageViewerZoom()" />
   </div>
 </div>

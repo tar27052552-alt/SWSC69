@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Banknote, AlertTriangle, Eye, X, Check, Camera } from 'lucide-react';
+import { Banknote, AlertTriangle, Eye, X, Check, Camera, Search } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { uploadFileToDrive, transformGoogleDriveUrl, verifySlipViaGAS } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
@@ -26,6 +26,9 @@ export default function MyFinesPage() {
 
   const [selectedFineIds, setSelectedFineIds] = useState([]);
   const [bulkPaymentModal, setBulkPaymentModal] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const loadMyFines = async (isInitial = false) => {
     if (!user) return;
@@ -591,9 +594,9 @@ export default function MyFinesPage() {
           ctx.fillStyle = '#212121';
           ctx.font = 'bold 13px "Noto Sans Thai", sans-serif';
           const titleText = isFines ? item.violation : item.title;
-          let displayTitle = titleText;
-          if (ctx.measureText(displayTitle).width > 340) {
-            while (ctx.measureText(displayTitle + '...').width > 340) {
+          let displayTitle = titleText || '';
+          if (displayTitle && ctx.measureText(displayTitle).width > 340) {
+            while (displayTitle.length > 0 && ctx.measureText(displayTitle + '...').width > 340) {
               displayTitle = displayTitle.slice(0, -1);
             }
             displayTitle += '...';
@@ -805,6 +808,56 @@ export default function MyFinesPage() {
 
           {/* Main Card */}
           <div className="card">
+            {/* Search & Status Filters Bar */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', background: '#fafafa', borderRadius: '16px 16px 0 0' }}>
+              <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
+                <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input
+                  type="text"
+                  placeholder="ค้นหาข้อหา, วันที่ หรือหมายเหตุ..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: 38,
+                    paddingLeft: 36,
+                    paddingRight: 12,
+                    borderRadius: 10,
+                    border: '1px solid #e2e8f0',
+                    fontSize: 13,
+                    outline: 'none',
+                    background: '#ffffff'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {[
+                  { id: 'all', label: 'ทั้งหมด' },
+                  { id: 'unpaid', label: 'ค้างชำระ' },
+                  { id: 'slip_uploaded', label: 'รอตรวจ' },
+                  { id: 'paid', label: 'ชำระแล้ว' }
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setStatusFilter(f.id)}
+                    style={{
+                      padding: '6px 14px',
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      borderRadius: 20,
+                      border: '1px solid ' + (statusFilter === f.id ? '#6366f1' : '#e2e8f0'),
+                      background: statusFilter === f.id ? '#f3e8ff' : '#ffffff',
+                      color: statusFilter === f.id ? '#6b21a8' : '#64748b',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <span className="card-title">ประวัติการโดนปรับทั้งหมด</span>
@@ -829,49 +882,73 @@ export default function MyFinesPage() {
               )}
             </div>
 
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '48px 0', color: '#9e9e9e' }}>
-                <div style={{ width: 40, height: 40, border: '4px solid #f3f3f3', borderTop: '4px solid #00bcd4', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
-                กำลังโหลดข้อมูลค่าปรับ...
-              </div>
-            ) : fines.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px 0', color: '#9e9e9e' }}>
-                🎉 ยอดเยี่ยม! คุณไม่มีประวัติการโดนปรับเลย
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table className="simple-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 40, textAlign: 'center' }}>
-                        {fines.filter(f => f.paymentStatus === 'unpaid').length > 0 && (
-                          <input
-                            type="checkbox"
-                            checked={selectedFineIds.length === fines.filter(f => f.paymentStatus === 'unpaid').length && selectedFineIds.length > 0}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedFineIds(fines.filter(f => f.paymentStatus === 'unpaid').map(f => f.id));
-                              } else {
-                                setSelectedFineIds([]);
-                              }
-                            }}
-                            style={{ cursor: 'pointer', width: 16, height: 16 }}
-                            title="เลือกค้างชำระทั้งหมด"
-                          />
-                        )}
-                      </th>
-                      <th>#</th>
-                      <th>ความผิด</th>
-                      <th>จำนวนเงิน</th>
-                      <th>วันที่โดนปรับ</th>
-                      <th>หมายเหตุ</th>
-                      <th>บันทึกโดย</th>
-                      <th>สถานะ</th>
-                      <th style={{ textAlign: 'center' }}>การชำระเงิน</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fines.map((f, i) => {
+            {(() => {
+              const filteredFines = fines.filter(f => {
+                const matchesSearch = !searchQuery || 
+                  f.violation.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  (f.note && f.note.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                  (f.date && f.date.includes(searchQuery));
+                const matchesStatus = statusFilter === 'all' || f.paymentStatus === statusFilter;
+                return matchesSearch && matchesStatus;
+              });
+
+              if (loading) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '48px 0', color: '#9e9e9e' }}>
+                    <div style={{ width: 40, height: 40, border: '4px solid #f3f3f3', borderTop: '4px solid #00bcd4', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
+                    กำลังโหลดข้อมูลค่าปรับ...
+                  </div>
+                );
+              }
+              if (fines.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '48px 0', color: '#9e9e9e' }}>
+                    🎉 ยอดเยี่ยม! คุณไม่มีประวัติการโดนปรับเลย
+                  </div>
+                );
+              }
+              if (filteredFines.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '36px 0', color: '#94a3b8' }}>
+                    <div style={{ fontSize: 28, marginBottom: 6 }}>🔍</div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>ไม่พบรายการค่าปรับตามเงื่อนไขที่ค้นหา</div>
+                  </div>
+                );
+              }
+              return (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="simple-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 40, textAlign: 'center' }}>
+                          {filteredFines.filter(f => f.paymentStatus === 'unpaid').length > 0 && (
+                            <input
+                              type="checkbox"
+                              checked={selectedFineIds.length === filteredFines.filter(f => f.paymentStatus === 'unpaid').length && selectedFineIds.length > 0}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedFineIds(filteredFines.filter(f => f.paymentStatus === 'unpaid').map(f => f.id));
+                                } else {
+                                  setSelectedFineIds([]);
+                                }
+                              }}
+                              style={{ cursor: 'pointer', width: 16, height: 16 }}
+                              title="เลือกค้างชำระทั้งหมด"
+                            />
+                          )}
+                        </th>
+                        <th>#</th>
+                        <th>ความผิด</th>
+                        <th>จำนวนเงิน</th>
+                        <th>วันที่โดนปรับ</th>
+                        <th>หมายเหตุ</th>
+                        <th>บันทึกโดย</th>
+                        <th>สถานะ</th>
+                        <th style={{ textAlign: 'center' }}>การชำระเงิน</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredFines.map((f, i) => {
                       const ps = f.paymentStatus;
                       return (
                         <tr key={f.id} style={{ background: selectedFineIds.includes(f.id) ? '#f0fdf4' : undefined }}>
@@ -937,7 +1014,8 @@ export default function MyFinesPage() {
                   </tbody>
                 </table>
               </div>
-            )}
+              );
+            })()}
           </div>
         </>
       )}

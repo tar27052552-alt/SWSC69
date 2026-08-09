@@ -187,13 +187,122 @@ export default function AdminPage() {
   };
 
   const handleDelete = async (u) => {
-    if (!confirm(`ยืนยันต้องการลบผู้ใช้ "${u.name} (${u.nickname})" ออกจากระบบหรือไม่?`)) return;
+    if (!confirm(`ยืนยันต้องการลบผู้ใช้ "${u.name} (${u.nickname})" ออกจากระบบหรือไม่?\n\n⚠️ ประวัติย้อนหลังทั้งหมดของผู้ใชี้ (ค่าปรับ, ประวัติการเข้าเรียน, รายงานเวร, การแจ้งเตือน) จะถูกลบออกทั้งหมดโดยสมบูรณ์`)) return;
     try {
+      const userIdStr = String(u.id);
+
+      try {
+        await supabaseDelete('discipline_fines', `?user_id=eq.${userIdStr}`);
+      } catch (e) { console.error('Error deleting user fines:', e); }
+
+      try {
+        await supabaseDelete('student_attendance', `?user_id=eq.${userIdStr}`);
+      } catch (e) { console.error('Error deleting user attendance:', e); }
+
+      try {
+        await supabaseDelete('notifications', `?user_id=eq.${userIdStr}`);
+      } catch (e) { console.error('Error deleting user notifications:', e); }
+
+      try {
+        await supabaseDelete('event_participants', `?user_id=eq.${userIdStr}`);
+      } catch (e) { console.error('Error deleting user event_participants:', e); }
+
+      if (u.nickname) {
+        try {
+          await supabaseDelete('greeting_duty_checks', `?nickname=eq.${encodeURIComponent(u.nickname)}`);
+        } catch (e) { console.error('Error deleting user greeting_duty_checks:', e); }
+
+        try {
+          await supabaseDelete('clean_duty_checks', `?nickname=eq.${encodeURIComponent(u.nickname)}`);
+        } catch (e) { console.error('Error deleting user clean_duty_checks:', e); }
+
+        try {
+          await supabaseDelete('discipline_fines', `?nickname=eq.${encodeURIComponent(u.nickname)}`);
+        } catch (e) { console.error('Error deleting user fines by nickname:', e); }
+      }
+
+      // Clean up finance_fees payments JSON for this user
+      try {
+        const allFees = await supabaseSelect('finance_fees', '?select=id,payments');
+        if (allFees) {
+          for (const fee of allFees) {
+            if (fee.payments && fee.payments[userIdStr]) {
+              const nextPayments = { ...fee.payments };
+              delete nextPayments[userIdStr];
+              await supabaseUpdate('finance_fees', { payments: nextPayments }, `?id=eq.${fee.id}`);
+            }
+          }
+        }
+      } catch (e) { console.error('Error cleaning up user fee payments:', e); }
+
       await supabaseDelete('users', `?id=eq.${u.id}`);
-      alert('ลบผู้ใช้สำเร็จ!');
+      alert('ลบผู้ใช้และประวัติทั้งหมดของผู้ใช้คนนี้เรียบร้อยแล้ว!');
       loadUsers();
     } catch (err) {
       alert('ลบไม่สำเร็จ: ' + err.message);
+    }
+  };
+
+  const handleCleanupOrphanedData = async () => {
+    if (!confirm('ต้องการตรวจสอบและล้างประวัติย้อนหลัง (ค่าปรับ, เช็คชื่อ, เวร ฯลฯ) ของสมาชิกที่ถูกลบไปแล้วทั้งหมดใช่หรือไม่?')) return;
+    try {
+      setLoading(true);
+      const validUsers = await supabaseSelect('users', '?select=id,nickname');
+      const validUserIds = new Set((validUsers || []).map(u => String(u.id)));
+      const validNicknames = new Set((validUsers || []).map(u => u.nickname).filter(Boolean));
+
+      const allFines = await supabaseSelect('discipline_fines', '?select=id,user_id,nickname');
+      const orphanFines = (allFines || []).filter(f => {
+        const idMatch = f.user_id && validUserIds.has(String(f.user_id));
+        const nickMatch = f.nickname && validNicknames.has(f.nickname);
+        return !idMatch && !nickMatch;
+      });
+
+      const allAtt = await supabaseSelect('student_attendance', '?select=id,user_id,nickname');
+      const orphanAtt = (allAtt || []).filter(a => {
+        const idMatch = a.user_id && validUserIds.has(String(a.user_id));
+        const nickMatch = a.nickname && validNicknames.has(a.nickname);
+        return !idMatch && !nickMatch;
+      });
+
+      let deletedCount = 0;
+      for (const fine of orphanFines) {
+        await supabaseDelete('discipline_fines', `?id=eq.${fine.id}`);
+        deletedCount++;
+      }
+      for (const att of orphanAtt) {
+        await supabaseDelete('student_attendance', `?id=eq.${att.id}`);
+        deletedCount++;
+      }
+
+      // Clean up finance_fees payments for deleted users
+      try {
+        const allFees = await supabaseSelect('finance_fees', '?select=id,payments');
+        if (allFees) {
+          for (const fee of allFees) {
+            if (!fee.payments) continue;
+            let changed = false;
+            const nextPayments = { ...fee.payments };
+            for (const uid of Object.keys(nextPayments)) {
+              if (!validUserIds.has(uid)) {
+                delete nextPayments[uid];
+                changed = true;
+              }
+            }
+            if (changed) {
+              await supabaseUpdate('finance_fees', { payments: nextPayments }, `?id=eq.${fee.id}`);
+            }
+          }
+        }
+      } catch (e) { console.error('Error cleaning fee payments:', e); }
+
+      alert(`ล้างประวัติค้างของผู้ใช้ที่ถูกลบเรียบร้อยแล้ว! (รวมลบประวัติ ${deletedCount} รายการ)`);
+      loadUsers();
+    } catch (err) {
+      console.error('Error cleaning up orphaned data:', err);
+      alert('เกิดข้อผิดพลาดในการล้างข้อมูล: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -218,14 +327,25 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <button
-          onClick={openAdd}
-          className="btn btn-primary"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
-        >
-          <Plus size={18} />
-          <span>เพิ่มสมาชิกใหม่</span>
-        </button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            onClick={handleCleanupOrphanedData}
+            className="btn btn-warning"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+            title="ล้างประวัติค่าปรับ/เช็คชื่อของสมาชิกที่ถูกลบไปแล้ว"
+          >
+            <Trash2 size={16} />
+            <span>ล้างประวัติผู้ใช้ที่ถูกลบ</span>
+          </button>
+          <button
+            onClick={openAdd}
+            className="btn btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+          >
+            <Plus size={18} />
+            <span>เพิ่มสมาชิกใหม่</span>
+          </button>
+        </div>
       </div>
 
       {dbError && (

@@ -101,6 +101,17 @@ export default function CameraCapture({ onCapture, facingMode = 'user', height =
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Security validation: Only allow image files and size < 10MB
+    if (!file.type.startsWith('image/')) {
+      alert('กรุณาอัปโหลดเฉพาะไฟล์รูปภาพ (JPG, PNG, WebP) เท่านั้น');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('ขนาดไฟล์ใหญ่เกินไป กรุณาอัปโหลดรูปภาพที่มีขนาดไม่เกิน 10MB');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (ev) => {
       const img = new Image();
@@ -137,7 +148,7 @@ export default function CameraCapture({ onCapture, facingMode = 'user', height =
     if (mode === 'live' && videoRef.current && streamRef.current && videoRef.current.srcObject !== streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
     }
-  });
+  }, [mode]);
 
   // Cleanup on unmount
   useEffect(() => {

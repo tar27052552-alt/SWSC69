@@ -370,7 +370,7 @@ export default function CalendarPage() {
 
           <div style={{ padding: 16 }}>
             {/* Weekday headers */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, padding: '0 1px', marginBottom: 8 }}>
               {DAYS_TH_SHORT.map((d, idx) => (
                 <div key={d} style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: idx === 0 ? '#ef4444' : '#64748b', padding: '6px 0' }}>
                   {d}
@@ -379,7 +379,7 @@ export default function CalendarPage() {
             </div>
 
             {/* Grid Cells */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridAutoRows: '125px', gap: 2, background: '#f0f0f0', border: '1px solid #e0e0e0', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridAutoRows: 'minmax(125px, 1fr)', gap: 2, background: '#f0f0f0', border: '1px solid #e0e0e0', borderRadius: 12, overflow: 'hidden' }}>
               {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} style={{ minHeight: '125px', background: '#fafafa' }} />)}
               {Array.from({ length: daysInMonth }).map((_, i) => {
                 const day = i + 1;
@@ -471,6 +471,10 @@ export default function CalendarPage() {
                   </div>
                 );
               })}
+              {/* Trailing empty cells */}
+              {Array.from({ length: (Math.ceil((firstDay + daysInMonth) / 7) * 7) - (firstDay + daysInMonth) }).map((_, i) => (
+                <div key={`empty-end-${i}`} style={{ minHeight: '125px', background: '#fafafa' }} />
+              ))}
             </div>
           </div>
         </div>

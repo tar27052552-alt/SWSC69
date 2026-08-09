@@ -12,12 +12,11 @@
     <meta name="description" content="ระบบหลังบ้าน สภานักเรียน สำหรับจัดการสมาชิกและข้อมูลระบบ" />
     <title>Admin | SWSC69</title>
     <script>
-      // Auto-redirect to admin page when accessing via /admin/ subdirectory
+      // Auto-redirect to login page when accessing via /admin/ subdirectory with empty hash
       (function() {
         var hash = window.location.hash;
-        // If no hash, or hash is just #/ or #/dashboard, redirect to #/admin
-        if (!hash || hash === '#/' || hash === '#/dashboard' || hash === '') {
-          window.location.replace(window.location.pathname + '#/admin');
+        if (!hash || hash === '' || hash === '#') {
+          window.location.replace(window.location.pathname + '#/login');
         }
       })();
     </script>

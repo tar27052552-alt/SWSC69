@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { DEPARTMENTS, ROLES } from '../data/mockData';
 import { supabaseRpc } from '../lib/supabaseRest';
 import { supabase } from '../supabaseClient';
@@ -455,9 +455,14 @@ export function AuthProvider({ children }) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', checkSessionTimeout);
 
-    // Update active timestamp on user clicks/interactions
+    // Update active timestamp on user clicks/interactions (throttled to at most once per 30 seconds)
+    let lastRecorded = 0;
     const updateActiveTime = () => {
-      localStorage.setItem('sc_last_active', Date.now().toString());
+      const now = Date.now();
+      if (now - lastRecorded > 30000) {
+        lastRecorded = now;
+        localStorage.setItem('sc_last_active', now.toString());
+      }
     };
     window.addEventListener('click', updateActiveTime);
     window.addEventListener('keydown', updateActiveTime);
@@ -516,6 +521,10 @@ export function AuthProvider({ children }) {
   };
 
   const loginAsUser = async (userId) => {
+    // Security check: Only Admin can switch accounts
+    if (!user || user.role !== ROLES.ADMIN) {
+      return { success: false, error: 'คุณไม่มีสิทธิ์ในการสลับบัญชีผู้ใช้' };
+    }
     try {
       const { data, error } = await supabase
         .from('users')
@@ -565,27 +574,37 @@ export function AuthProvider({ children }) {
   const isPresident = user?.role === ROLES.PRESIDENT;
   const isDeptHead = user?.role === ROLES.DEPT_HEAD || isAdmin || isPresident;
 
+  const value = useMemo(() => ({
+    user,
+    login,
+    logout,
+    loginAsUser,
+    updateUser,
+    isAdmin,
+    isPresident,
+    isDeptHead,
+    notifications,
+    setNotifications,
+    checkInState,
+    setCheckInState,
+    cleanDutyState,
+    setCleanDutyState,
+    greetingDutyState,
+    setGreetingDutyState,
+    setModalAlert,
+  }), [
+    user,
+    isAdmin,
+    isPresident,
+    isDeptHead,
+    notifications,
+    checkInState,
+    cleanDutyState,
+    greetingDutyState,
+  ]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        logout,
-        loginAsUser,
-        updateUser,
-        isAdmin,
-        isPresident,
-        isDeptHead,
-        notifications,
-        setNotifications,
-        checkInState,
-        setCheckInState,
-        cleanDutyState,
-        setCleanDutyState,
-        greetingDutyState,
-        setGreetingDutyState,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
       {modalAlert && (
         <CustomModalAlert
