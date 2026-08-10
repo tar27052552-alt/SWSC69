@@ -3192,11 +3192,14 @@
       match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
       if (match && match[1]) {
         fileId = match[1];
+      } else {
+        match = url.match(/[-\w]{25,}/);
+        if (match && match[0]) fileId = match[0];
       }
     }
 
     if (fileId) {
-      const driveDirect = 'https://drive.google.com/uc?export=view&id=' + fileId;
+      const driveDirect = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1000';
       return `https://wsrv.nl/?url=${encodeURIComponent(driveDirect)}${params}`;
     }
     return url;
@@ -4894,10 +4897,15 @@
     return (match && match[2].length === 11) ? match[2] : null;
   }
 
-  function getGoogleDriveId(url) {
-    if (!url) return null;
-    const match = url.match(/[-\w]{25,}/);
-    return match ? match[0] : null;
+  function getGoogleDriveId(urlStr) {
+    if (!urlStr) return null;
+    let match = urlStr.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (!match) match = urlStr.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (!match) match = urlStr.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (!match) match = urlStr.match(/\/open\?id=([a-zA-Z0-9_-]+)/);
+    if (!match) match = urlStr.match(/\/uc\?id=([a-zA-Z0-9_-]+)/);
+    if (!match) match = urlStr.match(/[-\w]{25,}/);
+    return match ? (match[1] || match[0]) : null;
   }
 
   function getEmbedUrl(rawUrl) {
@@ -4928,10 +4936,10 @@
     const cover = parts.length > 1 ? parts[1] : null;
     
     // If a custom cover image is provided, try to transform it if it's a Google Drive link, otherwise return as is
-    if (cover) {
-        if (cover.includes('drive.google.com')) {
-            const transformed = transformGoogleDriveUrl(cover);
-            if (transformed) return transformed;
+    if (cover && cover.trim()) {
+        const coverDriveId = getGoogleDriveId(cover);
+        if (coverDriveId) {
+            return `https://drive.google.com/thumbnail?id=${coverDriveId}&sz=w800`;
         }
         return cover;
     }
@@ -4940,6 +4948,12 @@
     if (ytId) {
       return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
     }
+    
+    const videoDriveId = getGoogleDriveId(url);
+    if (videoDriveId) {
+      return `https://drive.google.com/thumbnail?id=${videoDriveId}&sz=w800`;
+    }
+
     if (url.includes('drive.google.com')) {
       return transformGoogleDriveUrl(url) || './logo.png';
     }
@@ -4968,10 +4982,12 @@
     grid.innerHTML = toRender.map(item => {
       const thumb = getThumbnailUrl(item.video_url);
       const embed = getEmbedUrl(item.video_url);
+      const rawVideoUrl = (item.video_url || '').split('||')[0];
+      const videoDriveId = getGoogleDriveId(rawVideoUrl);
       return `
         <div class="video-card" onclick="openVideoPlayer('${embed}')">
           <div class="video-thumbnail-wrapper">
-            <img src="${thumb}" class="video-thumbnail" alt="${item.title}" onerror="this.src='./logo.png'" />
+            <img src="${thumb}" class="video-thumbnail" alt="${item.title}" onerror="if(!this.dataset.triedFallback && '${videoDriveId}'){this.dataset.triedFallback='true'; this.src='https://lh3.googleusercontent.com/d/${videoDriveId}';}else{this.src='./logo.png';}" />
             <div class="video-play-btn">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M8 5v14l11-7z" />

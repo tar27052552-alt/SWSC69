@@ -83,7 +83,8 @@ export default function ManageVideosPage() {
     if (!match) match = urlStr.match(/\/d\/([a-zA-Z0-9_-]+)/);
     if (!match) match = urlStr.match(/\/open\?id=([a-zA-Z0-9_-]+)/);
     if (!match) match = urlStr.match(/\/uc\?id=([a-zA-Z0-9_-]+)/);
-    return match ? match[1] : null;
+    if (!match) match = urlStr.match(/[-\w]{25,}/);
+    return match ? (match[1] || match[0]) : null;
   };
 
   const getThumbnailUrl = (rawUrl) => {
