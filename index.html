@@ -4944,7 +4944,7 @@
     if (cover && cover.trim()) {
         const coverDriveId = getGoogleDriveId(cover);
         if (coverDriveId) {
-            return `https://lh3.googleusercontent.com/d/${coverDriveId}`;
+            return `https://drive.google.com/thumbnail?id=${coverDriveId}&sz=w800`;
         }
         return cover;
     }
@@ -4956,7 +4956,7 @@
     
     const videoDriveId = getGoogleDriveId(url);
     if (videoDriveId) {
-      return `https://lh3.googleusercontent.com/d/${videoDriveId}`;
+      return `https://drive.google.com/thumbnail?id=${videoDriveId}&sz=w800`;
     }
 
     return './logo.png';
