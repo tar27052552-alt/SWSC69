@@ -279,7 +279,8 @@
       box-shadow: 0 10px 25px rgba(0,0,0,0.1);
       z-index: 201;
     }
-    .nav-item:hover .nav-dropdown {
+    .nav-item:hover .nav-dropdown,
+    .nav-item.active-dropdown .nav-dropdown {
       opacity: 1;
       visibility: visible;
       transform: translateX(-50%) translateY(0);
@@ -321,8 +322,14 @@
       border: none;
       box-shadow: none;
       cursor: pointer;
-      padding: 6px;
+      padding: 8px;
       transition: opacity 0.2s ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-appearance: none;
+      appearance: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .nav-burger span {
       display: block;
@@ -331,6 +338,7 @@
       background: #334155;
       border-radius: 3px;
       transition: all 0.25s ease;
+      pointer-events: none;
     }
     .nav-burger:hover span, .nav-burger:active span {
       background: #00838f;
@@ -358,19 +366,24 @@
       z-index: 199;
       border-bottom: 3px solid var(--purple-500);
       box-shadow: var(--shadow-lg);
-      max-height: calc(100vh - 70px);
+      max-height: calc(100dvh - 70px);
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
     }
     .mobile-menu.open { display: flex; flex-direction: column; gap: 6px; }
     .mobile-menu a {
-      padding: 12px 16px;
+      padding: 13px 16px;
       border-radius: 8px;
       color: var(--gray-700);
       font-weight: 600;
       text-decoration: none;
       font-size: 14.5px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      display: block;
     }
-    .mobile-menu a:hover, .mobile-menu a.active {
+    .mobile-menu a:hover, .mobile-menu a:active, .mobile-menu a.active {
       background: var(--purple-100);
       color: var(--purple-700);
     }
@@ -382,21 +395,36 @@
       width: 100%;
       border-radius: 8px;
       overflow: hidden;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .mobile-dropdown-toggle {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 16px;
+      padding: 13px 16px;
       font-size: 14.5px;
       font-weight: 600;
       color: var(--gray-700);
       cursor: pointer;
       user-select: none;
+      -webkit-user-select: none;
       border-radius: 8px;
       transition: all 0.2s;
+      background: transparent;
+      border: none;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-appearance: none;
+      appearance: none;
     }
-    .mobile-dropdown-toggle:hover {
+    .mobile-dropdown-toggle * {
+      pointer-events: none;
+    }
+    .mobile-dropdown-toggle:hover, .mobile-dropdown-toggle:active {
       background: var(--purple-50);
       color: var(--purple-700);
     }
@@ -416,25 +444,28 @@
     .mobile-dropdown-sub {
       max-height: 0;
       overflow: hidden;
-      transition: max-height 0.25s ease-out;
+      transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       flex-direction: column;
       background: #faf8ff;
       border-radius: 0 0 8px 8px;
     }
     .mobile-dropdown-parent.active .mobile-dropdown-sub {
-      max-height: 300px;
+      max-height: 400px;
     }
     .mobile-dropdown-sub a {
-      padding: 10px 16px 10px 32px !important;
+      padding: 12px 16px 12px 32px !important;
       font-size: 13.5px !important;
       font-weight: 600 !important;
       color: var(--gray-600) !important;
       border-radius: 0 !important;
       background: none !important;
       border-bottom: 1px solid rgba(0,0,0,0.02);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      display: block;
     }
-    .mobile-dropdown-sub a:hover {
+    .mobile-dropdown-sub a:hover, .mobile-dropdown-sub a:active {
       color: var(--purple-700) !important;
       background: var(--purple-100) !important;
     }
@@ -2354,10 +2385,10 @@
 
   <!-- ข้อมูลพื้นฐาน -->
   <div class="mobile-dropdown-parent">
-    <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
+    <button type="button" class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this, event)">
       <span>🏘️ ข้อมูลพื้นฐาน</span>
       <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-    </div>
+    </button>
     <div class="mobile-dropdown-sub">
       <a href="#/sap-model" onclick="closeMobile()">🚀 การขับเคลื่อนกิจกรรม (SAP)</a>
       <a href="#/policies" onclick="closeMobile()">🎯 นโยบายสภานักเรียน</a>
@@ -2369,10 +2400,10 @@
 
     <!-- ข้อมูลบริการ -->
     <div class="mobile-dropdown-parent">
-      <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
+      <button type="button" class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this, event)">
         <span>📁 ข้อมูลบริการ</span>
         <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-      </div>
+      </button>
       <div class="mobile-dropdown-sub">
         <a href="#/events" onclick="closeMobile()">📅 ปฏิทินกิจกรรม</a>
         <a href="#/suggestions" onclick="closeMobile()">💬 ข้อเสนอแนะ/ร้องเรียน</a>
@@ -2383,10 +2414,10 @@
 
     <!-- เว็บไซต์บริการ -->
     <div class="mobile-dropdown-parent">
-      <div class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this)">
+      <button type="button" class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this, event)">
         <span>🌐 เว็บไซต์บริการ</span>
         <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-      </div>
+      </button>
       <div class="mobile-dropdown-sub">
         <a href="https://www.sappha.ac.th" target="_blank" onclick="closeMobile()">🏫 เว็บไซต์โรงเรียน</a>
         <a href="https://www.sappha.ac.th/?page_id=2181" target="_blank" onclick="closeMobile()">♻️ ระบบขยะแลกแต้ม</a>
@@ -3772,25 +3803,65 @@
     }
   }, { passive: true });
 
-  /* ---- MOBILE MENU ---- */
+  /* ---- MOBILE MENU & DROPDOWNS ---- */
   const burger = document.getElementById('burger');
   const mobileMenu = document.getElementById('mobileMenu');
-  burger.addEventListener('click', () => mobileMenu.classList.toggle('open'));
+  if (burger && mobileMenu) {
+    burger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      mobileMenu.classList.toggle('open');
+    });
+  }
+
   function closeMobile() {
-    mobileMenu.classList.remove('open');
+    if (mobileMenu) mobileMenu.classList.remove('open');
     document.querySelectorAll('.mobile-dropdown-parent').forEach(p => p.classList.remove('active'));
   }
-  function toggleMobileDropdown(elem) {
-    const parent = elem.closest('.mobile-dropdown-parent');
+
+  function toggleMobileDropdown(elem, e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const parent = elem ? elem.closest('.mobile-dropdown-parent') : null;
+    if (!parent) return;
     const wasActive = parent.classList.contains('active');
-    document.querySelectorAll('.mobile-dropdown-parent').forEach(p => p.classList.remove('active'));
-    if (!wasActive) {
+    document.querySelectorAll('.mobile-dropdown-parent').forEach(p => {
+      if (p !== parent) p.classList.remove('active');
+    });
+    if (wasActive) {
+      parent.classList.remove('active');
+    } else {
       parent.classList.add('active');
     }
   }
+
+  // Close menus when clicking outside
   document.addEventListener('click', e => {
-    if (!burger.contains(e.target) && !mobileMenu.contains(e.target)) {
+    if (mobileMenu && burger && !burger.contains(e.target) && !mobileMenu.contains(e.target)) {
       closeMobile();
+    }
+    if (!e.target.closest('.nav-item')) {
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active-dropdown'));
+    }
+  });
+
+  // Enable touch / click toggle on desktop nav items for iPad/iOS touch
+  document.querySelectorAll('.nav-item').forEach(item => {
+    const link = item.querySelector('.nav-link');
+    const dropdown = item.querySelector('.nav-dropdown');
+    if (link && dropdown) {
+      link.addEventListener('click', (e) => {
+        if (window.innerWidth > 960) {
+          e.preventDefault();
+          e.stopPropagation();
+          const isActive = item.classList.contains('active-dropdown');
+          document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active-dropdown'));
+          if (!isActive) {
+            item.classList.add('active-dropdown');
+          }
+        }
+      });
     }
   });
 
