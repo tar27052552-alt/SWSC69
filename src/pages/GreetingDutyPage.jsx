@@ -34,15 +34,18 @@ export default function GreetingDutyPage() {
           if (greetingAct !== undefined) setGreetingActive(greetingAct !== 'false');
         }
 
-        // Load today's Greeting Duty
+        // Load today's Greeting Duty and Swaps
         const DAY_MAP = { 0: 'อาทิตย์', 1: 'จันทร์', 2: 'อังคาร', 3: 'พุธ', 4: 'พฤหัส', 5: 'ศุกร์', 6: 'เสาร์' };
         const todayKey = DAY_MAP[new Date().getDay()];
+        const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
 
-        const { data: scheduleData, error: scheduleError } = await supabase
-          .from('schedules')
-          .select('*')
-          .eq('type', 'greeting')
-          .eq('day', todayKey);
+        const [scheduleRes, swapsRes] = await Promise.all([
+          supabase.from('schedules').select('*').eq('type', 'greeting').eq('day', todayKey),
+          supabase.from('duty_swaps').select('*').eq('date', todayStr)
+        ]);
+
+        const scheduleData = scheduleRes.data;
+        const todaySwaps = swapsRes.data || [];
 
         let myNickname = user?.nickname || '';
         let hasDuty = false;
@@ -50,19 +53,34 @@ export default function GreetingDutyPage() {
         let gateKey = '';
         let gateNameTh = '';
 
-        if (!scheduleError && scheduleData && scheduleData[0]) {
+        if (!scheduleRes.error && scheduleData && scheduleData[0]) {
           const rowData = scheduleData[0].data || {};
           
-          // Search gates
-          if (rowData.gate1?.includes(myNickname)) {
+          const effectiveGates = {
+            gate1: (rowData.gate1 || []).map(n => {
+              const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate1' && s.original_nickname === n);
+              return swap ? swap.substitute_nickname : n;
+            }),
+            gate2: (rowData.gate2 || []).map(n => {
+              const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate2' && s.original_nickname === n);
+              return swap ? swap.substitute_nickname : n;
+            }),
+            gate3: (rowData.gate3 || []).map(n => {
+              const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate3' && s.original_nickname === n);
+              return swap ? swap.substitute_nickname : n;
+            }),
+          };
+
+          // Search effective gates for the current user
+          if (effectiveGates.gate1.includes(myNickname)) {
             gateKey = 'gate1';
             gateNameTh = 'ประตูไหมไทย';
             isMyDuty = true;
-          } else if (rowData.gate2?.includes(myNickname)) {
+          } else if (effectiveGates.gate2.includes(myNickname)) {
             gateKey = 'gate2';
             gateNameTh = 'ประตูอำเภอ';
             isMyDuty = true;
-          } else if (rowData.gate3?.includes(myNickname)) {
+          } else if (effectiveGates.gate3.includes(myNickname)) {
             gateKey = 'gate3';
             gateNameTh = 'ประตูหน้า รร.';
             isMyDuty = true;
@@ -70,9 +88,9 @@ export default function GreetingDutyPage() {
 
           // Check if any members assigned today
           const totalMembersToday = [
-            ...(rowData.gate1 || []),
-            ...(rowData.gate2 || []),
-            ...(rowData.gate3 || [])
+            ...effectiveGates.gate1,
+            ...effectiveGates.gate2,
+            ...effectiveGates.gate3
           ];
           hasDuty = totalMembersToday.length > 0 && totalMembersToday.some(n => n !== '–');
         }

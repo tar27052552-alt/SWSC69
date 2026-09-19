@@ -71,7 +71,7 @@ function AppRoutes() {
       if (globalLastOneSignalUser !== null) {
         globalLastOneSignalUser = null;
         window.OneSignalDeferred = window.OneSignalDeferred || [];
-        window.OneSignalDeferred.push(async function(OneSignal) {
+        window.OneSignalDeferred.push(async function (OneSignal) {
           console.log('OneSignal: User logged out. Clearing external ID');
           try {
             await OneSignal.logout();
@@ -95,7 +95,7 @@ function AppRoutes() {
 
     const runSync = () => {
       window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async function(OneSignal) {
+      window.OneSignalDeferred.push(async function (OneSignal) {
         try {
           const currentExternalId = OneSignal.User.externalId;
           console.log('OneSignal: Aligning external ID to:', targetId, '(current local ID:', currentExternalId, ')');
@@ -126,32 +126,32 @@ function AppRoutes() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-          <Route path="/dashboard"  element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/suggestions" element={<PrivateRoute><SuggestionsPage /></PrivateRoute>} />
-          <Route path="/schedules"  element={<PrivateRoute><SchedulesPage /></PrivateRoute>} />
-          <Route path="/calendar"   element={<PrivateRoute><CalendarPage /></PrivateRoute>} />
-          <Route path="/checkin"    element={<PrivateRoute><CheckInPage /></PrivateRoute>} />
+          <Route path="/schedules" element={<PrivateRoute><SchedulesPage /></PrivateRoute>} />
+          <Route path="/calendar" element={<PrivateRoute><CalendarPage /></PrivateRoute>} />
+          <Route path="/checkin" element={<PrivateRoute><CheckInPage /></PrivateRoute>} />
           <Route path="/clean-duty" element={<PrivateRoute><CleanDutyPage /></PrivateRoute>} />
           <Route path="/greeting-duty" element={<PrivateRoute><GreetingDutyPage /></PrivateRoute>} />
           <Route path="/my-attendance" element={<PrivateRoute><MyAttendancePage /></PrivateRoute>} />
-          <Route path="/profile"    element={<PrivateRoute><MyStats /></PrivateRoute>} />
-          <Route path="/settings"   element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><MyStats /></PrivateRoute>} />
+          <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
           <Route path="/submit-news" element={<PrivateRoute><SubmitNewsPage /></PrivateRoute>} />
-          <Route path="/admin"      element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+          <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
           <Route path="/admin-announcements" element={<PrivateRoute><AnnouncementsPage /></PrivateRoute>} />
           <Route path="/admin-videos" element={<PrivateRoute><ManageVideosPage /></PrivateRoute>} />
           <Route path="/admin-policies" element={<PrivateRoute><ManagePoliciesPage /></PrivateRoute>} />
           <Route path="/discipline" element={<PrivateRoute><DisciplinePage /></PrivateRoute>} />
-          <Route path="/my-fines"   element={<PrivateRoute><MyFinesPage /></PrivateRoute>} />
-          <Route path="/finance"    element={<PrivateRoute><FinancePage /></PrivateRoute>} />
-          <Route path="/pr"          element={<PrivateRoute><PRPage /></PrivateRoute>} />
-          <Route path="/av"          element={<PrivateRoute><AVPage /></PrivateRoute>} />
-          <Route path="/secretary"   element={<PrivateRoute><SecretaryPage /></PrivateRoute>} />
-          <Route path="/academic"    element={<PrivateRoute><AcademicPage /></PrivateRoute>} />
-          <Route path="/office"      element={<PrivateRoute><OfficePage /></PrivateRoute>} />
-          <Route path="/recreation"  element={<PrivateRoute><RecreationPage /></PrivateRoute>} />
-          <Route path="/facilities"  element={<PrivateRoute><FacilitiesPage /></PrivateRoute>} />
-          <Route path="/reception"   element={<PrivateRoute><ReceptionPage /></PrivateRoute>} />
+          <Route path="/my-fines" element={<PrivateRoute><MyFinesPage /></PrivateRoute>} />
+          <Route path="/finance" element={<PrivateRoute><FinancePage /></PrivateRoute>} />
+          <Route path="/pr" element={<PrivateRoute><PRPage /></PrivateRoute>} />
+          <Route path="/av" element={<PrivateRoute><AVPage /></PrivateRoute>} />
+          <Route path="/secretary" element={<PrivateRoute><SecretaryPage /></PrivateRoute>} />
+          <Route path="/academic" element={<PrivateRoute><AcademicPage /></PrivateRoute>} />
+          <Route path="/office" element={<PrivateRoute><OfficePage /></PrivateRoute>} />
+          <Route path="/recreation" element={<PrivateRoute><RecreationPage /></PrivateRoute>} />
+          <Route path="/facilities" element={<PrivateRoute><FacilitiesPage /></PrivateRoute>} />
+          <Route path="/reception" element={<PrivateRoute><ReceptionPage /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Suspense>
@@ -164,11 +164,11 @@ export default function App() {
     const oneSignalAppId = import.meta.env.VITE_ONESIGNAL_APP_ID;
     if (oneSignalAppId) {
       const base = import.meta.env.BASE_URL || '/';
-      
+
       // Patch: intercept service worker registration to fix path for subdirectory
       if (base !== '/' && 'serviceWorker' in navigator) {
         const originalRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
-        navigator.serviceWorker.register = function(scriptURL, options) {
+        navigator.serviceWorker.register = function (scriptURL, options) {
           let url = typeof scriptURL === 'string' ? scriptURL : scriptURL.toString();
           // If OneSignal tries to register at root, redirect to subdirectory
           if (url.includes('OneSignalSDKWorker.js') && !url.includes(base)) {
@@ -186,7 +186,7 @@ export default function App() {
         };
 
         const originalGetRegistration = navigator.serviceWorker.getRegistration.bind(navigator.serviceWorker);
-        navigator.serviceWorker.getRegistration = function(scope) {
+        navigator.serviceWorker.getRegistration = function (scope) {
           const scopeStr = typeof scope === 'string' ? scope : '';
           // If OneSignal checks for registration scope at root, redirect to the subdirectory base scope
           if (scopeStr === '/' || (scopeStr && !scopeStr.includes(base))) {
@@ -195,9 +195,9 @@ export default function App() {
           return originalGetRegistration(scope);
         };
       }
-      
+
       window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async function(OneSignal) {
+      window.OneSignalDeferred.push(async function (OneSignal) {
         // SW Diagnostics
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistrations().then(regs => {

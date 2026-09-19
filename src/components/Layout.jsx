@@ -152,29 +152,47 @@ export default function Layout({ children }) {
           .select('*')
           .eq('day', todayDayName);
 
+        const dutyLabels = {
+          greeting_gate1: '🙏 เวรยืนไหว้ (ประตูไหมไทย)',
+          greeting_gate2: '🙏 เวรยืนไหว้ (ประตูอำเภอ)',
+          greeting_gate3: '🙏 เวรยืนไหว้ (ประตูหน้า รร.)',
+          clean_room: '🧹 เวรทำความสะอาดห้องสภา',
+          national_flag: '🚩 เวรเชิญธงชาติ',
+          color_flag: '🎌 เวรเชิญธงสี'
+        };
+
         if (schedules) {
           schedules.forEach(sched => {
             const data = sched.data || {};
             const dutyType = sched.type;
-            const isSwappedOut = swaps?.some(s => s.duty_type === dutyType && s.original_nickname === user.nickname);
             
-            if (!isSwappedOut) {
-              if (dutyType === 'greeting') {
-                const gate1 = data.gate1 || [];
-                const gate2 = data.gate2 || [];
-                const gate3 = data.gate3 || [];
-                if (gate1.includes(user.nickname)) myTodayDuties.push('🙏 เวรยืนไหว้ (ประตูไหมไทย)');
-                if (gate2.includes(user.nickname)) myTodayDuties.push('🙏 เวรยืนไหว้ (ประตูอำเภอ)');
-                if (gate3.includes(user.nickname)) myTodayDuties.push('🙏 เวรยืนไหว้ (ประตูหน้า รร.)');
-              } else if (dutyType === 'clean_room') {
-                const members = data.members || [];
-                if (members.includes(user.nickname)) myTodayDuties.push('🧹 เวรทำความสะอาดห้องสภา');
-              } else if (dutyType === 'national_flag') {
-                const members = data.members || [];
-                if (members.includes(user.nickname)) myTodayDuties.push('🚩 เวรเชิญธงชาติ');
-              } else if (dutyType === 'color_flag') {
-                const members = data.members || [];
-                if (members.includes(user.nickname)) myTodayDuties.push('🎌 เวรเชิญธงสี');
+            if (dutyType === 'greeting') {
+              const gate1 = data.gate1 || [];
+              const gate2 = data.gate2 || [];
+              const gate3 = data.gate3 || [];
+              if (gate1.includes(user.nickname) && !swaps?.some(s => s.duty_type === 'greeting_gate1' && s.original_nickname === user.nickname)) {
+                myTodayDuties.push('🙏 เวรยืนไหว้ (ประตูไหมไทย)');
+              }
+              if (gate2.includes(user.nickname) && !swaps?.some(s => s.duty_type === 'greeting_gate2' && s.original_nickname === user.nickname)) {
+                myTodayDuties.push('🙏 เวรยืนไหว้ (ประตูอำเภอ)');
+              }
+              if (gate3.includes(user.nickname) && !swaps?.some(s => s.duty_type === 'greeting_gate3' && s.original_nickname === user.nickname)) {
+                myTodayDuties.push('🙏 เวรยืนไหว้ (ประตูหน้า รร.)');
+              }
+            } else if (dutyType === 'clean_room') {
+              const members = data.members || [];
+              if (members.includes(user.nickname) && !swaps?.some(s => s.duty_type === 'clean_room' && s.original_nickname === user.nickname)) {
+                myTodayDuties.push('🧹 เวรทำความสะอาดห้องสภา');
+              }
+            } else if (dutyType === 'national_flag') {
+              const members = data.members || [];
+              if (members.includes(user.nickname) && !swaps?.some(s => s.duty_type === 'national_flag' && s.original_nickname === user.nickname)) {
+                myTodayDuties.push('🚩 เวรเชิญธงชาติ');
+              }
+            } else if (dutyType === 'color_flag') {
+              const members = data.members || [];
+              if (members.includes(user.nickname) && !swaps?.some(s => s.duty_type === 'color_flag' && s.original_nickname === user.nickname)) {
+                myTodayDuties.push('🎌 เวรเชิญธงสี');
               }
             }
           });
@@ -182,7 +200,8 @@ export default function Layout({ children }) {
 
         swaps?.forEach(s => {
           if (s.substitute_nickname === user.nickname) {
-            myTodayDuties.push(`🔄 ปฏิบัติเวรแทน ${s.original_nickname}`);
+            const label = dutyLabels[s.duty_type] || s.duty_type;
+            myTodayDuties.push(`🔄 ${label} (แทน ${s.original_nickname})`);
           }
         });
 
@@ -234,30 +253,47 @@ export default function Layout({ children }) {
           .select('*')
           .eq('day', tomorrowDayName);
 
+        const dutyLabels = {
+          greeting_gate1: '🙏 เวรยืนไหว้ (ประตูไหมไทย)',
+          greeting_gate2: '🙏 เวรยืนไหว้ (ประตูอำเภอ)',
+          greeting_gate3: '🙏 เวรยืนไหว้ (ประตูหน้า รร.)',
+          clean_room: '🧹 เวรทำความสะอาดห้องสภา',
+          national_flag: '🚩 เวรเชิญธงชาติ',
+          color_flag: '🎌 เวรเชิญธงสี'
+        };
+
         if (schedules) {
           schedules.forEach(sched => {
             const data = sched.data || {};
             const dutyType = sched.type;
             
-            const isSwappedOut = swaps?.some(s => s.duty_type === dutyType && s.original_nickname === user.nickname);
-            
-            if (!isSwappedOut) {
-              if (dutyType === 'greeting') {
-                const gate1 = data.gate1 || [];
-                const gate2 = data.gate2 || [];
-                const gate3 = data.gate3 || [];
-                if (gate1.includes(user.nickname)) myTomorrowDuties.push('🙏 เวรยืนไหว้ (ประตูไหมไทย)');
-                if (gate2.includes(user.nickname)) myTomorrowDuties.push('🙏 เวรยืนไหว้ (ประตูอำเภอ)');
-                if (gate3.includes(user.nickname)) myTomorrowDuties.push('🙏 เวรยืนไหว้ (ประตูหน้า รร.)');
-              } else if (dutyType === 'clean_room') {
-                const members = data.members || [];
-                if (members.includes(user.nickname)) myTomorrowDuties.push('🧹 เวรทำความสะอาดห้องสภา');
-              } else if (dutyType === 'national_flag') {
-                const members = data.members || [];
-                if (members.includes(user.nickname)) myTomorrowDuties.push('🚩 เวรเชิญธงชาติ');
-              } else if (dutyType === 'color_flag') {
-                const members = data.members || [];
-                if (members.includes(user.nickname)) myTomorrowDuties.push('🎌 เวรเชิญธงสี');
+            if (dutyType === 'greeting') {
+              const gate1 = data.gate1 || [];
+              const gate2 = data.gate2 || [];
+              const gate3 = data.gate3 || [];
+              if (gate1.includes(user.nickname) && !swaps?.some(s => s.duty_type === 'greeting_gate1' && s.original_nickname === user.nickname)) {
+                myTomorrowDuties.push('🙏 เวรยืนไหว้ (ประตูไหมไทย)');
+              }
+              if (gate2.includes(user.nickname) && !swaps?.some(s => s.duty_type === 'greeting_gate2' && s.original_nickname === user.nickname)) {
+                myTomorrowDuties.push('🙏 เวรยืนไหว้ (ประตูอำเภอ)');
+              }
+              if (gate3.includes(user.nickname) && !swaps?.some(s => s.duty_type === 'greeting_gate3' && s.original_nickname === user.nickname)) {
+                myTomorrowDuties.push('🙏 เวรยืนไหว้ (ประตูหน้า รร.)');
+              }
+            } else if (dutyType === 'clean_room') {
+              const members = data.members || [];
+              if (members.includes(user.nickname) && !swaps?.some(s => s.duty_type === 'clean_room' && s.original_nickname === user.nickname)) {
+                myTomorrowDuties.push('🧹 เวรทำความสะอาดห้องสภา');
+              }
+            } else if (dutyType === 'national_flag') {
+              const members = data.members || [];
+              if (members.includes(user.nickname) && !swaps?.some(s => s.duty_type === 'national_flag' && s.original_nickname === user.nickname)) {
+                myTomorrowDuties.push('🚩 เวรเชิญธงชาติ');
+              }
+            } else if (dutyType === 'color_flag') {
+              const members = data.members || [];
+              if (members.includes(user.nickname) && !swaps?.some(s => s.duty_type === 'color_flag' && s.original_nickname === user.nickname)) {
+                myTomorrowDuties.push('🎌 เวรเชิญธงสี');
               }
             }
           });
@@ -265,7 +301,8 @@ export default function Layout({ children }) {
 
         swaps?.forEach(s => {
           if (s.substitute_nickname === user.nickname) {
-            myTomorrowDuties.push(`🔄 ปฏิบัติเวรแทน ${s.original_nickname}`);
+            const label = dutyLabels[s.duty_type] || s.duty_type;
+            myTomorrowDuties.push(`🔄 ${label} (แทน ${s.original_nickname})`);
           }
         });
 

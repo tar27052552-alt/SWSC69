@@ -446,6 +446,15 @@ export default function DisciplinePage() {
   const [dbDutySwaps, setDbDutySwaps] = useState([]);
   const [dbExemptNicknames, setDbExemptNicknames] = useState([]);
 
+  // GPS Settings State
+  const [schoolLat, setSchoolLat] = useState('16.713228');
+  const [schoolLng, setSchoolLng] = useState('98.573082');
+  const [schoolRadius, setSchoolRadius] = useState('100');
+  const [gate1Coords, setGate1Coords] = useState({ lat: '16.713800', lng: '98.572800', radius: '60' });
+  const [gate2Coords, setGate2Coords] = useState({ lat: '16.712600', lng: '98.573300', radius: '60' });
+  const [gate3Coords, setGate3Coords] = useState({ lat: '16.713000', lng: '98.572300', radius: '60' });
+  const [gettingGpsKey, setGettingGpsKey] = useState(null);
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -472,6 +481,13 @@ export default function DisciplinePage() {
           const greetingAct = settingsRes.data.find(d => d.key === 'greeting_duty_active')?.value;
           const cleanAct = settingsRes.data.find(d => d.key === 'clean_duty_active')?.value;
 
+          const sLat = settingsRes.data.find(d => d.key === 'school_center_lat')?.value;
+          const sLng = settingsRes.data.find(d => d.key === 'school_center_lng')?.value;
+          const sRad = settingsRes.data.find(d => d.key === 'school_radius')?.value;
+          const g1 = settingsRes.data.find(d => d.key === 'gate1_coords')?.value;
+          const g2 = settingsRes.data.find(d => d.key === 'gate2_coords')?.value;
+          const g3 = settingsRes.data.find(d => d.key === 'gate3_coords')?.value;
+
           if (days) setEnabledDays(days);
           if (dates) setDisabledDates(dates);
           if (subDates) setSubstituteDates(subDates);
@@ -481,6 +497,13 @@ export default function DisciplinePage() {
           if (checkInAct !== undefined) setCheckInActive(checkInAct !== 'false');
           if (greetingAct !== undefined) setGreetingActive(greetingAct !== 'false');
           if (cleanAct !== undefined) setCleanActive(cleanAct !== 'false');
+
+          if (sLat) setSchoolLat(String(sLat));
+          if (sLng) setSchoolLng(String(sLng));
+          if (sRad) setSchoolRadius(String(sRad));
+          if (g1) setGate1Coords(typeof g1 === 'string' ? JSON.parse(g1) : g1);
+          if (g2) setGate2Coords(typeof g2 === 'string' ? JSON.parse(g2) : g2);
+          if (g3) setGate3Coords(typeof g3 === 'string' ? JSON.parse(g3) : g3);
         }
 
         if (!cleanRes.error && cleanRes.data) {
@@ -530,6 +553,56 @@ export default function DisciplinePage() {
     } catch (err) {
       console.error('Error saving greeting duty start date:', err);
     }
+  };
+
+  const saveGpsSettings = async () => {
+    try {
+      const upserts = [
+        { key: 'school_center_lat', value: String(schoolLat) },
+        { key: 'school_center_lng', value: String(schoolLng) },
+        { key: 'school_radius', value: String(schoolRadius) },
+        { key: 'gate1_coords', value: gate1Coords },
+        { key: 'gate2_coords', value: gate2Coords },
+        { key: 'gate3_coords', value: gate3Coords }
+      ];
+      const { error } = await supabase.from('attendance_settings').upsert(upserts, { onConflict: 'key' });
+      if (error) throw error;
+      alert('บันทึกพิกัดและรัศมี GPS เรียบร้อยแล้ว!');
+    } catch (err) {
+      console.error('Error saving GPS settings:', err);
+      alert('เกิดข้อผิดพลาดในการบันทึกพิกัด GPS: ' + err.message);
+    }
+  };
+
+  const handleGetAdminCurrentLocation = (target) => {
+    if (!navigator.geolocation) {
+      alert('อุปกรณ์ของคุณไม่รองรับการดึงพิกัด GPS');
+      return;
+    }
+    setGettingGpsKey(target);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        if (target === 'school') {
+          setSchoolLat(lat);
+          setSchoolLng(lng);
+        } else if (target === 'gate1') {
+          setGate1Coords(prev => ({ ...prev, lat, lng }));
+        } else if (target === 'gate2') {
+          setGate2Coords(prev => ({ ...prev, lat, lng }));
+        } else if (target === 'gate3') {
+          setGate3Coords(prev => ({ ...prev, lat, lng }));
+        }
+        setGettingGpsKey(null);
+        alert(`ดึงพิกัดตำแหน่งจริงสำเร็จ:\nละติจูด: ${lat}\nลองจิจูด: ${lng}\n(กรุณากดปุ่ม "💾 บันทึกการตั้งค่าพิกัด GPS" เพื่อบันทึกลงระบบ)`);
+      },
+      (err) => {
+        setGettingGpsKey(null);
+        alert('ไม่สามารถดึงพิกัดได้: ' + err.message);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
   const toggleCheckInActive = async () => {
@@ -1688,7 +1761,219 @@ export default function DisciplinePage() {
                 </div>
               </div>
 
+              {/* GPS Check-in Coordinates & Anti-Dorm Radius Settings */}
+              <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #cbd5e1' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>📍</span>
+                      <span>ตั้งค่าพิกัดจุดเช็คชื่อ & รัศมี GPS (ป้องกันการเช็คชื่อจากหอพัก)</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                      กำหนดจุดศูนย์กลางและรัศมี (เมตร) เพื่อจำกัดพื้นที่เช็คชื่อเฉพาะบริเวณโรงเรียน/ลานเสาธง
+                    </div>
+                  </div>
+                  <button
+                    onClick={saveGpsSettings}
+                    className="btn btn-primary"
+                    style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700 }}
+                  >
+                    💾 บันทึกการตั้งค่าพิกัด GPS
+                  </button>
+                </div>
 
+                {/* Main School Center Coordinates */}
+                <div style={{ background: '#ffffff', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: '#0f766e' }}>
+                      🏫 จุดศูนย์กลางโรงเรียน (ลานเสาธง / นักเรียนทั่วไป):
+                    </div>
+                    <button
+                      type="button"
+                      disabled={gettingGpsKey === 'school'}
+                      onClick={() => handleGetAdminCurrentLocation('school')}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: 11,
+                        borderRadius: 6,
+                        border: '1px solid #00bcd4',
+                        background: '#e0f7fa',
+                        color: '#00838f',
+                        cursor: gettingGpsKey === 'school' ? 'wait' : 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      {gettingGpsKey === 'school' ? '⏳ กำลังดึงพิกัด...' : '📍 ใช้พิกัดที่ฉันยืนอยู่ตอนนี้'}
+                    </button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>ละติจูด (Latitude)</label>
+                      <input
+                        type="text"
+                        className="input-field"
+                        value={schoolLat}
+                        onChange={e => setSchoolLat(e.target.value)}
+                        placeholder="16.713228"
+                        style={{ fontSize: 12, padding: '6px 8px', marginTop: 3 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>ลองจิจูด (Longitude)</label>
+                      <input
+                        type="text"
+                        className="input-field"
+                        value={schoolLng}
+                        onChange={e => setSchoolLng(e.target.value)}
+                        placeholder="98.573082"
+                        style={{ fontSize: 12, padding: '6px 8px', marginTop: 3 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>รัศมีอนุญาต (เมตร)</label>
+                      <input
+                        type="number"
+                        className="input-field"
+                        value={schoolRadius}
+                        onChange={e => setSchoolRadius(e.target.value)}
+                        placeholder="100"
+                        style={{ fontSize: 12, padding: '6px 8px', marginTop: 3 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Greeting Gates Coordinates */}
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 12, color: '#475569', marginBottom: 8 }}>
+                    🙏 พิกัดเฉพาะสำหรับเวรยืนไหว้ประตูโรงเรียน (อนุญาตให้เช็คชื่อที่ประตูได้):
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+                    {/* Gate 1 */}
+                    <div style={{ background: '#ffffff', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: 12, color: '#334155' }}>🚪 ประตู 1 (ไหมไทย)</span>
+                        <button
+                          type="button"
+                          disabled={gettingGpsKey === 'gate1'}
+                          onClick={() => handleGetAdminCurrentLocation('gate1')}
+                          style={{ padding: '2px 8px', fontSize: 10, borderRadius: 4, border: '1px solid #00bcd4', background: '#e0f7fa', color: '#00838f', cursor: 'pointer' }}
+                        >
+                          {gettingGpsKey === 'gate1' ? '⏳...' : '📍 ดึงพิกัด'}
+                        </button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 60px', gap: 6 }}>
+                        <input
+                          type="text"
+                          className="input-field"
+                          placeholder="Lat"
+                          value={gate1Coords.lat || ''}
+                          onChange={e => setGate1Coords({ ...gate1Coords, lat: e.target.value })}
+                          style={{ fontSize: 11, padding: '4px 6px' }}
+                        />
+                        <input
+                          type="text"
+                          className="input-field"
+                          placeholder="Lng"
+                          value={gate1Coords.lng || ''}
+                          onChange={e => setGate1Coords({ ...gate1Coords, lng: e.target.value })}
+                          style={{ fontSize: 11, padding: '4px 6px' }}
+                        />
+                        <input
+                          type="number"
+                          className="input-field"
+                          placeholder="เมตร"
+                          value={gate1Coords.radius || '60'}
+                          onChange={e => setGate1Coords({ ...gate1Coords, radius: e.target.value })}
+                          style={{ fontSize: 11, padding: '4px 6px' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Gate 2 */}
+                    <div style={{ background: '#ffffff', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: 12, color: '#334155' }}>🚪 ประตู 2 (อำเภอ)</span>
+                        <button
+                          type="button"
+                          disabled={gettingGpsKey === 'gate2'}
+                          onClick={() => handleGetAdminCurrentLocation('gate2')}
+                          style={{ padding: '2px 8px', fontSize: 10, borderRadius: 4, border: '1px solid #00bcd4', background: '#e0f7fa', color: '#00838f', cursor: 'pointer' }}
+                        >
+                          {gettingGpsKey === 'gate2' ? '⏳...' : '📍 ดึงพิกัด'}
+                        </button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 60px', gap: 6 }}>
+                        <input
+                          type="text"
+                          className="input-field"
+                          placeholder="Lat"
+                          value={gate2Coords.lat || ''}
+                          onChange={e => setGate2Coords({ ...gate2Coords, lat: e.target.value })}
+                          style={{ fontSize: 11, padding: '4px 6px' }}
+                        />
+                        <input
+                          type="text"
+                          className="input-field"
+                          placeholder="Lng"
+                          value={gate2Coords.lng || ''}
+                          onChange={e => setGate2Coords({ ...gate2Coords, lng: e.target.value })}
+                          style={{ fontSize: 11, padding: '4px 6px' }}
+                        />
+                        <input
+                          type="number"
+                          className="input-field"
+                          placeholder="เมตร"
+                          value={gate2Coords.radius || '60'}
+                          onChange={e => setGate2Coords({ ...gate2Coords, radius: e.target.value })}
+                          style={{ fontSize: 11, padding: '4px 6px' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Gate 3 */}
+                    <div style={{ background: '#ffffff', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: 12, color: '#334155' }}>🚪 ประตู 3 (หน้า รร.)</span>
+                        <button
+                          type="button"
+                          disabled={gettingGpsKey === 'gate3'}
+                          onClick={() => handleGetAdminCurrentLocation('gate3')}
+                          style={{ padding: '2px 8px', fontSize: 10, borderRadius: 4, border: '1px solid #00bcd4', background: '#e0f7fa', color: '#00838f', cursor: 'pointer' }}
+                        >
+                          {gettingGpsKey === 'gate3' ? '⏳...' : '📍 ดึงพิกัด'}
+                        </button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 60px', gap: 6 }}>
+                        <input
+                          type="text"
+                          className="input-field"
+                          placeholder="Lat"
+                          value={gate3Coords.lat || ''}
+                          onChange={e => setGate3Coords({ ...gate3Coords, lat: e.target.value })}
+                          style={{ fontSize: 11, padding: '4px 6px' }}
+                        />
+                        <input
+                          type="text"
+                          className="input-field"
+                          placeholder="Lng"
+                          value={gate3Coords.lng || ''}
+                          onChange={e => setGate3Coords({ ...gate3Coords, lng: e.target.value })}
+                          style={{ fontSize: 11, padding: '4px 6px' }}
+                        />
+                        <input
+                          type="number"
+                          className="input-field"
+                          placeholder="เมตร"
+                          value={gate3Coords.radius || '60'}
+                          onChange={e => setGate3Coords({ ...gate3Coords, radius: e.target.value })}
+                          style={{ fontSize: 11, padding: '4px 6px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

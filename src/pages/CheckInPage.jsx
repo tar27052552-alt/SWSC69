@@ -17,6 +17,7 @@ export default function CheckInPage() {
   const [step, setStep] = useState(0); // 0=start, 1=locating, 2=camera
   const [photoUrl, setPhotoUrl] = useState(null);
   const [distanceInfo, setDistanceInfo] = useState('');
+  const [locError, setLocError] = useState(null);
   const [enabledDays, setEnabledDays] = useState(["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์"]);
   const [disabledDates, setDisabledDates] = useState([]);
   const [substituteDates, setSubstituteDates] = useState([]);
@@ -24,11 +25,20 @@ export default function CheckInPage() {
   const [checkInActive, setCheckInActive] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [greetingSchedules, setGreetingSchedules] = useState([]);
+  const [todaySwaps, setTodaySwaps] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const isSubmitting = useRef(false);
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [isExemptToday, setIsExemptToday] = useState(false);
   const [todayEventTitle, setTodayEventTitle] = useState('');
+
+  // GPS Settings State
+  const [schoolCenterLat, setSchoolCenterLat] = useState('16.713228');
+  const [schoolCenterLng, setSchoolCenterLng] = useState('98.573082');
+  const [schoolRadius, setSchoolRadius] = useState('100');
+  const [gate1Coords, setGate1Coords] = useState({ lat: '16.713800', lng: '98.572800', radius: '60' });
+  const [gate2Coords, setGate2Coords] = useState({ lat: '16.712600', lng: '98.573300', radius: '60' });
+  const [gate3Coords, setGate3Coords] = useState({ lat: '16.713000', lng: '98.572300', radius: '60' });
 
   useEffect(() => {
     async function checkTodayExemption() {
@@ -69,11 +79,26 @@ export default function CheckInPage() {
           const subDates = data.find(d => d.key === 'substitute_dates')?.value;
           const startD = data.find(d => d.key === 'start_date')?.value;
           const checkInAct = data.find(d => d.key === 'check_in_active')?.value;
+
+          const sLat = data.find(d => d.key === 'school_center_lat')?.value;
+          const sLng = data.find(d => d.key === 'school_center_lng')?.value;
+          const sRad = data.find(d => d.key === 'school_radius')?.value;
+          const g1 = data.find(d => d.key === 'gate1_coords')?.value;
+          const g2 = data.find(d => d.key === 'gate2_coords')?.value;
+          const g3 = data.find(d => d.key === 'gate3_coords')?.value;
+
           if (days) setEnabledDays(days);
           if (dates) setDisabledDates(dates);
           if (subDates) setSubstituteDates(subDates);
           if (startD) setStartDate(startD);
           if (checkInAct !== undefined) setCheckInActive(checkInAct !== 'false');
+
+          if (sLat) setSchoolCenterLat(String(sLat));
+          if (sLng) setSchoolCenterLng(String(sLng));
+          if (sRad) setSchoolRadius(String(sRad));
+          if (g1) setGate1Coords(typeof g1 === 'string' ? JSON.parse(g1) : g1);
+          if (g2) setGate2Coords(typeof g2 === 'string' ? JSON.parse(g2) : g2);
+          if (g3) setGate3Coords(typeof g3 === 'string' ? JSON.parse(g3) : g3);
         }
       } catch (err) {
         console.error('Error loading settings in CheckInPage:', err);
@@ -83,12 +108,16 @@ export default function CheckInPage() {
     }
     async function loadGreetingSchedules() {
       try {
-        const { data, error } = await supabase
-          .from('schedules')
-          .select('*')
-          .eq('type', 'greeting');
-        if (!error && data) {
-          setGreetingSchedules(data);
+        const todayStr = toGregorianStr(new Date());
+        const [schedRes, swapRes] = await Promise.all([
+          supabase.from('schedules').select('*').eq('type', 'greeting'),
+          supabase.from('duty_swaps').select('*').eq('date', todayStr)
+        ]);
+        if (!schedRes.error && schedRes.data) {
+          setGreetingSchedules(schedRes.data);
+        }
+        if (!swapRes.error && swapRes.data) {
+          setTodaySwaps(swapRes.data);
         }
       } catch (err) {
         console.error('Error loading greeting schedules:', err);
@@ -124,6 +153,13 @@ export default function CheckInPage() {
           loadGreetingSchedules();
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'duty_swaps' },
+        () => {
+          loadGreetingSchedules();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -155,12 +191,13 @@ export default function CheckInPage() {
   };
 
   const handleStartCheckIn = () => {
+    setLocError(null);
     setStep(1);
     
     if (!navigator.geolocation) {
       if (import.meta.env.DEV) {
         setDistanceInfo("เบราว์เซอร์ไม่รองรับ GPS (จำลองโหมด Dev)");
-        setTimeout(() => setStep(2), 1500);
+        setTimeout(() => setStep(2), 1200);
       } else {
         let msg = "เบราว์เซอร์ไม่รองรับระบบระบุพิกัด GPS";
         if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -172,26 +209,101 @@ export default function CheckInPage() {
       return;
     }
 
-    const optionsHigh = { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 };
-    const optionsLow = { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 };
+    // Determine if user has greeting duty and which gate
+    let userAssignedGate = null;
+    const todaySchedule = greetingSchedules.find(s => s.day === todayDayName);
+    if (todaySchedule && user?.nickname) {
+      const scheduleData = todaySchedule.data || {};
+      const effectiveGate1 = (scheduleData.gate1 || []).map(n => {
+        const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate1' && s.original_nickname === n);
+        return swap ? swap.substitute_nickname : n;
+      });
+      const effectiveGate2 = (scheduleData.gate2 || []).map(n => {
+        const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate2' && s.original_nickname === n);
+        return swap ? swap.substitute_nickname : n;
+      });
+      const effectiveGate3 = (scheduleData.gate3 || []).map(n => {
+        const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate3' && s.original_nickname === n);
+        return swap ? swap.substitute_nickname : n;
+      });
+
+      if (effectiveGate1.includes(user.nickname)) userAssignedGate = 'gate1';
+      else if (effectiveGate2.includes(user.nickname)) userAssignedGate = 'gate2';
+      else if (effectiveGate3.includes(user.nickname)) userAssignedGate = 'gate3';
+    }
+
+    const optionsHigh = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+    const optionsLow = { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 };
 
     const tryGetPosition = (options, isFallback) => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const { latitude, longitude } = pos.coords;
-          const schoolLat = 16.713227719670115; 
-          const schoolLng = 98.57308240750432;
-          const dist = getDistance(latitude, longitude, schoolLat, schoolLng);
+          const { latitude, longitude, accuracy } = pos.coords;
           
+          const sLat = parseFloat(schoolCenterLat) || 16.713228;
+          const sLng = parseFloat(schoolCenterLng) || 98.573082;
+          const sRad = parseFloat(schoolRadius) || 100;
+          const centerDist = getDistance(latitude, longitude, sLat, sLng);
+
+          let isPassed = false;
+          let checkPointName = 'ลานเสาธง/กลางโรงเรียน';
+          let shortestDist = centerDist;
+          let allowedRadius = sRad;
+
+          if (centerDist <= sRad) {
+            isPassed = true;
+            shortestDist = centerDist;
+            allowedRadius = sRad;
+            checkPointName = 'ลานเสาธง/บริเวณโรงเรียน';
+          } else if (userAssignedGate) {
+            let gateCoord = null;
+            let gateName = '';
+            if (userAssignedGate === 'gate1') {
+              gateCoord = gate1Coords;
+              gateName = 'ประตู 1 (ไหมไทย)';
+            } else if (userAssignedGate === 'gate2') {
+              gateCoord = gate2Coords;
+              gateName = 'ประตู 2 (อำเภอ)';
+            } else if (userAssignedGate === 'gate3') {
+              gateCoord = gate3Coords;
+              gateName = 'ประตู 3 (หน้า รร.)';
+            }
+
+            if (gateCoord && gateCoord.lat && gateCoord.lng) {
+              const gLat = parseFloat(gateCoord.lat);
+              const gLng = parseFloat(gateCoord.lng);
+              const gRad = parseFloat(gateCoord.radius) || 60;
+              const gateDist = getDistance(latitude, longitude, gLat, gLng);
+
+              if (gateDist <= gRad) {
+                isPassed = true;
+                shortestDist = gateDist;
+                allowedRadius = gRad;
+                checkPointName = gateName;
+              } else if (gateDist < shortestDist) {
+                shortestDist = gateDist;
+                allowedRadius = gRad;
+                checkPointName = gateName;
+              }
+            }
+          }
+
           if (import.meta.env.DEV) {
-            setDistanceInfo(`ระยะห่างจากโรงเรียน: ${Math.round(dist)} เมตร (จำลองโหมด Dev)`);
-            setTimeout(() => setStep(2), 1500);
-          } else if (dist > 300) {
-            alert(`ไม่สามารถเช็คชื่อได้! คุณอยู่ห่างจากโรงเรียน ${Math.round(dist)} เมตร (ต้องไม่เกิน 300 เมตร)`);
+            setDistanceInfo(`ระยะห่างจาก${checkPointName}: ${Math.round(shortestDist)} เมตร (จำลองโหมด Dev)`);
+            setLocError(null);
+            setTimeout(() => setStep(2), 1200);
+          } else if (!isPassed) {
+            setLocError({
+              dist: Math.round(shortestDist),
+              maxRadius: allowedRadius,
+              checkPointName,
+              accuracy: Math.round(accuracy || 0)
+            });
             setStep(0);
           } else {
-            setDistanceInfo(`ระยะห่างจากโรงเรียน: ${Math.round(dist)} เมตร`);
-            setTimeout(() => setStep(2), 1500);
+            setDistanceInfo(`ระยะห่างจาก${checkPointName}: ${Math.round(shortestDist)} เมตร`);
+            setLocError(null);
+            setTimeout(() => setStep(2), 1200);
           }
         },
         (err) => {
@@ -203,7 +315,8 @@ export default function CheckInPage() {
 
           if (import.meta.env.DEV) {
             setDistanceInfo("ดึงพิกัดไม่ได้ (จำลองโหมด Dev)");
-            setTimeout(() => setStep(2), 1500);
+            setLocError(null);
+            setTimeout(() => setStep(2), 1200);
           } else {
             let msg = "ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS";
             if (err.code === 1) {
@@ -246,9 +359,22 @@ export default function CheckInPage() {
     const todaySchedule = greetingSchedules.find(s => s.day === todayName);
     if (todaySchedule && user?.nickname) {
       const scheduleData = todaySchedule.data || {};
-      if (scheduleData.gate1?.includes(user.nickname) ||
-          scheduleData.gate2?.includes(user.nickname) ||
-          scheduleData.gate3?.includes(user.nickname)) {
+      const effectiveGate1 = (scheduleData.gate1 || []).map(n => {
+        const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate1' && s.original_nickname === n);
+        return swap ? swap.substitute_nickname : n;
+      });
+      const effectiveGate2 = (scheduleData.gate2 || []).map(n => {
+        const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate2' && s.original_nickname === n);
+        return swap ? swap.substitute_nickname : n;
+      });
+      const effectiveGate3 = (scheduleData.gate3 || []).map(n => {
+        const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate3' && s.original_nickname === n);
+        return swap ? swap.substitute_nickname : n;
+      });
+
+      if (effectiveGate1.includes(user.nickname) ||
+          effectiveGate2.includes(user.nickname) ||
+          effectiveGate3.includes(user.nickname)) {
         hasGreetingDuty = true;
       }
     }
@@ -540,11 +666,53 @@ export default function CheckInPage() {
                 กลับหน้าหลัก
               </button>
             </div>
+          ) : locError ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '10px 0' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#ffebee', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c62828' }}>
+                <AlertTriangle size={36} />
+              </div>
+              <div style={{ width: '100%' }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: '#c62828', margin: 0 }}>
+                  อยู่นอกเขตพื้นที่เช็คชื่อ!
+                </h3>
+                <div style={{ background: '#fff5f5', border: '1px solid #ffcdd2', borderRadius: 10, padding: '12px 16px', marginTop: 12, textAlign: 'left', fontSize: 13, color: '#37474f' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ color: '#757575' }}>จุดเช็คชื่อ:</span>
+                    <span style={{ fontWeight: 600 }}>{locError.checkPointName}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ color: '#757575' }}>ระยะห่างปัจจุบัน:</span>
+                    <span style={{ fontWeight: 700, color: '#c62828' }}>{locError.dist} เมตร</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ color: '#757575' }}>เกณฑ์ที่อนุญาต:</span>
+                    <span style={{ fontWeight: 600, color: '#2e7d32' }}>ไม่เกิน {locError.maxRadius} เมตร</span>
+                  </div>
+                  {locError.accuracy > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9e9e9e', borderTop: '1px dashed #e0e0e0', paddingTop: 4, marginTop: 4 }}>
+                      <span>ความแม่นยำสัญญาณ GPS:</span>
+                      <span>±{locError.accuracy} เมตร</span>
+                    </div>
+                  )}
+                </div>
+                <p style={{ fontSize: 13, color: '#555', marginTop: 12, lineHeight: 1.5 }}>
+                  💡 <b>คำแนะนำ:</b> กรุณาเดินเข้ามาในบริเวณโรงเรียน/ลานเสาธง แล้วยืนในจุดที่โล่งแจ้งเพื่อรับสัญญาณ GPS ชัดเจน
+                </p>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+                <button className="btn btn-primary" onClick={handleStartCheckIn} style={{ width: '100%', padding: '12px 0', fontSize: 15, fontWeight: 700 }}>
+                  🔄 ลองค้นหาตำแหน่งใหม่อีกครั้ง (Retry)
+                </button>
+                <button className="btn btn-gray" onClick={() => setLocError(null)} style={{ width: '100%', padding: '8px 0', fontSize: 13 }}>
+                  กลับหน้าเริ่มต้น
+                </button>
+              </div>
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
               <MapPin size={48} color="#00bcd4" />
               <div style={{ fontSize: 14, color: '#616161' }}>
-                ระบบจะทำการตรวจสอบพิกัด GPS ว่าคุณอยู่ในบริเวณโรงเรียนหรือไม่ จากนั้นให้ถ่ายภาพเซลฟี่เพื่อยืนยันตัวตน
+                ระบบจะทำการตรวจสอบพิกัด GPS ว่าคุณอยู่ในบริเวณโรงเรียนหรือไม่ (รัศมี {schoolRadius} ม.) จากนั้นให้ถ่ายภาพเซลฟี่ด้วยกล้องสดเพื่อยืนยันตัวตน
               </div>
               <button className="btn btn-primary" onClick={handleStartCheckIn} style={{ marginTop: 16, width: '100%', padding: '12px 0', fontSize: 16 }}>
                 เริ่มเช็คชื่อ
@@ -559,7 +727,7 @@ export default function CheckInPage() {
             <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
             <div>
               <div style={{ fontWeight: 600, fontSize: 16 }}>กำลังดึงตำแหน่ง GPS...</div>
-              <div style={{ fontSize: 13, color: '#9e9e9e', marginTop: 4 }}>กรุณารอสักครู่ ระบบกำลังตรวจสอบพิกัด</div>
+              <div style={{ fontSize: 13, color: '#9e9e9e', marginTop: 4 }}>กรุณารอสักครู่ ระบบกำลังตรวจสอบพิกัดความแม่นยำสูง</div>
             </div>
           </div>
         )}
@@ -572,6 +740,7 @@ export default function CheckInPage() {
             
             <CameraCapture
               onCapture={(dataUrl) => setPhotoUrl(dataUrl)}
+              allowUpload={false}
               facingMode="user"
               height={280}
             />

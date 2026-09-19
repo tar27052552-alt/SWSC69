@@ -1,11 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { DEPARTMENTS, ROLES } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import { 
   Search, Plus, Edit2, Trash2, X, Save, LogIn, Shield, 
   UserCheck, ShieldAlert, Camera, Users, Award, RefreshCw,
-  CheckCircle2, Lock, UserX, AlertTriangle, KeyRound
+  CheckCircle2, Lock, UserX, AlertTriangle, KeyRound, Megaphone, Target
 } from 'lucide-react';
 import { supabaseDelete, supabaseRpc, supabaseSelect, supabaseUpsert, supabaseUpdate } from '../lib/supabaseRest';
 
@@ -308,6 +308,22 @@ export default function AdminPage() {
 
   return (
     <div style={{ paddingBottom: 40 }}>
+      {/* ── ADMIN NAV TABS ── */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, overflowX: 'auto', paddingBottom: 4 }}>
+        <Link to="/admin" className="badge badge-purple" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
+          <Shield size={14} /> จัดการผู้ใช้งาน
+        </Link>
+        <Link to="/admin-announcements" className="badge badge-gray" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Megaphone size={14} /> จัดการประกาศหน้าเว็บ
+        </Link>
+        <Link to="/admin-videos" className="badge badge-gray" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Camera size={14} /> จัดการวิดีโอกิจกรรม
+        </Link>
+        <Link to="/admin-policies" className="badge badge-gray" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Target size={14} /> จัดการนโยบายสภาฯ
+        </Link>
+      </div>
+
       {/* ── PAGE HEADER ── */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <div>

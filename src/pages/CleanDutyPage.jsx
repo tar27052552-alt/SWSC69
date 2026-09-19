@@ -37,20 +37,26 @@ export default function CleanDutyPage() {
         const { data: uData } = await supabase.from('users').select('id, nickname, name, dept_id, role');
         if (uData) setUsersList(uData);
 
-        // Load today's Clean Room Duty
+        // Load today's Clean Room Duty & Swaps
         const DAY_MAP = { 0:'อาทิตย์', 1:'จันทร์', 2:'อังคาร', 3:'พุธ', 4:'พฤหัส', 5:'ศุกร์', 6:'เสาร์' };
         const todayKey = DAY_MAP[new Date().getDay()];
+        const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
         
-        const { data: scheduleData, error: scheduleError } = await supabase
-          .from('schedules')
-          .select('*')
-          .eq('type', 'clean_room')
-          .eq('day', todayKey);
+        const [scheduleRes, swapsRes] = await Promise.all([
+          supabase.from('schedules').select('*').eq('type', 'clean_room').eq('day', todayKey),
+          supabase.from('duty_swaps').select('*').eq('date', todayStr).eq('duty_type', 'clean_room')
+        ]);
         
         let members = [];
-        if (!scheduleError && scheduleData && scheduleData[0]) {
-          const rowData = scheduleData[0].data;
-          members = rowData.members || [];
+        const todaySwaps = swapsRes.data || [];
+
+        if (!scheduleRes.error && scheduleRes.data && scheduleRes.data[0]) {
+          const rowData = scheduleRes.data[0].data;
+          const rawMembers = rowData.members || [];
+          members = rawMembers.map(n => {
+            const swap = todaySwaps.find(s => s.original_nickname === n);
+            return swap ? swap.substitute_nickname : n;
+          });
         }
         
         let hasDuty = members.length > 0 && members[0] !== '–';

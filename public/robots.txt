@@ -1,0 +1,10 @@
+# robots.txt for SWSC.OFFICIAL (Sapphawitthayakhom School Student Council)
+User-agent: *
+Allow: /
+
+# Prevent search engines from indexing the private admin portal
+Disallow: /SWSC69/admin/
+Disallow: /admin/
+
+# Sitemap location
+Sitemap: https://tar27052552-alt.github.io/SWSC69/sitemap.xml

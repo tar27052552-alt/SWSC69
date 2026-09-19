@@ -18,6 +18,7 @@ export default function MyAttendancePage() {
   const [substituteDates, setSubstituteDates] = useState([]);
   const [startDate, setStartDate] = useState('');
   const [greetingSchedules, setGreetingSchedules] = useState([]);
+  const [swaps, setSwaps] = useState([]);
   const [dbExemptDates, setDbExemptDates] = useState([]);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
@@ -61,14 +62,15 @@ export default function MyAttendancePage() {
     async function loadMyAttendance() {
       try {
         if (user) {
-          const { data, error } = await supabase
-            .from('student_attendance')
-            .select('*')
-            .eq('user_id', String(user.id))
-            .like('date', `${month}-%`);
-          if (error) throw error;
-          if (data) {
-            setDbRecords(data);
+          const [attRes, swapRes] = await Promise.all([
+            supabase.from('student_attendance').select('*').eq('user_id', String(user.id)).like('date', `${month}-%`),
+            supabase.from('duty_swaps').select('*').like('date', `${month}-%`)
+          ]);
+          if (attRes.data) {
+            setDbRecords(attRes.data);
+          }
+          if (swapRes.data) {
+            setSwaps(swapRes.data);
           }
         }
       } catch (err) {
@@ -163,9 +165,22 @@ export default function MyAttendancePage() {
     const todaySchedule = greetingSchedules.find(s => s.day === dayName);
     if (todaySchedule && user?.nickname) {
       const scheduleData = todaySchedule.data || {};
-      if (scheduleData.gate1?.includes(user.nickname) ||
-          scheduleData.gate2?.includes(user.nickname) ||
-          scheduleData.gate3?.includes(user.nickname)) {
+      const effectiveGate1 = (scheduleData.gate1 || []).map(n => {
+        const swap = swaps.find(s => s.date === dateStr && s.duty_type === 'greeting_gate1' && s.original_nickname === n);
+        return swap ? swap.substitute_nickname : n;
+      });
+      const effectiveGate2 = (scheduleData.gate2 || []).map(n => {
+        const swap = swaps.find(s => s.date === dateStr && s.duty_type === 'greeting_gate2' && s.original_nickname === n);
+        return swap ? swap.substitute_nickname : n;
+      });
+      const effectiveGate3 = (scheduleData.gate3 || []).map(n => {
+        const swap = swaps.find(s => s.date === dateStr && s.duty_type === 'greeting_gate3' && s.original_nickname === n);
+        return swap ? swap.substitute_nickname : n;
+      });
+
+      if (effectiveGate1.includes(user.nickname) ||
+          effectiveGate2.includes(user.nickname) ||
+          effectiveGate3.includes(user.nickname)) {
         hasGreetingDuty = true;
       }
     }

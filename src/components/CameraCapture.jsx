@@ -6,8 +6,9 @@ import { Camera, RotateCcw, Upload, X } from 'lucide-react';
  * @param {Function} onCapture - callback รับ base64 data URL (หรือ null เมื่อ retake)
  * @param {string} facingMode  - 'user' (front) | 'environment' (back)
  * @param {number} height      - ความสูงของพื้นที่แสดงผล (px)
+ * @param {boolean} allowUpload - อนุญาตให้อัปโหลดไฟล์จากคลังรูปภาพหรือไม่ (default: true)
  */
-export default function CameraCapture({ onCapture, facingMode = 'user', height = 280 }) {
+export default function CameraCapture({ onCapture, facingMode = 'user', height = 280, allowUpload = true }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -192,16 +193,22 @@ export default function CameraCapture({ onCapture, facingMode = 'user', height =
           )}
 
           {/* File upload fallback */}
-          <label style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '10px', border: '1px dashed #bdbdbd', borderRadius: 8,
-            cursor: 'pointer', fontSize: 13, color: '#757575', background: '#fafafa'
-          }}>
-            <Upload size={15} />
-            หรืออัปโหลดรูปจากอุปกรณ์
-            <input type="file" accept="image/*"
-              onChange={handleFileUpload} style={{ display: 'none' }} />
-          </label>
+          {allowUpload ? (
+            <label style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '10px', border: '1px dashed #bdbdbd', borderRadius: 8,
+              cursor: 'pointer', fontSize: 13, color: '#757575', background: '#fafafa'
+            }}>
+              <Upload size={15} />
+              หรืออัปโหลดรูปจากอุปกรณ์
+              <input type="file" accept="image/*"
+                onChange={handleFileUpload} style={{ display: 'none' }} />
+            </label>
+          ) : (
+            <div style={{ fontSize: 12, color: '#e65100', background: '#fff3e0', border: '1px solid #ffe0b2', padding: '8px 12px', borderRadius: 8, textAlign: 'center', fontWeight: 600 }}>
+              📸 บังคับเปิดกล้องถ่ายสดเท่านั้น (ไม่อนุญาตให้อัปโหลดภาพจากคลังรูป)
+            </div>
+          )}
         </>
       )}
 

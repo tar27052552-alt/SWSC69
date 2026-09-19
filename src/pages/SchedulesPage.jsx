@@ -63,6 +63,8 @@ const TagList = ({ names, day, dutyType, swaps = [] }) => {
           return <span key={i} style={{ color: '#cbd5e1', fontSize: 13 }}>–</span>;
         }
 
+        const swapDateLabel = activeSwap ? new Date(activeSwap.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '';
+
         return (
           <span key={i} style={{
             background: activeSwap ? '#fff3e0' : '#e0f2fe',
@@ -72,10 +74,10 @@ const TagList = ({ names, day, dutyType, swaps = [] }) => {
             display: 'inline-flex', alignItems: 'center', gap: 4,
             boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
           }}>
-            {n}
+            {activeSwap ? <span style={{ textDecoration: 'line-through', opacity: 0.7 }}>{n}</span> : n}
             {activeSwap && (
-              <span style={{ fontSize: 11, color: '#c62828', fontWeight: 800 }}>
-                ➡️ {activeSwap.substitute_nickname} (แทน)
+              <span style={{ fontSize: 11, color: '#2e7d32', fontWeight: 800 }}>
+                ➡️ {activeSwap.substitute_nickname} <span style={{ fontSize: 10, color: '#e65100', fontWeight: 600 }}>({swapDateLabel})</span>
               </span>
             )}
           </span>

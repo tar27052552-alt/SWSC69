@@ -62,9 +62,8 @@ export default function ManageVideosPage() {
   // Helper functions for YouTube & Thumbnails
   const getYouTubeId = (url) => {
     if (!url) return null;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/)|youtu\.be\/|\&v=)([a-zA-Z0-9_-]{11})/);
+    return match ? match[1] : null;
   };
 
   const getVideoPlatform = (rawUrl) => {

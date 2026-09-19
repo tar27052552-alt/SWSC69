@@ -24,6 +24,7 @@ export default function CalendarPage() {
   const [disabledDates, setDisabledDates] = useState([]);
   const [substituteDates, setSubstituteDates] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  const [dutySwaps, setDutySwaps] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [selectedParticipants, setSelectedParticipants] = useState([]);
@@ -44,13 +45,15 @@ export default function CalendarPage() {
           usersRes,
           participantsRes,
           settingsRes,
-          schedulesRes
+          schedulesRes,
+          swapsRes
         ] = await Promise.all([
           supabase.from('events').select('*').order('date', { ascending: true }),
           supabase.from('users').select('id, name, nickname, dept_id').order('name'),
           supabase.from('event_participants').select('*'),
           supabase.from('attendance_settings').select('*'),
-          supabase.from('schedules').select('*')
+          supabase.from('schedules').select('*'),
+          supabase.from('duty_swaps').select('*')
         ]);
 
         if (eventsRes.data) {
@@ -64,6 +67,7 @@ export default function CalendarPage() {
         if (usersRes.data) setUsersList(usersRes.data);
         if (participantsRes.data) setParticipants(participantsRes.data);
         if (schedulesRes.data) setSchedules(schedulesRes.data);
+        if (swapsRes.data) setDutySwaps(swapsRes.data);
 
         if (settingsRes.data) {
           const disabled = settingsRes.data.find(s => s.key === 'disabled_dates')?.value || [];
@@ -330,6 +334,28 @@ export default function CalendarPage() {
   const effectiveDayName = selDayStatus.substitute ? selDayStatus.substitute.replaceDay : selDayName.replace('พฤหัสบดี','พฤหัส');
   const greetingSchedule = schedules.find(s => s.type === 'greeting' && s.day === effectiveDayName);
   const cleanRoomSchedule = schedules.find(s => s.type === 'clean_room' && s.day === effectiveDayName);
+
+  const selSwaps = (dutySwaps || []).filter(s => s.date === selDateStr);
+
+  const effectiveGreetingData = greetingSchedule?.data ? {
+    gate1: (greetingSchedule.data.gate1 || []).map(n => {
+      const swap = selSwaps.find(s => s.duty_type === 'greeting_gate1' && s.original_nickname === n);
+      return swap ? `${swap.substitute_nickname} (แทน ${n})` : n;
+    }),
+    gate2: (greetingSchedule.data.gate2 || []).map(n => {
+      const swap = selSwaps.find(s => s.duty_type === 'greeting_gate2' && s.original_nickname === n);
+      return swap ? `${swap.substitute_nickname} (แทน ${n})` : n;
+    }),
+    gate3: (greetingSchedule.data.gate3 || []).map(n => {
+      const swap = selSwaps.find(s => s.duty_type === 'greeting_gate3' && s.original_nickname === n);
+      return swap ? `${swap.substitute_nickname} (แทน ${n})` : n;
+    })
+  } : null;
+
+  const effectiveCleanMembers = cleanRoomSchedule?.data?.members ? (cleanRoomSchedule.data.members || []).map(n => {
+    const swap = selSwaps.find(s => s.duty_type === 'clean_room' && s.original_nickname === n);
+    return swap ? `${swap.substitute_nickname} (แทน ${n})` : n;
+  }) : [];
 
   const openAddForType = (type, defaultTitle = '') => {
     setEditId(null);
@@ -740,11 +766,11 @@ export default function CalendarPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: '#00838f' }}>🙏 เวรยืนไหว้ประตูโรงเรียน</div>
-                    {greetingSchedule?.data ? (
+                    {effectiveGreetingData ? (
                       <div style={{ fontSize: 11, color: '#475569', marginTop: 2, lineHeight: 1.4 }}>
-                        ประตูไหมไทย: {(greetingSchedule.data.gate1 || []).join(', ') || '-'}<br />
-                        ประตูอำเภอ: {(greetingSchedule.data.gate2 || []).join(', ') || '-'}<br />
-                        ประตูหน้า รร.: {(greetingSchedule.data.gate3 || []).join(', ') || '-'}
+                        ประตูไหมไทย: {(effectiveGreetingData.gate1 || []).join(', ') || '-'}<br />
+                        ประตูอำเภอ: {(effectiveGreetingData.gate2 || []).join(', ') || '-'}<br />
+                        ประตูหน้า รร.: {(effectiveGreetingData.gate3 || []).join(', ') || '-'}
                       </div>
                     ) : (
                       <div style={{ fontSize: 11, color: '#94a3b8' }}>ไม่มีเวรยืนไหว้ในวันนี้</div>
@@ -753,9 +779,9 @@ export default function CalendarPage() {
 
                   <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: '#2e7d32' }}>🧹 เวรทำความสะอาดห้องสภา</div>
-                    {cleanRoomSchedule?.data?.members ? (
+                    {effectiveCleanMembers && effectiveCleanMembers.length > 0 && effectiveCleanMembers[0] !== '–' ? (
                       <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
-                        {(cleanRoomSchedule.data.members || []).join(', ')}
+                        {effectiveCleanMembers.join(', ')}
                       </div>
                     ) : (
                       <div style={{ fontSize: 11, color: '#94a3b8' }}>ไม่มีเวรทำความสะอาดในวันนี้</div>

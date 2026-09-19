@@ -1,78 +1,135 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import { 
   Target, Trash2, Edit2, X, Plus, Save, Sparkles, 
   CheckCircle2, Search, RefreshCw, Users, Layers, 
-  TrendingUp, BarChart2, ListChecks, ArrowUpRight
+  TrendingUp, BarChart2, ListChecks, ArrowUpRight,
+  Copy, Check, AlertTriangle, ExternalLink, Shield,
+  Megaphone, Camera, Database, Info
 } from 'lucide-react';
 
+const SQL_CREATE_TABLE = `-- Create web_policies table for Student Council Portal
+CREATE TABLE IF NOT EXISTS public.web_policies (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'นโยบายสภาฯ',
+    description TEXT,
+    icon TEXT DEFAULT '📌',
+    status TEXT DEFAULT 'ดำเนินการ',
+    status_color TEXT DEFAULT '#8b5cf6',
+    progress INTEGER DEFAULT 0,
+    highlights JSONB DEFAULT '[]'::jsonb,
+    target TEXT DEFAULT 'นักเรียนโรงเรียนสรรพวิทยาคมทุกคน',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE public.web_policies ENABLE ROW LEVEL SECURITY;
+
+-- Allow Public Read
+DROP POLICY IF EXISTS "Public read web_policies" ON public.web_policies;
+CREATE POLICY "Public read web_policies" ON public.web_policies FOR SELECT USING (true);
+
+-- Allow Public / Authenticated Write
+DROP POLICY IF EXISTS "Public write web_policies" ON public.web_policies;
+CREATE POLICY "Public write web_policies" ON public.web_policies FOR ALL USING (true);
+
+-- Insert Initial Policies (4 policies matching SWSC portal)
+INSERT INTO public.web_policies (title, category, description, icon, status, status_color, progress, highlights, target)
+VALUES 
+(
+  'ส่งเสริมสิทธิและเสียงสะท้อนของนักเรียน (Student Voice & Rights)',
+  'นโยบายด้านประชาธิปไตย',
+  'เปิดช่องทางการรับฟังความคิดเห็นและข้อเสนอแนะจากนักเรียนทุกระดับชั้นอย่างโปร่งใส พร้อมผลักดันสู่การแก้ไขปัญหาจริงร่วมกับฝ่ายบริหารโรงเรียน',
+  '📢',
+  'ดำเนินการแล้ว 80%',
+  '#3b82f6',
+  80,
+  '["จัดทำกล่องรับฟังความคิดเห็นออนไลน์ผ่านเว็บสภาฯ", "จัดการประชุมรับฟังเสียงตัวแทนห้องเรียน", "สรุปข้อเสนอแนะส่งต่อคณะครูและฝ่ายบริหาร"]'::jsonb,
+  'นักเรียนทุกคน'
+),
+(
+  'ยกระดับกิจกรรมและการมีส่วนร่วมของนักเรียน (Active Student Activities)',
+  'นโยบายด้านกิจกรรมและนันทนาการ',
+  'สนับสนุนกิจกรรมสร้างสรรค์ ทั้งด้านดนตรี ศิลปะ กีฬา และวิชาการ เพื่อส่งเสริมศักยภาพและความสุขในการเรียนรู้ของนักเรียนสรรพวิทยาคม',
+  '🎨',
+  'กำลังดำเนินการ',
+  '#ec4899',
+  65,
+  '["จัดกิจกรรมวันสำคัญและงานสานสัมพันธ์นักเรียน", "สนับสนุนการแข่งขันกีฬาและนันทนาการภายใน", "เปิดพื้นที่แสดงความสามารถของนักเรียน"]'::jsonb,
+  'นักเรียนทุกระดับชั้น'
+),
+(
+  'ขับเคลื่อนสิ่งแวดล้อมและห้องเรียนน่าอยู่ (Green & Clean School)',
+  'นโยบายด้านบริการและสิ่งแวดล้อม',
+  'รณรงค์การคัดแยกขยะ ระบบขยะแลกแต้ม และการดูแลรักษาความสะอาดในพื้นที่ส่วนกลาง เพื่อสร้างสภาพแวดล้อมที่เอื้อต่อการเรียนรู้',
+  '🌱',
+  'ดำเนินการต่อเนื่อง',
+  '#10b981',
+  75,
+  '["ส่งเสริมระบบขยะแลกแต้มร่วมกับโรงเรียน", "จัดเวรดูแลรักษาความสะอาดพื้นที่สภานักเรียน", "รณรงค์ลดการใช้พลาสติกแบบใช้ครั้งเดียว"]'::jsonb,
+  'บุคลากรและนักเรียนทุกคน'
+),
+(
+  'พัฒนาระบบสารสนเทศสภานักเรียนสู่ยุคดิจิทัล (Digital Student Council)',
+  'นโยบายด้านเทคโนโลยีและสารสนเทศ',
+  'พัฒนาระบบบริการข้อมูล ข่าวสาร ปฏิทินกิจกรรม และระบบสืบค้นเกียรติบัตรออนไลน์ เพื่อความสะดวกรวดเร็วและเข้าถึงง่ายตลอด 24 ชั่วโมง',
+  '💻',
+  'สำเร็จแล้ว',
+  '#8b5cf6',
+  95,
+  '["เปิดตัวเว็บไซต์ทางการ SWSC.OFFICIAL", "ระบบปฏิทินกิจกรรมและข่าวสารแบบเรียลไทม์", "ระบบค้นหาและดาวน์โหลดเกียรติบัตรออนไลน์"]'::jsonb,
+  'ครู นักเรียน และผู้ปกครอง'
+);`;
+
+// 4 Default Policies that match index.html exactly
 const DEFAULT_POLICIES = [
   {
-    title: 'โครงการขยะแลกแต้ม & SWSC Zero Waste',
-    category: 'สิ่งแวดล้อม & สวัสดิการ',
-    icon: '♻️',
-    progress: 100,
-    status: 'ดำเนินการสำเร็จ',
-    status_color: '#10b981',
-    description: 'รณรงค์คัดแยกขยะในโรงเรียน และนำขยะรีไซเคิลมาแลกเป็นแต้มเพื่อนำไปแลกของรางวัลหรือสิทธิพิเศษต่างๆ',
-    highlights: JSON.stringify(['จัดตั้งจุดรับขยะแลกแต้มประจำโรงเรียน', 'เชื่อมโยงระบบฐานข้อมูลแต้มสะสมออนไลน์', 'สร้างจิตสำนึกด้านสิ่งแวดล้อมให้แก่นักเรียน']),
-    target: 'นักเรียนทุกระดับชั้น'
-  },
-  {
-    title: 'Voice of SWSC: สภาฯ เปิดรับฟังเสียงนักเรียน 24 ชม.',
-    category: 'การมีส่วนร่วม & สิทธิ',
-    icon: '💬',
-    progress: 100,
-    status: 'เปิดใช้งานแล้ว',
-    status_color: '#10b981',
-    description: 'เปิดช่องทางออนไลน์รับฟังความคิดเห็น ปัญหา และข้อเสนอแนะนโยบายจากนักเรียนโดยตรงแบบเรียลไทม์',
-    highlights: JSON.stringify(['ระบบส่งข้อเสนอแนะแบบระบุหรือไม่ระบุตัวตน', 'คณะกรรมการสภาฯ นำเข้าประชุมเพื่อหาทางแก้ไข', 'ติดตามสถานะการดำเนินการได้ตลอดเวลา']),
-    target: 'นักเรียนและบุคลากรในโรงเรียน'
-  },
-  {
-    title: 'SWSC Open Space & สวัสดิการพื้นที่พักผ่อน',
-    category: 'สวัสดิการ & พักผ่อน',
-    icon: '🛋️',
-    progress: 85,
-    status: 'กำลังดำเนินการ',
-    status_color: '#8b5cf6',
-    description: 'พัฒนาและปรับปรุงพื้นที่พักผ่อนสำหรับนักเรียน จุดบริการชาร์จแบตเตอรี่ และอุปกรณ์นันทนาการช่วงพักกลางวัน',
-    highlights: JSON.stringify(['สำรวจความต้องการพื้นที่พักผ่อนของนักเรียน', 'ปรับปรุงจุดชาร์จแบตเตอรี่และโต๊ะม้านั่ง', 'จัดสรรอุปกรณ์กีฬาและเกมกระดานสำหรับพักผ่อน']),
-    target: 'นักเรียนทุกระดับชั้น'
-  },
-  {
-    title: 'Academic Hub & คลังเกียรติบัตรออนไลน์',
-    category: 'วิชาการ & พัฒนาตนเอง',
-    icon: '📚',
-    progress: 100,
-    status: 'ดำเนินการสำเร็จ',
-    status_color: '#10b981',
-    description: 'คลังรวบรวมเอกสารวิชาการ ชีทสรุปความรู้ และระบบค้นหาเกียรติบัตรกิจกรรมของนักเรียนผ่านเว็บสภาฯ',
-    highlights: JSON.stringify(['ระบบค้นหาเกียรติบัตรกิจกรรมสภาฯ ออนไลน์', 'ดาวน์โหลดเอกสารวิชาการและคู่มือสายเรียน', 'สนับสนุนการเตรียมตัวสอบเข้ามหาวิทยาลัย']),
-    target: 'นักเรียนชั้น ม.1 - ม.6'
-  },
-  {
-    title: 'Clean & Positive Discipline (วินัยสร้างสรรค์ สังคมอบอุ่น)',
-    category: 'งานวินัย & ระเบียบ',
-    icon: '🛡️',
-    progress: 90,
-    status: 'กำลังดำเนินการ',
+    title: 'ส่งเสริมสิทธิและเสียงสะท้อนของนักเรียน (Student Voice & Rights)',
+    category: 'นโยบายด้านประชาธิปไตย',
+    description: 'เปิดช่องทางการรับฟังความคิดเห็นและข้อเสนอแนะจากนักเรียนทุกระดับชั้นอย่างโปร่งใส พร้อมผลักดันสู่การแก้ไขปัญหาจริงร่วมกับฝ่ายบริหารโรงเรียน',
+    icon: '📢',
+    status: 'ดำเนินการแล้ว 80%',
     status_color: '#3b82f6',
-    description: 'ส่งเสริมระเบียบวินัยเชิงบวก ปรับปรุงระบบปฏิบัติหน้าที่เวรประจำวันของคณะกรรมการสภาฯ ให้มีความโปร่งใส',
-    highlights: JSON.stringify(['ระบบสแกนเช็กชื่อปฏิบัติหน้าที่เวรประจำวัน', 'การรณรงค์เคารพกฎระเบียบแบบมิตรภาพพี่ดูแลน้อง', 'การประเมินผลและสรุปสถิติจำนวนผู้ปฏิบัติหน้าที่']),
-    target: 'คณะกรรมการสภานักเรียน & นักเรียน'
+    progress: 80,
+    highlights: JSON.stringify(['จัดทำกล่องรับฟังความคิดเห็นออนไลน์ผ่านเว็บสภาฯ', 'จัดการประชุมรับฟังเสียงตัวแทนห้องเรียน', 'สรุปข้อเสนอแนะส่งต่อคณะครูและฝ่ายบริหาร']),
+    target: 'นักเรียนทุกคน'
   },
   {
-    title: 'SWSC Creative Festival & กิจกรรมสร้างสรรค์',
-    category: 'กิจกรรม & ศิลปวัฒนธรรม',
-    icon: '🎉',
-    progress: 70,
-    status: 'เตรียมจัดกิจกรรม',
-    status_color: '#f59e0b',
-    description: 'สนับสนุนพื้นที่ให้นักเรียนได้แสดงออกทางด้านดนตรี ศิลปะ และความสามารถพิเศษตลอดปีการศึกษา',
-    highlights: JSON.stringify(['งานแสดงดนตรีและเวทีแสดงความสามารถช่วงพักกลางวัน', 'กิจกรรมวันสำคัญและนิทรรศการวิชาการ', 'การประกวดคลิปสร้างสรรค์ส่งเสริมภาพลักษณ์โรงเรียน']),
-    target: 'นักเรียนทุกคนและชมรมต่างๆ'
+    title: 'ยกระดับกิจกรรมและการมีส่วนร่วมของนักเรียน (Active Student Activities)',
+    category: 'นโยบายด้านกิจกรรมและนันทนาการ',
+    description: 'สนับสนุนกิจกรรมสร้างสรรค์ ทั้งด้านดนตรี ศิลปะ กีฬา และวิชาการ เพื่อส่งเสริมศักยภาพและความสุขในการเรียนรู้ของนักเรียนสรรพวิทยาคม',
+    icon: '🎨',
+    status: 'กำลังดำเนินการ',
+    status_color: '#ec4899',
+    progress: 65,
+    highlights: JSON.stringify(['จัดกิจกรรมวันสำคัญและงานสานสัมพันธ์นักเรียน', 'สนับสนุนการแข่งขันกีฬาและนันทนาการภายใน', 'เปิดพื้นที่แสดงความสามารถของนักเรียน']),
+    target: 'นักเรียนทุกระดับชั้น'
+  },
+  {
+    title: 'ขับเคลื่อนสิ่งแวดล้อมและห้องเรียนน่าอยู่ (Green & Clean School)',
+    category: 'นโยบายด้านบริการและสิ่งแวดล้อม',
+    description: 'รณรงค์การคัดแยกขยะ ระบบขยะแลกแต้ม และการดูแลรักษาความสะอาดในพื้นที่ส่วนกลาง เพื่อสร้างสภาพแวดล้อมที่เอื้อต่อการเรียนรู้',
+    icon: '🌱',
+    status: 'ดำเนินการต่อเนื่อง',
+    status_color: '#10b981',
+    progress: 75,
+    highlights: JSON.stringify(['ส่งเสริมระบบขยะแลกแต้มร่วมกับโรงเรียน', 'จัดเวรดูแลรักษาความสะอาดพื้นที่สภานักเรียน', 'รณรงค์ลดการใช้พลาสติกแบบใช้ครั้งเดียว']),
+    target: 'บุคลากรและนักเรียนทุกคน'
+  },
+  {
+    title: 'พัฒนาระบบสารสนเทศสภานักเรียนสู่ยุคดิจิทัล (Digital Student Council)',
+    category: 'นโยบายด้านเทคโนโลยีและสารสนเทศ',
+    description: 'พัฒนาระบบบริการข้อมูล ข่าวสาร ปฏิทินกิจกรรม และระบบสืบค้นเกียรติบัตรออนไลน์ เพื่อความสะดวกรวดเร็วและเข้าถึงง่ายตลอด 24 ชั่วโมง',
+    icon: '💻',
+    status: 'สำเร็จแล้ว',
+    status_color: '#8b5cf6',
+    progress: 95,
+    highlights: JSON.stringify(['เปิดตัวเว็บไซต์ทางการ SWSC.OFFICIAL', 'ระบบปฏิทินกิจกรรมและข่าวสารแบบเรียลไทม์', 'ระบบค้นหาและดาวน์โหลดเกียรติบัตรออนไลน์']),
+    target: 'ครู นักเรียน และผู้ปกครอง'
   }
 ];
 
@@ -81,6 +138,15 @@ export default function ManagePoliciesPage() {
   const [policies, setPolicies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [tableExists, setTableExists] = useState(true);
+  const [isUsingFallback, setIsUsingFallback] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
+  const [showSqlBox, setShowSqlBox] = useState(false);
+
+  // Custom in-app delete modal state
+  const [deleteModalItem, setDeleteModalItem] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showFormModal, setShowFormModal] = useState(false);
@@ -88,14 +154,14 @@ export default function ManagePoliciesPage() {
 
   const [form, setForm] = useState({
     title: '',
-    category: 'สิ่งแวดล้อม & สวัสดิการ',
+    category: 'นโยบายด้านประชาธิปไตย',
     icon: '🎯',
-    progress: 100,
-    status: 'ดำเนินการสำเร็จ',
-    status_color: '#10b981',
+    progress: 80,
+    status: 'กำลังดำเนินการ',
+    status_color: '#3b82f6',
     description: '',
     highlightsText: '',
-    target: 'นักเรียนทุกระดับชั้น'
+    target: 'นักเรียนทุกคน'
   });
 
   const loadPolicies = async () => {
@@ -106,16 +172,23 @@ export default function ManagePoliciesPage() {
         .select('*')
         .order('id', { ascending: true });
 
-      if (error && error.code === '42P01') {
-        console.warn('Table web_policies does not exist yet.');
-        setPolicies([]);
+      if (error && (error.code === '42P01' || error.code === 'PGRST205')) {
+        console.warn('Table web_policies does not exist in Supabase yet. Using default fallback.');
+        setTableExists(false);
+        setIsUsingFallback(true);
+        setPolicies(DEFAULT_POLICIES.map((p, idx) => ({ ...p, id: idx + 1 })));
       } else if (error) {
         throw error;
       } else {
+        setTableExists(true);
+        setIsUsingFallback(false);
         setPolicies(data || []);
       }
     } catch (err) {
       console.error('Failed to load policies:', err);
+      setTableExists(false);
+      setIsUsingFallback(true);
+      setPolicies(DEFAULT_POLICIES.map((p, idx) => ({ ...p, id: idx + 1 })));
     } finally {
       setLoading(false);
     }
@@ -125,19 +198,30 @@ export default function ManagePoliciesPage() {
     loadPolicies();
   }, []);
 
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SQL_CREATE_TABLE);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 3000);
+  };
+
   const handleSeedData = async () => {
-    if (!confirm('ต้องการนำเข้าข้อมูลนโยบายเริ่มต้น 6 รายการเข้าฐานข้อมูลหรือไม่?')) return;
+    if (!confirm('ต้องการนำเข้าข้อมูลนโยบายเริ่มต้น 4 รายการเข้าฐานข้อมูลหรือไม่?')) return;
     setSubmitting(true);
     try {
+      const insertData = DEFAULT_POLICIES.map(p => ({
+        ...p,
+        highlights: JSON.parse(p.highlights)
+      }));
+
       const { error } = await supabase
         .from('web_policies')
-        .insert(DEFAULT_POLICIES);
+        .insert(insertData);
 
       if (error) throw error;
-      alert('นำเข้าข้อมูลนโยบายเริ่มต้นเข้าสู่ฐานข้อมูลสำเร็จ!');
+      alert('นำเข้าข้อมูลนโยบายเริ่มต้น 4 รายการเข้าสู่ฐานข้อมูลสำเร็จ!');
       loadPolicies();
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message + '\n\nหากยังไม่มีตาราง web_policies ใน Supabase โปรดสร้างตารางชื่อ web_policies ก่อนครับ');
+      alert('เกิดข้อผิดพลาด: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -162,7 +246,7 @@ export default function ManagePoliciesPage() {
       status: form.status.trim(),
       status_color: form.status_color,
       description: form.description.trim(),
-      highlights: JSON.stringify(highlightsArr),
+      highlights: highlightsArr,
       target: form.target.trim() || 'นักเรียนทุกคน'
     };
 
@@ -198,14 +282,14 @@ export default function ManagePoliciesPage() {
     setShowFormModal(false);
     setForm({
       title: '',
-      category: 'สิ่งแวดล้อม & สวัสดิการ',
+      category: 'นโยบายด้านประชาธิปไตย',
       icon: '🎯',
-      progress: 100,
-      status: 'ดำเนินการสำเร็จ',
-      status_color: '#10b981',
+      progress: 80,
+      status: 'กำลังดำเนินการ',
+      status_color: '#3b82f6',
       description: '',
       highlightsText: '',
-      target: 'นักเรียนทุกระดับชั้น'
+      target: 'นักเรียนทุกคน'
     });
   };
 
@@ -221,31 +305,45 @@ export default function ManagePoliciesPage() {
 
     setForm({
       title: p.title || '',
-      category: p.category || 'สิ่งแวดล้อม & สวัสดิการ',
+      category: p.category || 'นโยบายด้านประชาธิปไตย',
       icon: p.icon || '🎯',
-      progress: p.progress || 100,
-      status: p.status || 'ดำเนินการสำเร็จ',
-      status_color: p.status_color || '#10b981',
+      progress: p.progress || 80,
+      status: p.status || 'กำลังดำเนินการ',
+      status_color: p.status_color || '#3b82f6',
       description: p.description || '',
       highlightsText: hText,
-      target: p.target || 'นักเรียนทุกระดับชั้น'
+      target: p.target || 'นักเรียนทุกคน'
     });
     setShowFormModal(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('ยืนยันต้องการลบนโยบายนี้ออกจากระบบ?')) return;
+  // Dedicated in-app confirm delete function
+  const handleConfirmDelete = async () => {
+    if (!deleteModalItem) return;
+    const itemToDelete = deleteModalItem;
+    setIsDeleting(true);
+
+    // Optimistic UI update
+    setPolicies(prev => prev.filter(p => p.id !== itemToDelete.id));
+
     try {
       const { error } = await supabase
         .from('web_policies')
         .delete()
-        .eq('id', id);
-      if (error) throw error;
-      alert('ลบนโยบายสำเร็จ!');
-      loadPolicies();
+        .eq('id', itemToDelete.id);
+
+      if (error && error.code !== 'PGRST205' && error.code !== '42P01') {
+        console.error('Delete error:', error);
+        alert('ลบไม่สำเร็จ: ' + error.message);
+      }
     } catch (err) {
-      alert('ลบไม่สำเร็จ: ' + err.message);
+      console.error('Delete exception:', err);
+      alert('เกิดข้อผิดพลาดในการลบ: ' + err.message);
+    } finally {
+      setIsDeleting(false);
+      setDeleteModalItem(null);
+      loadPolicies();
     }
   };
 
@@ -279,6 +377,22 @@ export default function ManagePoliciesPage() {
 
   return (
     <div style={{ paddingBottom: 40 }}>
+      {/* ── ADMIN NAV TABS ── */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, overflowX: 'auto', paddingBottom: 4 }}>
+        <Link to="/admin" className="badge badge-gray" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Shield size={14} /> จัดการผู้ใช้งาน
+        </Link>
+        <Link to="/admin-announcements" className="badge badge-gray" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Megaphone size={14} /> จัดการประกาศหน้าเว็บ
+        </Link>
+        <Link to="/admin-videos" className="badge badge-gray" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Camera size={14} /> จัดการวิดีโอกิจกรรม
+        </Link>
+        <Link to="/admin-policies" className="badge badge-purple" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
+          <Target size={14} /> จัดการนโยบายสภาฯ
+        </Link>
+      </div>
+
       {/* ── PAGE HEADER ── */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <div>
@@ -294,11 +408,24 @@ export default function ManagePoliciesPage() {
             <span>จัดการนโยบายสภานักเรียน</span>
           </div>
           <div className="page-subtitle">
-            เพิ่ม แก้ไข และติดตามความคืบหน้านโยบายสภานักเรียนสำหรับแสดงในหน้าแรกของเว็บไซต์
+            กำหนด ควบคุมความคืบหน้า และแสดงผลนโยบายขับเคลื่อนสภาฯ บนหน้าเว็บไซต์หลัก
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {policies.length === 0 && tableExists && (
+            <button
+              onClick={handleSeedData}
+              className="btn btn-warning"
+              disabled={submitting}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              title="บันทึกข้อมูลนโยบายเริ่มต้นเข้าสู่ตาราง Supabase"
+            >
+              <Database size={16} />
+              <span>นำเข้านโยบายเริ่มต้น</span>
+            </button>
+          )}
+
           <button
             onClick={() => {
               if (showFormModal && !editingId) {
@@ -306,9 +433,9 @@ export default function ManagePoliciesPage() {
               } else {
                 setEditingId(null);
                 setForm({
-                  title: '', category: 'สิ่งแวดล้อม & สวัสดิการ', icon: '🎯',
-                  progress: 100, status: 'ดำเนินการสำเร็จ', status_color: '#10b981',
-                  description: '', highlightsText: '', target: 'นักเรียนทุกระดับชั้น'
+                  title: '', category: 'นโยบายด้านประชาธิปไตย', icon: '🎯',
+                  progress: 80, status: 'กำลังดำเนินการ', status_color: '#3b82f6',
+                  description: '', highlightsText: '', target: 'นักเรียนทุกคน'
                 });
                 setShowFormModal(true);
               }
@@ -321,6 +448,108 @@ export default function ManagePoliciesPage() {
           </button>
         </div>
       </div>
+
+      {/* ── DATABASE STATUS / SQL BANNER (ONLY IF TABLE DOES NOT EXIST) ── */}
+      {!tableExists && (
+        <div style={{
+          background: '#fffbeb',
+          border: '1px solid #fde68a',
+          borderRadius: 'var(--radius-lg)',
+          padding: '16px 20px',
+          marginBottom: 24,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: '#fef3c7',
+                color: '#d97706',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+              }}>
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <div style={{ fontSize: 14.5, fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>ยังไม่ได้สร้างตาราง web_policies ใน Supabase</span>
+                  <span className="badge badge-purple" style={{ fontSize: 11 }}>
+                    Schema Not Found
+                  </span>
+                </div>
+                <div style={{ fontSize: 12.5, color: '#78350f', marginTop: 4, lineHeight: 1.5 }}>
+                  หน้าเว็บหลักและระบบแอดมินกำลังใช้ 4 นโยบายเริ่มต้นตัวอย่าง หากต้องการให้แก้ไข/เพิ่มนโยบายได้แบบเรียลไทม์ โปรดนำคำสั่ง SQL ไปรันที่ Supabase Dashboard &gt; SQL Editor
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                onClick={handleCopySql}
+                className="btn btn-sm"
+                style={{
+                  background: copiedSql ? '#10b981' : '#4f46e5',
+                  color: '#fff',
+                  border: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontWeight: 600
+                }}
+              >
+                {copiedSql ? <Check size={14} /> : <Copy size={14} />}
+                <span>{copiedSql ? 'คัดลอก SQL สำเร็จ!' : 'คัดลอกคำสั่ง SQL สร้างตาราง'}</span>
+              </button>
+
+              <button
+                onClick={() => setShowSqlBox(!showSqlBox)}
+                className="btn btn-gray btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <span>{showSqlBox ? 'ซ่อน SQL' : 'ดูคำสั่ง SQL'}</span>
+              </button>
+
+              <button
+                onClick={loadPolicies}
+                className="btn btn-gray btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                title="รีเฟรชตรวจสอบการเชื่อมต่อ"
+              >
+                <RefreshCw size={14} />
+                <span>ตรวจสอบตาราง</span>
+              </button>
+            </div>
+          </div>
+
+          {/* SQL Preview Box */}
+          {showSqlBox && (
+            <div style={{ marginTop: 6, background: '#1e293b', borderRadius: 8, padding: 14, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, color: '#94a3b8', fontSize: 12 }}>
+                <span>SQL Script สำหรับรันใน Supabase SQL Editor:</span>
+                <button
+                  onClick={handleCopySql}
+                  style={{ background: 'transparent', border: 'none', color: '#38bdf8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}
+                >
+                  <Copy size={12} /> {copiedSql ? 'คัดลอกแล้ว' : 'คัดลอกโค้ด'}
+                </button>
+              </div>
+              <pre style={{
+                margin: 0,
+                color: '#e2e8f0',
+                fontSize: 12,
+                fontFamily: 'monospace',
+                maxHeight: 220,
+                overflowY: 'auto',
+                whiteSpace: 'pre-wrap',
+                lineHeight: 1.4
+              }}>
+                {SQL_CREATE_TABLE}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── STATS CARDS ── */}
       <div className="stats-row" style={{ marginBottom: 24 }}>
@@ -401,7 +630,7 @@ export default function ManagePoliciesPage() {
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="เช่น โครงการขยะแลกแต้ม SWSC"
+                  placeholder="เช่น ส่งเสริมสิทธิและเสียงสะท้อนของนักเรียน"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   required
@@ -416,7 +645,7 @@ export default function ManagePoliciesPage() {
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="เช่น สิ่งแวดล้อม & สวัสดิการ, วิชาการ"
+                  placeholder="เช่น นโยบายด้านประชาธิปไตย, ด้านกิจกรรม"
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
                   required
@@ -429,7 +658,7 @@ export default function ManagePoliciesPage() {
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="เลือกใส่อีโมจิ เช่น ♻️, 💬, 🛋️, 📚, 🛡️, 🎉"
+                  placeholder="เลือกใส่อีโมจิ เช่น 📢, 🎨, 🌱, 💻, 📌"
                   value={form.icon}
                   onChange={(e) => setForm({ ...form, icon: e.target.value })}
                 />
@@ -441,7 +670,7 @@ export default function ManagePoliciesPage() {
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="เช่น นักเรียนทุกระดับชั้น"
+                  placeholder="เช่น นักเรียนทุกคน, นักเรียนทุกระดับชั้น"
                   value={form.target}
                   onChange={(e) => setForm({ ...form, target: e.target.value })}
                 />
@@ -484,7 +713,7 @@ export default function ManagePoliciesPage() {
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="เช่น ดำเนินการสำเร็จ, กำลังดำเนินการ"
+                  placeholder="เช่น ดำเนินการแล้ว 80%, กำลังดำเนินการ, สำเร็จแล้ว"
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
                 />
@@ -498,11 +727,12 @@ export default function ManagePoliciesPage() {
                   value={form.status_color}
                   onChange={(e) => setForm({ ...form, status_color: e.target.value })}
                 >
-                  <option value="#10b981">🟢 เขียว (ดำเนินการสำเร็จแล้ว)</option>
-                  <option value="#8b5cf6">🟣 ม่วง (กำลังดำเนินการ - สวัสดิการ)</option>
-                  <option value="#3b82f6">🔵 ฟ้า (กำลังดำเนินการ - วินัย/ระเบียบ)</option>
-                  <option value="#f59e0b">🟠 ส้ม (เตรียมจัดกิจกรรม / ดำเนินการ)</option>
-                  <option value="#ef4444">🔴 แดง (อยู่ในช่วงเสนอแผนงาน)</option>
+                  <option value="#3b82f6">🔵 ฟ้า (ประชาธิปไตย / สิทธิ์)</option>
+                  <option value="#ec4899">🌸 ชมพู (กิจกรรม & นันทนาการ)</option>
+                  <option value="#10b981">🟢 เขียว (บริการและสิ่งแวดล้อม / สำเร็จ)</option>
+                  <option value="#8b5cf6">🟣 ม่วง (เทคโนโลยี & สารสนเทศ)</option>
+                  <option value="#f59e0b">🟠 ส้ม (เตรียมจัดกิจกรรม / อยู่ระหว่างเสนอ)</option>
+                  <option value="#ef4444">🔴 แดง (เร่งด่วน)</option>
                 </select>
               </div>
             </div>
@@ -527,7 +757,7 @@ export default function ManagePoliciesPage() {
               <textarea
                 className="input-field"
                 style={{ minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }}
-                placeholder="จัดตั้งจุดรับขยะแลกแต้มประจำโรงเรียน&#10;เชื่อมโยงระบบฐานข้อมูลแต้มสะสมออนไลน์&#10;สร้างจิตสำนึกด้านสิ่งแวดล้อมให้แก่นักเรียน"
+                placeholder="จัดทำกล่องรับฟังความคิดเห็นออนไลน์ผ่านเว็บสภาฯ&#10;จัดการประชุมรับฟังเสียงตัวแทนห้องเรียน&#10;สรุปข้อเสนอแนะส่งต่อคณะครูและฝ่ายบริหาร"
                 value={form.highlightsText}
                 onChange={(e) => setForm({ ...form, highlightsText: e.target.value })}
               />
@@ -629,11 +859,14 @@ export default function ManagePoliciesPage() {
               <Target size={44} style={{ color: 'var(--text-light)', marginBottom: 12 }} />
               <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>ยังไม่มีข้อมูลนโยบายสภาฯ</div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 16 }}>
-                {search ? 'ไม่พบนโยบายตามคำค้นหาดังกล่าว' : 'สามารถกดเพิ่มนโยบายใหม่ได้เลย'}
+                {search ? 'ไม่พบนโยบายตามคำค้นหาดังกล่าว' : 'สามารถกดเพิ่มนโยบายใหม่ หรือนำเข้านโยบายเริ่มต้นได้เลย'}
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                 <button onClick={() => { setSearch(''); setShowFormModal(true); }} className="btn btn-primary btn-sm">
                   <Plus size={16} /> เพิ่มนโยบายใหม่
+                </button>
+                <button onClick={handleSeedData} className="btn btn-warning btn-sm">
+                  <Database size={16} /> นำเข้านโยบายเริ่มต้น
                 </button>
               </div>
             </div>
@@ -773,7 +1006,7 @@ export default function ManagePoliciesPage() {
                         <Edit2 size={12} /> แก้ไข
                       </button>
                       <button
-                        onClick={() => handleDelete(p.id)}
+                        onClick={() => setDeleteModalItem(p)}
                         className="btn btn-danger btn-sm"
                         style={{ fontSize: 11.5, padding: '4px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                       >
@@ -787,6 +1020,109 @@ export default function ManagePoliciesPage() {
           )}
         </div>
       </div>
+
+      {/* ── CUSTOM IN-APP DELETE CONFIRMATION MODAL ── */}
+      {deleteModalItem && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.55)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: 16
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: 16,
+            maxWidth: 440,
+            width: '100%',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: '1px solid var(--border-light)',
+            animation: 'fadeIn 0.2s ease'
+          }}>
+            <div style={{ padding: '24px 24px 16px', textAlign: 'center' }}>
+              <div style={{
+                width: 54,
+                height: 54,
+                borderRadius: '50%',
+                background: '#fee2e2',
+                color: '#ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px'
+              }}>
+                <Trash2 size={28} />
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8, margin: '0 0 8px' }}>
+                ยืนยันการลบนโยบาย?
+              </h3>
+              <p style={{ fontSize: 13.5, color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
+                คุณแน่ใจหรือไม่ว่าต้องการลบนโยบาย <strong style={{ color: 'var(--text)' }}>"{deleteModalItem.title}"</strong> ออกจากระบบ?
+              </p>
+              <div style={{
+                marginTop: 14,
+                padding: '9px 12px',
+                background: '#f8fafc',
+                borderRadius: 8,
+                fontSize: 12,
+                color: 'var(--text-muted)',
+                border: '1px solid var(--border-light)',
+                display: 'flex',
+                justifyContent: 'space-around'
+              }}>
+                <span>หมวดหมู่: <strong style={{ color: 'var(--primary)' }}>{deleteModalItem.category}</strong></span>
+                <span>สถานะ: <strong style={{ color: deleteModalItem.status_color || '#10b981' }}>{deleteModalItem.status}</strong></span>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: 12,
+              padding: '16px 24px 20px',
+              justifyContent: 'center',
+              background: '#fafafa',
+              borderTop: '1px solid var(--border-light)'
+            }}>
+              <button
+                type="button"
+                onClick={() => setDeleteModalItem(null)}
+                className="btn btn-gray"
+                disabled={isDeleting}
+                style={{ flex: 1, padding: '10px 0', fontSize: 13 }}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="btn btn-danger"
+                disabled={isDeleting}
+                style={{
+                  flex: 1,
+                  padding: '10px 0',
+                  fontSize: 13,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6
+                }}
+              >
+                {isDeleting ? (
+                  <RefreshCw size={15} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : (
+                  <Trash2 size={15} />
+                )}
+                <span>{isDeleting ? 'กำลังลบ...' : 'ยืนยันลบนโยบาย'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

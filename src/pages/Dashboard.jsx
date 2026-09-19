@@ -300,7 +300,7 @@ export default function Dashboard() {
     }
   };
 
-  const runAutoCleanFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, enabledDays = [], disabledDates = [], serverNow = new Date(), schedulesHistory = []) => {
+  const runAutoCleanFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, swapsList = [], enabledDays = [], disabledDates = [], serverNow = new Date(), schedulesHistory = []) => {
     try {
       const { data: usersData } = await supabase.from('users').select('id, name, nickname, dept_id');
       if (!usersData) return;
@@ -365,8 +365,13 @@ export default function Dashboard() {
         const dayName = TH_DAYS[dateObj.getUTCDay()];
 
         const scheduleData = getScheduleForDate('clean_room', dayName, dateStr, schedulesList, schedulesHistory);
-        const dutyMembers = scheduleData.members || [];
-        if (dutyMembers.length === 0 || dutyMembers[0] === '–') continue;
+        const rawMembers = scheduleData.members || [];
+        if (rawMembers.length === 0 || rawMembers[0] === '–') continue;
+
+        const dutyMembers = rawMembers.map(n => {
+          const swap = (swapsList || []).find(s => s.date === dateStr && s.duty_type === 'clean_room' && s.original_nickname === n);
+          return swap ? swap.substitute_nickname : n;
+        });
 
         const submittedNicknames = allChecks.filter(c => c.date === dateStr).map(c => c.nickname);
         const finedNicknames = allFines.filter(f => f.date === dateStr).map(f => f.nickname);
@@ -549,6 +554,7 @@ export default function Dashboard() {
         setDeptsCount(dCount || 0);
         setCleanSchedules(cleanData || []);
         setGreetingSchedules(greetingData || []);
+        setDutySwaps(swapData || []);
 
         // Compute conflicts for the logged-in user (or all users for admin/discipline)
         if (user && user.nickname) {
@@ -635,7 +641,7 @@ export default function Dashboard() {
           const cleanAct = settingsData?.find(d => d.key === 'clean_duty_active')?.value !== 'false';
 
           if (cleanData && cleanAct) {
-            await runAutoCleanFinesCheck(cleanData, cleanStartD, eventsData || [], partData || [], enabledDays, disabledDates, serverNow, schedulesHistory);
+            await runAutoCleanFinesCheck(cleanData, cleanStartD, eventsData || [], partData || [], swapData || [], enabledDays, disabledDates, serverNow, schedulesHistory);
           }
           if (greetingData && greetingAct) {
             await runAutoGreetingFinesCheck(greetingData, greetingStartD, eventsData || [], partData || [], swapData || [], enabledDays, disabledDates, serverNow, schedulesHistory);
@@ -681,7 +687,11 @@ export default function Dashboard() {
   
   const cleanSchedule = cleanSchedules.find(s => s.day === todayName);
   const cleanScheduleData = cleanSchedule?.data || {};
-  const cleanMembers = cleanScheduleData.members || [];
+  const rawCleanMembers = cleanScheduleData.members || [];
+  const cleanMembers = rawCleanMembers.map(n => {
+    const swap = (dutySwaps || []).find(s => s.date === todayStr && s.duty_type === 'clean_room' && s.original_nickname === n);
+    return swap ? swap.substitute_nickname : n;
+  });
   const isCleanBeforeStart = cleanDutyStartDate && todayStr < cleanDutyStartDate;
   const hasCleanDuty = cleanSchedule && user?.nickname && cleanMembers.includes(user.nickname) && !isCleanBeforeStart;
 
@@ -690,9 +700,22 @@ export default function Dashboard() {
   let myGreetingGate = '';
   let myGreetingGateLabel = '';
   if (greetingSchedule && user?.nickname) {
-    if (greetingScheduleData.gate1?.includes(user.nickname)) { myGreetingGate = 'gate1'; myGreetingGateLabel = 'ประตูไหมไทย'; }
-    else if (greetingScheduleData.gate2?.includes(user.nickname)) { myGreetingGate = 'gate2'; myGreetingGateLabel = 'ประตูอำเภอ'; }
-    else if (greetingScheduleData.gate3?.includes(user.nickname)) { myGreetingGate = 'gate3'; myGreetingGateLabel = 'ประตูหน้า รร.'; }
+    const effectiveGate1 = (greetingScheduleData.gate1 || []).map(n => {
+      const swap = (dutySwaps || []).find(s => s.date === todayStr && s.duty_type === 'greeting_gate1' && s.original_nickname === n);
+      return swap ? swap.substitute_nickname : n;
+    });
+    const effectiveGate2 = (greetingScheduleData.gate2 || []).map(n => {
+      const swap = (dutySwaps || []).find(s => s.date === todayStr && s.duty_type === 'greeting_gate2' && s.original_nickname === n);
+      return swap ? swap.substitute_nickname : n;
+    });
+    const effectiveGate3 = (greetingScheduleData.gate3 || []).map(n => {
+      const swap = (dutySwaps || []).find(s => s.date === todayStr && s.duty_type === 'greeting_gate3' && s.original_nickname === n);
+      return swap ? swap.substitute_nickname : n;
+    });
+
+    if (effectiveGate1.includes(user.nickname)) { myGreetingGate = 'gate1'; myGreetingGateLabel = 'ประตูไหมไทย'; }
+    else if (effectiveGate2.includes(user.nickname)) { myGreetingGate = 'gate2'; myGreetingGateLabel = 'ประตูอำเภอ'; }
+    else if (effectiveGate3.includes(user.nickname)) { myGreetingGate = 'gate3'; myGreetingGateLabel = 'ประตูหน้า รร.'; }
   }
   const isGreetingBeforeStart = greetingDutyStartDate && todayStr < greetingDutyStartDate;
   const hasGreetingDutyToday = myGreetingGate !== '' && !isGreetingBeforeStart;
