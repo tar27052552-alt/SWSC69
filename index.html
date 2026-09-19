@@ -1888,7 +1888,7 @@
       padding-bottom: 12px;
       border-bottom: 1px solid var(--gray-200);
     }
-    .reg-tab-btn {
+    .reg-tab-btn, .manual-tab-btn {
       padding: 10px 18px;
       border-radius: 10px;
       border: 1.5px solid var(--gray-200);
@@ -1903,12 +1903,12 @@
       transition: all 0.2s ease;
       font-family: inherit;
     }
-    .reg-tab-btn:hover {
+    .reg-tab-btn:hover, .manual-tab-btn:hover {
       border-color: var(--purple-400);
       color: var(--purple-700);
       background: var(--purple-100);
     }
-    .reg-tab-btn.active {
+    .reg-tab-btn.active, .manual-tab-btn.active {
       background: linear-gradient(135deg, var(--purple-600), var(--purple-800));
       color: #ffffff;
       border-color: var(--purple-700);
@@ -2981,20 +2981,34 @@
       <!-- PAGE: MANUAL -->
       <div class="page-section" id="manual">
         <div class="block">
-          <div class="block-head">
+          <div class="block-head" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <h2 class="block-head-title">📘 คู่มือการปฏิบัติงานสภานักเรียน</h2>
+            <a id="manualDownloadBtn" href="./manual-2569.pdf" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--purple-600), var(--purple-800)); color: #fff !important; padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; box-shadow: 0 4px 12px rgba(109, 40, 217, 0.2); transition: all 0.2s ease;">
+              📥 เปิดอ่านฉบับเต็ม (๒๕๖๙) / ดาวน์โหลด (PDF)
+            </a>
           </div>
-          <div class="block-body" style="padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+          <div class="block-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
             
-            <div style="display: flex; justify-content: flex-end; width: 100%;">
-              <a href="./manual.pdf" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--purple-600), var(--purple-800)); color: #fff !important; padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 13.5px; box-shadow: 0 4px 15px rgba(109, 40, 217, 0.2); transition: all 0.3s ease;">
-                📥 ดาวน์โหลด / เปิดอ่านคู่มือปฏิบัติงาน (PDF)
-              </a>
+            <!-- Year Switcher Tabs -->
+            <div class="reg-tabs-bar" style="margin-bottom: 0; padding-bottom: 12px;">
+              <button type="button" class="manual-tab-btn active" id="manualTab-2569" onclick="switchManualYear('2569')">
+                <span>ฉบับปีการศึกษา ๒๕๖๙</span>
+                <span style="background: #10b981; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 700;">ฉบับปัจจุบัน</span>
+              </button>
+              <button type="button" class="manual-tab-btn" id="manualTab-2567" onclick="switchManualYear('2567')">
+                <span>ฉบับปีการศึกษา ๒๕๖๗</span>
+              </button>
             </div>
 
-            <div class="pdf-frame-container">
-              <iframe id="manualIframe" class="pdf-iframe" src="./manual.pdf">
-                <p>เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF <a href="./manual.pdf">คลิกที่นี่เพื่อดาวน์โหลดไฟล์</a></p>
+            <!-- PDF Embed Viewer (Full Direct Viewer) -->
+            <div class="pdf-frame-container" style="margin-top: 0;">
+              <iframe id="manualIframe" class="pdf-iframe" style="height: 88vh; min-height: 750px; width: 100%; border: 1px solid var(--gray-300); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.06);" data-src="./manual-2569.pdf" src="">
+                <p style="padding: 20px; text-align: center; color: var(--gray-600);">
+                  เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF ในหน้าเว็บ 
+                  <a id="manualIframeFallbackLink" href="./manual-2569.pdf" target="_blank" style="color: var(--purple-700); font-weight: 700; text-decoration: underline;">
+                    คลิกที่นี่เพื่อเปิดอ่านหรือดาวน์โหลดไฟล์ PDF
+                  </a>
+                </p>
               </iframe>
             </div>
 
@@ -3932,9 +3946,8 @@
           renderRegulationEdition(currentRegYear);
         }
       } else if (id === 'manual') {
-        const iframe = document.getElementById('manualIframe');
-        if (iframe && !iframe.src) {
-          iframe.src = iframe.dataset.src;
+        if (typeof renderManualEdition === 'function') {
+          renderManualEdition(currentManualYear);
         }
       }
     }
@@ -3993,6 +4006,47 @@
 
   function renderRegulationEdition(year) {
     switchRegulationYear(year || currentRegYear);
+  }
+
+  /* ---- MANUAL (MULTI-EDITION PDF VIEWER) ---- */
+  let currentManualYear = '2569';
+  const MANUAL_FILES = {
+    '2569': {
+      year: '๒๕๖๙',
+      url: './manual-2569.pdf',
+      title: 'คู่มือการปฏิบัติงานสภานักเรียน โรงเรียนสรรพวิทยาคม ประจำปีการศึกษา ๒๕๖๙'
+    },
+    '2567': {
+      year: '๒๕๖๗',
+      url: './manual-2567.pdf',
+      title: 'คู่มือการปฏิบัติงานสภานักเรียน โรงเรียนสรรพวิทยาคม ประจำปีการศึกษา ๒๕๖๗'
+    }
+  };
+
+  function switchManualYear(year) {
+    currentManualYear = year;
+    document.querySelectorAll('.manual-tab-btn').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById('manualTab-' + year);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    const manual = MANUAL_FILES[year] || MANUAL_FILES['2569'];
+    const iframe = document.getElementById('manualIframe');
+    if (iframe) {
+      iframe.src = manual.url;
+    }
+    const downloadBtn = document.getElementById('manualDownloadBtn');
+    if (downloadBtn) {
+      downloadBtn.href = manual.url;
+      downloadBtn.innerHTML = `📥 เปิดอ่านฉบับเต็ม (${manual.year}) / ดาวน์โหลด (PDF)`;
+    }
+    const fallbackLink = document.getElementById('manualIframeFallbackLink');
+    if (fallbackLink) {
+      fallbackLink.href = manual.url;
+    }
+  }
+
+  function renderManualEdition(year) {
+    switchManualYear(year || currentManualYear);
   }
 
 
