@@ -4398,7 +4398,7 @@
       const sideAuthor = getAuthorName(n.submitter);
       html += `
         <div class="pr-item" onclick="showNewsPopup('${n.id}')" style="cursor:pointer;">
-          <img src="${sideImg}" data-src="${sideImg}" data-retries="0" referrerpolicy="no-referrer" alt="${(s.headline || 'ข่าวประชาสัมพันธ์สภานักเรียน').replace(/"/g, '&quot;')}"
+          <img src="${sideImg}" data-src="${sideImg}" data-retries="0" referrerpolicy="no-referrer" alt="${(n.headline || 'ข่าวประชาสัมพันธ์สภานักเรียน').replace(/"/g, '&quot;')}"
                onerror="_newsImgError(this)" onload="this.style.opacity='1'" style="opacity:0.5;transition:opacity 0.4s;" />
           <div class="pr-item-info">
             <div class="pr-tag" style="font-size:11px;">${n.category || 'ข่าวประชาสัมพันธ์'}</div>
