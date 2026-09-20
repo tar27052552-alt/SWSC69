@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom';
 import { Camera, MapPin, X, CheckCircle, AlertTriangle, Sparkles, HandHeart } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
+import { DUTY_LABELS, getThaiTodayStr, resolveEffectiveSubstitute } from '../lib/dutyHelper';
 
 const TYPE_LABEL = { meeting: 'ประชุม', event: 'กิจกรรม', deadline: 'กำหนดส่ง' };
 const TYPE_BADGE = { meeting: 'badge-purple', event: 'badge-green', deadline: 'badge-yellow' };
@@ -135,7 +136,7 @@ export default function Dashboard() {
     return events.filter(e => e.date === ds);
   };
 
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const todayStr = getThaiTodayStr(today);
 
   const runAutoGreetingFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, swapsList, enabledDays = [], disabledDates = [], serverNow = new Date(), schedulesHistory = []) => {
     try {
@@ -208,15 +209,11 @@ export default function Dashboard() {
         const dutyMembers = [];
         ['gate1', 'gate2', 'gate3'].forEach(gate => {
           const members = scheduleData[gate] || [];
+          const gateSwaps = (swapsList || []).filter(s => s.date === dateStr && s.duty_type === `greeting_${gate}`);
           members.forEach(nickname => {
             if (nickname && nickname !== '–') {
-              // Apply swaps logic
-              const swap = (swapsList || []).find(s => s.date === dateStr && s.duty_type === `greeting_${gate}` && s.original_nickname === nickname);
-              if (swap) {
-                dutyMembers.push({ nickname: swap.substitute_nickname, gate });
-              } else {
-                dutyMembers.push({ nickname, gate });
-              }
+              const effectiveNickname = resolveEffectiveSubstitute(nickname, gateSwaps);
+              dutyMembers.push({ nickname: effectiveNickname, gate });
             }
           });
         });
@@ -368,10 +365,8 @@ export default function Dashboard() {
         const rawMembers = scheduleData.members || [];
         if (rawMembers.length === 0 || rawMembers[0] === '–') continue;
 
-        const dutyMembers = rawMembers.map(n => {
-          const swap = (swapsList || []).find(s => s.date === dateStr && s.duty_type === 'clean_room' && s.original_nickname === n);
-          return swap ? swap.substitute_nickname : n;
-        });
+        const cleanSwaps = (swapsList || []).filter(s => s.date === dateStr && s.duty_type === 'clean_room');
+        const dutyMembers = rawMembers.map(n => resolveEffectiveSubstitute(n, cleanSwaps));
 
         const submittedNicknames = allChecks.filter(c => c.date === dateStr).map(c => c.nickname);
         const finedNicknames = allFines.filter(f => f.date === dateStr).map(f => f.nickname);
@@ -654,6 +649,20 @@ export default function Dashboard() {
       }
     }
     loadDashboardData();
+
+    const channel = supabase
+      .channel('dashboard-duty-swaps-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'duty_swaps' }, () => {
+        loadDashboardData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => {
+        loadDashboardData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, isAdmin]);
 
   const upcoming = events
@@ -688,10 +697,8 @@ export default function Dashboard() {
   const cleanSchedule = cleanSchedules.find(s => s.day === todayName);
   const cleanScheduleData = cleanSchedule?.data || {};
   const rawCleanMembers = cleanScheduleData.members || [];
-  const cleanMembers = rawCleanMembers.map(n => {
-    const swap = (dutySwaps || []).find(s => s.date === todayStr && s.duty_type === 'clean_room' && s.original_nickname === n);
-    return swap ? swap.substitute_nickname : n;
-  });
+  const todayCleanSwaps = (dutySwaps || []).filter(s => s.date === todayStr && s.duty_type === 'clean_room');
+  const cleanMembers = rawCleanMembers.map(n => resolveEffectiveSubstitute(n, todayCleanSwaps));
   const isCleanBeforeStart = cleanDutyStartDate && todayStr < cleanDutyStartDate;
   const hasCleanDuty = cleanSchedule && user?.nickname && cleanMembers.includes(user.nickname) && !isCleanBeforeStart;
 
@@ -700,18 +707,13 @@ export default function Dashboard() {
   let myGreetingGate = '';
   let myGreetingGateLabel = '';
   if (greetingSchedule && user?.nickname) {
-    const effectiveGate1 = (greetingScheduleData.gate1 || []).map(n => {
-      const swap = (dutySwaps || []).find(s => s.date === todayStr && s.duty_type === 'greeting_gate1' && s.original_nickname === n);
-      return swap ? swap.substitute_nickname : n;
-    });
-    const effectiveGate2 = (greetingScheduleData.gate2 || []).map(n => {
-      const swap = (dutySwaps || []).find(s => s.date === todayStr && s.duty_type === 'greeting_gate2' && s.original_nickname === n);
-      return swap ? swap.substitute_nickname : n;
-    });
-    const effectiveGate3 = (greetingScheduleData.gate3 || []).map(n => {
-      const swap = (dutySwaps || []).find(s => s.date === todayStr && s.duty_type === 'greeting_gate3' && s.original_nickname === n);
-      return swap ? swap.substitute_nickname : n;
-    });
+    const gate1Swaps = (dutySwaps || []).filter(s => s.date === todayStr && s.duty_type === 'greeting_gate1');
+    const gate2Swaps = (dutySwaps || []).filter(s => s.date === todayStr && s.duty_type === 'greeting_gate2');
+    const gate3Swaps = (dutySwaps || []).filter(s => s.date === todayStr && s.duty_type === 'greeting_gate3');
+
+    const effectiveGate1 = (greetingScheduleData.gate1 || []).map(n => resolveEffectiveSubstitute(n, gate1Swaps));
+    const effectiveGate2 = (greetingScheduleData.gate2 || []).map(n => resolveEffectiveSubstitute(n, gate2Swaps));
+    const effectiveGate3 = (greetingScheduleData.gate3 || []).map(n => resolveEffectiveSubstitute(n, gate3Swaps));
 
     if (effectiveGate1.includes(user.nickname)) { myGreetingGate = 'gate1'; myGreetingGateLabel = 'ประตูไหมไทย'; }
     else if (effectiveGate2.includes(user.nickname)) { myGreetingGate = 'gate2'; myGreetingGateLabel = 'ประตูอำเภอ'; }

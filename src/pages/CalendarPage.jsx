@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, RefreshCw, X, Trash2, Edit2, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
+import { resolveEffectiveSubstitute } from '../lib/dutyHelper';
 
 const MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const DAYS_TH = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
@@ -80,6 +81,23 @@ export default function CalendarPage() {
       }
     }
     loadData();
+
+    const channel = supabase
+      .channel('calendar-duty-and-events-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'duty_swaps' }, () => {
+        loadData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => {
+        loadData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        loadData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleSaveEvent = async () => {
@@ -336,25 +354,25 @@ export default function CalendarPage() {
   const cleanRoomSchedule = schedules.find(s => s.type === 'clean_room' && s.day === effectiveDayName);
 
   const selSwaps = (dutySwaps || []).filter(s => s.date === selDateStr);
+  const gate1Swaps = selSwaps.filter(s => s.duty_type === 'greeting_gate1');
+  const gate2Swaps = selSwaps.filter(s => s.duty_type === 'greeting_gate2');
+  const gate3Swaps = selSwaps.filter(s => s.duty_type === 'greeting_gate3');
+  const cleanSwaps = selSwaps.filter(s => s.duty_type === 'clean_room');
+
+  const formatSub = (original, swapsList) => {
+    if (!original || original === '–') return original;
+    const finalSub = resolveEffectiveSubstitute(original, swapsList);
+    return finalSub !== original ? `${finalSub} (แทน ${original})` : original;
+  };
 
   const effectiveGreetingData = greetingSchedule?.data ? {
-    gate1: (greetingSchedule.data.gate1 || []).map(n => {
-      const swap = selSwaps.find(s => s.duty_type === 'greeting_gate1' && s.original_nickname === n);
-      return swap ? `${swap.substitute_nickname} (แทน ${n})` : n;
-    }),
-    gate2: (greetingSchedule.data.gate2 || []).map(n => {
-      const swap = selSwaps.find(s => s.duty_type === 'greeting_gate2' && s.original_nickname === n);
-      return swap ? `${swap.substitute_nickname} (แทน ${n})` : n;
-    }),
-    gate3: (greetingSchedule.data.gate3 || []).map(n => {
-      const swap = selSwaps.find(s => s.duty_type === 'greeting_gate3' && s.original_nickname === n);
-      return swap ? `${swap.substitute_nickname} (แทน ${n})` : n;
-    })
+    gate1: (greetingSchedule.data.gate1 || []).map(n => formatSub(n, gate1Swaps)),
+    gate2: (greetingSchedule.data.gate2 || []).map(n => formatSub(n, gate2Swaps)),
+    gate3: (greetingSchedule.data.gate3 || []).map(n => formatSub(n, gate3Swaps))
   } : null;
 
   const effectiveCleanMembers = cleanRoomSchedule?.data?.members ? (cleanRoomSchedule.data.members || []).map(n => {
-    const swap = selSwaps.find(s => s.duty_type === 'clean_room' && s.original_nickname === n);
-    return swap ? `${swap.substitute_nickname} (แทน ${n})` : n;
+    return formatSub(n, cleanSwaps);
   }) : [];
 
   const openAddForType = (type, defaultTitle = '') => {

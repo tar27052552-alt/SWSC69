@@ -6,6 +6,7 @@ import { supabase } from '../supabaseClient';
 import CameraCapture from '../components/CameraCapture';
 import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
+import { getThaiTodayStr, resolveEffectiveSubstitute } from '../lib/dutyHelper';
 
 export default function CleanDutyPage() {
   const { user, cleanDutyState, setCleanDutyState } = useAuth();
@@ -39,8 +40,9 @@ export default function CleanDutyPage() {
 
         // Load today's Clean Room Duty & Swaps
         const DAY_MAP = { 0:'อาทิตย์', 1:'จันทร์', 2:'อังคาร', 3:'พุธ', 4:'พฤหัส', 5:'ศุกร์', 6:'เสาร์' };
-        const todayKey = DAY_MAP[new Date().getDay()];
-        const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+        const todayStr = getThaiTodayStr();
+        const [y, m, d] = todayStr.split('-').map(Number);
+        const todayKey = DAY_MAP[new Date(y, m - 1, d).getDay()];
         
         const [scheduleRes, swapsRes] = await Promise.all([
           supabase.from('schedules').select('*').eq('type', 'clean_room').eq('day', todayKey),
@@ -53,10 +55,7 @@ export default function CleanDutyPage() {
         if (!scheduleRes.error && scheduleRes.data && scheduleRes.data[0]) {
           const rowData = scheduleRes.data[0].data;
           const rawMembers = rowData.members || [];
-          members = rawMembers.map(n => {
-            const swap = todaySwaps.find(s => s.original_nickname === n);
-            return swap ? swap.substitute_nickname : n;
-          });
+          members = rawMembers.map(n => resolveEffectiveSubstitute(n, todaySwaps));
         }
         
         let hasDuty = members.length > 0 && members[0] !== '–';
@@ -75,9 +74,23 @@ export default function CleanDutyPage() {
       }
     }
     initPage();
+
+    const channel = supabase
+      .channel('clean-duty-swaps-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'duty_swaps' }, () => {
+        initPage();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => {
+        initPage();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
-  const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+  const todayStr = getThaiTodayStr();
   const isBeforeStart = startDate && todayStr < startDate;
   
   const isSubmitting = useRef(false);

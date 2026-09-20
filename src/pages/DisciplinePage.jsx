@@ -5,6 +5,7 @@ import { Plus, Search, X, Save, AlertTriangle, Edit2, ChevronDown, ChevronUp } f
 import { supabase } from '../supabaseClient';
 import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
+import { resolveEffectiveSubstitute } from '../lib/dutyHelper';
 
 const VIOLATION_TYPES = [
   'วางรองเท้าไม่เรียบร้อย (ข้าง)',
@@ -848,6 +849,17 @@ export default function DisciplinePage() {
         if (targetDate === selectedDate) {
           loadCleanChecks();
         }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'greeting_duty_checks' }, () => {
+        loadGreetingChecks();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'duty_swaps' }, () => {
+        loadExemptionsAndSwaps();
+        if (users.length > 0) loadConflictsData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => {
+        loadExemptionsAndSwaps();
+        if (users.length > 0) loadConflictsData();
       })
       .subscribe();
 
@@ -2220,11 +2232,12 @@ export default function DisciplinePage() {
                     return <tr><td colSpan="5" style={{ textAlign:'center', padding:40, color:'#9e9e9e' }}>ไม่มีเวรทำความสะอาดในวันนี้</td></tr>;
                   }
 
+                  const cleanSwaps = dbDutySwaps.filter(s => s.date === selectedDate && s.duty_type === 'clean_room');
                   const usersOnDuty = dutyMembers.map(nickname => {
-                    const swap = dbDutySwaps.find(s => s.date === selectedDate && s.duty_type === 'clean_room' && s.original_nickname === nickname);
-                    const activeNick = swap ? swap.substitute_nickname : nickname;
+                    const activeNick = resolveEffectiveSubstitute(nickname, cleanSwaps);
+                    const isSubbed = activeNick !== nickname;
                     const found = users.find(u => u.nickname === activeNick);
-                    if (found) return { ...found, isSubbed: !!swap, originalNickname: nickname };
+                    if (found) return { ...found, isSubbed, originalNickname: nickname };
                     return {
                       id: activeNick,
                       name: `สมาชิก (${activeNick})`,
@@ -2232,7 +2245,7 @@ export default function DisciplinePage() {
                       deptId: null,
                       avatar: activeNick.substring(0, 1),
                       avatarColor: '#9e9e9e',
-                      isSubbed: !!swap,
+                      isSubbed,
                       originalNickname: nickname
                     };
                   });
@@ -2353,11 +2366,12 @@ export default function DisciplinePage() {
                   const dutyMembers = [];
                   ['gate1', 'gate2', 'gate3'].forEach(gate => {
                     const members = dutyForDayData[gate] || [];
+                    const gateSwaps = dbDutySwaps.filter(s => s.date === selectedDate && s.duty_type === `greeting_${gate}`);
                     members.forEach(nickname => {
                       if (nickname && nickname !== '–') {
-                        const swap = dbDutySwaps.find(s => s.date === selectedDate && s.duty_type === `greeting_${gate}` && s.original_nickname === nickname);
-                        if (swap) {
-                          dutyMembers.push({ nickname: swap.substitute_nickname, gate, original: nickname });
+                        const finalSubstitute = resolveEffectiveSubstitute(nickname, gateSwaps);
+                        if (finalSubstitute !== nickname) {
+                          dutyMembers.push({ nickname: finalSubstitute, gate, original: nickname });
                         } else {
                           dutyMembers.push({ nickname, gate });
                         }

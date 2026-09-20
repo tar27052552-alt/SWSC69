@@ -7,6 +7,7 @@ import { supabaseRpc } from '../lib/supabaseRest';
 import CameraCapture from '../components/CameraCapture';
 import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
+import { resolveEffectiveSubstitute } from '../lib/dutyHelper';
 
 const TH_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
 const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -214,18 +215,13 @@ export default function CheckInPage() {
     const todaySchedule = greetingSchedules.find(s => s.day === todayDayName);
     if (todaySchedule && user?.nickname) {
       const scheduleData = todaySchedule.data || {};
-      const effectiveGate1 = (scheduleData.gate1 || []).map(n => {
-        const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate1' && s.original_nickname === n);
-        return swap ? swap.substitute_nickname : n;
-      });
-      const effectiveGate2 = (scheduleData.gate2 || []).map(n => {
-        const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate2' && s.original_nickname === n);
-        return swap ? swap.substitute_nickname : n;
-      });
-      const effectiveGate3 = (scheduleData.gate3 || []).map(n => {
-        const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate3' && s.original_nickname === n);
-        return swap ? swap.substitute_nickname : n;
-      });
+      const gate1Swaps = todaySwaps.filter(s => s.duty_type === 'greeting_gate1');
+      const gate2Swaps = todaySwaps.filter(s => s.duty_type === 'greeting_gate2');
+      const gate3Swaps = todaySwaps.filter(s => s.duty_type === 'greeting_gate3');
+
+      const effectiveGate1 = (scheduleData.gate1 || []).map(n => resolveEffectiveSubstitute(n, gate1Swaps));
+      const effectiveGate2 = (scheduleData.gate2 || []).map(n => resolveEffectiveSubstitute(n, gate2Swaps));
+      const effectiveGate3 = (scheduleData.gate3 || []).map(n => resolveEffectiveSubstitute(n, gate3Swaps));
 
       if (effectiveGate1.includes(user.nickname)) userAssignedGate = 'gate1';
       else if (effectiveGate2.includes(user.nickname)) userAssignedGate = 'gate2';
@@ -359,18 +355,13 @@ export default function CheckInPage() {
     const todaySchedule = greetingSchedules.find(s => s.day === todayName);
     if (todaySchedule && user?.nickname) {
       const scheduleData = todaySchedule.data || {};
-      const effectiveGate1 = (scheduleData.gate1 || []).map(n => {
-        const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate1' && s.original_nickname === n);
-        return swap ? swap.substitute_nickname : n;
-      });
-      const effectiveGate2 = (scheduleData.gate2 || []).map(n => {
-        const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate2' && s.original_nickname === n);
-        return swap ? swap.substitute_nickname : n;
-      });
-      const effectiveGate3 = (scheduleData.gate3 || []).map(n => {
-        const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate3' && s.original_nickname === n);
-        return swap ? swap.substitute_nickname : n;
-      });
+      const gate1Swaps = todaySwaps.filter(s => s.duty_type === 'greeting_gate1');
+      const gate2Swaps = todaySwaps.filter(s => s.duty_type === 'greeting_gate2');
+      const gate3Swaps = todaySwaps.filter(s => s.duty_type === 'greeting_gate3');
+
+      const effectiveGate1 = (scheduleData.gate1 || []).map(n => resolveEffectiveSubstitute(n, gate1Swaps));
+      const effectiveGate2 = (scheduleData.gate2 || []).map(n => resolveEffectiveSubstitute(n, gate2Swaps));
+      const effectiveGate3 = (scheduleData.gate3 || []).map(n => resolveEffectiveSubstitute(n, gate3Swaps));
 
       if (effectiveGate1.includes(user.nickname) ||
           effectiveGate2.includes(user.nickname) ||

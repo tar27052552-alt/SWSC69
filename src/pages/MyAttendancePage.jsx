@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { CalendarDays, X } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { transformGoogleDriveUrl, getGoogleDriveViewUrl } from '../lib/googleDriveUpload';
+import { resolveEffectiveSubstitute } from '../lib/dutyHelper';
 
 const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
@@ -78,6 +79,20 @@ export default function MyAttendancePage() {
       }
     }
     loadMyAttendance();
+
+    const channel = supabase
+      .channel('my-attendance-duty-swaps-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'duty_swaps' }, () => {
+        loadMyAttendance();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_attendance' }, () => {
+        loadMyAttendance();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [month, user]);
 
   useEffect(() => {
@@ -165,18 +180,14 @@ export default function MyAttendancePage() {
     const todaySchedule = greetingSchedules.find(s => s.day === dayName);
     if (todaySchedule && user?.nickname) {
       const scheduleData = todaySchedule.data || {};
-      const effectiveGate1 = (scheduleData.gate1 || []).map(n => {
-        const swap = swaps.find(s => s.date === dateStr && s.duty_type === 'greeting_gate1' && s.original_nickname === n);
-        return swap ? swap.substitute_nickname : n;
-      });
-      const effectiveGate2 = (scheduleData.gate2 || []).map(n => {
-        const swap = swaps.find(s => s.date === dateStr && s.duty_type === 'greeting_gate2' && s.original_nickname === n);
-        return swap ? swap.substitute_nickname : n;
-      });
-      const effectiveGate3 = (scheduleData.gate3 || []).map(n => {
-        const swap = swaps.find(s => s.date === dateStr && s.duty_type === 'greeting_gate3' && s.original_nickname === n);
-        return swap ? swap.substitute_nickname : n;
-      });
+      const dateSwaps = swaps.filter(s => s.date === dateStr);
+      const gate1Swaps = dateSwaps.filter(s => s.duty_type === 'greeting_gate1');
+      const gate2Swaps = dateSwaps.filter(s => s.duty_type === 'greeting_gate2');
+      const gate3Swaps = dateSwaps.filter(s => s.duty_type === 'greeting_gate3');
+
+      const effectiveGate1 = (scheduleData.gate1 || []).map(n => resolveEffectiveSubstitute(n, gate1Swaps));
+      const effectiveGate2 = (scheduleData.gate2 || []).map(n => resolveEffectiveSubstitute(n, gate2Swaps));
+      const effectiveGate3 = (scheduleData.gate3 || []).map(n => resolveEffectiveSubstitute(n, gate3Swaps));
 
       if (effectiveGate1.includes(user.nickname) ||
           effectiveGate2.includes(user.nickname) ||

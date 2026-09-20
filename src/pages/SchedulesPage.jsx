@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Edit2, Lock, Unlock, ChevronDown, Camera } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
+import { DUTY_LABELS, getThaiTodayStr, getThaiDayFromDateStr, resolveEffectiveSubstitute } from '../lib/dutyHelper';
 import logoUrl from '../assets/logo.png';
 const ALL_NAMES = [
   'อ้วน', 'ใบหม่อน', 'กร', 'แปม', 'เจมส์', 'มิก', 'ณโม', 'โฟกัส', 'น้ำภัท', 'โนโน', 'คิว', 'พอใจ',
@@ -39,45 +40,61 @@ const DayBadge = ({ day }) => {
 };
 
 const TagList = ({ names, day, dutyType, swaps = [] }) => {
-  const getThaiDayFromDate = (dateStr) => {
-    if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const dateObj = new Date(y, m - 1, d);
-    const daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
-    return daysTh[dateObj.getDay()] || '';
-  };
-
-  const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+  const todayStr = getThaiTodayStr();
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', alignItems: 'center' }}>
       {names.map((n, i) => {
-        const activeSwap = swaps.find(s => {
-          if (s.original_nickname !== n) return false;
-          if (dutyType && s.duty_type !== dutyType && !s.duty_type.startsWith(dutyType)) return false;
-          const sDay = getThaiDayFromDate(s.date);
-          return sDay === day && s.date >= todayStr;
-        });
-
         if (n === '–') {
           return <span key={i} style={{ color: '#cbd5e1', fontSize: 13 }}>–</span>;
         }
 
-        const swapDateLabel = activeSwap ? new Date(activeSwap.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '';
+        const trimmedName = n?.trim();
+
+        // Find swaps for this person and duty type
+        const matchingSwaps = (swaps || []).filter(s => {
+          if (s.original_nickname?.trim() !== trimmedName) return false;
+          if (dutyType && s.duty_type !== dutyType && !s.duty_type.startsWith(dutyType)) return false;
+          const sDay = getThaiDayFromDateStr(s.date);
+          return sDay === day;
+        });
+
+        // 1. Nearest upcoming swap (s.date >= todayStr), sorted nearest first
+        const upcomingSwaps = matchingSwaps
+          .filter(s => s.date >= todayStr)
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        // 2. Recent past swap (e.g. earlier in current week), sorted most recent first
+        const pastSwaps = matchingSwaps
+          .filter(s => s.date < todayStr)
+          .sort((a, b) => b.date.localeCompare(a.date));
+
+        const directSwap = upcomingSwaps[0] || pastSwaps[0];
+
+        let finalSubstitute = '';
+        let swapDateLabel = '';
+        if (directSwap) {
+          // Resolve any chained swaps for that specific date & duty type
+          const sameDaySwaps = (swaps || []).filter(s => s.date === directSwap.date && s.duty_type === directSwap.duty_type);
+          finalSubstitute = resolveEffectiveSubstitute(trimmedName, sameDaySwaps);
+          swapDateLabel = new Date(directSwap.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+        }
+
+        const isSwapped = Boolean(directSwap && finalSubstitute && finalSubstitute !== trimmedName);
 
         return (
           <span key={i} style={{
-            background: activeSwap ? '#fff3e0' : '#e0f2fe',
-            color: activeSwap ? '#e65100' : '#0369a1',
-            border: activeSwap ? '1px solid #ffcc80' : '1px solid #bae6fd',
+            background: isSwapped ? '#fff3e0' : '#e0f2fe',
+            color: isSwapped ? '#e65100' : '#0369a1',
+            border: isSwapped ? '1px solid #ffcc80' : '1px solid #bae6fd',
             borderRadius: 20, padding: '3px 10px', fontSize: 12.5, fontWeight: 700,
             display: 'inline-flex', alignItems: 'center', gap: 4,
             boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
           }}>
-            {activeSwap ? <span style={{ textDecoration: 'line-through', opacity: 0.7 }}>{n}</span> : n}
-            {activeSwap && (
+            {isSwapped ? <span style={{ textDecoration: 'line-through', opacity: 0.7 }}>{n}</span> : n}
+            {isSwapped && (
               <span style={{ fontSize: 11, color: '#2e7d32', fontWeight: 800 }}>
-                ➡️ {activeSwap.substitute_nickname} <span style={{ fontSize: 10, color: '#e65100', fontWeight: 600 }}>({swapDateLabel})</span>
+                ➡️ {finalSubstitute} <span style={{ fontSize: 10, color: '#e65100', fontWeight: 600 }}>({swapDateLabel})</span>
               </span>
             )}
           </span>
@@ -351,10 +368,10 @@ export default function SchedulesPage() {
       duties.push('national_flag');
     }
 
-    // Check color flag
-    const colRow = colorFlag.find(s => s.day === thDay);
-    if (colRow && (colRow.members || []).includes(nickname)) {
-      duties.push('color_flag');
+    // Check clean room
+    const cleanRow = cleanRoom.find(s => s.day === thDay);
+    if (cleanRow && (cleanRow.members || []).includes(nickname)) {
+      duties.push('clean_room');
     }
 
     return duties;
@@ -442,6 +459,21 @@ export default function SchedulesPage() {
       }
     }
     loadSchedules();
+
+    // Supabase Realtime subscription for duty_swaps and schedules
+    const channel = supabase
+      .channel('schedules-and-swaps-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'duty_swaps' }, () => {
+        loadSchedules();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => {
+        loadSchedules();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Auto-fill and warning logic for swap modal based on schedule
@@ -480,6 +512,8 @@ export default function SchedulesPage() {
         scheduled = nationalFlag.find(s => s.day === thDay)?.members || [];
       } else if (newSwap.duty_type === 'color_flag') {
         scheduled = colorFlag.find(s => s.day === thDay)?.members || [];
+      } else if (newSwap.duty_type === 'clean_room') {
+        scheduled = cleanRoom.find(s => s.day === thDay)?.members || [];
       }
 
       const cleanScheduled = scheduled.filter(x => x !== '–' && x !== '');
@@ -498,9 +532,17 @@ export default function SchedulesPage() {
     if (!isAdmin && !isDiscipline) {
       defaultOriginal = user?.nickname || '';
     }
+
+    let defaultDutyType = 'greeting_gate1';
+    if (tab === 'clean_room') defaultDutyType = 'clean_room';
+    else if (tab === 'national_flag') defaultDutyType = 'national_flag';
+    else if (tab === 'color_flag') defaultDutyType = 'color_flag';
+    else if (tab === 'greeting') defaultDutyType = 'greeting_gate1';
+
+    const todayTh = getThaiTodayStr();
     setNewSwap({
-      date: new Date().toISOString().split('T')[0],
-      duty_type: 'greeting_gate1',
+      date: todayTh,
+      duty_type: defaultDutyType,
       original_nickname: defaultOriginal,
       substitute_nickname: ''
     });
@@ -535,18 +577,9 @@ export default function SchedulesPage() {
       alert('ขอสลับเวรสำเร็จ!');
       setShowSwapModal(false);
       
-      // Send Discord Alert
-      const dutyLabels = {
-        greeting_gate1: 'ยืนไหว้ - ประตูไหมไทย',
-        greeting_gate2: 'ยืนไหว้ - ประตูอำเภอ',
-        greeting_gate3: 'ยืนไหว้ - ประตูหน้า รร.',
-        national_flag: 'เชิญธงชาติ',
-        color_flag: 'เชิญธงสี'
-      };
-      
       const embedTitle = `🔄 มีการสลับเวรปฏิบัติหน้าที่สภานักเรียน`;
       const formattedDate = new Date(newSwap.date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-      const embedDesc = `วันที่: **${formattedDate}**\nเวร: **${dutyLabels[newSwap.duty_type] || newSwap.duty_type}**\n**${newSwap.original_nickname}** ➡️ ให้ **${newSwap.substitute_nickname}** ปฏิบัติหน้าที่แทน\nบันทึกโดย: **${user?.nickname || user?.name || 'ระบบ'}** 📝`;
+      const embedDesc = `วันที่: **${formattedDate}**\nเวร: **${DUTY_LABELS[newSwap.duty_type] || newSwap.duty_type}**\n**${newSwap.original_nickname}** ➡️ ให้ **${newSwap.substitute_nickname}** ปฏิบัติหน้าที่แทน\nบันทึกโดย: **${user?.nickname || user?.name || 'ระบบ'}** 📝`;
       
       let targetUserIds = [];
       const origUser = usersList.find(u => u.nickname === newSwap.original_nickname);
@@ -752,6 +785,8 @@ export default function SchedulesPage() {
     scheduled = nationalFlag.find(s => s.day === thDay)?.members || [];
   } else if (newSwap.duty_type === 'color_flag') {
     scheduled = colorFlag.find(s => s.day === thDay)?.members || [];
+  } else if (newSwap.duty_type === 'clean_room') {
+    scheduled = cleanRoom.find(s => s.day === thDay)?.members || [];
   }
 
   const exportSchedulePNG = () => {
@@ -1155,25 +1190,17 @@ export default function SchedulesPage() {
       </div>
 
       {/* Banner for Active Duty Swaps */}
-      {swaps.filter(s => s.date >= `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`).length > 0 && (
+      {swaps.filter(s => s.date >= getThaiTodayStr()).length > 0 && (
         <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 8, padding: '12px 16px', marginBottom: 16 }}>
           <div style={{ fontWeight: 700, fontSize: 13, color: '#e65100', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span>🔄</span> <span>รายการสลับเวรปฏิบัติหน้าที่ (จัดการโดยฝ่ายปกครอง):</span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {swaps.filter(s => s.date >= `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`).map(s => {
-              const dutyLabels = {
-                greeting_gate1: 'ยืนไหว้-ประตูไหมไทย',
-                greeting_gate2: 'ยืนไหว้-ประตูอำเภอ',
-                greeting_gate3: 'ยืนไหว้-ประตูหน้า รร.',
-                clean_room: 'เวรห้องสภา',
-                national_flag: 'เชิญธงชาติ',
-                color_flag: 'เชิญธงสี'
-              };
+            {swaps.filter(s => s.date >= getThaiTodayStr()).map(s => {
               const dStr = new Date(s.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
               return (
                 <span key={s.id} style={{ background: 'white', border: '1px solid #ffcc80', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#bf360c', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                  📅 <strong>{dStr}</strong> ({dutyLabels[s.duty_type] || s.duty_type}): <span style={{ textDecoration: 'line-through', opacity: 0.7 }}>{s.original_nickname}</span> ➡️ <strong style={{ color: '#2e7d32' }}>{s.substitute_nickname}</strong> (แทน)
+                  📅 <strong>{dStr}</strong> ({DUTY_LABELS[s.duty_type] || s.duty_type}): <span style={{ textDecoration: 'line-through', opacity: 0.7 }}>{s.original_nickname}</span> ➡️ <strong style={{ color: '#2e7d32' }}>{s.substitute_nickname}</strong> (แทน)
                 </span>
               );
             })}
@@ -1244,37 +1271,17 @@ export default function SchedulesPage() {
                 />
                 {newSwap.date && myDuties.length === 0 && !isAdmin && !isDiscipline && (
                   <div style={{ color: '#d32f2f', background: '#ffebee', border: '1px solid #ffcdd2', padding: '8px 12px', borderRadius: 4, fontSize: 12, marginTop: 6, textAlign: 'left', lineHeight: 1.4 }}>
-                    ⚠️ ตามตารางปกติ คุณไม่มีเวรยืนไหว้หรือเวรเชิญธงในวัน{thDay}
+                    ⚠️ ตามตารางปกติ คุณไม่มีเวร (ยืนไหว้ / ธง / ห้องสภา) ในวัน{thDay}
                   </div>
                 )}
                 {newSwap.date && myDuties.length > 0 && !isAdmin && !isDiscipline && (
                   <div style={{ color: '#2e7d32', background: '#e8f5e9', border: '1px solid #c8e6c9', padding: '8px 12px', borderRadius: 4, fontSize: 12, marginTop: 6, textAlign: 'left', lineHeight: 1.4 }}>
-                    📅 วัน{thDay} คุณมีเวรตามตาราง: <strong>{myDuties.map(d => {
-                      const dutyLabels = {
-                        greeting_gate1: 'ยืนไหว้ (ประตูไหมไทย)',
-                        greeting_gate2: 'ยืนไหว้ (ประตูอำเภอ)',
-                        greeting_gate3: 'ยืนไหว้ (ประตูหน้า รร.)',
-                        national_flag: 'เชิญธงชาติ',
-                        color_flag: 'เชิญธงสี'
-                      };
-                      return dutyLabels[d] || d;
-                    }).join(', ')}</strong>
+                    📅 วัน{thDay} คุณมีเวรตามตาราง: <strong>{myDuties.map(d => DUTY_LABELS[d] || d).join(', ')}</strong>
                   </div>
                 )}
                 {newSwap.date && (isAdmin || isDiscipline) && (
                   <div style={{ background: '#f5f5f5', border: '1px solid #e0e0e0', padding: '8px 12px', borderRadius: 4, fontSize: 12, marginTop: 6, textAlign: 'left', color: '#455a64', lineHeight: 1.4 }}>
-                    📌 สมาชิกที่มีเวรในวัน{thDay} ({
-                      (() => {
-                        const dutyLabels = {
-                          greeting_gate1: 'ยืนไหว้ - ประตูไหมไทย',
-                          greeting_gate2: 'ยืนไหว้ - ประตูอำเภอ',
-                          greeting_gate3: 'ยืนไหว้ - ประตูหน้า รร.',
-                          national_flag: 'เชิญธงชาติ',
-                          color_flag: 'เชิญธงสี'
-                        };
-                        return dutyLabels[newSwap.duty_type] || newSwap.duty_type;
-                      })()
-                    }): <strong>{
+                    📌 สมาชิกที่มีเวรในวัน{thDay} ({DUTY_LABELS[newSwap.duty_type] || newSwap.duty_type}): <strong>{
                       scheduled.filter(x => x !== '–' && x !== '').length > 0
                         ? scheduled.filter(x => x !== '–' && x !== '').join(', ')
                         : 'ไม่มี (ว่าง)'
@@ -1294,6 +1301,7 @@ export default function SchedulesPage() {
                   <option value="greeting_gate1">🙏 ยืนไหว้ - ประตูไหมไทย</option>
                   <option value="greeting_gate2">🙏 ยืนไหว้ - ประตูอำเภอ</option>
                   <option value="greeting_gate3">🙏 ยืนไหว้ - ประตูหน้า รร.</option>
+                  <option value="clean_room">🧹 เวรทำความสะอาดห้องสภา</option>
                   <option value="national_flag">🚩 เชิญธงชาติ</option>
                   <option value="color_flag">🎌 เชิญธงสี</option>
                 </select>

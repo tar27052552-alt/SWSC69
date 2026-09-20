@@ -6,6 +6,7 @@ import { supabase } from '../supabaseClient';
 import CameraCapture from '../components/CameraCapture';
 import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
+import { getThaiTodayStr, resolveEffectiveSubstitute } from '../lib/dutyHelper';
 
 export default function GreetingDutyPage() {
   const { user, checkInState, greetingDutyState, setGreetingDutyState } = useAuth();
@@ -36,8 +37,9 @@ export default function GreetingDutyPage() {
 
         // Load today's Greeting Duty and Swaps
         const DAY_MAP = { 0: 'อาทิตย์', 1: 'จันทร์', 2: 'อังคาร', 3: 'พุธ', 4: 'พฤหัส', 5: 'ศุกร์', 6: 'เสาร์' };
-        const todayKey = DAY_MAP[new Date().getDay()];
-        const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+        const todayStr = getThaiTodayStr();
+        const [y, m, d] = todayStr.split('-').map(Number);
+        const todayKey = DAY_MAP[new Date(y, m - 1, d).getDay()];
 
         const [scheduleRes, swapsRes] = await Promise.all([
           supabase.from('schedules').select('*').eq('type', 'greeting').eq('day', todayKey),
@@ -56,19 +58,14 @@ export default function GreetingDutyPage() {
         if (!scheduleRes.error && scheduleData && scheduleData[0]) {
           const rowData = scheduleData[0].data || {};
           
+          const gate1Swaps = todaySwaps.filter(s => s.duty_type === 'greeting_gate1');
+          const gate2Swaps = todaySwaps.filter(s => s.duty_type === 'greeting_gate2');
+          const gate3Swaps = todaySwaps.filter(s => s.duty_type === 'greeting_gate3');
+
           const effectiveGates = {
-            gate1: (rowData.gate1 || []).map(n => {
-              const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate1' && s.original_nickname === n);
-              return swap ? swap.substitute_nickname : n;
-            }),
-            gate2: (rowData.gate2 || []).map(n => {
-              const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate2' && s.original_nickname === n);
-              return swap ? swap.substitute_nickname : n;
-            }),
-            gate3: (rowData.gate3 || []).map(n => {
-              const swap = todaySwaps.find(s => s.duty_type === 'greeting_gate3' && s.original_nickname === n);
-              return swap ? swap.substitute_nickname : n;
-            }),
+            gate1: (rowData.gate1 || []).map(n => resolveEffectiveSubstitute(n, gate1Swaps)),
+            gate2: (rowData.gate2 || []).map(n => resolveEffectiveSubstitute(n, gate2Swaps)),
+            gate3: (rowData.gate3 || []).map(n => resolveEffectiveSubstitute(n, gate3Swaps)),
           };
 
           // Search effective gates for the current user
@@ -113,9 +110,23 @@ export default function GreetingDutyPage() {
       }
     }
     initPage();
+
+    const channel = supabase
+      .channel('greeting-duty-swaps-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'duty_swaps' }, () => {
+        initPage();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => {
+        initPage();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
-  const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+  const todayStr = getThaiTodayStr();
   const isBeforeStart = startDate && todayStr < startDate;
   
   const isSubmitting = useRef(false);
