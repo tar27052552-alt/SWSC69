@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { DEPARTMENTS } from '../data/mockData';
-import { Plus, X, Save, Search, CheckCircle, Clock, XCircle, Eye, Camera, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, X, Save, Search, CheckCircle, Clock, XCircle, Eye, Camera, ChevronDown, ChevronUp, Download, Users, ListFilter, AlertCircle, FileText } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
@@ -65,10 +65,29 @@ export default function FinancePage() {
   // Discipline fines
   const [dfines, setDfines] = useState([]);
   const [slipViewModal, setSlipViewModal] = useState(null); // fine object to view slip
+  const [fineSubView, setFineSubView] = useState('list'); // 'list' | 'summary'
+  const [memberFineModal, setMemberFineModal] = useState(null); // selected member object for fine details
+  const [memberFineSearch, setMemberFineSearch] = useState('');
+  const [memberFineFilter, setMemberFineFilter] = useState('all'); // 'all' | 'unpaid' | 'paid' | 'zero'
+  const [fineListSearch, setFineListSearch] = useState('');
   
   // สมาชิกตัวจริงที่ดึงจากระบบ
   const [usersList, setUsersList] = useState([]);
   const [feeSlipModal, setFeeSlipModal] = useState(null);
+
+  // ฟังก์ชันจับคู่ค่าปรับกับสมาชิกแต่ละคน (รองรับทั้ง userId, nickname, และ fullName)
+  const getUserFines = (userObj) => {
+    if (!userObj) return [];
+    const uid = String(userObj.id);
+    const nick = (userObj.nickname || '').trim().toLowerCase();
+    const name = (userObj.name || '').trim().toLowerCase();
+    return dfines.filter(f => {
+      if (f.userId && String(f.userId) === uid) return true;
+      if (f.nickname && nick && f.nickname.trim().toLowerCase() === nick) return true;
+      if (f.userName && name && f.userName.trim().toLowerCase() === name) return true;
+      return false;
+    });
+  };
 
   const loadFinanceData = async () => {
     try {
@@ -844,6 +863,241 @@ export default function FinancePage() {
       link.click();
     };
   };
+
+  // ส่งออกใบสรุปค่าปรับรายบุคคลเป็นภาพ PNG สำหรับส่งแชท / LINE
+  const exportMemberFinesPNG = (member) => {
+    if (!member) return;
+    const mFines = getUserFines(member);
+    const totalAmount = mFines.reduce((sum, f) => sum + Number(f.amount || 0), 0);
+    const unpaidAmount = mFines.filter(f => f.paymentStatus !== 'paid' && !f.paid).reduce((sum, f) => sum + Number(f.amount || 0), 0);
+    const paidAmount = totalAmount - unpaidAmount;
+    const dept = DEPARTMENTS.find(d => d.id === (member.dept_id || member.deptId));
+
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.src = logoUrl;
+    logoImg.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const width = 800;
+      const headerHeight = 220;
+      const profileCardHeight = 110;
+      const tableHeaderHeight = 45;
+      const rowHeight = 52;
+      const footerHeight = 90;
+      const totalRows = mFines.length === 0 ? 1 : mFines.length;
+      const height = headerHeight + profileCardHeight + tableHeaderHeight + (totalRows * rowHeight) + footerHeight;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const drawRoundRect = (x, y, w, h, r) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      };
+
+      // พื้นหลังสีขาว
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      // เฮดเดอร์แบบ Gradient
+      const gradient = ctx.createLinearGradient(0, 0, width, headerHeight);
+      gradient.addColorStop(0, '#0f172a');
+      gradient.addColorStop(1, '#1e293b');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, headerHeight);
+
+      // ลวดลายวงกลมประดับ
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.beginPath(); ctx.arc(width - 40, 30, 130, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(40, headerHeight, 90, 0, Math.PI * 2); ctx.fill();
+
+      // ตราสัญลักษณ์สภา
+      try {
+        ctx.drawImage(logoImg, 35, 30, 120, 120);
+      } catch (err) {
+        console.warn('Canvas logo draw error:', err);
+      }
+
+      // ข้อความส่วนหัว
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 20px "Noto Sans Thai", sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('สภานักเรียนโรงเรียน (ฝ่ายการเงินและพัสดุ)', 175, 70);
+      ctx.font = 'normal 13px "Noto Sans Thai", sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.fillText('ใบแจ้งยอดสรุปประวัติค่าปรับวินัยสภานักเรียน (รายบุคคล)', 175, 96);
+
+      // ชื่อสมาชิก
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 22px "Noto Sans Thai", sans-serif';
+      ctx.fillText(`สรุปข้อมูล: ${member.name} (${member.nickname ? `"${member.nickname}"` : '-'})`, 35, 190);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = 'normal 11px "Noto Sans Thai", sans-serif';
+      ctx.textAlign = 'right';
+      const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      ctx.fillText(`ข้อมูล ณ: ${dateStr} น.`, width - 35, 190);
+
+      // การ์ดข้อมูลส่วนตัว & สถิติ
+      const profileY = headerHeight + 15;
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      drawRoundRect(35, profileY, width - 70, 80, 10);
+      ctx.stroke();
+      ctx.fillStyle = '#f8fafc';
+      ctx.fill();
+
+      // ข้อมูลสมาชิกฝั่งซ้าย
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'normal 12px "Noto Sans Thai", sans-serif';
+      ctx.fillText(`ฝ่าย: ${dept ? dept.name : 'สภานักเรียน'}  |  ตำแหน่ง: ${member.position || 'กรรมการสภานักเรียน'}`, 55, profileY + 28);
+      ctx.font = 'bold 13px "Noto Sans Thai", sans-serif';
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText(`บันทึกความผิดทั้งหมด: ${mFines.length} รายการ`, 55, profileY + 54);
+
+      // 3 Stat Pills ฝั่งขวา
+      const statColW = 120;
+      const statsStartX = width - 35 - (statColW * 3) - 20;
+
+      // Stat 1: ยอดรวม
+      drawRoundRect(statsStartX, profileY + 12, statColW, 56, 8);
+      ctx.fillStyle = '#eff6ff';
+      ctx.fill();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#3b82f6';
+      ctx.font = 'normal 11px "Noto Sans Thai", sans-serif';
+      ctx.fillText('ยอดปรับรวม', statsStartX + statColW / 2, profileY + 30);
+      ctx.font = 'bold 15px "Noto Sans Thai", sans-serif';
+      ctx.fillText(`${totalAmount.toLocaleString()} บ.`, statsStartX + statColW / 2, profileY + 52);
+
+      // Stat 2: ชำระแล้ว
+      drawRoundRect(statsStartX + statColW + 10, profileY + 12, statColW, 56, 8);
+      ctx.fillStyle = '#f0fdf4';
+      ctx.fill();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#16a34a';
+      ctx.font = 'normal 11px "Noto Sans Thai", sans-serif';
+      ctx.fillText('ชำระแล้ว', statsStartX + statColW + 10 + statColW / 2, profileY + 30);
+      ctx.font = 'bold 15px "Noto Sans Thai", sans-serif';
+      ctx.fillText(`${paidAmount.toLocaleString()} บ.`, statsStartX + statColW + 10 + statColW / 2, profileY + 52);
+
+      // Stat 3: ค้างชำระ
+      drawRoundRect(statsStartX + (statColW * 2) + 20, profileY + 12, statColW, 56, 8);
+      ctx.fillStyle = unpaidAmount > 0 ? '#fef2f2' : '#f8fafc';
+      ctx.fill();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = unpaidAmount > 0 ? '#dc2626' : '#64748b';
+      ctx.font = 'bold 11px "Noto Sans Thai", sans-serif';
+      ctx.fillText('ค้างชำระ', statsStartX + (statColW * 2) + 20 + statColW / 2, profileY + 30);
+      ctx.font = 'bold 16px "Noto Sans Thai", sans-serif';
+      ctx.fillText(`${unpaidAmount.toLocaleString()} บ.`, statsStartX + (statColW * 2) + 20 + statColW / 2, profileY + 52);
+
+      // หัวตาราง
+      const tableY = profileY + 98;
+      drawRoundRect(35, tableY, width - 70, tableHeaderHeight, 6);
+      ctx.fillStyle = '#1e293b';
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px "Noto Sans Thai", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('#', 55, tableY + tableHeaderHeight / 2 + 4);
+      ctx.fillText('วันที่', 95, tableY + tableHeaderHeight / 2 + 4);
+      ctx.fillText('ข้อหาความผิดวินัยสภาฯ', 220, tableY + tableHeaderHeight / 2 + 4);
+      ctx.textAlign = 'right';
+      ctx.fillText('ยอดปรับ', 580, tableY + tableHeaderHeight / 2 + 4);
+      ctx.textAlign = 'center';
+      ctx.fillText('สถานะ', 710, tableY + tableHeaderHeight / 2 + 4);
+
+      let currentY = tableY + tableHeaderHeight;
+
+      if (mFines.length === 0) {
+        ctx.fillStyle = '#16a34a';
+        ctx.font = 'bold 14px "Noto Sans Thai", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🎉 ยอดเยี่ยมมาก! สมาชิกท่านนี้ไม่มีประวัติการโดนปรับวินัยสภาฯ เลย', width / 2, currentY + rowHeight / 2 + 5);
+      } else {
+        mFines.forEach((item, idx) => {
+          if (idx % 2 === 1) {
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(35, currentY, width - 70, rowHeight);
+          }
+
+          ctx.strokeStyle = '#f1f5f9';
+          ctx.beginPath();
+          ctx.moveTo(35, currentY + rowHeight);
+          ctx.lineTo(width - 35, currentY + rowHeight);
+          ctx.stroke();
+
+          ctx.fillStyle = '#64748b';
+          ctx.textAlign = 'left';
+          ctx.font = 'normal 12px "Noto Sans Thai", sans-serif';
+          ctx.fillText(`${idx + 1}`, 55, currentY + rowHeight / 2 + 4);
+
+          ctx.fillStyle = '#334155';
+          ctx.fillText(item.date || '-', 95, currentY + rowHeight / 2 + 4);
+
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 12px "Noto Sans Thai", sans-serif';
+          let displayViolation = item.violation || '';
+          if (displayViolation && ctx.measureText(displayViolation).width > 320) {
+            while (displayViolation.length > 0 && ctx.measureText(displayViolation + '...').width > 320) {
+              displayViolation = displayViolation.slice(0, -1);
+            }
+            displayViolation += '...';
+          }
+          ctx.fillText(displayViolation, 220, currentY + rowHeight / 2 + 4);
+
+          ctx.textAlign = 'right';
+          ctx.fillStyle = item.paymentStatus === 'paid' ? '#16a34a' : '#dc2626';
+          ctx.font = 'bold 13px "Noto Sans Thai", sans-serif';
+          ctx.fillText(`${item.amount} บ.`, 580, currentY + rowHeight / 2 + 4);
+
+          ctx.textAlign = 'center';
+          const isPaid = item.paymentStatus === 'paid';
+          const isSlip = item.paymentStatus === 'slip_uploaded';
+          ctx.fillStyle = isPaid ? '#dcfce7' : (isSlip ? '#fef3c7' : '#fee2e2');
+          drawRoundRect(670, currentY + rowHeight / 2 - 12, 80, 24, 12);
+          ctx.fill();
+
+          ctx.fillStyle = isPaid ? '#16a34a' : (isSlip ? '#d97706' : '#dc2626');
+          ctx.font = 'bold 10px "Noto Sans Thai", sans-serif';
+          ctx.fillText(isPaid ? '✓ ชำระแล้ว' : (isSlip ? '⏳ รอตรวจ' : '✕ ยังไม่ชำระ'), 710, currentY + rowHeight / 2 + 4);
+
+          currentY += rowHeight;
+        });
+      }
+
+      const footerY = height - 50;
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.beginPath(); ctx.moveTo(35, footerY - 15); ctx.lineTo(width - 35, footerY - 15); ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'normal 11px "Noto Sans Thai", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('สภานักเรียนโรงเรียน | ติดต่อชำระเงินที่ฝ่ายการเงิน หรือโอนผ่านระบบสภาฯ', 35, footerY + 10);
+      ctx.textAlign = 'right';
+      ctx.fillText('ใช้สำหรับแจ้งเตือนและติดตามการชำระเงินภายในเท่านั้น', width - 35, footerY + 10);
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `fine_summary_${member.nickname || member.name}_${new Date().toISOString().split('T')[0]}.png`;
+      link.href = dataUrl;
+      link.click();
+    };
+  };
   
   return (
     <div style={{ paddingBottom: 40 }}>
@@ -1299,71 +1553,575 @@ export default function FinancePage() {
         </div>
       )}
 
-      {tab === 'fines' && (
-        <div className="card">
-          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-            <span className="card-title">💸 ตรวจสอบการชำระค่าปรับ</span>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button className="btn btn-outline btn-sm" onClick={exportAllUnpaidFinesPNG} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <Camera size={12} /> 📸 สรุปยอดค้างชำระสภาฯ (PNG)
-              </button>
-              <div style={{ fontSize:12, color:'#757575', marginLeft: 6 }}>รอตรวจสลิป: {dfines.filter(f=>f.paymentStatus==='slip_uploaded').length} รายการ</div>
+      {tab === 'fines' && (() => {
+        const councilMembers = usersList.filter(u => u.role !== 'admin');
+        const memberSummaries = councilMembers.map(u => {
+          const mFines = getUserFines(u);
+          const count = mFines.length;
+          const total = mFines.reduce((sum, f) => sum + Number(f.amount || 0), 0);
+          const unpaid = mFines.filter(f => f.paymentStatus !== 'paid' && !f.paid).reduce((sum, f) => sum + Number(f.amount || 0), 0);
+          const paid = total - unpaid;
+          const pendingSlip = mFines.filter(f => f.paymentStatus === 'slip_uploaded').length;
+          return {
+            ...u,
+            fines: mFines,
+            count,
+            total,
+            unpaid,
+            paid,
+            pendingSlip,
+          };
+        });
+
+        // เรียงลำดับสำหรับมุมมองสรุปรายบุคคล (ค้างชำระมากสุดก่อน -> ยอดรวม -> ชื่อเล่น)
+        const sortedMembers = [...memberSummaries].sort((a, b) => {
+          if (b.unpaid !== a.unpaid) return b.unpaid - a.unpaid;
+          if (b.total !== a.total) return b.total - a.total;
+          return (a.nickname || '').localeCompare(b.nickname || '', 'th');
+        });
+
+        const filteredMembers = sortedMembers.filter(m => {
+          const s = memberFineSearch.toLowerCase().trim();
+          const matchSearch = !s || 
+            (m.name || '').toLowerCase().includes(s) || 
+            (m.nickname || '').toLowerCase().includes(s);
+          if (!matchSearch) return false;
+
+          if (memberFineFilter === 'unpaid') return m.unpaid > 0;
+          if (memberFineFilter === 'paid') return m.count > 0 && m.unpaid === 0;
+          if (memberFineFilter === 'zero') return m.count === 0;
+          return true; // 'all'
+        });
+
+        // การคำนวณสถิติภาพรวม
+        const totalFineSum = dfines.reduce((sum, f) => sum + Number(f.amount || 0), 0);
+        const totalUnpaidSum = dfines.filter(f => f.paymentStatus !== 'paid' && !f.paid).reduce((sum, f) => sum + Number(f.amount || 0), 0);
+        const unpaidMemberCount = memberSummaries.filter(m => m.unpaid > 0).length;
+
+        // การกรองสำหรับมุมมองรายการทั้งหมด
+        const filteredDfines = dfines.filter(f => {
+          const s = fineListSearch.toLowerCase().trim();
+          if (!s) return true;
+          return (f.userName || '').toLowerCase().includes(s) || 
+                 (f.nickname || '').toLowerCase().includes(s) || 
+                 (f.violation || '').toLowerCase().includes(s);
+        });
+
+        return (
+          <div className="card">
+            {/* ส่วนหัวพร้อมปุ่มสลับมุมมอง Segmented Control */}
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span className="card-title" style={{ margin: 0 }}>💸 การจัดการค่าปรับวินัย</span>
+                <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: 3, borderRadius: 8, gap: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => setFineSubView('list')}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: fineSubView === 'list' ? 700 : 500,
+                      background: fineSubView === 'list' ? '#00bcd4' : 'transparent',
+                      color: fineSubView === 'list' ? '#ffffff' : '#64748b',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      transition: 'all 0.2s ease',
+                      boxShadow: fineSubView === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    }}
+                  >
+                    <FileText size={14} /> 📋 รายการค่าปรับทั้งหมด ({dfines.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFineSubView('summary')}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: fineSubView === 'summary' ? 700 : 500,
+                      background: fineSubView === 'summary' ? '#00bcd4' : 'transparent',
+                      color: fineSubView === 'summary' ? '#ffffff' : '#64748b',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      transition: 'all 0.2s ease',
+                      boxShadow: fineSubView === 'summary' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    }}
+                  >
+                    <Users size={14} /> 📊 สรุปรายบุคคล ({councilMembers.length})
+                  </button>
+                </div>
+              </div>
+
+              {/* ปุ่มดำเนินการฝั่งขวา */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button className="btn btn-outline btn-sm" onClick={exportAllUnpaidFinesPNG} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Camera size={13} /> 📸 สรุปยอดค้างชำระสภาฯ (PNG)
+                </button>
+                <div style={{ fontSize: 12, color: '#757575', padding: '4px 8px', background: '#f5f5f5', borderRadius: 6 }}>
+                  รอตรวจสลิป: <strong style={{ color: '#f57f17' }}>{dfines.filter(f=>f.paymentStatus==='slip_uploaded').length}</strong> รายการ
+                </div>
+              </div>
+            </div>
+
+            {/* มุมมองที่ 1: รายการค่าปรับทั้งหมดตามลำดับเวลา (Default) */}
+            {fineSubView === 'list' && (
+              <div>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ position: 'relative', minWidth: 260, maxWidth: 360, flex: 1 }}>
+                    <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input
+                      className="input-field"
+                      placeholder="ค้นหาชื่อสมาชิก หรือข้อหาความผิด..."
+                      value={fineListSearch}
+                      onChange={e => setFineListSearch(e.target.value)}
+                      style={{ paddingLeft: 32, fontSize: 12, height: 34 }}
+                    />
+                  </div>
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                    แสดงผล {filteredDfines.length} จาก {dfines.length} รายการ
+                  </div>
+                </div>
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="simple-table">
+                    <thead>
+                      <tr><th>#</th><th>สมาชิก</th><th>ความผิด</th><th>ยอด</th><th>วันที่</th><th>สถานะ</th><th>สลิป</th>{isFinance && <th>ดำเนินการ</th>}</tr>
+                    </thead>
+                    <tbody>
+                      {filteredDfines.map((f, i) => (
+                        <tr key={f.id}>
+                          <td style={{ color: '#9e9e9e', fontSize: 12 }}>{i + 1}</td>
+                          <td>
+                            <div style={{ fontWeight: 600, fontSize: 13 }}>{f.userName}</div>
+                            <div style={{ fontSize: 11, color: '#9e9e9e' }}>'{f.nickname}'</div>
+                          </td>
+                          <td style={{ fontSize: 12 }}>{f.violation}</td>
+                          <td><span className={`badge ${f.paymentStatus === 'paid' ? 'badge-green' : 'badge-red'}`}>{f.amount} บาท</span></td>
+                          <td style={{ fontSize: 12 }}>{f.date}</td>
+                          <td>
+                            {f.paymentStatus === 'paid' && <span className="badge badge-green">✓ ชำระแล้ว</span>}
+                            {f.paymentStatus === 'slip_uploaded' && <span className="badge badge-yellow">⏳ รอตรวจสลิป</span>}
+                            {f.paymentStatus === 'unpaid' && <span className="badge badge-red">ยังไม่ชำระ</span>}
+                          </td>
+                          <td>
+                            {f.paymentStatus === 'slip_uploaded' || f.paymentStatus === 'paid'
+                              ? <button className="btn btn-gray btn-sm" style={{ fontSize: 11 }} onClick={() => viewSlip(f)}><Eye size={12} /> ดูสลิป</button>
+                              : <span style={{ fontSize: 11, color: '#bdbdbd' }}>-</span>}
+                          </td>
+                          {isFinance && (
+                            <td>
+                              {f.paymentStatus === 'slip_uploaded' && (
+                                <div style={{ display: 'flex', gap: 5 }}>
+                                  <button className="btn btn-success btn-sm" style={{ fontSize: 11 }} onClick={() => confirmFinePaid(f)}>✓ ยืนยัน</button>
+                                  <button className="btn btn-danger btn-sm" style={{ fontSize: 11 }} onClick={() => rejectFineSlip(f)}>✕ ปฏิเสธ</button>
+                                </div>
+                              )}
+                              {f.paymentStatus === 'unpaid' && (
+                                <button className="btn btn-gray btn-sm" style={{ fontSize: 11 }} onClick={() => markFineCash(f.id)}>💵 เงินสด</button>
+                              )}
+                              {f.paymentStatus === 'paid' && (
+                                <button className="btn btn-gray btn-sm" style={{ fontSize: 11, color: '#d32f2f' }} onClick={() => revertFineUnpaid(f)}>💵 ยังไม่ชำระ</button>
+                              )}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {filteredDfines.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '32px', color: '#9e9e9e' }}>
+                    {fineListSearch ? 'ไม่พบรายการที่ตรงกับคำค้นหา' : 'ไม่มีรายการค่าปรับ'}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* มุมมองที่ 2: สรุปยอดค่าปรับรายบุคคล (Per-Member Summary) */}
+            {fineSubView === 'summary' && (
+              <div>
+                {/* กล่องสรุปสถิติภาพรวม */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, padding: '16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <div style={{ background: '#ffffff', padding: '12px 16px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>👥 สมาชิกสภาทั้งหมด</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', marginTop: 4 }}>{councilMembers.length} คน</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>รวมทุกฝ่ายงานในสภาฯ</div>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: '12px 16px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>⚠️ ผู้ที่มียอดค้างชำระ</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: unpaidMemberCount > 0 ? '#dc2626' : '#16a34a', marginTop: 4 }}>{unpaidMemberCount} คน</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{unpaidMemberCount === 0 ? 'ชำระครบทุกคนแล้ว' : 'ยังมียอดค้างชำระ'}</div>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: '12px 16px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>💸 ยอดปรับรวมทั้งหมด</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: '#0284c7', marginTop: 4 }}>{totalFineSum.toLocaleString()} บาท</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{dfines.length} รายการที่บันทึก</div>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: '12px 16px', borderRadius: 8, border: '1px solid #fee2e2' }}>
+                    <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>🚨 ยอดค้างชำระรวม</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: '#b91c1c', marginTop: 4 }}>{totalUnpaidSum.toLocaleString()} บาท</div>
+                    <div style={{ fontSize: 11, color: '#dc2626' }}>ชำระแล้ว {(totalFineSum - totalUnpaidSum).toLocaleString()} บาท</div>
+                  </div>
+                </div>
+
+                {/* แถบเครื่องมือค้นหาและฟิลเตอร์ */}
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ position: 'relative', minWidth: 260, maxWidth: 360, flex: 1 }}>
+                    <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input
+                      className="input-field"
+                      placeholder="ค้นหาชื่อ หรือชื่อเล่นสมาชิก..."
+                      value={memberFineSearch}
+                      onChange={e => setMemberFineSearch(e.target.value)}
+                      style={{ paddingLeft: 32, fontSize: 12, height: 34 }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${memberFineFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+                      onClick={() => setMemberFineFilter('all')}
+                      style={{ fontSize: 11, padding: '4px 10px', borderRadius: 16 }}
+                    >
+                      ทั้งหมด ({memberSummaries.length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${memberFineFilter === 'unpaid' ? 'btn-primary' : 'btn-ghost'}`}
+                      onClick={() => setMemberFineFilter('unpaid')}
+                      style={{ fontSize: 11, padding: '4px 10px', borderRadius: 16, color: memberFineFilter === 'unpaid' ? '#fff' : '#dc2626' }}
+                    >
+                      ⚠️ ค้างชำระ ({memberSummaries.filter(m => m.unpaid > 0).length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${memberFineFilter === 'paid' ? 'btn-primary' : 'btn-ghost'}`}
+                      onClick={() => setMemberFineFilter('paid')}
+                      style={{ fontSize: 11, padding: '4px 10px', borderRadius: 16, color: memberFineFilter === 'paid' ? '#fff' : '#16a34a' }}
+                    >
+                      ✅ ชำระครบแล้ว ({memberSummaries.filter(m => m.count > 0 && m.unpaid === 0).length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${memberFineFilter === 'zero' ? 'btn-primary' : 'btn-ghost'}`}
+                      onClick={() => setMemberFineFilter('zero')}
+                      style={{ fontSize: 11, padding: '4px 10px', borderRadius: 16, color: memberFineFilter === 'zero' ? '#fff' : '#64748b' }}
+                    >
+                      ✨ ไม่มีค่าปรับ ({memberSummaries.filter(m => m.count === 0).length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* ตารางสรุปรายบุคคล (แสดงสมาชิกสภาทุกคน) */}
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="simple-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>สมาชิก</th>
+                        <th>ฝ่ายงาน</th>
+                        <th style={{ textAlign: 'center' }}>ประวัติโดนปรับ</th>
+                        <th style={{ textAlign: 'right' }}>ยอดรวม</th>
+                        <th style={{ textAlign: 'right' }}>ค้างชำระ</th>
+                        <th style={{ textAlign: 'right' }}>ชำระแล้ว</th>
+                        <th style={{ textAlign: 'center' }}>สถานะสลิป</th>
+                        <th style={{ textAlign: 'center' }}>การดำเนินการ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredMembers.map((m, i) => {
+                        const dept = DEPARTMENTS.find(d => d.id === (m.dept_id || m.deptId));
+                        const avatarBg = (m.avatar_color || m.avatarColor || '#00bcd4') + '22';
+                        const avatarText = m.avatar_color || m.avatarColor || '#00bcd4';
+
+                        return (
+                          <tr key={m.id} style={{ background: m.unpaid > 0 ? '#fffbfb' : 'transparent' }}>
+                            <td style={{ color: '#9e9e9e', fontSize: 12 }}>{i + 1}</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div
+                                  className="avatar"
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    background: avatarBg,
+                                    color: avatarText,
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0
+                                  }}
+                                >
+                                  {m.avatar || m.nickname?.slice(0, 1) || m.name?.slice(0, 1) || '?'}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>
+                                    {m.name}
+                                    {m.nickname && <span style={{ color: '#0284c7', marginLeft: 6 }}>"{m.nickname}"</span>}
+                                  </div>
+                                  <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                                    {m.position || 'กรรมการสภานักเรียน'}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              {dept ? (
+                                <span className="badge" style={{ background: dept.bg, color: dept.color, fontSize: 11, fontWeight: 600 }}>
+                                  {dept.short}
+                                </span>
+                              ) : (
+                                <span style={{ color: '#cbd5e1', fontSize: 12 }}>-</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              {m.count > 0 ? (
+                                <span style={{ fontWeight: 600, fontSize: 12, color: '#334155' }}>{m.count} ครั้ง</span>
+                              ) : (
+                                <span style={{ color: '#94a3b8', fontSize: 11 }}>0 ครั้ง</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 13, color: m.total > 0 ? '#0f172a' : '#94a3b8' }}>
+                              {m.total > 0 ? `${m.total.toLocaleString()} บ.` : '0 บ.'}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              {m.unpaid > 0 ? (
+                                <span className="badge badge-red" style={{ fontWeight: 700 }}>
+                                  {m.unpaid.toLocaleString()} บาท
+                                </span>
+                              ) : (
+                                <span style={{ color: '#94a3b8', fontSize: 12 }}>-</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              {m.paid > 0 ? (
+                                <span className="badge badge-green">
+                                  {m.paid.toLocaleString()} บาท
+                                </span>
+                              ) : (
+                                <span style={{ color: '#94a3b8', fontSize: 12 }}>-</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              {m.pendingSlip > 0 ? (
+                                <span className="badge badge-yellow" style={{ fontSize: 10 }}>
+                                  ⏳ รอตรวจ {m.pendingSlip}
+                                </span>
+                              ) : (
+                                <span style={{ color: '#cbd5e1', fontSize: 11 }}>-</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                className="btn btn-outline btn-sm"
+                                onClick={() => setMemberFineModal(m)}
+                                style={{
+                                  fontSize: 11,
+                                  padding: '4px 10px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  color: m.unpaid > 0 ? '#dc2626' : '#0284c7',
+                                  borderColor: m.unpaid > 0 ? '#fca5a5' : '#bae6fd'
+                                }}
+                              >
+                                <Eye size={12} /> ดูประวัติ
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {filteredMembers.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '36px', color: '#94a3b8' }}>
+                    ไม่พบรายชื่อสมาชิกที่ตรงกับเงื่อนไขการค้นหา
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Member Fine Details Modal (ป๊อปอัปดูประวัติค่าปรับเฉพาะบุคคล) */}
+      {memberFineModal && (() => {
+        const memberFines = getUserFines(memberFineModal);
+        const total = memberFines.reduce((s, f) => s + Number(f.amount || 0), 0);
+        const unpaid = memberFines.filter(f => f.paymentStatus !== 'paid' && !f.paid).reduce((s, f) => s + Number(f.amount || 0), 0);
+        const paid = total - unpaid;
+        const dept = DEPARTMENTS.find(d => d.id === (memberFineModal.dept_id || memberFineModal.deptId));
+        const avatarBg = (memberFineModal.avatar_color || memberFineModal.avatarColor || '#00bcd4') + '22';
+        const avatarText = memberFineModal.avatar_color || memberFineModal.avatarColor || '#00bcd4';
+
+        return (
+          <div className="modal-overlay" style={{ zIndex: 1050 }} onClick={e => e.target === e.currentTarget && setMemberFineModal(null)}>
+            <div className="modal-box" style={{ maxWidth: 760, width: '95%' }}>
+              <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div
+                    className="avatar"
+                    style={{
+                      width: 40,
+                      height: 40,
+                      fontSize: 16,
+                      fontWeight: 700,
+                      background: avatarBg,
+                      color: avatarText,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    {memberFineModal.avatar || memberFineModal.nickname?.slice(0, 1) || memberFineModal.name?.slice(0, 1) || '?'}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: '#0f172a' }}>
+                      {memberFineModal.name} {memberFineModal.nickname && <span style={{ color: '#0284c7' }}>"{memberFineModal.nickname}"</span>}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {dept && <span className="badge" style={{ background: dept.bg, color: dept.color, fontSize: 10 }}>{dept.name}</span>}
+                      <span>{memberFineModal.position || 'กรรมการสภานักเรียน'}</span>
+                    </div>
+                  </div>
+                </div>
+                <button onClick={() => setMemberFineModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* การ์ดสถิติย่อย 3 รายการ */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                  <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 8, border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>ยอดปรับรวมสะสม</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#0284c7', marginTop: 2 }}>{total.toLocaleString()} บาท</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>บันทึก {memberFines.length} ครั้ง</div>
+                  </div>
+                  <div style={{ background: '#f0fdf4', padding: '12px 14px', borderRadius: 8, border: '1px solid #bbf7d0', textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 600 }}>ชำระแล้ว</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#16a34a', marginTop: 2 }}>{paid.toLocaleString()} บาท</div>
+                    <div style={{ fontSize: 11, color: '#86efac' }}>เรียบร้อยแล้ว</div>
+                  </div>
+                  <div style={{ background: unpaid > 0 ? '#fef2f2' : '#f8fafc', padding: '12px 14px', borderRadius: 8, border: unpaid > 0 ? '1px solid #fecaca' : '1px solid #e2e8f0', textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: unpaid > 0 ? '#dc2626' : '#64748b', fontWeight: 600 }}>ยอดค้างชำระ</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: unpaid > 0 ? '#b91c1c' : '#64748b', marginTop: 2 }}>{unpaid.toLocaleString()} บาท</div>
+                    <div style={{ fontSize: 11, color: unpaid > 0 ? '#f87171' : '#94a3b8' }}>{unpaid > 0 ? 'ต้องชำระ' : 'ไม่มีค้างชำระ 🎉'}</div>
+                  </div>
+                </div>
+
+                {/* แถบเครื่องมือและปุ่มดาวน์โหลด PNG */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>
+                    📋 ประวัติรายการความผิดทั้งหมด ({memberFines.length} รายการ)
+                  </div>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => exportMemberFinesPNG(memberFineModal)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12 }}
+                  >
+                    <Camera size={13} /> 📸 ดาวน์โหลดสรุปยอดของคนนี้ (PNG)
+                  </button>
+                </div>
+
+                {/* ตารางรายการค่าปรับของคนนี้ */}
+                {memberFines.length > 0 ? (
+                  <div style={{ overflowX: 'auto', border: '1px solid #f1f5f9', borderRadius: 8 }}>
+                    <table className="simple-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>วันที่</th>
+                          <th>ข้อหาความผิด</th>
+                          <th>ยอดเงิน</th>
+                          <th>สถานะ</th>
+                          <th>สลิป</th>
+                          {isFinance && <th>ดำเนินการ</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {memberFines.map((f, idx) => (
+                          <tr key={f.id}>
+                            <td style={{ color: '#9e9e9e', fontSize: 12 }}>{idx + 1}</td>
+                            <td style={{ fontSize: 12 }}>{f.date}</td>
+                            <td style={{ fontSize: 13 }}>
+                              <div style={{ fontWeight: 600 }}>{f.violation}</div>
+                              {f.note && <div style={{ fontSize: 11, color: '#94a3b8' }}>หมายเหตุ: {f.note}</div>}
+                            </td>
+                            <td>
+                              <span className={`badge ${f.paymentStatus === 'paid' ? 'badge-green' : 'badge-red'}`}>
+                                {f.amount} บาท
+                              </span>
+                            </td>
+                            <td>
+                              {f.paymentStatus === 'paid' && <span className="badge badge-green">✓ ชำระแล้ว</span>}
+                              {f.paymentStatus === 'slip_uploaded' && <span className="badge badge-yellow">⏳ รอตรวจสลิป</span>}
+                              {f.paymentStatus === 'unpaid' && <span className="badge badge-red">ยังไม่ชำระ</span>}
+                            </td>
+                            <td>
+                              {f.paymentStatus === 'slip_uploaded' || f.paymentStatus === 'paid' ? (
+                                <button className="btn btn-gray btn-sm" style={{ fontSize: 11 }} onClick={() => viewSlip(f)}>
+                                  <Eye size={12} /> ดูสลิป
+                                </button>
+                              ) : (
+                                <span style={{ fontSize: 11, color: '#cbd5e1' }}>-</span>
+                              )}
+                            </td>
+                            {isFinance && (
+                              <td>
+                                {f.paymentStatus === 'slip_uploaded' && (
+                                  <div style={{ display: 'flex', gap: 5 }}>
+                                    <button className="btn btn-success btn-sm" style={{ fontSize: 11 }} onClick={() => confirmFinePaid(f)}>✓ ยืนยัน</button>
+                                    <button className="btn btn-danger btn-sm" style={{ fontSize: 11 }} onClick={() => rejectFineSlip(f)}>✕ ปฏิเสธ</button>
+                                  </div>
+                                )}
+                                {f.paymentStatus === 'unpaid' && (
+                                  <button className="btn btn-gray btn-sm" style={{ fontSize: 11 }} onClick={() => markFineCash(f.id)}>💵 รับเงินสด</button>
+                                )}
+                                {f.paymentStatus === 'paid' && (
+                                  <button className="btn btn-gray btn-sm" style={{ fontSize: 11, color: '#d32f2f' }} onClick={() => revertFineUnpaid(f)}>🔄 ยกเลิกเป็นยังไม่ชำระ</button>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '36px 16px', background: '#f8fafc', borderRadius: 8, border: '1px dashed #e2e8f0' }}>
+                    <div style={{ fontSize: 24, marginBottom: 8 }}>🎉</div>
+                    <div style={{ fontWeight: 600, color: '#16a34a', fontSize: 14 }}>ไม่มีประวัติการโดนปรับวินัยสภาฯ</div>
+                    <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 4 }}>สมาชิกท่านนี้ปฏิบัติตามกฎระเบียบและเวรของสภานักเรียนอย่างเคร่งครัด</div>
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button className="btn btn-primary" onClick={() => setMemberFineModal(null)}>ปิดหน้าต่าง</button>
+              </div>
             </div>
           </div>
-          <div style={{ overflowX:'auto' }}>
-            <table className="simple-table">
-              <thead>
-                <tr><th>#</th><th>สมาชิก</th><th>ความผิด</th><th>ยอด</th><th>วันที่</th><th>สถานะ</th><th>สลิป</th>{isFinance && <th>ดำเนินการ</th>}</tr>
-              </thead>
-              <tbody>
-                {dfines.map((f,i) => (
-                  <tr key={f.id}>
-                    <td style={{ color:'#9e9e9e', fontSize:12 }}>{i+1}</td>
-                    <td>
-                      <div style={{ fontWeight:600, fontSize:13 }}>{f.userName}</div>
-                      <div style={{ fontSize:11, color:'#9e9e9e' }}>'{f.nickname}'</div>
-                    </td>
-                    <td style={{ fontSize:12 }}>{f.violation}</td>
-                    <td><span className={`badge ${f.paymentStatus==='paid'?'badge-green':'badge-red'}`}>{f.amount} บาท</span></td>
-                    <td style={{ fontSize:12 }}>{f.date}</td>
-                    <td>
-                      {f.paymentStatus === 'paid' && <span className="badge badge-green">✓ ชำระแล้ว</span>}
-                      {f.paymentStatus === 'slip_uploaded' && <span className="badge badge-yellow">⏳ รอตรวจสลิป</span>}
-                      {f.paymentStatus === 'unpaid' && <span className="badge badge-red">ยังไม่ชำระ</span>}
-                    </td>
-                    <td>
-                      {f.paymentStatus === 'slip_uploaded' || f.paymentStatus === 'paid'
-                        ? <button className="btn btn-gray btn-sm" style={{ fontSize:11 }} onClick={() => viewSlip(f)}><Eye size={12}/> ดูสลิป</button>
-                        : <span style={{ fontSize:11, color:'#bdbdbd' }}>-</span>}
-                    </td>
-                    {isFinance && (
-                      <td>
-                        {f.paymentStatus === 'slip_uploaded' && (
-                          <div style={{ display:'flex', gap:5 }}>
-                            <button className="btn btn-success btn-sm" style={{ fontSize:11 }} onClick={() => confirmFinePaid(f)}>✓ ยืนยัน</button>
-                            <button className="btn btn-danger btn-sm" style={{ fontSize:11 }} onClick={() => rejectFineSlip(f)}>✕ ปฏิเสธ</button>
-                          </div>
-                        )}
-                        {f.paymentStatus === 'unpaid' && (
-                          <button className="btn btn-gray btn-sm" style={{ fontSize:11 }} onClick={() => markFineCash(f.id)}>💵 เงินสด</button>
-                        )}
-                        {f.paymentStatus === 'paid' && (
-                          <button className="btn btn-gray btn-sm" style={{ fontSize:11, color: '#d32f2f' }} onClick={() => revertFineUnpaid(f)}>💵 ยังไม่ชำระ</button>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {dfines.length === 0 && <div style={{ textAlign:'center', padding:'32px', color:'#9e9e9e' }}>ไม่มีรายการค่าปรับ</div>}
-        </div>
-      )}
+        );
+      })()}
 
       {/* Slip View Modal */}
       {slipViewModal && (
-        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setSlipViewModal(null)}>
+        <div className="modal-overlay" style={{ zIndex: 1200 }} onClick={e=>e.target===e.currentTarget&&setSlipViewModal(null)}>
           <div className="modal-box" style={{ maxWidth:480 }}>
             <div className="modal-header">
               <span style={{ fontWeight:700, fontSize:15 }}>📤 สลิปการโอนเงิน - {slipViewModal.userName}</span>
