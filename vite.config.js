@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 
 export default defineConfig({
-  base: process.env.VERCEL ? '/' : '/SWSC69/', // บน Vercel หรือ Custom Domain จะใช้ '/' อัตโนมัติ
+  base: (typeof process !== 'undefined' && process.env.VERCEL) ? '/' : '/SWSC69/', // บน Vercel หรือ Custom Domain จะใช้ '/' อัตโนมัติ
   plugins: [
     react(),
     tailwindcss(),
