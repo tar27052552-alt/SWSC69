@@ -421,10 +421,75 @@
       transition: all 0.15s ease;
       white-space: nowrap;
     }
-    .nav-dropdown a:hover {
+        .nav-dropdown a:hover {
       background: #f5f3ff;
       color: var(--purple-700);
       transform: translateX(4px);
+    }
+
+    /* ==================== ROYAL GOLD METALLIC ICONS & SHIMMER ==================== */
+    .nav-gold-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+      vertical-align: middle;
+      transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.28s ease;
+      overflow: hidden;
+      border-radius: 4px;
+    }
+    .nav-gold-icon svg {
+      display: block;
+      transition: all 0.25s ease;
+      filter: drop-shadow(0 1px 1px rgba(180, 83, 9, 0.2));
+    }
+    
+    /* Shimmer light sweep element */
+    .nav-gold-icon::after {
+      content: '';
+      position: absolute;
+      top: -60%;
+      left: -140%;
+      width: 70%;
+      height: 220%;
+      background: linear-gradient(
+        75deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0) 25%,
+        rgba(255, 248, 220, 0.95) 50%,
+        rgba(255, 255, 255, 0) 75%,
+        transparent 100%
+      );
+      transform: rotate(25deg);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    /* Hover effects across Desktop Navbar, Dropdowns, and Mobile Menu */
+    .nav-menu a.nav-link:hover .nav-gold-icon,
+    .nav-dropdown a:hover .nav-gold-icon,
+    .mobile-menu a:hover .nav-gold-icon,
+    .mobile-dropdown-toggle:hover .nav-gold-icon {
+      transform: scale(1.15);
+      filter: drop-shadow(0 0 7px rgba(245, 158, 11, 0.65)) drop-shadow(0 0 1px rgba(251, 191, 36, 0.9));
+    }
+
+    .nav-menu a.nav-link:hover .nav-gold-icon::after,
+    .nav-dropdown a:hover .nav-gold-icon::after,
+    .mobile-menu a:hover .nav-gold-icon::after,
+    .mobile-dropdown-toggle:hover .nav-gold-icon::after {
+      opacity: 1;
+      animation: goldShimmerSweep 0.75s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes goldShimmerSweep {
+      0% {
+        left: -140%;
+      }
+      100% {
+        left: 170%;
+      }
     }
 
     .btn-download-pdf:hover {
@@ -2956,95 +3021,105 @@
 
   <!-- NAVBAR -->
   <nav id="navbar">
+    <!-- SVG Defs for Royal Gold Gradients -->
+    <svg width="0" height="0" style="position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;" aria-hidden="true">
+      <defs>
+        <linearGradient id="royalGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#FFE27A" />
+          <stop offset="35%" stop-color="#F59E0B" />
+          <stop offset="70%" stop-color="#D97706" />
+          <stop offset="100%" stop-color="#B45309" />
+        </linearGradient>
+      </defs>
+    </svg>
     <a href="#/home" class="nav-brand">
       <img src="./all-logos.png" alt="ตราสัญลักษณ์โรงเรียนสรรพวิทยาคมและสภานักเรียน SWSC" class="nav-all-logos" onerror="this.style.display='none'"/>
       <span class="nav-brand-name">SWSC.OFFICIAL</span>
     </a>
     <ul class="nav-menu">
-      <li class="nav-item"><a href="#/news" class="nav-link">📰 ข่าวประชาสัมพันธ์</a></li>
+      <li class="nav-item"><a href="#/news" class="nav-link"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg></span> ข่าวประชาสัมพันธ์</a></li>
       <li class="nav-item">
-        <a href="javascript:void(0)" class="nav-link">🏘️ ข้อมูลพื้นฐาน <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
+        <a href="javascript:void(0)" class="nav-link"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"/><path d="M2 18h20"/><path d="M4 6h16"/><path d="m12 2 10 4H2l10-4z"/><path d="M6 10v8"/><path d="M10 10v8"/><path d="M14 10v8"/><path d="M18 10v8"/></svg></span> ข้อมูลพื้นฐาน <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
         <div class="nav-dropdown">
-          <a href="#/sap-model">🚀 การขับเคลื่อนกิจกรรม (SAP Model)</a>
-          <a href="#/policies">🎯 นโยบายสภานักเรียน</a>
-          <a href="#/regulations">📜 ระเบียบสภานักเรียน</a>
-          <a href="#/manual">📘 คู่มือปฏิบัติงาน</a>
-          <a href="#/structure">🏛️ โครงสร้างการบริหารงาน</a>
+          <a href="#/sap-model"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></span> การขับเคลื่อนกิจกรรม (SAP Model)</a>
+          <a href="#/policies"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span> นโยบายสภานักเรียน</a>
+          <a href="#/regulations"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v3h4"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/></svg></span> ระเบียบสภานักเรียน</a>
+          <a href="#/manual"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg></span> คู่มือปฏิบัติงาน</a>
+          <a href="#/structure"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect width="6" height="6" x="9" y="2" rx="1"/><rect width="6" height="6" x="2" y="16" rx="1"/><rect width="6" height="6" x="16" y="16" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg></span> โครงสร้างการบริหารงาน</a>
         </div>
       </li>
       <li class="nav-item">
-        <a href="javascript:void(0)" class="nav-link">📁 ข้อมูลบริการ <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
+        <a href="javascript:void(0)" class="nav-link"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/><path d="m9 13 2 2 4-4"/></svg></span> ข้อมูลบริการ <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
         <div class="nav-dropdown">
-          <a href="#/events">📅 ปฏิทินกิจกรรม</a>
-          <a href="#/suggestions">💬 ข้อเสนอแนะ/ร้องเรียน</a>
-          <a href="#/documents">📑 เอกสารวิชาการ</a>
-          <a href="#/certificates">🎓 ค้นหาเกียรติบัตร</a>
+          <a href="#/events"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/></svg></span> ปฏิทินกิจกรรม</a>
+          <a href="#/suggestions"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8"/><path d="M8 13h6"/></svg></span> ข้อเสนอแนะ/ร้องเรียน</a>
+          <a href="#/documents"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span> เอกสารวิชาการ</a>
+          <a href="#/certificates"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg></span> ค้นหาเกียรติบัตร</a>
         </div>
       </li>
       <li class="nav-item">
-        <a href="javascript:void(0)" class="nav-link">🌐 เว็บไซต์บริการ <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
+        <a href="javascript:void(0)" class="nav-link"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></span> เว็บไซต์บริการ <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
         <div class="nav-dropdown">
-          <a href="https://www.sappha.ac.th" target="_blank">🏫 เว็บไซต์โรงเรียนสรรพวิทยาคม</a>
-          <a href="https://www.sappha.ac.th/?page_id=2181" target="_blank">♻️ ระบบขยะแลกแต้ม</a>
-          <a href="./admin/#/login">🔐 ระบบภายในสภา</a>
+          <a href="https://www.sappha.ac.th" target="_blank"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 22v-4a2 2 0 1 0-4 0v4"/><path d="m18 10 4 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8l4-2"/><path d="M18 5v17"/><path d="m4 6 8-4 8 4"/><path d="M6 5v17"/><circle cx="12" cy="9" r="2"/></svg></span> เว็บไซต์โรงเรียนสรรพวิทยาคม</a>
+          <a href="https://www.sappha.ac.th/?page_id=2181" target="_blank"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/><path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/><path d="m14 16-3 3 3 3"/><path d="M8.293 13.596 5.5 9.5 8.5 4.5h6.983a1.83 1.83 0 0 1 1.556.89 1.784 1.784 0 0 1 0 1.775l-.946 1.635"/><path d="m11 5 3-3-3-3"/></svg></span> ระบบขยะแลกแต้ม</a>
+          <a href="./admin/#/login"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><rect width="6" height="4" x="9" y="11" rx="1"/><path d="M10 11V9a2 2 0 1 1 4 0v2"/></svg></span> ระบบภายในสภา</a>
         </div>
       </li>
-      <li class="nav-item"><a href="#/videos" class="nav-link">🎞️ สื่อวีดิทัศน์</a></li>
-      <li class="nav-item"><a href="#/contact" class="nav-link">📞 ติดต่อเรา</a></li>
-
+      <li class="nav-item"><a href="#/videos" class="nav-link"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="2.18" ry="2.18"/><line x1="7" x2="7" y1="2" y2="22"/><line x1="17" x2="17" y1="2" y2="22"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="2" x2="7" y1="7" y2="7"/><line x1="2" x2="7" y1="17" y2="17"/><line x1="17" x2="22" y1="17" y2="17"/><line x1="17" x2="22" y1="7" y2="7"/></svg></span> สื่อวีดิทัศน์</a></li>
+      <li class="nav-item"><a href="#/contact" class="nav-link"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span> ติดต่อเรา</a></li>
     </ul>
     <button class="nav-burger" id="burger"><span></span><span></span><span></span></button>
   </nav>
   <div class="mobile-menu" id="mobileMenu">
-  <a href="#/news" onclick="closeMobile()">📰 ข่าวประชาสัมพันธ์</a>
+    <a href="#/news" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg></span> ข่าวประชาสัมพันธ์</a>
 
-  <!-- ข้อมูลพื้นฐาน -->
-  <div class="mobile-dropdown-parent">
-    <button type="button" class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this, event)">
-      <span>🏘️ ข้อมูลพื้นฐาน</span>
-      <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-    </button>
-    <div class="mobile-dropdown-sub">
-      <a href="#/sap-model" onclick="closeMobile()">🚀 การขับเคลื่อนกิจกรรม (SAP)</a>
-      <a href="#/policies" onclick="closeMobile()">🎯 นโยบายสภานักเรียน</a>
-      <a href="#/regulations" onclick="closeMobile()">📜 ระเบียบสภาฯ</a>
-      <a href="#/manual" onclick="closeMobile()">📘 คู่มือปฏิบัติงาน</a>
-      <a href="#/structure" onclick="closeMobile()">🏛️ โครงสร้างการบริหารงาน</a>
+    <!-- ข้อมูลพื้นฐาน -->
+    <div class="mobile-dropdown-parent">
+      <button type="button" class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this, event)">
+        <span style="display: flex; align-items: center; gap: 10px;"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"/><path d="M2 18h20"/><path d="M4 6h16"/><path d="m12 2 10 4H2l10-4z"/><path d="M6 10v8"/><path d="M10 10v8"/><path d="M14 10v8"/><path d="M18 10v8"/></svg></span> ข้อมูลพื้นฐาน</span>
+        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="mobile-dropdown-sub">
+        <a href="#/sap-model" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></span> การขับเคลื่อนกิจกรรม (SAP)</a>
+        <a href="#/policies" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span> นโยบายสภานักเรียน</a>
+        <a href="#/regulations" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v3h4"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/></svg></span> ระเบียบสภาฯ</a>
+        <a href="#/manual" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg></span> คู่มือปฏิบัติงาน</a>
+        <a href="#/structure" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect width="6" height="6" x="9" y="2" rx="1"/><rect width="6" height="6" x="2" y="16" rx="1"/><rect width="6" height="6" x="16" y="16" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg></span> โครงสร้างการบริหารงาน</a>
+      </div>
     </div>
-  </div>
 
     <!-- ข้อมูลบริการ -->
     <div class="mobile-dropdown-parent">
       <button type="button" class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this, event)">
-        <span>📁 ข้อมูลบริการ</span>
+        <span style="display: flex; align-items: center; gap: 10px;"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/><path d="m9 13 2 2 4-4"/></svg></span> ข้อมูลบริการ</span>
         <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="mobile-dropdown-sub">
-        <a href="#/events" onclick="closeMobile()">📅 ปฏิทินกิจกรรม</a>
-        <a href="#/suggestions" onclick="closeMobile()">💬 ข้อเสนอแนะ/ร้องเรียน</a>
-        <a href="#/documents" onclick="closeMobile()">📑 เอกสารวิชาการ</a>
-        <a href="#/certificates" onclick="closeMobile()">🎓 ค้นหาเกียรติบัตร</a>
+        <a href="#/events" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/></svg></span> ปฏิทินกิจกรรม</a>
+        <a href="#/suggestions" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8"/><path d="M8 13h6"/></svg></span> ข้อเสนอแนะ/ร้องเรียน</a>
+        <a href="#/documents" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span> เอกสารวิชาการ</a>
+        <a href="#/certificates" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg></span> ค้นหาเกียรติบัตร</a>
       </div>
     </div>
 
     <!-- เว็บไซต์บริการ -->
     <div class="mobile-dropdown-parent">
       <button type="button" class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this, event)">
-        <span>🌐 เว็บไซต์บริการ</span>
+        <span style="display: flex; align-items: center; gap: 10px;"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></span> เว็บไซต์บริการ</span>
         <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="mobile-dropdown-sub">
-        <a href="https://www.sappha.ac.th" target="_blank" onclick="closeMobile()">🏫 เว็บไซต์โรงเรียน</a>
-        <a href="https://www.sappha.ac.th/?page_id=2181" target="_blank" onclick="closeMobile()">♻️ ระบบขยะแลกแต้ม</a>
-        <a href="./admin/#/login" onclick="closeMobile()">🔐 ระบบภายในสภา</a>
+        <a href="https://www.sappha.ac.th" target="_blank" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 22v-4a2 2 0 1 0-4 0v4"/><path d="m18 10 4 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8l4-2"/><path d="M18 5v17"/><path d="m4 6 8-4 8 4"/><path d="M6 5v17"/><circle cx="12" cy="9" r="2"/></svg></span> เว็บไซต์โรงเรียน</a>
+        <a href="https://www.sappha.ac.th/?page_id=2181" target="_blank" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/><path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/><path d="m14 16-3 3 3 3"/><path d="M8.293 13.596 5.5 9.5 8.5 4.5h6.983a1.83 1.83 0 0 1 1.556.89 1.784 1.784 0 0 1 0 1.775l-.946 1.635"/><path d="m11 5 3-3-3-3"/></svg></span> ระบบขยะแลกแต้ม</a>
+        <a href="./admin/#/login" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><rect width="6" height="4" x="9" y="11" rx="1"/><path d="M10 11V9a2 2 0 1 1 4 0v2"/></svg></span> ระบบภายในสภา</a>
       </div>
     </div>
 
-  <!-- สื่อวีดิทัศน์ -->
-  <a href="#/videos" onclick="closeMobile()">🎞️ สื่อวีดิทัศน์</a>
+    <!-- สื่อวีดิทัศน์ -->
+    <a href="#/videos" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="2.18" ry="2.18"/><line x1="7" x2="7" y1="2" y2="22"/><line x1="17" x2="17" y1="2" y2="22"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="2" x2="7" y1="7" y2="7"/><line x1="2" x2="7" y1="17" y2="17"/><line x1="17" x2="22" y1="17" y2="17"/><line x1="17" x2="22" y1="7" y2="7"/></svg></span> สื่อวีดิทัศน์</a>
 
-  <!-- ติดต่อเรา -->
-  <a href="#/contact" onclick="closeMobile()">📞 ติดต่อเรา</a>
+    <!-- ติดต่อเรา -->
+    <a href="#/contact" onclick="closeMobile()"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span> ติดต่อเรา</a>
   </div>
 
   <!-- FULL HERO BANNER -->
