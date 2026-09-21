@@ -3945,6 +3945,39 @@
       if (!resJson.success) {
         throw new Error("Failed to load");
       }
+      
+      const data = resJson.data;
+      const certs = data.filter(d => d.type && d.type.startsWith('เกียรติบัตร') && String(d.title) === studentId).reverse();
+
+      if (certs.length === 0) {
+        resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500); font-size:14px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.6); width: 100%;">ไม่พบเกียรติบัตรสำหรับเลขประจำตัวนี้</div>';
+        return;
+      }
+
+      resultDiv.innerHTML = certs.map(d => {
+        let displayDate = d.date;
+        if (displayDate && displayDate.includes('T')) {
+          const dt = new Date(displayDate);
+          displayDate = dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        const cat = d.type.includes('|') ? d.type.split('|')[1] : (d.category || 'เกียรติบัตรเข้าร่วมกิจกรรม');
+        return `
+        <a href="${d.file_url}" target="_blank" class="doc-list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.85); border-radius: 12px; text-decoration: none; color: inherit; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+          <div class="doc-list-info" style="display: flex; flex-direction: column; gap: 4px; text-align: left;">
+            <div class="doc-list-title" style="font-weight: 700; color: var(--purple-950); font-size: 14px;">${cat}</div>
+            <div class="doc-list-meta" style="font-size: 12px; color: var(--gray-500);">เลขประจำตัว: ${d.title} • ${displayDate}</div>
+          </div>
+          <div class="doc-download-btn" style="background: var(--purple-100); color: var(--purple-700); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; transition: all 0.2s;">ดาวน์โหลด</div>
+        </a>
+      `}).join('');
+    } catch (err) {
+      console.error(err);
+      resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#e53935; font-size:14px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; width: 100%;">เกิดข้อผิดพลาดในการค้นหา/ฐานข้อมูลขัดข้อง โปรดลองอีกครั้งภายหลัง</div>';
+    }
+  }
+
+  /* ---- ROUTING ---- */
+  function route() {
     closeCalPopup();
     closeNewsPopup();
     closeDocModal();
