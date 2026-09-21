@@ -421,10 +421,75 @@
       transition: all 0.15s ease;
       white-space: nowrap;
     }
-        .nav-dropdown a:hover {
+            .nav-dropdown a:hover {
       background: #f5f3ff;
       color: var(--purple-700);
       transform: translateX(4px);
+    }
+
+    /* ==================== ROYAL GOLD METALLIC ICONS & SHIMMER ==================== */
+    .nav-gold-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+      vertical-align: middle;
+      transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.28s ease;
+      overflow: hidden;
+      border-radius: 4px;
+    }
+    .nav-gold-icon svg {
+      display: block;
+      transition: all 0.25s ease;
+      filter: drop-shadow(0 1px 1px rgba(180, 83, 9, 0.2));
+    }
+    
+    /* Shimmer light sweep element */
+    .nav-gold-icon::after {
+      content: '';
+      position: absolute;
+      top: -60%;
+      left: -140%;
+      width: 70%;
+      height: 220%;
+      background: linear-gradient(
+        75deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0) 25%,
+        rgba(255, 248, 220, 0.95) 50%,
+        rgba(255, 255, 255, 0) 75%,
+        transparent 100%
+      );
+      transform: rotate(25deg);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    /* Hover effects across Desktop Navbar, Dropdowns, and Mobile Menu */
+    .nav-menu a.nav-link:hover .nav-gold-icon,
+    .nav-dropdown a:hover .nav-gold-icon,
+    .mobile-menu a:hover .nav-gold-icon,
+    .mobile-dropdown-toggle:hover .nav-gold-icon {
+      transform: scale(1.15);
+      filter: drop-shadow(0 0 7px rgba(245, 158, 11, 0.65)) drop-shadow(0 0 1px rgba(251, 191, 36, 0.9));
+    }
+
+    .nav-menu a.nav-link:hover .nav-gold-icon::after,
+    .nav-dropdown a:hover .nav-gold-icon::after,
+    .mobile-menu a:hover .nav-gold-icon::after,
+    .mobile-dropdown-toggle:hover .nav-gold-icon::after {
+      opacity: 1;
+      animation: goldShimmerSweep 0.75s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes goldShimmerSweep {
+      0% {
+        left: -140%;
+      }
+      100% {
+        left: 170%;
+      }
     }
 
     /* ==================== ROYAL GOLD METALLIC ICONS & SHIMMER ==================== */
@@ -3039,7 +3104,7 @@
     <ul class="nav-menu">
       <li class="nav-item"><a href="#/news" class="nav-link"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg></span> ข่าวประชาสัมพันธ์</a></li>
       <li class="nav-item">
-        <a href="javascript:void(0)" class="nav-link"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"/><path d="M2 18h20"/><path d="M4 6h16"/><path d="m12 2 10 4H2l10-4z"/><path d="M6 10v8"/><path d="M10 10v8"/><path d="M14 10v8"/><path d="M18 10v8"/></svg></span> ข้อมูลพื้นฐาน <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
+        <a href="javascript:void(0)" class="nav-link"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10L12 3L21 10H3Z"/><circle cx="12" cy="7.5" r="1" fill="url(#royalGoldGrad)"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="10" x2="6" y2="18"/><line x1="12" y1="10" x2="12" y2="18"/><line x1="18" y1="10" x2="18" y2="18"/><line x1="3" y1="18" x2="21" y2="18"/><line x1="1" y1="21" x2="23" y2="21"/></svg></span> ข้อมูลพื้นฐาน <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
         <div class="nav-dropdown">
           <a href="#/sap-model"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></span> การขับเคลื่อนกิจกรรม (SAP Model)</a>
           <a href="#/policies"><span class="nav-gold-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span> นโยบายสภานักเรียน</a>
@@ -3076,7 +3141,7 @@
     <!-- ข้อมูลพื้นฐาน -->
     <div class="mobile-dropdown-parent">
       <button type="button" class="mobile-dropdown-toggle" onclick="toggleMobileDropdown(this, event)">
-        <span style="display: flex; align-items: center; gap: 10px;"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"/><path d="M2 18h20"/><path d="M4 6h16"/><path d="m12 2 10 4H2l10-4z"/><path d="M6 10v8"/><path d="M10 10v8"/><path d="M14 10v8"/><path d="M18 10v8"/></svg></span> ข้อมูลพื้นฐาน</span>
+        <span style="display: flex; align-items: center; gap: 10px;"><span class="nav-gold-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#royalGoldGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10L12 3L21 10H3Z"/><circle cx="12" cy="7.5" r="1" fill="url(#royalGoldGrad)"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="10" x2="6" y2="18"/><line x1="12" y1="10" x2="12" y2="18"/><line x1="18" y1="10" x2="18" y2="18"/><line x1="3" y1="18" x2="21" y2="18"/><line x1="1" y1="21" x2="23" y2="21"/></svg></span> ข้อมูลพื้นฐาน</span>
         <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="mobile-dropdown-sub">
