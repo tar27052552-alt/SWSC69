@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { 
   Megaphone, Save, Trash2, Edit2, X, Plus, ArrowUp, ArrowDown, 
   Search, RefreshCw, Eye, EyeOff, Sparkles, Image as ImageIcon,
-  CheckCircle2, Link as LinkIcon, Calendar, Layers
+  CheckCircle2, Link as LinkIcon, Calendar, Layers, Shield, Camera, Target
 } from 'lucide-react';
 
 export default function AnnouncementsPage() {
@@ -229,6 +230,22 @@ export default function AnnouncementsPage() {
 
   return (
     <div style={{ paddingBottom: 40 }}>
+      {/* ── ADMIN NAV TABS ── */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, overflowX: 'auto', paddingBottom: 4 }}>
+        <Link to="/admin" className="badge badge-gray" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Shield size={14} /> จัดการผู้ใช้งาน
+        </Link>
+        <Link to="/admin-announcements" className="badge badge-purple" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
+          <Megaphone size={14} /> จัดการประกาศหน้าเว็บ
+        </Link>
+        <Link to="/admin-videos" className="badge badge-gray" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Camera size={14} /> จัดการวิดีโอกิจกรรม
+        </Link>
+        <Link to="/admin-policies" className="badge badge-gray" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Target size={14} /> จัดการนโยบายสภาฯ
+        </Link>
+      </div>
+
       {/* ── PAGE HEADER ── */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <div>

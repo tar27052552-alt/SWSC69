@@ -247,7 +247,8 @@ export default function ManagePoliciesPage() {
       status_color: form.status_color,
       description: form.description.trim(),
       highlights: highlightsArr,
-      target: form.target.trim() || 'นักเรียนทุกคน'
+      target: form.target.trim() || 'นักเรียนทุกคน',
+      updated_at: new Date().toISOString()
     };
 
     setSubmitting(true);

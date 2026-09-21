@@ -1032,6 +1032,7 @@ export default function Dashboard() {
               { to: '/schedules', icon: '🙏', label: 'ตารางเวรยืนไหว้' },
               { to: '/schedules', icon: '🚩', label: 'เวรเชิญธง' },
               { to: '/calendar',  icon: '📅', label: 'ปฏิทินกิจกรรม' },
+              ...(isAdmin ? [{ to: '/admin-policies', icon: '🎯', label: 'จัดการนโยบายสภาฯ' }] : [])
             ].map(q => (
               <NavLink key={q.label} to={q.to} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', color: '#212121', borderBottom: '1px solid #f0f0f0', borderRight: '1px solid #f0f0f0' }}>
                 <span style={{ fontSize: 18 }}>{q.icon}</span>

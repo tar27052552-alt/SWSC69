@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import { 
   Camera, Trash2, Edit2, X, Plus, Save, ExternalLink, 
   Search, Play, Video, HardDrive, Calendar, 
   Sparkles, RefreshCw, AlertCircle, FileVideo, Image as ImageIcon,
-  CheckCircle2, Film, Globe, Eye
+  CheckCircle2, Film, Globe, Eye, Shield, Megaphone, Target
 } from 'lucide-react';
 import { uploadFileToDrive } from '../lib/googleDriveUpload';
 
@@ -305,6 +306,22 @@ export default function ManageVideosPage() {
 
   return (
     <div style={{ paddingBottom: 40 }}>
+      {/* ── ADMIN NAV TABS ── */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, overflowX: 'auto', paddingBottom: 4 }}>
+        <Link to="/admin" className="badge badge-gray" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Shield size={14} /> จัดการผู้ใช้งาน
+        </Link>
+        <Link to="/admin-announcements" className="badge badge-gray" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Megaphone size={14} /> จัดการประกาศหน้าเว็บ
+        </Link>
+        <Link to="/admin-videos" className="badge badge-purple" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
+          <Camera size={14} /> จัดการวิดีโอกิจกรรม
+        </Link>
+        <Link to="/admin-policies" className="badge badge-gray" style={{ padding: '7px 14px', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Target size={14} /> จัดการนโยบายสภาฯ
+        </Link>
+      </div>
+
       {/* ── HEADER ── */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <div>
