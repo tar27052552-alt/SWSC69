@@ -4117,7 +4117,7 @@
     const reg = REG_FILES[year] || REG_FILES['2569'];
     const iframe = document.getElementById('regulationsIframe');
     if (iframe) {
-      iframe.src = reg.url;
+      iframe.src = `https://docs.google.com/viewer?url=https://swscofficial.com${reg.url.replace('./', '/')}&embedded=true`;
     }
     const downloadBtn = document.getElementById('regDownloadBtn');
     if (downloadBtn) {
@@ -4158,7 +4158,7 @@
     const manual = MANUAL_FILES[year] || MANUAL_FILES['2569'];
     const iframe = document.getElementById('manualIframe');
     if (iframe) {
-      iframe.src = manual.url;
+      iframe.src = `https://docs.google.com/viewer?url=https://swscofficial.com${manual.url.replace('./', '/')}&embedded=true`;
     }
     const downloadBtn = document.getElementById('manualDownloadBtn');
     if (downloadBtn) {
@@ -4539,6 +4539,9 @@
     
     html += `</div>`;
     el.innerHTML = html;
+    if (typeof AOS !== 'undefined') {
+      setTimeout(() => AOS.refresh(), 100);
+    }
   }
 
   function renderNews(items, targetId) {
@@ -4580,6 +4583,10 @@
         if (items.length > newsDisplayLimit) loadMoreWrap.style.display = 'block';
         else loadMoreWrap.style.display = 'none';
       }
+    }
+    
+    if (typeof AOS !== 'undefined') {
+      setTimeout(() => AOS.refresh(), 100);
     }
   }
 
