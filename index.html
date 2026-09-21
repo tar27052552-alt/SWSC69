@@ -1051,6 +1051,256 @@
     }
 
     /* ==================== PUBLIC DOCUMENT HUB ==================== */
+    /* Primary Category Switcher Tabs */
+    .doc-main-tabs-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      background: rgba(243, 244, 246, 0.85);
+      padding: 6px;
+      border-radius: 14px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+    }
+    .doc-main-tab {
+      flex: 1;
+      min-width: 180px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gray-700);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .doc-main-tab:hover {
+      color: var(--purple-700);
+      background: rgba(255, 255, 255, 0.65);
+    }
+    .doc-main-tab.active {
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--purple-600), var(--purple-700));
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.25);
+    }
+    .doc-main-tab .tab-badge {
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 11px;
+      background: rgba(0, 0, 0, 0.08);
+      color: inherit;
+    }
+    .doc-main-tab.active .tab-badge {
+      background: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+    }
+
+    /* Project Folder Cards */
+    .project-folders-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .project-folder-box {
+      background: #ffffff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+      position: relative;
+      overflow: hidden;
+    }
+    .project-folder-box:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(124, 58, 237, 0.1);
+      border-color: rgba(168, 85, 247, 0.4);
+    }
+    .project-folder-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .project-folder-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+      color: #7c3aed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+      transition: all 0.25s;
+    }
+    .project-folder-box:hover .project-folder-icon {
+      background: linear-gradient(135deg, var(--purple-600), var(--purple-700));
+      color: #ffffff;
+      transform: scale(1.05);
+    }
+    .project-folder-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gray-900);
+      line-height: 1.4;
+      margin-top: 2px;
+    }
+    .project-folder-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 12px;
+      margin-top: 4px;
+    }
+    .project-folder-count {
+      font-size: 12px;
+      font-weight: 700;
+      color: #059669;
+      background: #ecfdf5;
+      padding: 3px 10px;
+      border-radius: 99px;
+      border: 1px solid #a7f3d0;
+    }
+    .project-folder-arrow {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--purple-600);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Meeting Session Card (Paired Agendas & Minutes) */
+    .meeting-session-card {
+      background: #ffffff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 16px;
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .meeting-session-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.08);
+      border-color: rgba(96, 165, 250, 0.5);
+    }
+    .meeting-session-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+      min-width: 0;
+    }
+    .meeting-session-num {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      color: #1d4ed8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-weight: 800;
+      font-size: 16px;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    .meeting-session-num span {
+      font-size: 10px;
+      font-weight: 600;
+      color: #60a5fa;
+      line-height: 1;
+    }
+    .meeting-session-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 4px;
+    }
+    .meeting-session-meta {
+      font-size: 12px;
+      color: var(--gray-500);
+    }
+    .meeting-doc-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .meeting-download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .meeting-btn-agenda {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+    .meeting-btn-agenda:hover {
+      background: #1d4ed8;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(29, 78, 216, 0.2);
+    }
+    .meeting-btn-minutes {
+      background: #fdf2f8;
+      color: #be185d;
+      border: 1px solid #fbcfe8;
+    }
+    .meeting-btn-minutes:hover {
+      background: #be185d;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(190, 24, 93, 0.2);
+    }
+
+    /* Drill-down back button */
+    .doc-back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #ffffff;
+      color: var(--purple-700);
+      border: 1px solid var(--purple-200);
+      padding: 8px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+      transition: all 0.2s;
+    }
+    .doc-back-btn:hover {
+      background: var(--purple-50);
+      border-color: var(--purple-400);
+      transform: translateX(-3px);
+    }
+
+    /* Standard Document Item */
     .public-doc-item {
       display: flex;
       align-items: center;
@@ -1156,7 +1406,19 @@
       background: #7c3aed;
       color: #fff;
     }
-    @media (max-width: 640px) {
+    @media (max-width: 768px) {
+      .doc-main-tab {
+        min-width: 100%;
+      }
+      .meeting-session-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+      }
+      .meeting-doc-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
       .public-doc-item {
         flex-direction: column;
         align-items: flex-start;
@@ -3106,40 +3368,55 @@
           </div>
           
           <div class="block-body" style="padding: 24px;">
-            <!-- Search & Quick Filters -->
-            <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
-              <!-- Search Bar -->
-              <div style="position: relative; width: 100%;">
-                <input type="text" id="docSearchInput" placeholder="🔍 ค้นหาชื่อเอกสาร, โครงการ, หรือประเภทเอกสาร..." 
-                  oninput="filterDocuments()"
-                  style="width: 100%; padding: 12px 18px 12px 42px; border: 1px solid var(--gray-300); border-radius: 12px; font-size: 14px; outline: none; background: #ffffff; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.02);" 
-                  onfocus="this.style.borderColor='var(--purple-500)'; this.style.boxShadow='0 0 0 3px rgba(168, 85, 247, 0.15)';"
-                  onblur="this.style.borderColor='var(--gray-300)'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.02)';" />
-                <svg style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--gray-400); pointer-events: none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-              </div>
+            <!-- Primary 3-Category Tabs -->
+            <div class="doc-main-tabs-bar" id="docMainTabs">
+              <button type="button" class="doc-main-tab active" id="tabBtnProjects" onclick="switchDocTab('projects')">
+                <span>📂</span> เอกสารโครงการ
+                <span class="tab-badge" id="badgeTabProjects">...</span>
+              </button>
+              <button type="button" class="doc-main-tab" id="tabBtnMeetings" onclick="switchDocTab('meetings')">
+                <span>📑</span> เอกสารการประชุม
+                <span class="tab-badge" id="badgeTabMeetings">...</span>
+              </button>
+              <button type="button" class="doc-main-tab" id="tabBtnTemplates" onclick="switchDocTab('templates')">
+                <span>🗂️</span> ต้นแบบเอกสาร / แบบฟอร์ม
+                <span class="tab-badge" id="badgeTabTemplates">...</span>
+              </button>
+            </div>
 
-              <!-- Filter Pills -->
-              <div class="filter-row" id="docFilterPills" style="margin-bottom: 0; display: flex; flex-wrap: wrap; gap: 8px;">
-                <button class="pill active" onclick="setDocFilter('all', this)">🌟 ทั้งหมด</button>
-                <button class="pill" onclick="setDocFilter('template', this)">🗂️ ต้นแบบเอกสาร</button>
-                <button class="pill" onclick="setDocFilter('project', this)">🚀 เอกสารโครงการ</button>
-                <button class="pill" onclick="setDocFilter('leave', this)">🕒 ใบขอเวลาเรียน</button>
-                <button class="pill" onclick="setDocFilter('agenda', this)">📑 วาระการประชุม</button>
-                <button class="pill" onclick="setDocFilter('minutes', this)">📝 สรุปการประชุม</button>
+            <!-- Search Bar -->
+            <div style="position: relative; width: 100%; margin-bottom: 20px;">
+              <input type="text" id="docSearchInput" placeholder="🔍 ค้นหาเอกสาร..." 
+                oninput="filterDocuments()"
+                style="width: 100%; padding: 12px 18px 12px 42px; border: 1px solid var(--gray-300); border-radius: 12px; font-size: 14px; outline: none; background: #ffffff; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.02);" 
+                onfocus="this.style.borderColor='var(--purple-500)'; this.style.boxShadow='0 0 0 3px rgba(168, 85, 247, 0.15)';"
+                onblur="this.style.borderColor='var(--gray-300)'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.02)';" />
+              <svg style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--gray-400); pointer-events: none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </div>
+
+            <!-- Tab 1 Container: Projects -->
+            <div id="docTabPaneProjects" style="display: block;">
+              <div id="projectsContentContainer">
+                <div class="skel-card" style="height: 100px; border-radius: 16px; margin-bottom: 12px;"><div class="skel-body" style="padding: 20px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 10px;"></div></div></div>
+                <div class="skel-card" style="height: 100px; border-radius: 16px; margin-bottom: 12px;"><div class="skel-body" style="padding: 20px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 10px;"></div></div></div>
               </div>
             </div>
 
-            <!-- Documents Container -->
-            <div id="allDocsContainer" style="display: flex; flex-direction: column; gap: 12px;">
-              <!-- Skeleton Loading -->
-              <div class="skel-card" style="height: 76px; border-radius: 14px;"><div class="skel-body" style="padding: 18px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 8px;"></div></div></div>
-              <div class="skel-card" style="height: 76px; border-radius: 14px;"><div class="skel-body" style="padding: 18px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 8px;"></div></div></div>
-              <div class="skel-card" style="height: 76px; border-radius: 14px;"><div class="skel-body" style="padding: 18px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 8px;"></div></div></div>
+            <!-- Tab 2 Container: Meetings -->
+            <div id="docTabPaneMeetings" style="display: none;">
+              <div id="meetingsContentContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
             </div>
 
+            <!-- Tab 3 Container: Templates -->
+            <div id="docTabPaneTemplates" style="display: none;">
+              <div id="templatesContentContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
+            </div>
+
+            <!-- Hidden container fallback for backward compatibility -->
+            <div id="allDocsContainer" style="display: none;"></div>
           </div>
         </div>
       </div>
@@ -3651,18 +3928,85 @@
     return url;
   }
 
-  /* ---- ACADEMIC & SECRETARY DOCUMENT HUB ---- */
+/* ---- ACADEMIC & SECRETARY DOCUMENT HUB (3 TABS: PROJECTS, MEETINGS, TEMPLATES) ---- */
+  let activeDocMainTab = 'projects';
+  let selectedProjectId = null;
   let cachedDocs = { sec: null, academic: null, projects: null };
-  let cachedAllDocs = null;
-  let cachedProjectsMap = {};
-  let currentDocFilter = 'all';
+  let cachedProjectFolders = [];
+  let cachedMeetings = [];
+  let cachedTemplates = [];
   let isDocsLoading = false;
 
+  function toThaiNumeral(n) {
+    const numToThai = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+    return String(n).replace(/\d/g, d => numToThai[parseInt(d, 10)]);
+  }
+
+  function parseMeetingSession(title) {
+    const thaiToNum = { '๑': '1', '๒': '2', '๓': '3', '๔': '4', '๕': '5', '๖': '6', '๗': '7', '๘': '8', '๙': '9', '๐': '0' };
+    let t = (title || '').replace(/[๑-๙๐]/g, m => thaiToNum[m] || m);
+    const match = t.match(/ครั้งที่\s*(\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
+  }
+
+  function formatDocDate(dateStr) {
+    if (!dateStr) return '';
+    try {
+      const beMatch = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (beMatch) {
+        let y = parseInt(beMatch[1], 10);
+        const m = parseInt(beMatch[2], 10) - 1;
+        const d = parseInt(beMatch[3], 10);
+        const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        if (y > 2400) {
+          return d + ' ' + thaiMonths[m] + ' ' + y;
+        } else {
+          return d + ' ' + thaiMonths[m] + ' ' + (y + 543);
+        }
+      }
+      if (String(dateStr).includes('T')) {
+        const dt = new Date(dateStr);
+        if (!isNaN(dt.getTime())) {
+          return dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+      }
+    } catch (e) {}
+    return String(dateStr);
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function renderDocActionButtons(files) {
+    if (!files || !files.length) return '';
+    return files.map(f => {
+      const rawType = (f.type || '').toUpperCase();
+      let isPdf = rawType === 'PDF';
+      let btnClass = isPdf ? 'public-doc-btn-pdf' : 'public-doc-btn-docx';
+      let label = isPdf ? 'PDF' : (rawType === 'DEFAULT' || !rawType ? 'DOCX' : rawType);
+
+      return `
+        <a href="${f.file_url}" target="_blank" rel="noopener noreferrer" class="public-doc-btn ${btnClass}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          ${label}
+        </a>
+      `;
+    }).join('');
+  }
+
   async function loadAllDocuments(forceRefresh = false) {
-    const container = document.getElementById('allDocsContainer');
-    const badge = document.getElementById('docTotalCountBadge');
-    
-    if (cachedAllDocs && !forceRefresh) {
+    if (cachedDocs.sec && cachedDocs.academic && !forceRefresh) {
       filterDocuments();
       return;
     }
@@ -3670,13 +4014,7 @@
     if (isDocsLoading) return;
     isDocsLoading = true;
 
-    if (container && (!cachedAllDocs || forceRefresh)) {
-      container.innerHTML = `
-        <div class="skel-card" style="height: 76px; border-radius: 14px;"><div class="skel-body" style="padding: 18px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 8px;"></div></div></div>
-        <div class="skel-card" style="height: 76px; border-radius: 14px;"><div class="skel-body" style="padding: 18px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 8px;"></div></div></div>
-        <div class="skel-card" style="height: 76px; border-radius: 14px;"><div class="skel-body" style="padding: 18px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 8px;"></div></div></div>
-      `;
-    }
+    const badge = document.getElementById('docTotalCountBadge');
     if (badge) badge.textContent = 'กำลังโหลด...';
 
     try {
@@ -3698,83 +4036,133 @@
         }).then(r => r.json()).catch(() => ({ success: false }))
       ]);
 
-      if (projRes.success && Array.isArray(projRes.data)) {
-        projRes.data.forEach(p => {
-          if (p.id) cachedProjectsMap[p.id] = p.title || p.name || 'โครงการ';
-        });
-      }
-
       const secData = (secRes.success && Array.isArray(secRes.data)) ? secRes.data : [];
       const acadData = (acadRes.success && Array.isArray(acadRes.data)) ? acadRes.data : [];
+      const projData = (projRes.success && Array.isArray(projRes.data)) ? projRes.data : [];
 
       cachedDocs.sec = secData;
       cachedDocs.academic = acadData;
-      if (projRes.success && Array.isArray(projRes.data)) cachedDocs.projects = projRes.data;
+      cachedDocs.projects = projData;
 
-      const nonCertAcad = acadData.filter(d => !d.type || !d.type.startsWith('เกียรติบัตร'));
-      const combined = [...secData, ...nonCertAcad];
-
-      // Group by title + category
-      const grouped = [];
-      combined.forEach(item => {
+      // 1. Process Meetings (Secretary_Docs: paired agenda + minutes by session number)
+      const meetingSessionsMap = {};
+      secData.forEach(item => {
+        const sessionNum = parseMeetingSession(item.title);
+        if (!sessionNum) return;
+        if (!meetingSessionsMap[sessionNum]) {
+          meetingSessionsMap[sessionNum] = {
+            sessionNum: sessionNum,
+            date: formatDocDate(item.date || item.created_at),
+            agendaUrl: '',
+            minutesUrl: '',
+            files: []
+          };
+        }
+        const sess = meetingSessionsMap[sessionNum];
+        sess.files.push(item);
+        if (item.date && (!sess.date || sess.date.includes('2026') || sess.date.includes('2569'))) {
+          sess.date = formatDocDate(item.date);
+        }
         const cat = item.category || '';
-        const existing = grouped.find(g => g.title === item.title && (g.rawCategory === cat || !g.rawCategory));
+        const title = item.title || '';
+        if (cat === 'วาระการประชุม' || title.includes('วาระ')) {
+          sess.agendaUrl = item.file_url;
+        } else if (cat === 'สรุปการประชุม' || cat.includes('รายงาน') || title.includes('รายงาน') || title.includes('สรุป')) {
+          sess.minutesUrl = item.file_url;
+        }
+      });
+      cachedMeetings = Object.values(meetingSessionsMap).sort((a, b) => b.sessionNum - a.sessionNum);
+
+      // 2. Process Projects (Academic_Projects + [PROJ:id] docs from Academic_Docs)
+      const nonCertAcad = acadData.filter(d => !d.type || !d.type.startsWith('เกียรติบัตร'));
+      cachedProjectFolders = projData.map(p => {
+        const pId = p.id;
+        const pDocs = nonCertAcad.filter(d => (d.category || '').startsWith(`[PROJ:${pId}]`));
+
+        // Group docs by title within project
+        const grouped = [];
+        pDocs.forEach(item => {
+          const existing = grouped.find(g => g.title === item.title);
+          if (existing) {
+            if (!existing.files.some(f => f.type === item.type && f.file_url === item.file_url)) {
+              existing.files.push(item);
+            }
+          } else {
+            grouped.push({
+              id: item.id,
+              title: item.title,
+              date: formatDocDate(item.date || item.created_at),
+              files: [item]
+            });
+          }
+        });
+
+        return {
+          id: pId,
+          title: p.title || p.name || 'โครงการ',
+          description: p.description || '',
+          status: p.status || '',
+          files: grouped
+        };
+      });
+
+      // 3. Process Templates (Academic_Docs where category is 'ต้นแบบเอกสาร')
+      const templateItems = nonCertAcad.filter(d => d.category === 'ต้นแบบเอกสาร');
+      const groupedTemplates = [];
+      templateItems.forEach(item => {
+        const existing = groupedTemplates.find(g => g.title === item.title);
         if (existing) {
           if (!existing.files.some(f => f.type === item.type && f.file_url === item.file_url)) {
             existing.files.push(item);
           }
         } else {
-          let tag = 'other';
-          let displayCategory = cat || 'เอกสารทั่วไป';
-          let projectName = '';
+          let tag = 'template';
+          let tagLabel = '🗂️ แบบฟอร์มทั่วไป';
+          let tagStyle = 'background:#f5f3ff; color:#7c3aed; border-color:#ddd6fe;';
 
-          if (cat === 'ต้นแบบเอกสาร') {
-            tag = 'template';
-          } else if (cat.startsWith('[PROJ:')) {
-            tag = 'project';
-            const projIdMatch = cat.match(/\[PROJ:([^\]]+)\]/);
-            if (projIdMatch && cachedProjectsMap[projIdMatch[1]]) {
-              projectName = cachedProjectsMap[projIdMatch[1]];
-              const subCat = cat.replace(/\[PROJ:[^\]]+\]\s*/, '').trim();
-              displayCategory = subCat ? `${projectName} (${subCat})` : projectName;
-            }
-          } else if (cat === 'วาระการประชุม') {
-            tag = 'agenda';
-          } else if (cat === 'สรุปการประชุม' || cat.includes('รายงานการประชุม')) {
-            tag = 'minutes';
-          }
-
-          if (item.title.includes('เวลาเรียน') || cat.includes('เวลาเรียน')) {
+          if (item.title.includes('เวลาเรียน')) {
             tag = 'leave';
+            tagLabel = '🕒 ขอเวลาเรียน';
+            tagStyle = 'background:#fffbeb; color:#d97706; border-color:#fde68a;';
+          } else if (item.title.includes('เบิก') || item.title.includes('ใบสำคัญรับเงิน') || item.title.includes('เงิน')) {
+            tag = 'finance';
+            tagLabel = '💰 การเงิน / เบิกจ่าย';
+            tagStyle = 'background:#ecfdf5; color:#059669; border-color:#a7f3d0;';
           }
 
-          let dateStr = item.date || item.created_at || '';
-          if (dateStr && dateStr.includes('T')) {
-            const dt = new Date(dateStr);
-            dateStr = dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
-          }
-
-          grouped.push({
+          groupedTemplates.push({
             id: item.id,
             title: item.title,
-            rawCategory: cat,
-            displayCategory: displayCategory,
-            projectName: projectName,
             tag: tag,
-            date: dateStr,
-            uploaded_by: item.uploaded_by || '',
+            tagLabel: tagLabel,
+            tagStyle: tagStyle,
+            date: formatDocDate(item.date || item.created_at),
             files: [item]
           });
         }
       });
+      cachedTemplates = groupedTemplates;
 
-      cachedAllDocs = grouped;
+      // Update counters & badges
+      const badgeProj = document.getElementById('badgeTabProjects');
+      const badgeMeet = document.getElementById('badgeTabMeetings');
+      const badgeTmpl = document.getElementById('badgeTabTemplates');
+      if (badgeProj) badgeProj.textContent = `${cachedProjectFolders.length} โครงการ`;
+      if (badgeMeet) badgeMeet.textContent = `${cachedMeetings.length} ครั้ง`;
+      if (badgeTmpl) badgeTmpl.textContent = `${cachedTemplates.length} แบบฟอร์ม`;
+
+      if (badge) {
+        badge.textContent = `${cachedProjectFolders.length} โครงการ | ${cachedMeetings.length} การประชุม | ${cachedTemplates.length} แบบฟอร์ม`;
+      }
+
+      // Render the current view
       filterDocuments();
     } catch (err) {
       console.error('Failed to load documents:', err);
-      if (container) {
-        container.innerHTML = `
-          <div style="text-align:center; padding:40px 20px; color:var(--gray-500); background:#fff; border-radius:12px; border:1px dashed var(--gray-300);">
+      const projContainer = document.getElementById('projectsContentContainer');
+      if (projContainer) {
+        projContainer.innerHTML = `
+          <div style="text-align:center; padding:40px 20px; color:var(--gray-500); background:#fff; border-radius:14px; border:1px dashed var(--gray-300);">
             <div style="font-size:36px; margin-bottom:12px;">⚠️</div>
             <div style="font-weight:700; color:var(--gray-800); margin-bottom:4px;">ไม่สามารถโหลดเอกสารได้ในขณะนี้</div>
             <div style="font-size:13px; color:var(--gray-500); margin-bottom:16px;">โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่อีกครั้ง</div>
@@ -3788,464 +4176,329 @@
     }
   }
 
-  function setDocFilter(filterType, btn) {
-    currentDocFilter = filterType;
-    document.querySelectorAll('#docFilterPills .pill').forEach(p => p.classList.remove('active'));
-    if (btn) btn.classList.add('active');
+  function switchDocTab(tabName) {
+    activeDocMainTab = tabName;
+    if (tabName === 'projects') {
+      selectedProjectId = null;
+    }
+
+    const btnProjects = document.getElementById('tabBtnProjects');
+    const btnMeetings = document.getElementById('tabBtnMeetings');
+    const btnTemplates = document.getElementById('tabBtnTemplates');
+    if (btnProjects) btnProjects.classList.toggle('active', tabName === 'projects');
+    if (btnMeetings) btnMeetings.classList.toggle('active', tabName === 'meetings');
+    if (btnTemplates) btnTemplates.classList.toggle('active', tabName === 'templates');
+
+    const paneProjects = document.getElementById('docTabPaneProjects');
+    const paneMeetings = document.getElementById('docTabPaneMeetings');
+    const paneTemplates = document.getElementById('docTabPaneTemplates');
+    if (paneProjects) paneProjects.style.display = tabName === 'projects' ? 'block' : 'none';
+    if (paneMeetings) paneMeetings.style.display = tabName === 'meetings' ? 'flex' : 'none';
+    if (paneTemplates) paneTemplates.style.display = tabName === 'templates' ? 'flex' : 'none';
+
     filterDocuments();
   }
 
   function filterDocuments() {
-    if (!cachedAllDocs) {
+    if (!cachedDocs.sec || !cachedDocs.academic) {
       loadAllDocuments();
       return;
     }
+    if (activeDocMainTab === 'projects') {
+      renderProjectsView();
+    } else if (activeDocMainTab === 'meetings') {
+      renderMeetingsView();
+    } else if (activeDocMainTab === 'templates') {
+      renderTemplatesView();
+    }
+  }
+
+  function openProjectFolder(projectId) {
+    selectedProjectId = projectId;
+    renderProjectsView();
+    const docSection = document.getElementById('documents');
+    if (docSection) {
+      docSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function backToProjectsList() {
+    selectedProjectId = null;
+    renderProjectsView();
+  }
+
+  function renderProjectsView() {
+    const container = document.getElementById('projectsContentContainer');
+    if (!container) return;
 
     const searchInput = document.getElementById('docSearchInput');
     const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
-    const badge = document.getElementById('docTotalCountBadge');
 
-    const filtered = cachedAllDocs.filter(doc => {
-      // 1. Tag filter
-      if (currentDocFilter === 'template' && doc.tag !== 'template') return false;
-      if (currentDocFilter === 'project' && doc.tag !== 'project') return false;
-      if (currentDocFilter === 'leave' && doc.tag !== 'leave' && !doc.title.includes('เวลาเรียน')) return false;
-      if (currentDocFilter === 'agenda' && doc.tag !== 'agenda') return false;
-      if (currentDocFilter === 'minutes' && doc.tag !== 'minutes') return false;
-
-      // 2. Search query filter
-      if (q) {
-        const matchTitle = doc.title.toLowerCase().includes(q);
-        const matchCat = doc.displayCategory.toLowerCase().includes(q);
-        const matchProj = doc.projectName.toLowerCase().includes(q);
-        return matchTitle || matchCat || matchProj;
+    // Sub-view: Files inside the selected project folder
+    if (selectedProjectId) {
+      const proj = cachedProjectFolders.find(p => p.id === selectedProjectId);
+      if (!proj) {
+        selectedProjectId = null;
+        renderProjectsView();
+        return;
       }
-      return true;
-    });
 
-    if (badge) {
-      badge.textContent = `${filtered.length} รายการ`;
+      let files = proj.files || [];
+      if (q) {
+        files = files.filter(f => f.title.toLowerCase().includes(q));
+      }
+
+      let filesHtml = '';
+      if (files.length === 0) {
+        filesHtml = `
+          <div style="text-align:center; padding:40px 20px; color:var(--gray-500); background:#ffffff; border-radius:14px; border:1px dashed var(--gray-300);">
+            <div style="font-size:36px; margin-bottom:10px;">📭</div>
+            <div style="font-weight:700; color:var(--gray-800); font-size:15px; margin-bottom:4px;">ไม่พบเอกสารในโครงการนี้</div>
+            <div style="font-size:13px; color:var(--gray-500);">ยังไม่มีเอกสารที่ตรงกับคำค้นหาของคุณ</div>
+          </div>
+        `;
+      } else {
+        filesHtml = `
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            ${files.map(doc => `
+              <div class="public-doc-item">
+                <div class="public-doc-info">
+                  <div class="public-doc-icon">📄</div>
+                  <div style="flex: 1; min-width: 0;">
+                    <div class="public-doc-title">${escapeHtml(doc.title)}</div>
+                    <div class="public-doc-meta">
+                      <span class="public-doc-badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;">
+                        ${escapeHtml(proj.title)}
+                      </span>
+                      ${doc.date ? `<span>📅 ${doc.date}</span>` : ''}
+                    </div>
+                  </div>
+                </div>
+                <div class="public-doc-actions">
+                  ${renderDocActionButtons(doc.files)}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      container.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
+          <button type="button" class="doc-back-btn" onclick="backToProjectsList()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            ย้อนกลับไปหน้ารวมโครงการ
+          </button>
+          <span style="font-size: 13px; color: var(--gray-500); font-weight: 600;">
+            พบ ${files.length} รายการ
+          </span>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #f8fafc, #f1f5f9); border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px 24px; margin-bottom: 20px;">
+          <div style="font-size: 11.5px; font-weight: 800; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+            📂 เอกสารภายในโครงการ
+          </div>
+          <h3 style="font-size: 19px; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.4;">
+            ${escapeHtml(proj.title)}
+          </h3>
+          ${proj.description && proj.description !== '-' ? `<p style="font-size: 13.5px; color: #64748b; margin: 8px 0 0 0; line-height: 1.5;">${escapeHtml(proj.description)}</p>` : ''}
+        </div>
+
+        ${filesHtml}
+      `;
+      return;
     }
 
-    renderDocumentsList(filtered);
-  }
+    // Main view: Project Folder Grid
+    let folders = cachedProjectFolders || [];
+    if (q) {
+      folders = folders.filter(p => {
+        const matchProj = p.title.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q));
+        const matchFiles = p.files && p.files.some(f => f.title.toLowerCase().includes(q));
+        return matchProj || matchFiles;
+      });
+    }
 
-  function renderDocumentsList(docs) {
-    const container = document.getElementById('allDocsContainer');
-    if (!container) return;
-
-    if (!docs || docs.length === 0) {
+    if (folders.length === 0) {
       container.innerHTML = `
         <div style="text-align:center; padding:45px 20px; color:var(--gray-500); background:#ffffff; border-radius:14px; border:1px dashed var(--gray-300);">
-          <div style="font-size:42px; margin-bottom:12px;">📭</div>
-          <div style="font-weight:700; color:var(--gray-800); font-size:15px; margin-bottom:4px;">ไม่พบเอกสารในหมวดนี้</div>
-          <div style="font-size:13px; color:var(--gray-500);">ลองเปลี่ยนหมวดหมู่หรือคำค้นหาด้านบน</div>
+          <div style="font-size:42px; margin-bottom:12px;">📂</div>
+          <div style="font-weight:700; color:var(--gray-800); font-size:15px; margin-bottom:4px;">ไม่พบโครงการที่ค้นหา</div>
+          <div style="font-size:13px; color:var(--gray-500);">ลองตรวจสอบหรือเปลี่ยนคำค้นหาใหม่อีกครั้ง</div>
         </div>
       `;
       return;
     }
 
-    const TAG_COLORS = {
-      template: { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe', icon: '🗂️' },
-      project:  { bg: '#ecfdf5', color: '#059669', border: '#a7f3d0', icon: '🚀' },
-      leave:    { bg: '#fffbeb', color: '#d97706', border: '#fde68a', icon: '🕒' },
-      agenda:   { bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe', icon: '📑' },
-      minutes:  { bg: '#fdf2f8', color: '#db2777', border: '#fbcfe8', icon: '📝' },
-      other:    { bg: '#f8fafc', color: '#475569', border: '#e2e8f0', icon: '📄' }
-    };
-
-    container.innerHTML = docs.map(d => {
-      const meta = TAG_COLORS[d.tag] || TAG_COLORS.other;
-
-      const actionsHtml = d.files.map(f => {
-        const rawType = (f.type || '').toUpperCase();
-        let btnClass = 'public-doc-btn-other';
-        let label = rawType || 'DOWNLOAD';
-
-        if (rawType === 'PDF') {
-          btnClass = 'public-doc-btn-pdf';
-        } else if (rawType === 'DOCX' || rawType === 'DOC' || rawType === 'DEFAULT') {
-          btnClass = 'public-doc-btn-docx';
-          label = 'DOCX';
-        }
-
-        return `
-          <a href="${f.file_url}" target="_blank" rel="noopener noreferrer" class="public-doc-btn ${btnClass}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            ${label}
-          </a>
-        `;
-      }).join('');
-
-      return `
-        <div class="public-doc-item">
-          <div class="public-doc-info">
-            <div class="public-doc-icon">${meta.icon}</div>
-            <div style="flex: 1; min-width: 0;">
-              <div class="public-doc-title">${d.title}</div>
-              <div class="public-doc-meta">
-                <span class="public-doc-badge" style="background:${meta.bg}; color:${meta.color}; border:1px solid ${meta.border};">
-                  ${d.displayCategory}
-                </span>
-                ${d.date ? `<span>📅 ${d.date}</span>` : ''}
+    container.innerHTML = `
+      <div class="project-folders-grid">
+        ${folders.map(p => `
+          <div class="project-folder-box" onclick="openProjectFolder('${p.id}')">
+            <div class="project-folder-top">
+              <div class="project-folder-icon">📂</div>
+              <div style="flex: 1; min-width: 0;">
+                <div class="project-folder-title">${escapeHtml(p.title)}</div>
+                <div style="font-size: 12.5px; color: var(--gray-500); margin-top: 4px;">
+                  ${p.files.length} รายการเอกสาร
+                </div>
               </div>
             </div>
+            <div class="project-folder-bottom">
+              <span class="project-folder-count">
+                ${p.files.length > 0 ? `${p.files.length} เอกสารพร้อมดาวน์โหลด` : 'ยังไม่มีเอกสาร'}
+              </span>
+              <span class="project-folder-arrow">
+                เปิดโฟลเดอร์ <span>›</span>
+              </span>
+            </div>
           </div>
-          <div class="public-doc-actions">
-            ${actionsHtml}
-          </div>
-        </div>
-      `;
-    }).join('');
+        `).join('')}
+      </div>
+    `;
   }
 
-  async function openDocCategory(category, type) {
-    const overlay = document.getElementById('docModalOverlay');
-    const title = document.getElementById('docModalTitle');
-    const body = document.getElementById('docModalBody');
-    
-    title.innerText = category;
-    body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);"><div class="spin" style="margin: 0 auto 15px; border-top-color: var(--purple-600); width: 30px; height: 30px;"></div>กำลังโหลดข้อมูลเอกสาร...</div>';
-    overlay.classList.add('show');
-    document.body.classList.add('modal-open'); document.documentElement.classList.add('modal-open');
+  function renderMeetingsView() {
+    const container = document.getElementById('meetingsContentContainer');
+    if (!container) return;
 
-    try {
-      let sheetName = type === 'sec' ? 'Secretary_Docs' : 'Academic_Docs';
-      let data = type === 'sec' ? cachedDocs.sec : cachedDocs.academic;
-      
-      if (!data) {
-        const res = await fetch(GAS_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "read_sheet", sheetName })
-        });
-        const resJson = await res.json();
-        if (resJson.success) {
-          data = resJson.data;
-          if (type === 'sec') cachedDocs.sec = data;
-          else cachedDocs.academic = data;
-        } else {
-          throw new Error("Failed to load");
-        }
-      }
+    const searchInput = document.getElementById('docSearchInput');
+    const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
-      if (category === 'เอกสารโครงการ') {
-        let projectsData = cachedDocs.projects;
-        if (!projectsData) {
-          try {
-            const pRes = await fetch(GAS_URL, {
-              method: "POST",
-              headers: { "Content-Type": "text/plain;charset=utf-8" },
-              body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Projects" })
-            });
-            const pJson = await pRes.json();
-            projectsData = (pJson.success && Array.isArray(pJson.data)) ? pJson.data : [];
-            cachedDocs.projects = projectsData;
-          } catch {
-            projectsData = [];
-          }
-        }
+    let meetings = cachedMeetings || [];
+    if (q) {
+      meetings = meetings.filter(m => {
+        const numStr = String(m.sessionNum);
+        const thaiNum = toThaiNumeral(m.sessionNum);
+        const matchNum = numStr.includes(q) || thaiNum.includes(q);
+        const matchTitle = (m.title || '').toLowerCase().includes(q);
+        const matchDate = (m.date || '').toLowerCase().includes(q);
+        return matchNum || matchTitle || matchDate || q.includes('ประชุม') || q.includes('วาระ') || q.includes('รายงาน');
+      });
+    }
 
-        const projectDocs = Array.isArray(data) ? data.filter(d => (d.category || '').startsWith('[PROJ:')) : [];
+    if (meetings.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:45px 20px; color:var(--gray-500); background:#ffffff; border-radius:14px; border:1px dashed var(--gray-300);">
+          <div style="font-size:42px; margin-bottom:12px;">📑</div>
+          <div style="font-weight:700; color:var(--gray-800); font-size:15px; margin-bottom:4px;">ไม่พบเอกสารการประชุม</div>
+          <div style="font-size:13px; color:var(--gray-500);">ลองตรวจสอบหรือเปลี่ยนคำค้นหาใหม่อีกครั้ง</div>
+        </div>
+      `;
+      return;
+    }
 
-        window.renderProjectList = function() {
-          title.innerHTML = 'เอกสารโครงการ';
-
-          // Case 1: We have projects from Academic_Projects sheet
-          if (Array.isArray(projectsData) && projectsData.length > 0) {
-            const projectsHtml = projectsData.map((p, index) => {
-              const pId = p.id || p.rowIndex || (index + 1);
-              const pTitle = p.title || p.name || 'โครงการไม่มีชื่อ';
-              const docCount = projectDocs.filter(d => (d.category || '').includes(`[PROJ:${pId}]`)).length;
-              const metaStyle = docCount > 0 ? 'color:#7c3aed; background:rgba(124,58,237,0.08);' : 'color:#94a3b8; background:#f8fafc;';
-              return `
-                <div class="project-folder-card" onclick="renderProjectDocs('${pId}', '${pTitle.replace(/'/g, "\\'")}')">
-                  <div class="folder-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                  </div>
-                  <div class="folder-info">
-                    <div class="folder-title" title="${pTitle}">${pTitle}</div>
-                    <div style="${metaStyle} display:inline-block; padding:2px 10px; border-radius:10px; font-size:11px; font-weight:700; margin-top:4px;">
-                      ${docCount > 0 ? `${docCount} รายการเอกสาร` : 'ยังไม่มีเอกสาร'}
-                    </div>
-                  </div>
-                  <div class="folder-arrow">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-                  </div>
-                </div>`;
-            }).join('');
-
-            body.innerHTML = `
-              <style>
-                .project-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:14px; padding:4px 0; }
-                .project-folder-card { background:#fff; border:1px solid #ede9fe; border-radius:14px; padding:16px; display:flex; align-items:center; gap:14px; cursor:pointer; transition:all 0.25s; box-shadow:0 2px 8px rgba(124,58,237,0.04); }
-                .project-folder-card:hover { transform:translateY(-3px); box-shadow:0 12px 28px rgba(124,58,237,0.12); border-color:rgba(124,58,237,0.3); }
-                .folder-icon { display:flex; align-items:center; justify-content:center; width:44px; height:44px; background:rgba(124,58,237,0.08); color:#7c3aed; border-radius:10px; flex-shrink:0; }
-                .project-folder-card:hover .folder-icon { background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff; }
-                .folder-info { flex:1; min-width:0; }
-                .folder-title { font-weight:700; font-size:15px; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-                .project-folder-card:hover .folder-title { color:#7c3aed; }
-                .folder-arrow { color:#cbd5e1; display:flex; align-items:center; }
-              </style>
-              <div class="project-grid">${projectsHtml}</div>`;
-            return;
-          }
-
-          // Case 2: No projects sheet — show docs directly if any exist
-          if (projectDocs.length > 0) {
-            const docsHtml = projectDocs.map(g => `
-              <div style="display:flex; justify-content:space-between; align-items:center; padding:16px; margin-bottom:12px; background:#fff; border:1px solid #e5e7eb; border-radius:12px;">
-                <div style="font-weight:700; color:#1f2937; font-size:14px;">${g.title}</div>
-                <a href="${g.file_url}" target="_blank" style="padding:8px 16px; background:#7c3aed; color:#fff; border-radius:8px; text-decoration:none; font-size:12px; font-weight:700;">ดาวน์โหลด</a>
-              </div>`).join('');
-            body.innerHTML = `<div style="display:flex; flex-direction:column;">${docsHtml}</div>`;
-            return;
-          }
-
-          // Case 3: Nothing at all
-          body.innerHTML = '<div style="text-align:center; padding:40px 20px; color:#94a3b8;"><div style="font-size:48px; margin-bottom:12px;">📂</div><div style="font-weight:600;">ยังไม่มีโครงการในระบบขณะนี้</div></div>';
-        };
-
-
-
-        window.renderProjectDocs = function(projectId, projectTitle) {
-          title.innerHTML = `<button onclick="renderProjectList()" style="background:none; border:none; color:var(--purple-600); cursor:pointer; font-size:14px; margin-right:8px; display:inline-flex; align-items:center;">‹ ย้อนกลับ</button> โครงการ: ${projectTitle}`;
-          const projDocs = projectDocs.filter(d => d.category.startsWith(`[PROJ:${projectId}]`)).reverse();
-          
-          if (projDocs.length === 0) {
-            body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);">ยังไม่มีเอกสารสำหรับโครงการนี้</div>';
-            return;
-          }
-
-          const grouped = projDocs.reduce((acc, curr) => {
-            const existing = acc.find(x => x.title === curr.title);
-            if (existing) {
-              existing.files.push(curr);
-            } else {
-              acc.push({ ...curr, files: [curr] });
-            }
-            return acc;
-          }, []);
-
-          const docsHtml = grouped.map((g, index) => `
-            <div class="doc-file-card">
-              <div class="doc-file-info">
-                <div class="doc-file-icon">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                </div>
-                <div class="doc-file-title">${g.title}</div>
-              </div>
-              <div class="doc-file-actions">
-                ${g.files.map(f => {
-                  let typeLabel = f.type === 'default' ? 'DOCX' : f.type;
-                  let isPdf = typeLabel === 'PDF';
-                  let bg = isPdf ? '#fef2f2' : '#eff6ff';
-                  let color = isPdf ? '#ef4444' : '#3b82f6';
-                  let border = isPdf ? '#fecaca' : '#bfdbfe';
-                  return `<a href="${f.file_url}" target="_blank" style="text-decoration: none; padding: 6px 12px; border-radius: 8px; background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 12px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 4px;" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter='none'">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    ${typeLabel}
-                  </a>`;
-                }).join('')}
-              </div>
-            </div>
-          `).join('');
-
-          body.innerHTML = `
-            <style>
-              .doc-file-card {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 16px;
-                margin-bottom: 12px;
-                background: #ffffff;
-                border: 1px solid var(--gray-200);
-                border-radius: 12px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-                transition: all 0.2s ease;
-              }
-              .doc-file-card:hover {
-                border-color: var(--purple-300);
-                box-shadow: 0 4px 12px rgba(139, 92, 246, 0.08);
-                transform: translateY(-2px);
-              }
-              .doc-file-info {
-                display: flex;
-                align-items: center;
-                gap: 16px;
-              }
-              .doc-file-icon {
-                width: 44px;
-                height: 44px;
-                border-radius: 10px;
-                background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-                color: #6b7280;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-              }
-              .doc-file-card:hover .doc-file-icon {
-                background: linear-gradient(135deg, var(--purple-100), var(--purple-200));
-                color: var(--purple-600);
-              }
-              .doc-file-title {
-                font-weight: 600;
-                color: var(--gray-800);
-                font-size: 15px;
-                line-height: 1.4;
-              }
-              .doc-file-actions {
-                display: flex;
-                gap: 8px;
-                flex-wrap: wrap;
-                margin-left: 16px;
-              }
-              @media (max-width: 600px) {
-                .doc-file-card {
-                  flex-direction: column;
-                  align-items: flex-start;
-                  gap: 12px;
-                }
-                .doc-file-actions {
-                  margin-left: 60px; /* align with text */
-                }
-              }
-            </style>
-            ${docsHtml}
-          `;
-        };
-
-        renderProjectList();
-        return;
-      }
-
-      // Filter by category and sort by date descending (approximate using id if date parsing fails)
-      const filtered = data.filter(d => {
-        if (category === 'เอกสารโครงการ') {
-          return (d.category || '').startsWith('[PROJ:');
-        }
-        return d.category === category || (d.category || '').endsWith(category);
-      }).reverse();
-      
-      if (filtered.length === 0) {
-        body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);">ยังไม่มีเอกสารในหมวดหมู่นี้</div>';
-        return;
-      }
-
-      const grouped = filtered.reduce((acc, curr) => {
-        const existing = acc.find(x => x.title === curr.title);
-        if (existing) {
-          existing.files.push(curr);
-        } else {
-          acc.push({ ...curr, files: [curr] });
-        }
-        return acc;
-      }, []);
-
-      const docsHtml = grouped.map((g, index) => `
-        <div class="doc-file-card">
-          <div class="doc-file-info">
-            <div class="doc-file-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            </div>
-            <div class="doc-file-title">${g.title}</div>
+    container.innerHTML = meetings.map(m => `
+      <div class="meeting-session-card">
+        <div class="meeting-session-info">
+          <div class="meeting-session-num">
+            <span>ครั้งที่</span>
+            ${toThaiNumeral(m.sessionNum)}
           </div>
-          <div class="doc-file-actions">
-            ${g.files.map(f => {
-              let typeLabel = f.type === 'default' ? 'DOCX' : f.type;
-              let isPdf = typeLabel === 'PDF';
-              let bg = isPdf ? '#fef2f2' : '#eff6ff';
-              let color = isPdf ? '#ef4444' : '#3b82f6';
-              let border = isPdf ? '#fecaca' : '#bfdbfe';
-              return `<a href="${f.file_url}" target="_blank" style="text-decoration: none; padding: 6px 12px; border-radius: 8px; background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 12px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 4px;" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter='none'">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                ${typeLabel}
-              </a>`;
-            }).join('')}
+          <div style="flex: 1; min-width: 0;">
+            <div class="meeting-session-title">
+              การประชุมคณะกรรมการสภานักเรียน ครั้งที่ ${toThaiNumeral(m.sessionNum)}
+            </div>
+            <div class="meeting-session-meta">
+              ${m.date ? `<span>📅 วันที่ประชุม: ${m.date}</span>` : '<span>สภานักเรียนโรงเรียนสรรพวิทยาคม</span>'}
+            </div>
           </div>
         </div>
-      `).join('');
+        <div class="meeting-doc-actions">
+          ${m.agendaUrl ? `
+            <a href="${m.agendaUrl}" target="_blank" rel="noopener noreferrer" class="meeting-download-btn meeting-btn-agenda">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              วาระการประชุม (PDF)
+            </a>
+          ` : ''}
+          ${m.minutesUrl ? `
+            <a href="${m.minutesUrl}" target="_blank" rel="noopener noreferrer" class="meeting-download-btn meeting-btn-minutes">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              รายงานการประชุม (PDF)
+            </a>
+          ` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
 
-      body.innerHTML = `
-        <style>
-          .doc-file-card {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px;
-            margin-bottom: 12px;
-            background: #ffffff;
-            border: 1px solid var(--gray-200);
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            transition: all 0.2s ease;
-          }
-          .doc-file-card:hover {
-            border-color: var(--purple-300);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.08);
-            transform: translateY(-2px);
-          }
-          .doc-file-info {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-          }
-          .doc-file-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-            color: #6b7280;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-          }
-          .doc-file-card:hover .doc-file-icon {
-            background: linear-gradient(135deg, var(--purple-100), var(--purple-200));
-            color: var(--purple-600);
-          }
-          .doc-file-title {
-            font-weight: 600;
-            color: var(--gray-800);
-            font-size: 15px;
-            line-height: 1.4;
-          }
-          .doc-file-actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-left: 16px;
-          }
-          @media (max-width: 600px) {
-            .doc-file-card {
-              flex-direction: column;
-              align-items: flex-start;
-              gap: 12px;
-            }
-            .doc-file-actions {
-              margin-left: 60px; /* align with text */
-            }
-          }
-        </style>
-        ${docsHtml}
+  function renderTemplatesView() {
+    const container = document.getElementById('templatesContentContainer');
+    if (!container) return;
+
+    const searchInput = document.getElementById('docSearchInput');
+    const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+    let templates = cachedTemplates || [];
+    if (q) {
+      templates = templates.filter(t => {
+        const matchTitle = t.title.toLowerCase().includes(q);
+        const matchTag = t.tagLabel.toLowerCase().includes(q);
+        return matchTitle || matchTag;
+      });
+    }
+
+    if (templates.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:45px 20px; color:var(--gray-500); background:#ffffff; border-radius:14px; border:1px dashed var(--gray-300);">
+          <div style="font-size:42px; margin-bottom:12px;">🗂️</div>
+          <div style="font-weight:700; color:var(--gray-800); font-size:15px; margin-bottom:4px;">ไม่พบแบบฟอร์มที่ค้นหา</div>
+          <div style="font-size:13px; color:var(--gray-500);">ลองตรวจสอบหรือเปลี่ยนคำค้นหาใหม่อีกครั้ง</div>
+        </div>
       `;
+      return;
+    }
 
-    } catch (err) {
-      console.error(err);
-      body.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#e53935;">เกิดข้อผิดพลาดในการโหลดข้อมูล<br/><span style="font-size:12px;opacity:0.7">โปรดลองใหม่อีกครั้งในภายหลัง</span></div>';
+    container.innerHTML = templates.map(t => `
+      <div class="public-doc-item">
+        <div class="public-doc-info">
+          <div class="public-doc-icon">${t.tag === 'leave' ? '🕒' : '💰'}</div>
+          <div style="flex: 1; min-width: 0;">
+            <div class="public-doc-title">${escapeHtml(t.title)}</div>
+            <div class="public-doc-meta">
+              <span class="public-doc-badge" style="${t.tagStyle}">
+                ${t.tagLabel}
+              </span>
+              ${t.date ? `<span>📅 ปรับปรุงล่าสุด: ${t.date}</span>` : ''}
+            </div>
+          </div>
+        </div>
+        <div class="public-doc-actions">
+          ${renderDocActionButtons(t.files)}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Compatibility helper
+  async function openDocCategory(category, type) {
+    if (category === 'เอกสารโครงการ') {
+      switchDocTab('projects');
+    } else if (category === 'วาระการประชุม' || category === 'สรุปการประชุม' || type === 'sec') {
+      switchDocTab('meetings');
+    } else {
+      switchDocTab('templates');
     }
   }
 
   function closeDocModal() {
-    document.getElementById('docModalOverlay').classList.remove('show');
-    document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
+    const overlay = document.getElementById('docModalOverlay');
+    if (overlay) overlay.classList.remove('show');
+    document.body.classList.remove('modal-open');
+    document.documentElement.classList.remove('modal-open');
   }
 
   /* ---- CERTIFICATES MODAL ---- */
