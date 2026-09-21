@@ -1049,6 +1049,124 @@
       opacity: 1 !important;
       visibility: visible !important;
     }
+
+    /* ==================== PUBLIC DOCUMENT HUB ==================== */
+    .public-doc-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: #ffffff;
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      border-radius: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      gap: 16px;
+    }
+    .public-doc-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(109, 40, 217, 0.08);
+      border-color: rgba(168, 85, 247, 0.4);
+    }
+    .public-doc-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+      min-width: 0;
+    }
+    .public-doc-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 22px;
+      background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+      color: var(--purple-700);
+      border: 1px solid rgba(168, 85, 247, 0.15);
+    }
+    .public-doc-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--gray-900);
+      line-height: 1.4;
+      margin-bottom: 4px;
+    }
+    .public-doc-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--gray-500);
+    }
+    .public-doc-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .public-doc-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .public-doc-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .public-doc-btn-docx {
+      background: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+    }
+    .public-doc-btn-docx:hover {
+      background: #2563eb;
+      color: #fff;
+    }
+    .public-doc-btn-pdf {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+    .public-doc-btn-pdf:hover {
+      background: #dc2626;
+      color: #fff;
+    }
+    .public-doc-btn-other {
+      background: #f5f3ff;
+      color: #7c3aed;
+      border: 1px solid #ddd6fe;
+    }
+    .public-doc-btn-other:hover {
+      background: #7c3aed;
+      color: #fff;
+    }
+    @media (max-width: 640px) {
+      .public-doc-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .public-doc-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+    }
     .news-card:hover {
       transform: translateY(-6px) scale(1.02);
       box-shadow: 0 20px 40px rgba(147, 51, 234, 0.1);
@@ -2975,32 +3093,53 @@
       <!-- PAGE: DOCUMENTS -->
       <div class="page-section" id="documents">
         <div class="block">
-          <div class="block-head">
-            <h2 class="block-head-title">📑 เอกสารวิชาการ</h2>
-          </div>
-          <div class="block-body">
-            <div class="docs-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
-              <a href="javascript:void(0)" class="doc-card" style="padding: 15px;" onclick="openDocCategory('วาระการประชุม', 'sec')">
-                <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">📑</div>
-                <div class="doc-title" style="font-size:14px;">วาระการประชุม</div>
-              </a>
-              <a href="javascript:void(0)" class="doc-card" style="padding: 15px;" onclick="openDocCategory('สรุปการประชุม', 'sec')">
-                <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">📝</div>
-                <div class="doc-title" style="font-size:14px;">สรุปการประชุม</div>
-              </a>
-              <a href="javascript:void(0)" class="doc-card" style="padding: 15px;" onclick="openDocCategory('ใบขอเวลาเรียน', 'academic')">
-                <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">🕒</div>
-                <div class="doc-title" style="font-size:14px;">ใบขอเวลาเรียน</div>
-              </a>
-              <a href="javascript:void(0)" class="doc-card" style="padding: 15px;" onclick="openDocCategory('เอกสารโครงการ', 'academic')">
-                <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">📄</div>
-                <div class="doc-title" style="font-size:14px;">เอกสารโครงการ</div>
-              </a>
-              <a href="javascript:void(0)" class="doc-card" style="padding: 15px;" onclick="openDocCategory('ต้นแบบเอกสาร', 'academic')">
-                <div class="doc-icon" style="font-size:24px; margin-bottom:8px;">🗂️</div>
-                <div class="doc-title" style="font-size:14px;">ต้นแบบเอกสาร</div>
-              </a>
+          <div class="block-head" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h2 class="block-head-title">📑 คลังเอกสารวิชาการและงานสารบรรณ</h2>
+              <p style="font-size: 13px; color: var(--gray-500); margin: 4px 0 0 0;">ดาวน์โหลดแบบฟอร์ม ต้นแบบเอกสาร วาระการประชุม และเอกสารโครงการต่างๆ ของสภานักเรียน</p>
             </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span id="docTotalCountBadge" style="background: var(--purple-100); color: var(--purple-700); font-weight: 700; font-size: 12px; padding: 4px 12px; border-radius: 99px;">
+                กำลังโหลด...
+              </span>
+            </div>
+          </div>
+          
+          <div class="block-body" style="padding: 24px;">
+            <!-- Search & Quick Filters -->
+            <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+              <!-- Search Bar -->
+              <div style="position: relative; width: 100%;">
+                <input type="text" id="docSearchInput" placeholder="🔍 ค้นหาชื่อเอกสาร, โครงการ, หรือประเภทเอกสาร..." 
+                  oninput="filterDocuments()"
+                  style="width: 100%; padding: 12px 18px 12px 42px; border: 1px solid var(--gray-300); border-radius: 12px; font-size: 14px; outline: none; background: #ffffff; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.02);" 
+                  onfocus="this.style.borderColor='var(--purple-500)'; this.style.boxShadow='0 0 0 3px rgba(168, 85, 247, 0.15)';"
+                  onblur="this.style.borderColor='var(--gray-300)'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.02)';" />
+                <svg style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--gray-400); pointer-events: none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </div>
+
+              <!-- Filter Pills -->
+              <div class="filter-row" id="docFilterPills" style="margin-bottom: 0; display: flex; flex-wrap: wrap; gap: 8px;">
+                <button class="pill active" onclick="setDocFilter('all', this)">🌟 ทั้งหมด</button>
+                <button class="pill" onclick="setDocFilter('template', this)">🗂️ ต้นแบบเอกสาร</button>
+                <button class="pill" onclick="setDocFilter('project', this)">🚀 เอกสารโครงการ</button>
+                <button class="pill" onclick="setDocFilter('leave', this)">🕒 ใบขอเวลาเรียน</button>
+                <button class="pill" onclick="setDocFilter('agenda', this)">📑 วาระการประชุม</button>
+                <button class="pill" onclick="setDocFilter('minutes', this)">📝 สรุปการประชุม</button>
+              </div>
+            </div>
+
+            <!-- Documents Container -->
+            <div id="allDocsContainer" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Skeleton Loading -->
+              <div class="skel-card" style="height: 76px; border-radius: 14px;"><div class="skel-body" style="padding: 18px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 8px;"></div></div></div>
+              <div class="skel-card" style="height: 76px; border-radius: 14px;"><div class="skel-body" style="padding: 18px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 8px;"></div></div></div>
+              <div class="skel-card" style="height: 76px; border-radius: 14px;"><div class="skel-body" style="padding: 18px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 8px;"></div></div></div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -3512,8 +3651,257 @@
     return url;
   }
 
-  /* ---- DOCUMENTS MODAL ---- */
+  /* ---- ACADEMIC & SECRETARY DOCUMENT HUB ---- */
   let cachedDocs = { sec: null, academic: null, projects: null };
+  let cachedAllDocs = null;
+  let cachedProjectsMap = {};
+  let currentDocFilter = 'all';
+  let isDocsLoading = false;
+
+  async function loadAllDocuments(forceRefresh = false) {
+    const container = document.getElementById('allDocsContainer');
+    const badge = document.getElementById('docTotalCountBadge');
+    
+    if (cachedAllDocs && !forceRefresh) {
+      filterDocuments();
+      return;
+    }
+
+    if (isDocsLoading) return;
+    isDocsLoading = true;
+
+    if (container && (!cachedAllDocs || forceRefresh)) {
+      container.innerHTML = `
+        <div class="skel-card" style="height: 76px; border-radius: 14px;"><div class="skel-body" style="padding: 18px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 8px;"></div></div></div>
+        <div class="skel-card" style="height: 76px; border-radius: 14px;"><div class="skel-body" style="padding: 18px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 8px;"></div></div></div>
+        <div class="skel-card" style="height: 76px; border-radius: 14px;"><div class="skel-body" style="padding: 18px;"><div class="skel-line skel-bg w-40"></div><div class="skel-line skel-bg w-full" style="margin-top: 8px;"></div></div></div>
+      `;
+    }
+    if (badge) badge.textContent = 'กำลังโหลด...';
+
+    try {
+      const [secRes, acadRes, projRes] = await Promise.all([
+        fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "read_sheet", sheetName: "Secretary_Docs" })
+        }).then(r => r.json()).catch(() => ({ success: false })),
+        fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Docs" })
+        }).then(r => r.json()).catch(() => ({ success: false })),
+        fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Projects" })
+        }).then(r => r.json()).catch(() => ({ success: false }))
+      ]);
+
+      if (projRes.success && Array.isArray(projRes.data)) {
+        projRes.data.forEach(p => {
+          if (p.id) cachedProjectsMap[p.id] = p.title || p.name || 'โครงการ';
+        });
+      }
+
+      const secData = (secRes.success && Array.isArray(secRes.data)) ? secRes.data : [];
+      const acadData = (acadRes.success && Array.isArray(acadRes.data)) ? acadRes.data : [];
+
+      cachedDocs.sec = secData;
+      cachedDocs.academic = acadData;
+      if (projRes.success && Array.isArray(projRes.data)) cachedDocs.projects = projRes.data;
+
+      const nonCertAcad = acadData.filter(d => !d.type || !d.type.startsWith('เกียรติบัตร'));
+      const combined = [...secData, ...nonCertAcad];
+
+      // Group by title + category
+      const grouped = [];
+      combined.forEach(item => {
+        const cat = item.category || '';
+        const existing = grouped.find(g => g.title === item.title && (g.rawCategory === cat || !g.rawCategory));
+        if (existing) {
+          if (!existing.files.some(f => f.type === item.type && f.file_url === item.file_url)) {
+            existing.files.push(item);
+          }
+        } else {
+          let tag = 'other';
+          let displayCategory = cat || 'เอกสารทั่วไป';
+          let projectName = '';
+
+          if (cat === 'ต้นแบบเอกสาร') {
+            tag = 'template';
+          } else if (cat.startsWith('[PROJ:')) {
+            tag = 'project';
+            const projIdMatch = cat.match(/\[PROJ:([^\]]+)\]/);
+            if (projIdMatch && cachedProjectsMap[projIdMatch[1]]) {
+              projectName = cachedProjectsMap[projIdMatch[1]];
+              const subCat = cat.replace(/\[PROJ:[^\]]+\]\s*/, '').trim();
+              displayCategory = subCat ? `${projectName} (${subCat})` : projectName;
+            }
+          } else if (cat === 'วาระการประชุม') {
+            tag = 'agenda';
+          } else if (cat === 'สรุปการประชุม' || cat.includes('รายงานการประชุม')) {
+            tag = 'minutes';
+          }
+
+          if (item.title.includes('เวลาเรียน') || cat.includes('เวลาเรียน')) {
+            tag = 'leave';
+          }
+
+          let dateStr = item.date || item.created_at || '';
+          if (dateStr && dateStr.includes('T')) {
+            const dt = new Date(dateStr);
+            dateStr = dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+          }
+
+          grouped.push({
+            id: item.id,
+            title: item.title,
+            rawCategory: cat,
+            displayCategory: displayCategory,
+            projectName: projectName,
+            tag: tag,
+            date: dateStr,
+            uploaded_by: item.uploaded_by || '',
+            files: [item]
+          });
+        }
+      });
+
+      cachedAllDocs = grouped;
+      filterDocuments();
+    } catch (err) {
+      console.error('Failed to load documents:', err);
+      if (container) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:40px 20px; color:var(--gray-500); background:#fff; border-radius:12px; border:1px dashed var(--gray-300);">
+            <div style="font-size:36px; margin-bottom:12px;">⚠️</div>
+            <div style="font-weight:700; color:var(--gray-800); margin-bottom:4px;">ไม่สามารถโหลดเอกสารได้ในขณะนี้</div>
+            <div style="font-size:13px; color:var(--gray-500); margin-bottom:16px;">โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่อีกครั้ง</div>
+            <button onclick="loadAllDocuments(true)" style="background:var(--purple-600); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;">ลองใหม่</button>
+          </div>
+        `;
+      }
+      if (badge) badge.textContent = 'ขัดข้อง';
+    } finally {
+      isDocsLoading = false;
+    }
+  }
+
+  function setDocFilter(filterType, btn) {
+    currentDocFilter = filterType;
+    document.querySelectorAll('#docFilterPills .pill').forEach(p => p.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    filterDocuments();
+  }
+
+  function filterDocuments() {
+    if (!cachedAllDocs) {
+      loadAllDocuments();
+      return;
+    }
+
+    const searchInput = document.getElementById('docSearchInput');
+    const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const badge = document.getElementById('docTotalCountBadge');
+
+    const filtered = cachedAllDocs.filter(doc => {
+      // 1. Tag filter
+      if (currentDocFilter === 'template' && doc.tag !== 'template') return false;
+      if (currentDocFilter === 'project' && doc.tag !== 'project') return false;
+      if (currentDocFilter === 'leave' && doc.tag !== 'leave' && !doc.title.includes('เวลาเรียน')) return false;
+      if (currentDocFilter === 'agenda' && doc.tag !== 'agenda') return false;
+      if (currentDocFilter === 'minutes' && doc.tag !== 'minutes') return false;
+
+      // 2. Search query filter
+      if (q) {
+        const matchTitle = doc.title.toLowerCase().includes(q);
+        const matchCat = doc.displayCategory.toLowerCase().includes(q);
+        const matchProj = doc.projectName.toLowerCase().includes(q);
+        return matchTitle || matchCat || matchProj;
+      }
+      return true;
+    });
+
+    if (badge) {
+      badge.textContent = `${filtered.length} รายการ`;
+    }
+
+    renderDocumentsList(filtered);
+  }
+
+  function renderDocumentsList(docs) {
+    const container = document.getElementById('allDocsContainer');
+    if (!container) return;
+
+    if (!docs || docs.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:45px 20px; color:var(--gray-500); background:#ffffff; border-radius:14px; border:1px dashed var(--gray-300);">
+          <div style="font-size:42px; margin-bottom:12px;">📭</div>
+          <div style="font-weight:700; color:var(--gray-800); font-size:15px; margin-bottom:4px;">ไม่พบเอกสารในหมวดนี้</div>
+          <div style="font-size:13px; color:var(--gray-500);">ลองเปลี่ยนหมวดหมู่หรือคำค้นหาด้านบน</div>
+        </div>
+      `;
+      return;
+    }
+
+    const TAG_COLORS = {
+      template: { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe', icon: '🗂️' },
+      project:  { bg: '#ecfdf5', color: '#059669', border: '#a7f3d0', icon: '🚀' },
+      leave:    { bg: '#fffbeb', color: '#d97706', border: '#fde68a', icon: '🕒' },
+      agenda:   { bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe', icon: '📑' },
+      minutes:  { bg: '#fdf2f8', color: '#db2777', border: '#fbcfe8', icon: '📝' },
+      other:    { bg: '#f8fafc', color: '#475569', border: '#e2e8f0', icon: '📄' }
+    };
+
+    container.innerHTML = docs.map(d => {
+      const meta = TAG_COLORS[d.tag] || TAG_COLORS.other;
+
+      const actionsHtml = d.files.map(f => {
+        const rawType = (f.type || '').toUpperCase();
+        let btnClass = 'public-doc-btn-other';
+        let label = rawType || 'DOWNLOAD';
+
+        if (rawType === 'PDF') {
+          btnClass = 'public-doc-btn-pdf';
+        } else if (rawType === 'DOCX' || rawType === 'DOC' || rawType === 'DEFAULT') {
+          btnClass = 'public-doc-btn-docx';
+          label = 'DOCX';
+        }
+
+        return `
+          <a href="${f.file_url}" target="_blank" rel="noopener noreferrer" class="public-doc-btn ${btnClass}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            ${label}
+          </a>
+        `;
+      }).join('');
+
+      return `
+        <div class="public-doc-item">
+          <div class="public-doc-info">
+            <div class="public-doc-icon">${meta.icon}</div>
+            <div style="flex: 1; min-width: 0;">
+              <div class="public-doc-title">${d.title}</div>
+              <div class="public-doc-meta">
+                <span class="public-doc-badge" style="background:${meta.bg}; color:${meta.color}; border:1px solid ${meta.border};">
+                  ${d.displayCategory}
+                </span>
+                ${d.date ? `<span>📅 ${d.date}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="public-doc-actions">
+            ${actionsHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 
   async function openDocCategory(category, type) {
     const overlay = document.getElementById('docModalOverlay');
@@ -4052,6 +4440,10 @@
       } else if (id === 'manual') {
         if (typeof renderManualEdition === 'function') {
           renderManualEdition(currentManualYear);
+        }
+      } else if (id === 'documents') {
+        if (typeof loadAllDocuments === 'function') {
+          loadAllDocuments();
         }
       }
     }
@@ -5884,6 +6276,7 @@
       }
     });
     loadTeam();
+    loadAllDocuments();
     loadUsers().then(() => {
       const statMem = document.getElementById('statMembers');
       if (statMem) {
