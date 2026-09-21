@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
@@ -3051,7 +3051,7 @@
 
             <!-- PDF Embed Viewer (Full Direct Viewer) -->
             <div class="pdf-frame-container" style="margin-top: 0;">
-              <iframe id="regulationsIframe" class="pdf-iframe" style="height: 88vh; min-height: 750px; width: 100%; border: 1px solid var(--gray-300); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.06);" src="./regulations-2569.pdf">
+              <iframe id="regulationsIframe" class="pdf-iframe" style="height: 88vh; min-height: 750px; width: 100%; border: 1px solid var(--gray-300); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.06);" src="https://docs.google.com/viewer?url=https://swscofficial.com/regulations-2569.pdf&embedded=true">
                 <p style="padding: 20px; text-align: center; color: var(--gray-600);">
                   เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF ในหน้าเว็บ 
                   <a id="regIframeFallbackLink" href="./regulations-2569.pdf" target="_blank" style="color: var(--purple-700); font-weight: 700; text-decoration: underline;">
@@ -3089,7 +3089,7 @@
 
             <!-- PDF Embed Viewer (Full Direct Viewer) -->
             <div class="pdf-frame-container" style="margin-top: 0;">
-              <iframe id="manualIframe" class="pdf-iframe" style="height: 88vh; min-height: 750px; width: 100%; border: 1px solid var(--gray-300); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.06);" data-src="./manual-2569.pdf" src="">
+              <iframe id="manualIframe" class="pdf-iframe" style="height: 88vh; min-height: 750px; width: 100%; border: 1px solid var(--gray-300); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.06);" data-src="https://docs.google.com/viewer?url=https://swscofficial.com/manual-2569.pdf&embedded=true" src="">
                 <p style="padding: 20px; text-align: center; color: var(--gray-600);">
                   เบราว์เซอร์ของคุณไม่รองรับการแสดงผล PDF ในหน้าเว็บ 
                   <a id="manualIframeFallbackLink" href="./manual-2569.pdf" target="_blank" style="color: var(--purple-700); font-weight: 700; text-decoration: underline;">
@@ -4050,10 +4050,42 @@
     scrollTo(0, 0);
   }
   window.addEventListener('hashchange', route);
-  document.addEventListener('DOMContentLoaded', route);
+  
+  function initNavDropdowns() {
+    document.querySelectorAll('.nav-item').forEach(item => {
+      const link = item.querySelector('a.nav-link');
+      const dropdown = item.querySelector('.nav-dropdown');
+      if (link && dropdown && !item.hasAttribute('data-nav-init')) {
+        item.setAttribute('data-nav-init', 'true');
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const isActive = item.classList.contains('active-dropdown');
+          document.querySelectorAll('.nav-item.active-dropdown').forEach(activeItem => {
+            activeItem.classList.remove('active-dropdown');
+          });
+          if (!isActive) item.classList.add('active-dropdown');
+        });
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.nav-item')) {
+        document.querySelectorAll('.nav-item.active-dropdown').forEach(item => {
+          item.classList.remove('active-dropdown');
+        });
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    route();
+    initNavDropdowns();
+  });
+  
   // Execute immediately if DOM is already loaded
   if (document.readyState === 'interactive' || document.readyState === 'complete') {
     route();
+    initNavDropdowns();
   }
 
   /* ---- REGULATIONS (MULTI-EDITION PDF VIEWER) ---- */
@@ -4307,8 +4339,8 @@
       const totalRealCount = Array.isArray(countRes) && countRes.length > 0 ? countRes.length : (Array.isArray(fetchedNews) ? fetchedNews.length : 0);
       allNews = Array.isArray(fetchedNews) ? fetchedNews.filter(n => n.category !== 'ประกาศ' && n.category !== 'ประกาศ_ซ่อน') : [];
 
-      renderHomeNews(allNews);
-      renderNews(allNews, 'fullNewsGrid');
+      try { renderHomeNews(allNews); } catch(e) { console.error('Error rendering home news:', e); }
+      try { renderNews(allNews, 'fullNewsGrid'); } catch(e) { console.error('Error rendering full news grid:', e); }
 
       const elStat = document.getElementById('statNews');
       if (elStat) {
@@ -4324,8 +4356,8 @@
         try {
           let fullFetched = await sbFetch(`web_news?select=*&${catNotAnn}&order=created_at.desc`) || [];
           if (Array.isArray(fullFetched) && fullFetched.length > 0) {
-            allNews = fullFetched.filter(n => n.category !== 'ประกาศ' && n.category !== 'ประกาศ_ซ่อน');
-            renderNews(allNews, 'fullNewsGrid');
+            allNews = fullFetched.filter(n => !n.category.startsWith('ประกาศ'));
+            try { renderNews(allNews, 'fullNewsGrid'); } catch(e) { console.error('Error rendering full news grid:', e); }
             if (elStat) {
               elStat.dataset.target = allNews.length;
               elStat.textContent = allNews.length;
@@ -5734,7 +5766,7 @@
       }
       if (allNews && allNews.length > 0) {
         renderHomeNews(allNews.slice(0, 5));
-        renderNews(allNews, 'fullNewsGrid');
+        try { renderNews(allNews, 'fullNewsGrid'); } catch(e) { console.error('Error rendering full news grid:', e); }
       }
     });
 
