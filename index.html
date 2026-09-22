@@ -6293,14 +6293,14 @@
   async function loadPolicies() {
     try {
       const data = await sbFetch('web_policies?select=*&order=id.asc');
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         renderPolicies(data);
       } else {
-        renderPolicies(DEFAULT_POLICIES);
+        renderPolicies([]);
       }
     } catch (err) {
-      console.warn('Failed to load web_policies from db, using default policies:', err);
-      renderPolicies(DEFAULT_POLICIES);
+      console.warn('Failed to load web_policies from db:', err);
+      renderPolicies([]);
     }
   }
 
@@ -6318,10 +6318,7 @@
             </svg>
           </div>
           <div style="font-size: 18px; font-weight: 800; color: var(--gray-800); margin-bottom: 8px;">ยังไม่มีข้อมูลนโยบายสภานักเรียนในขณะนี้</div>
-          <div style="font-size: 13.5px; color: var(--gray-500); max-width: 440px; margin: 0 auto 20px; line-height: 1.6;">คณะกรรมการสภานักเรียนกำลังขับเคลื่อนและเตรียมประกาศแผนนโยบายการทำงานประจำปีการศึกษาฉบับสมบูรณ์</div>
-          <button onclick="renderPolicies(DEFAULT_POLICIES)" class="pill" style="padding: 10px 22px; font-size: 13.5px; font-weight: 700; color: #78350f; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #f59e0b; border-radius: 99px; cursor: pointer; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2); transition: all 0.2s;">
-            แสดงข้อมูลนโยบายตัวอย่าง
-          </button>
+          <div style="font-size: 13.5px; color: var(--gray-500); max-width: 440px; margin: 0 auto; line-height: 1.6;">คณะกรรมการสภานักเรียนกำลังขับเคลื่อนและเตรียมประกาศแผนนโยบายการทำงานประจำปีการศึกษาฉบับสมบูรณ์</div>
         </div>
       `;
       return;
