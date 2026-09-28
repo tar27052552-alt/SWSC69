@@ -3070,6 +3070,72 @@
     .pdf-page-info { font-size: 14px; font-weight: 600; color: var(--gray-700); min-width: 100px; text-align: center; }
     .pdf-js-canvas-wrapper { overflow: auto; height: 75vh; min-height: 600px; padding: 20px 10px; text-align: center; display: flex; flex-direction: column; align-items: center; }
     .pdf-js-canvas-wrapper canvas { max-width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 4px; margin-bottom: 20px; }
+
+    /* Responsive layout refinements for the public site */
+    html { overflow-x: clip; }
+    body { min-width: 320px; overflow-x: clip; }
+    img, video, iframe, canvas { max-width: 100%; }
+
+    @media (max-width: 1024px) {
+      .layout {
+        width: 100%;
+        padding-inline: clamp(16px, 3.5vw, 32px);
+      }
+      .stats-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat-item { min-width: 0; }
+      .section-wrapper { padding: clamp(16px, 3vw, 24px); }
+    }
+
+    @media (max-width: 768px) {
+      body { padding-bottom: env(safe-area-inset-bottom); }
+      .layout { margin: 18px auto 56px; padding-inline: 16px; }
+      .section-wrapper { padding: 16px !important; margin-bottom: 20px; border-radius: 16px; }
+      .section-header { max-width: 100%; font-size: 15px; }
+      .stats-strip { margin-bottom: 20px; }
+      .stat-item { padding: 16px 12px; }
+      .stat-number { font-size: clamp(25px, 7vw, 34px); }
+      .pr-news-container { gap: 16px; }
+      .pr-main img { aspect-ratio: 16 / 10; max-height: none; }
+      .pr-item { align-items: flex-start; gap: 12px; }
+      .pr-item img { width: clamp(76px, 24vw, 112px); height: clamp(92px, 29vw, 132px); flex: 0 0 auto; }
+      .reg-tabs-bar { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; padding: 2px 2px 12px; }
+      .reg-tab-btn, .manual-tab-btn { flex: 0 0 auto; min-height: 44px; white-space: nowrap; }
+      .block-head { align-items: flex-start; gap: 12px; flex-wrap: wrap; padding: 14px 16px; }
+      .block-head-title { min-width: 0; }
+      .pdf-frame-container { min-width: 0; }
+      .pdf-iframe { height: min(72dvh, 720px) !important; min-height: 340px !important; }
+      .pdf-js-toolbar { gap: 8px; padding: 10px; }
+      .pdf-js-toolbar button { min-height: 42px; padding-inline: 11px; }
+      .pdf-js-canvas-wrapper { height: 60dvh; min-height: 360px; padding: 12px 6px; }
+      .public-modal-content { padding: calc(72px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom)); }
+      .public-modal-header { gap: 12px; }
+      footer { padding: 36px 20px calc(24px + env(safe-area-inset-bottom)); }
+      #backToTop { right: max(14px, env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom)); width: 44px; height: 44px; }
+    }
+
+    @media (max-width: 480px) {
+      .layout { padding-inline: 12px; }
+      .section-wrapper { padding: 13px !important; }
+      .stats-strip { gap: 1px; border-radius: 12px; }
+      .stat-item { padding: 13px 8px; }
+      .stat-label { font-size: 11px; line-height: 1.35; }
+      .pr-main h3 { font-size: 18px; }
+      .pr-excerpt { font-size: 13.5px; }
+      .pr-item-info h4 { font-size: 14px; }
+      .cal-toolbar { gap: 6px; flex-wrap: wrap; }
+      .cal-popup { padding: 10px; }
+      .cal-popup-inner { padding: 48px 14px 16px !important; margin: 0; }
+      .cal-popup-close { top: 8px !important; right: 8px !important; }
+      .pdf-page-info { min-width: 82px; }
+      .footer-nav { gap: 12px; }
+    }
+
+    @media (max-width: 360px) {
+      .nav-brand-name { max-width: 150px; overflow-wrap: anywhere; }
+      .nav-all-logos { max-width: 52px; object-fit: contain; }
+      .stat-item { padding-inline: 5px; }
+      .reg-tab-btn, .manual-tab-btn { padding-inline: 12px; font-size: 13px; }
+    }
   </style>
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
