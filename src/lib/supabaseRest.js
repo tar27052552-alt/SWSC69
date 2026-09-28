@@ -1,3 +1,5 @@
+import { supabase } from '../supabaseClient';
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -7,16 +9,22 @@ function requireEnv() {
   }
 }
 
+async function authHeaders(extra = {}) {
+  const { data: { session } } = await supabase.auth.getSession();
+  return {
+    apikey: supabaseAnonKey,
+    Authorization: `Bearer ${session?.access_token || supabaseAnonKey}`,
+    ...extra,
+  };
+}
+
 
 export async function supabaseRpc(fnName, args) {
   requireEnv();
+  const headers = await authHeaders({ 'Content-Type': 'application/json' });
   const res = await fetch(`${supabaseUrl}/rest/v1/rpc/${fnName}`, {
     method: 'POST',
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(args ?? {}),
   });
 
@@ -38,11 +46,9 @@ export async function supabaseRpc(fnName, args) {
 
 export async function supabaseSelect(table, queryString) {
   requireEnv();
+  const headers = await authHeaders();
   const res = await fetch(`${supabaseUrl}/rest/v1/${table}${queryString}`, {
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-    },
+    headers,
   });
   const text = await res.text();
   let data = null;
@@ -62,14 +68,13 @@ export async function supabaseSelect(table, queryString) {
 
 export async function supabaseUpsert(table, rows) {
   requireEnv();
+  const headers = await authHeaders({
+    'Content-Type': 'application/json',
+    Prefer: 'resolution=merge-duplicates,return=representation',
+  });
   const res = await fetch(`${supabaseUrl}/rest/v1/${table}?on_conflict=id`, {
     method: 'POST',
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates,return=representation',
-    },
+    headers,
     body: JSON.stringify(rows),
   });
   const text = await res.text();
@@ -90,13 +95,10 @@ export async function supabaseUpsert(table, rows) {
 
 export async function supabaseDelete(table, queryString) {
   requireEnv();
+  const headers = await authHeaders({ Prefer: 'return=representation' });
   const res = await fetch(`${supabaseUrl}/rest/v1/${table}${queryString}`, {
     method: 'DELETE',
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      Prefer: 'return=representation',
-    },
+    headers,
   });
   const text = await res.text();
   let data = null;
@@ -116,14 +118,13 @@ export async function supabaseDelete(table, queryString) {
 
 export async function supabaseUpdate(table, row, queryString) {
   requireEnv();
+  const headers = await authHeaders({
+    'Content-Type': 'application/json',
+    Prefer: 'return=representation',
+  });
   const res = await fetch(`${supabaseUrl}/rest/v1/${table}${queryString}`, {
     method: 'PATCH',
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation',
-    },
+    headers,
     body: JSON.stringify(row),
   });
   const text = await res.text();

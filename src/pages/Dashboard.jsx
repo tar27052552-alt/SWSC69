@@ -140,7 +140,7 @@ export default function Dashboard() {
 
   const runAutoGreetingFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, swapsList, enabledDays = [], disabledDates = [], serverNow = new Date(), schedulesHistory = []) => {
     try {
-      const { data: usersData } = await supabase.from('users').select('id, name, nickname, dept_id');
+      const { data: usersData } = await supabase.from('user_directory').select('id, name, nickname, dept_id');
       if (!usersData) return;
 
       const now = serverNow;
@@ -299,7 +299,7 @@ export default function Dashboard() {
 
   const runAutoCleanFinesCheck = async (schedulesList, startDateValue, eventsList, participantsList, swapsList = [], enabledDays = [], disabledDates = [], serverNow = new Date(), schedulesHistory = []) => {
     try {
-      const { data: usersData } = await supabase.from('users').select('id, name, nickname, dept_id');
+      const { data: usersData } = await supabase.from('user_directory').select('id, name, nickname, dept_id');
       if (!usersData) return;
 
       const now = serverNow;
@@ -449,10 +449,10 @@ export default function Dashboard() {
         ] = await Promise.all([
           supabase.from('events').select('*').order('date', { ascending: true }),
           supabase.from('notifications').select('*').order('created_at', { ascending: false }),
-          supabase.from('users').select('*', { count: 'exact', head: true }),
+          supabase.from('user_directory').select('id', { count: 'exact', head: true }),
           supabase.from('departments').select('*', { count: 'exact', head: true }),
           supabase.from('schedules').select('*'),
-          supabase.from('users').select('id, name, nickname, dept_id'),
+          supabase.from('user_directory').select('id, name, nickname, dept_id'),
           supabase.from('event_participants').select('*'),
           supabase.from('duty_swaps').select('*'),
           supabase.from('attendance_settings').select('*')

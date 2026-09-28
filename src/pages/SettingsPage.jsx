@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Save, Bell, AlertCircle, CheckCircle2, XCircle, MessageSquare, Send, Loader, Smartphone } from 'lucide-react';
-import { supabaseRpc } from '../lib/supabaseRest';
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 import { DEPARTMENTS } from '../data/mockData';
@@ -43,7 +42,7 @@ export default function SettingsPage() {
       const fetchAllUsers = async () => {
         try {
           const { data, error } = await supabase
-            .from('users')
+            .from('user_directory')
             .select('id, name, nickname, dept_id, role')
             .order('name');
           if (!error && data) {
@@ -71,7 +70,7 @@ export default function SettingsPage() {
       if (selectedTarget === 'all') {
         // Send to everyone except the sender
         const { data: users, error } = await supabase
-          .from('users')
+          .from('user_directory')
           .select('id')
           .neq('id', user.id);
         if (error) throw error;
@@ -82,7 +81,7 @@ export default function SettingsPage() {
         }
         // Send to everyone in selected departments
         const { data: users, error } = await supabase
-          .from('users')
+          .from('user_directory')
           .select('id')
           .in('dept_id', selectedDepts)
           .neq('id', user.id);
@@ -149,10 +148,11 @@ export default function SettingsPage() {
       try {
         await supabase
           .from('notifications')
-          .insert([{
+          .insert(targetUserIds.map((targetUserId) => ({
             type: 'announcement',
+            user_id: String(targetUserId),
             message: `📢 ประกาศด่วนโดย ${user?.nickname || user?.name || 'ผู้ดูแลระบบ'}: ${adminMessage}`
-          }]);
+          })));
       } catch (errDb) {
         console.error('Failed to save announcement in DB:', errDb);
       }
@@ -316,29 +316,21 @@ export default function SettingsPage() {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
+    if (passwords.new.length < 8) {
+      alert('รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร');
+      return;
+    }
     if (passwords.new !== passwords.confirm) {
       alert('รหัสผ่านใหม่ไม่ตรงกัน!');
       return;
     }
 
     try {
-      // Verify current password using login_student RPC
-      const verifyRes = await supabaseRpc('login_student', {
-        p_student_id: user?.studentId,
-        p_password: passwords.old
+      const { data, error } = await supabase.functions.invoke('complete-password-migration', {
+        body: { oldPassword: passwords.old, newPassword: passwords.new },
       });
-
-      const found = Array.isArray(verifyRes) ? verifyRes[0] : null;
-      if (!found) {
-        alert('รหัสผ่านปัจจุบันไม่ถูกต้อง!');
-        return;
-      }
-
-      // Set the new password
-      await supabaseRpc('set_user_password', {
-        p_user_id: user?.id,
-        p_password: passwords.new
-      });
+      const details = error ? await error.context?.json?.().catch(() => null) : null;
+      if (error || !data?.success) throw new Error(details?.error || data?.error || error?.message || 'เปลี่ยนรหัสผ่านไม่สำเร็จ');
 
       alert('เปลี่ยนรหัสผ่านสำเร็จ!');
       setPasswords({ old: '', new: '', confirm: '' });
@@ -368,7 +360,7 @@ export default function SettingsPage() {
               <div>
                 <label className="form-label">รหัสผ่านปัจจุบัน</label>
                 <input 
-                  type="password" required className="input-field" 
+                  type="password" required className="input-field"
                   value={passwords.old} 
                   onChange={e => setPasswords({...passwords, old: e.target.value})} 
                 />
@@ -376,7 +368,7 @@ export default function SettingsPage() {
               <div>
                 <label className="form-label">รหัสผ่านใหม่</label>
                 <input 
-                  type="password" required className="input-field" 
+                  type="password" required minLength={8} className="input-field"
                   value={passwords.new} 
                   onChange={e => setPasswords({...passwords, new: e.target.value})} 
                 />

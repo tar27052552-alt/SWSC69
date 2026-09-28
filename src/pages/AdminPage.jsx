@@ -1,13 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { DEPARTMENTS, ROLES } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import { 
-  Search, Plus, Edit2, Trash2, X, Save, LogIn, Shield, 
+  Search, Plus, Edit2, Trash2, X, Save, Shield,
   UserCheck, ShieldAlert, Camera, Users, Award, RefreshCw,
   CheckCircle2, Lock, UserX, AlertTriangle, KeyRound, Megaphone, Target
 } from 'lucide-react';
-import { supabaseDelete, supabaseRpc, supabaseSelect, supabaseUpsert, supabaseUpdate } from '../lib/supabaseRest';
+import { supabaseSelect, supabaseUpdate } from '../lib/supabaseRest';
+import { supabase } from '../supabaseClient';
 
 const ROLE_LABELS = { admin: 'ผู้ดูแลระบบ', president: 'ประธานสภาฯ', dept_head: 'หัวหน้าฝ่าย', member: 'สมาชิก' };
 const ROLE_BADGE  = { admin: 'badge-purple', president: 'badge-purple', dept_head: 'badge-blue', member: 'badge-green' };
@@ -18,8 +19,7 @@ const AVATAR_COLORS = ['#00bcd4','#e91e63','#43a047','#f9a825','#ec407a','#00acc
 const initForm = { name:'', nickname:'', studentId:'', phone:'', password:'', role: ROLES.MEMBER, deptId:'', position:'', profileImage:'', banned: false };
 
 export default function AdminPage() {
-  const { isAdmin, loginAsUser, user } = useAuth();
-  const navigate = useNavigate();
+  const { isAdmin, user } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -35,7 +35,9 @@ export default function AdminPage() {
     setLoading(true);
     try {
       setDbError('');
-      const rows = await supabaseSelect('users', '?select=id,name,nickname,student_id,phone,dept_id,role,position,avatar_color,banned&order=created_at.asc');
+      const { data, error } = await supabase.functions.invoke('admin-users', { body: { action: 'list' } });
+      if (error) throw error;
+      const rows = data?.users || [];
       const mapped = (rows || []).map(r => {
         return {
           id: r.id,
@@ -46,8 +48,8 @@ export default function AdminPage() {
           deptId: r.dept_id,
           role: r.role,
           position: r.position,
-          avatar: r.nickname?.substring(0, 1) || r.name?.charAt(0) || 'U',
-          profileImage: null,
+          avatar: r.avatar || r.nickname?.substring(0, 1) || r.name?.charAt(0) || 'U',
+          profileImage: r.avatar && r.avatar.length > 50 ? r.avatar : null,
           avatarColor: r.avatar_color || AVATAR_COLORS[0],
           banned: r.banned || false,
         };
@@ -105,34 +107,8 @@ export default function AdminPage() {
   
   const openEdit = async u => {
     setEditUser(u);
-    setForm({ name:u.name, nickname:u.nickname, studentId:u.studentId, phone:u.phone||'', password:'', role:u.role, deptId:u.deptId||'', position:u.position, profileImage: '', banned: u.banned || false });
+    setForm({ name:u.name, nickname:u.nickname, studentId:u.studentId, phone:u.phone||'', password:'', role:u.role, deptId:u.deptId||'', position:u.position, profileImage: u.profileImage || '', banned: u.banned || false });
     setModal(true);
-    
-    try {
-      const rows = await supabaseSelect('users', `?select=avatar&id=eq.${u.id}`);
-      if (rows && rows[0] && rows[0].avatar && rows[0].avatar.length > 50) {
-        setForm(p => ({ ...p, profileImage: rows[0].avatar }));
-      }
-    } catch (err) {
-      console.error('Error fetching user avatar:', err);
-    }
-  };
-
-  const handleLoginAs = async (u) => {
-    if (window.confirm(`ต้องการเข้าสู่ระบบในฐานะ "${u.name} (${u.nickname})" ใช่หรือไม่?`)) {
-      try {
-        setDbError('');
-        const res = await loginAsUser(u.id);
-        if (res.success) {
-          alert(`เข้าสู่ระบบสำเร็จในฐานะ: ${u.name}`);
-          navigate('/dashboard');
-        } else {
-          setDbError(res.error || 'เกิดข้อผิดพลาดในการสลับบัญชี');
-        }
-      } catch (err) {
-        setDbError(err?.message || 'เกิดข้อผิดพลาดในการสลับบัญชี');
-      }
-    }
   };
 
   const handleSave = async (e) => {
@@ -159,21 +135,11 @@ export default function AdminPage() {
         avatar: hasImage ? form.profileImage : (editUser?.profileImage ? editUser.profileImage : (form.nickname?.substring(0, 1) || form.name?.charAt(0) || 'U')),
         avatar_color: editUser?.avatarColor || AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
         banned: form.banned || false,
-        ...(editUser ? {} : { password_hash: '' }),
       };
-
-      if (editUser) {
-        await supabaseUpdate('users', row, `?id=eq.${editUser.id}`);
-      } else {
-        await supabaseUpsert('users', [row]);
-      }
-
-      if (!editUser || form.password) {
-        if (!form.password) throw new Error('กรุณากรอกรหัสผ่าน');
-        const targetUserId = editUser ? editUser.id : row.id;
-        if (!targetUserId) throw new Error('บันทึกผู้ใช้ไม่สำเร็จ');
-        await supabaseRpc('set_user_password', { p_user_id: targetUserId, p_password: form.password });
-      }
+      const { error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'save', user: row, password: form.password, isNew: !editUser },
+      });
+      if (error) throw error;
 
       setModal(false);
       await loadUsers();
@@ -189,53 +155,10 @@ export default function AdminPage() {
   const handleDelete = async (u) => {
     if (!confirm(`ยืนยันต้องการลบผู้ใช้ "${u.name} (${u.nickname})" ออกจากระบบหรือไม่?\n\n⚠️ ประวัติย้อนหลังทั้งหมดของผู้ใชี้ (ค่าปรับ, ประวัติการเข้าเรียน, รายงานเวร, การแจ้งเตือน) จะถูกลบออกทั้งหมดโดยสมบูรณ์`)) return;
     try {
-      const userIdStr = String(u.id);
-
-      try {
-        await supabaseDelete('discipline_fines', `?user_id=eq.${userIdStr}`);
-      } catch (e) { console.error('Error deleting user fines:', e); }
-
-      try {
-        await supabaseDelete('student_attendance', `?user_id=eq.${userIdStr}`);
-      } catch (e) { console.error('Error deleting user attendance:', e); }
-
-      try {
-        await supabaseDelete('notifications', `?user_id=eq.${userIdStr}`);
-      } catch (e) { console.error('Error deleting user notifications:', e); }
-
-      try {
-        await supabaseDelete('event_participants', `?user_id=eq.${userIdStr}`);
-      } catch (e) { console.error('Error deleting user event_participants:', e); }
-
-      if (u.nickname) {
-        try {
-          await supabaseDelete('greeting_duty_checks', `?nickname=eq.${encodeURIComponent(u.nickname)}`);
-        } catch (e) { console.error('Error deleting user greeting_duty_checks:', e); }
-
-        try {
-          await supabaseDelete('clean_duty_checks', `?nickname=eq.${encodeURIComponent(u.nickname)}`);
-        } catch (e) { console.error('Error deleting user clean_duty_checks:', e); }
-
-        try {
-          await supabaseDelete('discipline_fines', `?nickname=eq.${encodeURIComponent(u.nickname)}`);
-        } catch (e) { console.error('Error deleting user fines by nickname:', e); }
-      }
-
-      // Clean up finance_fees payments JSON for this user
-      try {
-        const allFees = await supabaseSelect('finance_fees', '?select=id,payments');
-        if (allFees) {
-          for (const fee of allFees) {
-            if (fee.payments && fee.payments[userIdStr]) {
-              const nextPayments = { ...fee.payments };
-              delete nextPayments[userIdStr];
-              await supabaseUpdate('finance_fees', { payments: nextPayments }, `?id=eq.${fee.id}`);
-            }
-          }
-        }
-      } catch (e) { console.error('Error cleaning up user fee payments:', e); }
-
-      await supabaseDelete('users', `?id=eq.${u.id}`);
+      const { error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'delete', userId: u.id },
+      });
+      if (error) throw error;
       alert('ลบผู้ใช้และประวัติทั้งหมดของผู้ใช้คนนี้เรียบร้อยแล้ว!');
       loadUsers();
     } catch (err) {
@@ -247,7 +170,7 @@ export default function AdminPage() {
     if (!confirm('ต้องการตรวจสอบและล้างประวัติย้อนหลัง (ค่าปรับ, เช็คชื่อ, เวร ฯลฯ) ของสมาชิกที่ถูกลบไปแล้วทั้งหมดใช่หรือไม่?')) return;
     try {
       setLoading(true);
-      const validUsers = await supabaseSelect('users', '?select=id,nickname');
+      const validUsers = await supabaseSelect('user_directory', '?select=id,nickname');
       const validUserIds = new Set((validUsers || []).map(u => String(u.id)));
       const validNicknames = new Set((validUsers || []).map(u => u.nickname).filter(Boolean));
 
@@ -602,14 +525,6 @@ export default function AdminPage() {
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: 6 }}>
                             <button
-                              onClick={() => handleLoginAs(u)}
-                              className="btn btn-gray btn-sm"
-                              style={{ fontSize: 11.5, padding: '4px 8px' }}
-                              title="สลับเข้าใช้งานในฐานะผู้ใช้นี้"
-                            >
-                              <LogIn size={13} /> สลับสิทธิ์
-                            </button>
-                            <button
                               onClick={() => openEdit(u)}
                               className="btn btn-warning btn-sm"
                               style={{ fontSize: 11.5, padding: '4px 8px' }}
@@ -761,6 +676,7 @@ export default function AdminPage() {
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
                   required={!editUser}
+                  minLength={8}
                 />
               </div>
 

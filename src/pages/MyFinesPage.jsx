@@ -79,10 +79,7 @@ export default function MyFinesPage() {
       return;
     }
     try {
-      const { data, error } = await supabase
-        .from('finance_fees')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('get_my_finance_fees');
       if (error) throw error;
       if (data) {
         setFees(data);
@@ -131,8 +128,16 @@ export default function MyFinesPage() {
       })
       .subscribe();
 
+    // Fee rows are intentionally hidden from members because payments are stored
+    // in a shared JSON object; poll the owner-only RPC for approval updates.
+    const refreshTimer = setInterval(() => {
+      loadMyFines(false);
+      loadMyFees();
+    }, 15000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(refreshTimer);
     };
   }, [user]);
 
@@ -188,29 +193,29 @@ export default function MyFinesPage() {
         }
       }
 
-      // 3. Mark as paid automatically
-      const { error } = await supabase
-        .from('discipline_fines')
-        .update({ payment_status: 'paid', paid: true, payment_slip: finalSlipUrl })
-        .eq('id', paymentModal.id);
-        
+      // The browser-side slip check is not trusted for approving a payment.
+      const { data: submitted, error } = await supabase.rpc('submit_my_fine_payment', {
+        p_fine_id: paymentModal.id,
+        p_payment_slip: finalSlipUrl,
+      });
       if (error) throw error;
+      if (!submitted) throw new Error('ไม่พบรายการค่าปรับนี้ หรือรายการได้รับการชำระแล้ว');
       
-      setFines(prev => prev.map(f => f.id === paymentModal.id ? { ...f, paymentStatus: 'paid', paid: true, paymentSlip: finalSlipUrl } : f));
+      setFines(prev => prev.map(f => f.id === paymentModal.id ? { ...f, paymentStatus: 'slip_uploaded', paid: false, paymentSlip: finalSlipUrl } : f));
       const paidFine = paymentModal;
       setPaymentModal(null);
       setSlipPreview(null);
-      alert('✅ ชำระค่าปรับเรียบร้อยแล้ว ระบบตรวจสอบและอนุมัติอัตโนมัติ!');
+      alert('✅ ส่งหลักฐานการชำระค่าปรับแล้ว รอฝ่ายการเงินหรือฝ่ายปกครองตรวจสอบและอนุมัติ');
 
       // Send Discord embed notification
-      const embedTitle = `✅ ชำระค่าปรับสำเร็จ - สภานักเรียน`;
-      const embedDesc = `ระบบทำการตรวจสอบและผ่านการอนุมัติสลิปโอนเงินอัตโนมัติ`;
+      const embedTitle = `📥 ส่งหลักฐานชำระค่าปรับ - สภานักเรียน`;
+      const embedDesc = `ผู้ใช้ส่งหลักฐานเพื่อรอฝ่ายการเงินหรือฝ่ายปกครองตรวจสอบ`;
       const fields = [
         { name: '👤 ผู้ชำระ', value: `${user?.name} (${user?.nickname})`, inline: true },
         { name: '⚖️ ชำระค่าปรับ', value: paidFine.violation, inline: true },
         { name: '💵 จำนวนเงิน', value: `${paidFine.amount} บาท`, inline: true }
       ];
-      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, fields, finalSlipUrl, 'discipline_fines'); // สีเขียวสำหรับสำเร็จ พร้อมพรีวิวสลิป (ค่าปรับ)
+      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15105570, fields, finalSlipUrl, 'discipline_fines');
     } catch (err) {
       console.error('Error uploading slip:', err);
       alert('เกิดข้อผิดพลาด: ' + err.message);
@@ -273,27 +278,27 @@ export default function MyFinesPage() {
         }
       }
 
-      const { error } = await supabase
-        .from('discipline_fines')
-        .update({ payment_status: 'paid', paid: true, payment_slip: finalSlipUrl })
-        .in('id', selectedFineIds);
-        
+      const { data: submittedCount, error } = await supabase.rpc('submit_my_fine_payments', {
+        p_fine_ids: selectedFineIds,
+        p_payment_slip: finalSlipUrl,
+      });
       if (error) throw error;
+      if (submittedCount !== selectedFineIds.length) throw new Error('มีรายการที่ไม่พบหรือชำระแล้ว กรุณาโหลดรายการใหม่');
       
-      setFines(prev => prev.map(f => selectedFineIds.includes(f.id) ? { ...f, paymentStatus: 'paid', paid: true, paymentSlip: finalSlipUrl } : f));
+      setFines(prev => prev.map(f => selectedFineIds.includes(f.id) ? { ...f, paymentStatus: 'slip_uploaded', paid: false, paymentSlip: finalSlipUrl } : f));
       setSelectedFineIds([]);
       setBulkPaymentModal(false);
       setSlipPreview(null);
-      alert(`✅ ชำระค่าปรับรวม ${selectedFinesList.length} รายการ (รวม ${totalAmount} บาท) เรียบร้อยแล้ว!`);
+      alert(`✅ ส่งหลักฐานค่าปรับ ${selectedFinesList.length} รายการ (รวม ${totalAmount} บาท) แล้ว รอเจ้าหน้าที่ตรวจสอบ`);
 
-      const embedTitle = `✅ ชำระค่าปรับรวม ${selectedFinesList.length} รายการสำเร็จ - สภานักเรียน`;
-      const embedDesc = `ระบบทำการตรวจสอบสลิปโอนเงินรวมแบบกลุ่มอนุมัติอัตโนมัติ`;
+      const embedTitle = `📥 ส่งหลักฐานค่าปรับรวม ${selectedFinesList.length} รายการ - สภานักเรียน`;
+      const embedDesc = `ผู้ใช้ส่งหลักฐานเพื่อรอเจ้าหน้าที่ตรวจสอบ`;
       const fields = [
         { name: '👤 ผู้ชำระ', value: `${user?.name} (${user?.nickname})`, inline: true },
         { name: '⚖️ รายการที่ชำระ', value: selectedFinesList.map(f => `• ${f.violation} (${f.amount} บ.)`).join('\n'), inline: false },
         { name: '💵 ยอดรวมสุทธิ', value: `${totalAmount} บาท`, inline: true }
       ];
-      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, fields, finalSlipUrl, 'discipline_fines');
+      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15105570, fields, finalSlipUrl, 'discipline_fines');
     } catch (err) {
       console.error('Error uploading bulk slip:', err);
       alert('เกิดข้อผิดพลาด: ' + err.message);
@@ -355,42 +360,37 @@ export default function MyFinesPage() {
         }
       }
 
-      // 3. Mark as paid automatically in finance_fees
+      // Record the member's own payment submission without exposing the shared map.
       const targetFee = fees.find(f => f.id === feePaymentModal.id);
       if (!targetFee) throw new Error('ไม่พบข้อมูลรายการเก็บเงิน');
 
+      const { data: submitted, error } = await supabase.rpc('submit_my_fee_payment', {
+        p_fee_id: feePaymentModal.id,
+        p_payment_slip: finalSlipUrl,
+      });
+      if (error) throw error;
+      if (!submitted) throw new Error('ไม่พบรายการเก็บเงินนี้');
+
       const nextPayments = {
         ...(targetFee.payments || {}),
-        [user.id]: {
-          paid: true,
-          status: 'paid',
-          slip: finalSlipUrl,
-          date: new Date().toISOString()
-        }
+        [user.id]: { paid: false, status: 'slip_uploaded', slip: finalSlipUrl, date: new Date().toISOString() }
       };
-
-      const { error } = await supabase
-        .from('finance_fees')
-        .update({ payments: nextPayments })
-        .eq('id', feePaymentModal.id);
-        
-      if (error) throw error;
       
       setFees(prev => prev.map(f => f.id === feePaymentModal.id ? { ...f, payments: nextPayments } : f));
       const paidFee = feePaymentModal;
       setFeePaymentModal(null);
       setSlipPreview(null);
-      alert('✅ ชำระค่าธรรมเนียมเรียบร้อยแล้ว ระบบตรวจสอบและอนุมัติอัตโนมัติ!');
+      alert('✅ ส่งหลักฐานค่าธรรมเนียมแล้ว รอฝ่ายการเงินตรวจสอบและอนุมัติ');
 
       // Send Discord embed notification
-      const embedTitle = `✅ ชำระค่าธรรมเนียมสำเร็จ - สภานักเรียน`;
-      const embedDesc = `ระบบทำการตรวจสอบและผ่านการอนุมัติสลิปโอนเงินอัตโนมัติ`;
+      const embedTitle = `📥 ส่งหลักฐานค่าธรรมเนียม - สภานักเรียน`;
+      const embedDesc = `ผู้ใช้ส่งหลักฐานเพื่อรอฝ่ายการเงินตรวจสอบ`;
       const fields = [
         { name: '👤 ผู้ชำระ', value: `${user?.name} (${user?.nickname})`, inline: true },
         { name: '📋 ชำระค่าธรรมเนียม', value: paidFee.title, inline: true },
         { name: '💵 จำนวนเงิน', value: `${paidFee.amount} บาท`, inline: true }
       ];
-      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, fields, finalSlipUrl, 'discipline_fines'); // สีเขียวสำหรับสำเร็จ พร้อมพรีวิวสลิป
+      sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15105570, fields, finalSlipUrl, 'discipline_fines');
     } catch (err) {
       console.error('Error uploading fee slip:', err);
       alert('เกิดข้อผิดพลาด: ' + err.message);

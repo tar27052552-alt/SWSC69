@@ -50,7 +50,7 @@ export default function CalendarPage() {
           swapsRes
         ] = await Promise.all([
           supabase.from('events').select('*').order('date', { ascending: true }),
-          supabase.from('users').select('id, name, nickname, dept_id').order('name'),
+          supabase.from('user_directory').select('id, name, nickname, dept_id').order('name'),
           supabase.from('event_participants').select('*'),
           supabase.from('attendance_settings').select('*'),
           supabase.from('schedules').select('*'),

@@ -386,7 +386,7 @@ export default function SchedulesPage() {
           swapsRes,
           settingsRes
         ] = await Promise.all([
-          supabase.from('users').select('id, nickname, name, dept_id, role'),
+          supabase.from('user_directory').select('id, nickname, name, dept_id, role'),
           supabase.from('schedules').select('*'),
           supabase.from('duty_swaps').select('*').order('date', { ascending: false }),
           supabase.from('attendance_settings').select('*')

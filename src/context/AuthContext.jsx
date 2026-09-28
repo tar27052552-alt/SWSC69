@@ -1,10 +1,28 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { DEPARTMENTS, ROLES } from '../data/mockData';
-import { supabaseRpc } from '../lib/supabaseRest';
 import { supabase } from '../supabaseClient';
 import { CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react';
 
 const AuthContext = createContext(null);
+
+function mapCouncilProfile(profile) {
+  const dept = profile.dept_id ? DEPARTMENTS.find((d) => d.id === profile.dept_id) : null;
+  const isImg = profile.avatar && (profile.avatar.startsWith('data:image') || profile.avatar.startsWith('http'));
+  return {
+    id: profile.id,
+    name: profile.name,
+    nickname: profile.nickname,
+    studentId: profile.student_id,
+    phone: profile.phone || '',
+    deptId: profile.dept_id,
+    role: profile.role,
+    position: profile.position,
+    avatar: isImg ? (profile.nickname?.substring(0, 1) || profile.name?.substring(0, 1) || 'U') : profile.avatar,
+    profileImage: isImg ? profile.avatar : null,
+    avatarColor: profile.avatar_color,
+    dept,
+  };
+}
 
 function CustomModalAlert({ title, message, type, onClose }) {
   useEffect(() => {
@@ -153,28 +171,75 @@ function CustomModalAlert({ title, message, type, onClose }) {
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('sc_user');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error parsing saved user session:', e);
-      }
-    }
-    return null;
-  });
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [checkInState, setCheckInState] = useState(null);
   const [cleanDutyState, setCleanDutyState] = useState(null);
   const [greetingDutyState, setGreetingDutyState] = useState(null);
   const [modalAlert, setModalAlert] = useState(null);
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
+    setMustChangePassword(false);
     localStorage.removeItem('sc_user');
     localStorage.removeItem('sc_last_active'); // Clear last active on logout
   };
+
+  useEffect(() => {
+    let active = true;
+    // Never trust the legacy client-side identity after switching to Supabase Auth.
+    localStorage.removeItem('sc_user');
+    const loadSessionProfile = async (session) => {
+      if (!session?.user) {
+        if (active) {
+          setUser(null);
+          setMustChangePassword(false);
+        }
+        return;
+      }
+
+      const { data, error } = await supabase.rpc('get_my_council_profile');
+      const profile = Array.isArray(data) ? data[0] : data;
+      if (error || !profile || profile.banned) {
+        await supabase.auth.signOut();
+        if (active) {
+          setUser(null);
+          setMustChangePassword(false);
+        }
+        return;
+      }
+      if (profile.must_change_password) {
+        await supabase.auth.signOut();
+        if (active) {
+          setUser(null);
+          setMustChangePassword(false);
+        }
+        return;
+      }
+      if (active) {
+        setMustChangePassword(false);
+        setUser(mapCouncilProfile(profile));
+      }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      loadSessionProfile(session).finally(() => active && setAuthReady(true));
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Defer Supabase calls until after the auth callback returns.
+      setTimeout(() => {
+        loadSessionProfile(session).finally(() => active && setAuthReady(true));
+      }, 0);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     window.alert = (message) => {
@@ -243,15 +308,10 @@ export function AuthProvider({ children }) {
     try {
       // Check if user is banned
       try {
-        const { data: userCheck } = await supabase
-          .from('users')
-          .select('banned')
-          .eq('id', user.id)
-          .maybeSingle();
-        if (userCheck && userCheck.banned) {
+        const { data: profile, error: profileError } = await supabase.rpc('get_my_council_profile');
+        if (!profileError && (!Array.isArray(profile) || profile.length === 0)) {
           console.log('User is banned. Logging out...');
-          logout();
-          window.location.reload();
+          await logout();
           return;
         }
       } catch (err) {
@@ -477,95 +537,80 @@ export function AuthProvider({ children }) {
 
   const login = async (studentId, password) => {
     try {
-      const rows = await supabaseRpc('login_student', { p_student_id: studentId, p_password: password });
-      const found = Array.isArray(rows) ? rows[0] : null;
-      if (!found) return { success: false, error: 'รหัสนักเรียนหรือรหัสผ่านไม่ถูกต้อง' };
+      const { data, error } = await supabase.functions.invoke('legacy-student-login', {
+        body: { studentId, password },
+      });
+      if (error) {
+        const details = await error.context?.json?.().catch(() => null);
+        throw new Error(details?.error || error.message);
+      }
+      if (!data?.email) return { success: false, error: 'รหัสนักเรียนหรือรหัสผ่านไม่ถูกต้อง' };
 
-      // Double-check if the user is banned
-      try {
-        const { data: userCheck } = await supabase
-          .from('users')
-          .select('banned')
-          .eq('id', found.id)
-          .maybeSingle();
-        if (userCheck && userCheck.banned) {
-          return { success: false, error: 'บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อแอดมิน' };
+      if (data.token_hash) {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: data.token_hash,
+          type: 'magiclink',
+        });
+        if (otpError) throw otpError;
+        const { data: profileData, error: profileError } = await supabase.rpc('get_my_council_profile');
+        const profile = Array.isArray(profileData) ? profileData[0] : profileData;
+        if (profileError || !profile || profile.banned || profile.must_change_password) {
+          await supabase.auth.signOut();
+          throw profileError || new Error('ตรวจสอบบัญชีหลังเข้าสู่ระบบไม่สำเร็จ');
         }
-      } catch (err) {
-        console.error('Error checking banned status:', err);
+        setMustChangePassword(false);
+        setUser(mapCouncilProfile(profile));
+        localStorage.setItem('sc_last_active', Date.now().toString());
+        return { success: true };
       }
 
-      const dept = found.dept_id ? DEPARTMENTS.find((d) => d.id === found.dept_id) : null;
-      const isImg = found.avatar && (found.avatar.startsWith('data:image') || found.avatar.startsWith('http'));
-      const userData = {
-        id: found.id,
-        name: found.name,
-        nickname: found.nickname,
-        studentId: found.student_id,
-        phone: found.phone || '',
-        deptId: found.dept_id,
-        role: found.role,
-        position: found.position,
-        avatar: isImg ? (found.nickname?.substring(0, 1) || found.name?.substring(0, 1) || 'U') : found.avatar,
-        profileImage: isImg ? found.avatar : null,
-        avatarColor: found.avatar_color,
-        dept,
-      };
-      setUser(userData);
-      localStorage.setItem('sc_user', JSON.stringify(userData));
-      localStorage.setItem('sc_last_active', Date.now().toString()); // Reset last active on successful login
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: data.email, password });
+      if (signInError) throw signInError;
+      const { data: profileData, error: profileError } = await supabase.rpc('get_my_council_profile');
+      const profile = Array.isArray(profileData) ? profileData[0] : profileData;
+      if (profileError || !profile || profile.banned) {
+        await supabase.auth.signOut();
+        throw new Error('ไม่พบบัญชีสมาชิกหรือบัญชีถูกระงับ');
+      }
+      if (profile.must_change_password) {
+        setUser(null);
+        setMustChangePassword(true);
+        return { success: true, needsPasswordChange: true };
+      }
+      setMustChangePassword(false);
+      setUser(mapCouncilProfile(profile));
+      localStorage.setItem('sc_last_active', Date.now().toString());
       return { success: true };
     } catch (e) {
       return { success: false, error: e?.message || 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ' };
     }
   };
 
-  const loginAsUser = async (userId) => {
-    // Security check: Only Admin can switch accounts
-    if (!user || user.role !== ROLES.ADMIN) {
-      return { success: false, error: 'คุณไม่มีสิทธิ์ในการสลับบัญชีผู้ใช้' };
-    }
+  const completeInitialPasswordChange = async (newPassword) => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const { data, error } = await supabase.functions.invoke('complete-password-migration', {
+        body: { newPassword },
+      });
       if (error) throw error;
-      
-      const dept = data.dept_id ? DEPARTMENTS.find((d) => d.id === data.dept_id) : null;
-      const isImg = data.avatar && (data.avatar.startsWith('data:image') || data.avatar.startsWith('http'));
-      const userData = {
-        id: data.id,
-        name: data.name,
-        nickname: data.nickname,
-        studentId: data.student_id,
-        phone: data.phone || '',
-        deptId: data.dept_id,
-        role: data.role,
-        position: data.position,
-        avatar: isImg ? (data.nickname?.substring(0, 1) || data.name?.substring(0, 1) || 'U') : data.avatar,
-        profileImage: isImg ? data.avatar : null,
-        avatarColor: data.avatar_color,
-        dept,
-      };
-      setUser(userData);
-      localStorage.setItem('sc_user', JSON.stringify(userData));
-      localStorage.setItem('sc_last_active', Date.now().toString()); // Reset last active on switch user
+      if (!data?.success) throw new Error(data?.error || 'ตั้งรหัสผ่านใหม่ไม่สำเร็จ');
+
+      const { data: profileData, error: profileError } = await supabase.rpc('get_my_council_profile');
+      const profile = Array.isArray(profileData) ? profileData[0] : profileData;
+      if (profileError || !profile || profile.must_change_password || profile.banned) {
+        throw profileError || new Error('ตรวจสอบบัญชีหลังเปลี่ยนรหัสผ่านไม่สำเร็จ');
+      }
+      setUser(mapCouncilProfile(profile));
+      setMustChangePassword(false);
+      localStorage.setItem('sc_last_active', Date.now().toString());
       return { success: true };
-    } catch (e) {
-      return { success: false, error: e?.message || 'สลับบัญชีไม่สำเร็จ' };
+    } catch (error) {
+      return { success: false, error: error?.message || 'ตั้งรหัสผ่านใหม่ไม่สำเร็จ' };
     }
   };
 
   const updateUser = (updates) => {
     setUser((prev) => {
       const updated = prev ? { ...prev, ...updates } : null;
-      if (updated) {
-        localStorage.setItem('sc_user', JSON.stringify(updated));
-      } else {
-        localStorage.removeItem('sc_user');
-      }
       return updated;
     });
   };
@@ -576,9 +621,11 @@ export function AuthProvider({ children }) {
 
   const value = useMemo(() => ({
     user,
+    authReady,
+    mustChangePassword,
     login,
+    completeInitialPasswordChange,
     logout,
-    loginAsUser,
     updateUser,
     isAdmin,
     isPresident,
@@ -594,6 +641,8 @@ export function AuthProvider({ children }) {
     setModalAlert,
   }), [
     user,
+    authReady,
+    mustChangePassword,
     isAdmin,
     isPresident,
     isDeptHead,

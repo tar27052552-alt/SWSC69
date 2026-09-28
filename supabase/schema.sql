@@ -62,7 +62,10 @@ $$;
 -- Minimal grants for REST/RPC
 grant usage on schema public to anon, authenticated;
 grant execute on function public.login_student(text, text) to anon, authenticated;
-grant execute on function public.set_user_password(uuid, text) to anon, authenticated;
+-- This RPC accepts an arbitrary user id and does not verify the caller's current
+-- password. Keep it unavailable to API roles; password changes must use the
+-- verified change_student_password RPC from security_hardening.sql.
+revoke all on function public.set_user_password(uuid, text) from public, anon, authenticated;
 
 -- Secure RPC for recording attendance check-in and server-side tamper-proof fine computation
 create or replace function public.record_checkin_and_fine(
@@ -131,5 +134,7 @@ begin
 end;
 $$;
 
-grant execute on function public.record_checkin_and_fine(uuid, text, text, integer, text, text, boolean, integer) to anon, authenticated;
+-- This SECURITY DEFINER RPC trusts caller-supplied identity and lateness data.
+-- Do not expose it until check-in identity is verified server-side.
+revoke all on function public.record_checkin_and_fine(uuid, text, text, integer, text, text, boolean, integer) from public, anon, authenticated;
 

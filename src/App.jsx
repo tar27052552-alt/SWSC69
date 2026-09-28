@@ -44,13 +44,15 @@ const PageLoader = () => (
 );
 
 function PrivateRoute({ children }) {
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
+  if (!authReady) return <PageLoader />;
   if (!user) return <Navigate to="/login" replace />;
   return <Layout>{children}</Layout>;
 }
 
 function PublicRoute({ children }) {
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
+  if (!authReady) return <PageLoader />;
   if (user) return <Navigate to="/dashboard" replace />;
   return children;
 }

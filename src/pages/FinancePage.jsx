@@ -93,8 +93,8 @@ export default function FinancePage() {
     try {
       // โหลดสมาชิกจริง - ปรับแต่งลดปริมาณข้อมูล (หลีกเลี่ยงโหลดรูปโปรไฟล์)
       const { data: uData, error: uErr } = await supabase
-        .from('users')
-        .select('id, name, nickname, student_id, phone, role, dept_id, position, avatar_color');
+        .from('user_directory')
+        .select('id, name, nickname, role, dept_id, position, avatar_color');
       if (!uErr && uData) {
         setUsersList(uData);
       }

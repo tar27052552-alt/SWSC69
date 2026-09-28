@@ -35,7 +35,7 @@ export default function CleanDutyPage() {
         }
 
         // Load Users
-        const { data: uData } = await supabase.from('users').select('id, nickname, name, dept_id, role');
+        const { data: uData } = await supabase.from('user_directory').select('id, nickname, name, dept_id, role');
         if (uData) setUsersList(uData);
 
         // Load today's Clean Room Duty & Swaps

@@ -1,0 +1,4 @@
+-- Deprecated: do not run this file.
+-- It is kept only so older setup links fail visibly instead of restoring the
+-- legacy public login RPC and incomplete policies.
+-- Use supabase/auth_rls_migration.sql after applying the required table schemas.

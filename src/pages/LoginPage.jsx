@@ -4,17 +4,37 @@ import { useAuth } from '../context/AuthContext';
 import logoUrl from '../assets/logo.png';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, mustChangePassword, completeInitialPasswordChange } = useAuth();
   const navigate = useNavigate();
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true); setError('');
     const result = await login(studentId, password);
+    setLoading(false);
+    if (result.success && !result.needsPasswordChange) navigate('/dashboard');
+    else setError(result.error);
+  };
+
+  const handleInitialPasswordChange = async (e) => {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      setError('รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('รหัสผ่านใหม่ไม่ตรงกัน');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    const result = await completeInitialPasswordChange(newPassword);
     setLoading(false);
     if (result.success) navigate('/dashboard');
     else setError(result.error);
@@ -62,7 +82,7 @@ export default function LoginPage() {
             />
 
             <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: 0 }}>
-              สภานักเรียน
+              {mustChangePassword ? 'ตั้งรหัสผ่านใหม่' : 'สภานักเรียน'}
             </h1>
             <p style={{ fontSize: 12.5, color: '#64748b', marginTop: 3, fontWeight: 500 }}>
               Student Council Portal SWSC69
@@ -70,7 +90,38 @@ export default function LoginPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {mustChangePassword ? (
+            <form onSubmit={handleInitialPasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <p style={{ margin: 0, color: '#475569', fontSize: 13, lineHeight: 1.6 }}>
+                ยืนยันบัญชีเดิมแล้ว กรุณาตั้งรหัสผ่านใหม่อย่างน้อย 8 ตัวอักษรก่อนเริ่มใช้งาน
+              </p>
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5, color: '#334155', marginBottom: 6, display: 'block' }}>
+                  รหัสผ่านใหม่
+                </label>
+                <input type="password" className="input-field" value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)} required minLength={8}
+                  autoComplete="new-password" style={{ height: 48, fontSize: 16, borderRadius: 12, paddingLeft: 14 }} />
+              </div>
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5, color: '#334155', marginBottom: 6, display: 'block' }}>
+                  ยืนยันรหัสผ่านใหม่
+                </label>
+                <input type="password" className="input-field" value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)} required minLength={8}
+                  autoComplete="new-password" style={{ height: 48, fontSize: 16, borderRadius: 12, paddingLeft: 14 }} />
+              </div>
+              {error && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '10px 14px', color: '#dc2626', fontSize: 12.5, fontWeight: 600 }}>
+                  ⚠️ {error}
+                </div>
+              )}
+              <button type="submit" className="btn btn-primary" disabled={loading}
+                style={{ width: '100%', justifyContent: 'center', height: 48, borderRadius: 12, fontSize: 15, fontWeight: 700 }}>
+                {loading ? '⏳ กำลังบันทึกรหัสผ่าน...' : 'บันทึกรหัสผ่านและเข้าใช้งาน'}
+              </button>
+            </form>
+          ) : <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div>
               <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5, color: '#334155', marginBottom: 6, display: 'block' }}>
                 รหัสประจำตัวนักเรียน
@@ -152,7 +203,7 @@ export default function LoginPage() {
             >
               {loading ? '⏳ กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
             </button>
-          </form>
+          </form>}
         </div>
 
         {/* Footer Text */}

@@ -729,7 +729,7 @@ export default function AVPage() {
     async function loadAVMembers() {
       try {
         const { data, error } = await supabase
-          .from('users')
+          .from('user_directory')
           .select('id, nickname, name, dept_id, role');
         if (!error && data) {
           setUsersList(data);

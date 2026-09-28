@@ -71,8 +71,8 @@ export default function DisciplinePage() {
     async function loadUsers() {
       try {
         const { data, error } = await supabase
-          .from('users')
-          .select('id, name, nickname, student_id, phone, dept_id, role, position, avatar_color')
+          .from('user_directory')
+          .select('id, name, nickname, dept_id, role, position, avatar_color')
           .order('name', { ascending: true });
         if (error) throw error;
         if (data) {
@@ -80,8 +80,6 @@ export default function DisciplinePage() {
             id: r.id,
             name: r.name,
             nickname: r.nickname,
-            studentId: r.student_id,
-            phone: r.phone || '',
             deptId: r.dept_id,
             role: r.role,
             position: r.position,
@@ -1022,7 +1020,7 @@ export default function DisciplinePage() {
         setDbGreetingChecks(prev => prev.filter(x => x.nickname !== nickname));
 
         // Delete auto-fine if marked reset
-        const { data: userFound } = await supabase.from('users').select('id').eq('nickname', nickname).maybeSingle();
+        const { data: userFound } = await supabase.from('user_directory').select('id').eq('nickname', nickname).maybeSingle();
         if (userFound) {
           await supabase.from('discipline_fines')
             .delete()
@@ -1068,7 +1066,7 @@ export default function DisciplinePage() {
 
       // VERY IMPORTANT: If marked as 'done', delete auto-fine for "ไม่ปฏิบัติเวรไหว้"
       if (status === 'done') {
-        const { data: userFound } = await supabase.from('users').select('id').eq('nickname', nickname).maybeSingle();
+        const { data: userFound } = await supabase.from('user_directory').select('id').eq('nickname', nickname).maybeSingle();
         if (userFound) {
           await supabase.from('discipline_fines')
             .delete()

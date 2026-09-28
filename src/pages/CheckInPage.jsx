@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { CheckCircle, AlertTriangle, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { supabaseRpc } from '../lib/supabaseRest';
 import CameraCapture from '../components/CameraCapture';
 import { uploadFileToDrive, transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
@@ -371,9 +370,9 @@ export default function CheckInPage() {
     }
 
     const limitM = hasGreetingDuty ? 0 : 35; // 07:00 or 07:35
-    const isLate = (h > 7) || (h === 7 && m > limitM); 
-    const timeStr = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')} น.`;
-    const status = isLate ? 'late' : 'on_time';
+    let isLate = (h > 7) || (h === 7 && m > limitM);
+    let timeStr = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')} น.`;
+    let status = isLate ? 'late' : 'on_time';
     
     try {
       if (user) {
@@ -390,101 +389,19 @@ export default function CheckInPage() {
           }
         }
 
-        const record = {
-          user_id: String(user.id),
-          user_name: user.name,
-          nickname: user.nickname,
-          date: toGregorianStr(now),
-          time: timeStr,
-          status: status,
-          photo: finalPhotoUrl,
-          is_manual: false
-        };
-        const { error: upsertError } = await supabase
-          .from('student_attendance')
-          .upsert([record], { onConflict: 'user_id,date' });
-        
-        if (upsertError) {
-          console.error("CheckIn error:", upsertError);
-          alert("ไม่สามารถบันทึกข้อมูลได้: " + upsertError.message);
-          isSubmitting.current = false;
-          setSubmitting(false);
-          return;
-        }
+        const { data: checkinResult, error: checkinError } = await supabase.rpc('record_my_checkin', {
+          p_photo: finalPhotoUrl,
+        });
+        if (checkinError) throw checkinError;
 
-        // Auto-fine if late
-        let minutesLate = 0;
-        let finalAmount = 0;
-
-        if (isLate) {
-          const limitHour = 7;
-          const limitMinute = limitM;
-          const limitDate = new Date(now);
-          limitDate.setHours(limitHour, limitMinute, 0, 0);
-
-          if (now > limitDate) {
-            const diffMs = now - limitDate;
-            minutesLate = Math.ceil(diffMs / (1000 * 60));
-          }
-        }
-
-        // Call secure server-side RPC function for fine computation & notification insertion
-        const dateStr = toGregorianStr(now);
-        try {
-          const rpcRes = await supabaseRpc('record_checkin_and_fine', {
-            p_user_id: user.id,
-            p_user_name: user.name,
-            p_nickname: user.nickname,
-            p_dept_id: user.deptId || null,
-            p_date: dateStr,
-            p_time: timeStr,
-            p_is_late: isLate,
-            p_minutes_late: minutesLate
-          });
-          if (rpcRes && typeof rpcRes.amount === 'number') {
-            finalAmount = rpcRes.amount;
-          }
-        } catch (rpcErr) {
-          console.warn('RPC record_checkin_and_fine fallback to direct insert:', rpcErr);
-          if (isLate && minutesLate > 0) {
-            const baseAmount = 5;
-            finalAmount = baseAmount * minutesLate;
-            if (user.deptId === 2) finalAmount *= 2;
-
-            const { data: existingFine } = await supabase
-              .from('discipline_fines')
-              .select('id')
-              .eq('user_id', String(user.id))
-              .eq('date', dateStr)
-              .eq('violation', 'มาสาย (นาที)');
-
-            if (!existingFine || existingFine.length === 0) {
-              const fineRecord = {
-                user_id: String(user.id),
-                user_name: user.name,
-                nickname: user.nickname,
-                violation: 'มาสาย (นาที)',
-                amount: finalAmount,
-                date: dateStr,
-                note: `มาสาย ${minutesLate} นาที (เวลาเช็คชื่อ ${timeStr})${user.deptId === 2 ? ' - ปรับ 2 เท่าเนื่องจากเป็นสารวัตรนักเรียน' : ''}`,
-                by: 'ระบบอัตโนมัติ',
-                paid: false
-              };
-              await supabase.from('discipline_fines').insert([fineRecord]);
-            }
-          }
-
-          // Fallback notification
-          await supabase
-            .from('notifications')
-            .insert([{
-              type: isLate ? 'fine' : 'task',
-              user_id: String(user.id),
-              message: isLate 
-                ? `⚠️ คุณเช็คชื่อเข้าโรงเรียนสาย (${minutesLate} นาที) เมื่อเวลา ${timeStr} ค่าปรับ ${finalAmount} บาท`
-                : `📍 คุณเช็คชื่อเข้าโรงเรียนเรียบร้อยแล้ว เมื่อเวลา ${timeStr}`
-            }]);
-        }
+        // The database clock and authenticated user now determine attendance,
+        // lateness, fines, and notifications.
+        isLate = Boolean(checkinResult?.is_late);
+        status = isLate ? 'late' : 'on_time';
+        timeStr = checkinResult?.time || timeStr;
+        const minutesLate = Number(checkinResult?.minutes_late || 0);
+        const finalAmount = Number(checkinResult?.amount || 0);
+        const dateStr = checkinResult?.date || toGregorianStr(now);
 
         // Notify Discord
         let embedTitle = `🟢 [เช็คชื่อเข้าแถว] ${user.nickname} เช็คชื่อสำเร็จ`;

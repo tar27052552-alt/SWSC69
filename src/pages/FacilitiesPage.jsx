@@ -35,7 +35,7 @@ export default function FacilitiesPage() {
           })));
         }
         // โหลดรายชื่อผู้ใช้
-        const { data: uData } = await supabase.from('users').select('id, nickname, name, dept_id, role');
+        const { data: uData } = await supabase.from('user_directory').select('id, nickname, name, dept_id, role');
         if (uData) {
           setUsersList(uData);
         }
