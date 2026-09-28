@@ -5695,16 +5695,23 @@
   let calDisabledDates = [], calSubstituteDates = [];
   async function fetchCalEvents() {
     try {
-      const [evs, settings] = await Promise.all([
-        sbFetch(`events?select=*&order=date.asc`),
-        sbFetch(`attendance_settings?select=*`)
-      ]);
+      const evs = await sbFetch(`events?select=*&order=date.asc`);
       calEvents = evs || [];
-      if (settings && Array.isArray(settings)) {
-        const disRow = settings.find(s => s.key === 'disabled_dates');
-        const subRow = settings.find(s => s.key === 'substitute_dates');
-        calDisabledDates = disRow ? (typeof disRow.value === 'string' ? JSON.parse(disRow.value) : (disRow.value || [])) : [];
-        calSubstituteDates = subRow ? (typeof subRow.value === 'string' ? JSON.parse(subRow.value) : (subRow.value || [])) : [];
+
+      // Attendance settings are optional for displaying calendar events.
+      // Keep the events if settings are unavailable to the public homepage.
+      calDisabledDates = [];
+      calSubstituteDates = [];
+      try {
+        const settings = await sbFetch(`attendance_settings?select=*`);
+        if (settings && Array.isArray(settings)) {
+          const disRow = settings.find(s => s.key === 'disabled_dates');
+          const subRow = settings.find(s => s.key === 'substitute_dates');
+          calDisabledDates = disRow ? (typeof disRow.value === 'string' ? JSON.parse(disRow.value) : (disRow.value || [])) : [];
+          calSubstituteDates = subRow ? (typeof subRow.value === 'string' ? JSON.parse(subRow.value) : (subRow.value || [])) : [];
+        }
+      } catch (settingsError) {
+        console.warn('Could not load attendance settings for calendar:', settingsError);
       }
     } catch { calEvents = []; calDisabledDates = []; calSubstituteDates = []; }
   }
