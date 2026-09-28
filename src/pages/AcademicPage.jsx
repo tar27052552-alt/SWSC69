@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, X, Save, Search, FileText, Upload, Download, Loader, AlertTriangle } from 'lucide-react';
+import { Plus, X, Save, Search, FileText, Upload, Download, Loader, AlertTriangle, RotateCw } from 'lucide-react';
 import { readSheet, writeSheet, updateSheet, uploadFileToDrive, deleteSheet } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 import { supabase } from '../supabaseClient';
@@ -25,6 +25,7 @@ export default function AcademicPage() {
   
   // Loading states
   const [loadingData, setLoadingData] = useState(true);
+  const [dataErrors, setDataErrors] = useState({});
   const [savingProj, setSavingProj] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState({});
   const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -40,50 +41,64 @@ export default function AcademicPage() {
   const [docForm, setDocForm] = useState({ title: '', category: 'ใบขอเวลาเรียน', customCategory: '', projectId: '', files: [] });
 
   const loadAcademicData = async () => {
-    try {
-      setLoadingData(true);
-      // โหลดโครงการ
-      const pData = await readSheet('Academic_Projects');
-      if (pData) {
-        const sortedProjects = pData.sort((a, b) => new Date(b.created_at || b.due_date) - new Date(a.created_at || a.due_date));
-        setProjects(sortedProjects.map(p => ({
-          id: p.id,
-          title: p.title,
-          category: p.category,
-          owner: p.owner,
-          budget: p.budget,
-          dueDate: p.due_date,
-          status: p.status,
-          desc: p.description
-        })));
-      }
+    setLoadingData(true);
+    setDataErrors({});
 
-      // โหลดเอกสาร
-      const dData = await readSheet('Academic_Docs');
-      if (dData) {
-        const sortedDocs = dData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        setDocs(sortedDocs.map(d => ({
-          id: d.id,
-          title: d.title,
-          category: d.category || 'อื่นๆ',
-          type: d.type,
-          size: d.size,
-          uploadedBy: d.uploaded_by,
-          date: d.date,
-          fileUrl: d.file_url
-        })));
-      }
+    const [projectsResult, docsResult, usersResult] = await Promise.allSettled([
+      readSheet('Academic_Projects'),
+      readSheet('Academic_Docs'),
+      supabase.from('user_directory').select('id, nickname, name, dept_id, role')
+    ]);
+    const nextErrors = {};
 
-      // โหลดรายชื่อผู้ใช้
-      const { data: uData } = await supabase.from('user_directory').select('id, nickname, name, dept_id, role');
-      if (uData) {
-        setUsersList(uData);
-      }
-    } catch (err) {
-      console.error('Error loading academic data from Sheets:', err);
-    } finally {
-      setLoadingData(false);
+    if (projectsResult.status === 'fulfilled' && Array.isArray(projectsResult.value)) {
+      const sortedProjects = [...projectsResult.value].sort((a, b) =>
+        new Date(b.created_at || b.due_date) - new Date(a.created_at || a.due_date)
+      );
+      setProjects(sortedProjects.map(p => ({
+        id: p.id,
+        title: p.title,
+        category: p.category,
+        owner: p.owner,
+        budget: p.budget,
+        dueDate: p.due_date,
+        status: p.status,
+        desc: p.description
+      })));
+    } else {
+      nextErrors.projects = projectsResult.status === 'rejected'
+        ? projectsResult.reason?.message || 'อ่านข้อมูลโครงการไม่สำเร็จ'
+        : 'รูปแบบข้อมูลโครงการไม่ถูกต้อง';
+      console.error('Error loading academic projects:', projectsResult.status === 'rejected' ? projectsResult.reason : 'Invalid response');
     }
+
+    if (docsResult.status === 'fulfilled' && Array.isArray(docsResult.value)) {
+      const sortedDocs = [...docsResult.value].sort((a, b) =>
+        new Date(b.created_at) - new Date(a.created_at)
+      );
+      setDocs(sortedDocs.map(d => ({
+        id: d.id,
+        title: d.title,
+        category: d.category || 'อื่นๆ',
+        type: d.type,
+        size: d.size,
+        uploadedBy: d.uploaded_by,
+        date: d.date,
+        fileUrl: d.file_url
+      })));
+    } else {
+      nextErrors.docs = docsResult.status === 'rejected'
+        ? docsResult.reason?.message || 'อ่านคลังเอกสารไม่สำเร็จ'
+        : 'รูปแบบข้อมูลเอกสารไม่ถูกต้อง';
+      console.error('Error loading academic documents:', docsResult.status === 'rejected' ? docsResult.reason : 'Invalid response');
+    }
+
+    if (usersResult.status === 'fulfilled' && !usersResult.value.error && usersResult.value.data) {
+      setUsersList(usersResult.value.data);
+    }
+
+    setDataErrors(nextErrors);
+    setLoadingData(false);
   };
 
   useEffect(() => {
@@ -381,19 +396,20 @@ export default function AcademicPage() {
           <div className="page-title">📚 ฝ่ายวิชาการ</div>
           <div className="page-subtitle">จัดการโครงการ เอกสารเผยแพร่ และแผนงานวิชาการประจำปี (เก็บแบบไร้ค่าใช้จ่ายบน Google Sheets & Drive)</div>
         </div>
-        {canManage && (
-          <div style={{ display: 'flex', gap: 8 }}>
-            {tab === 'projects' ? (
-              <button className="btn btn-primary" onClick={() => setProjModal(true)}>
-                <Plus size={14} /> เพิ่มโครงการ
-              </button>
-            ) : (
-              <button className="btn btn-primary" onClick={() => setDocModal(true)}>
-                <Upload size={14} /> อัปโหลดเอกสาร
-              </button>
-            )}
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn btn-gray" onClick={loadAcademicData} disabled={loadingData} aria-label="รีเฟรชข้อมูลฝ่ายวิชาการ">
+            <RotateCw size={14} className={loadingData ? 'animate-spin' : ''} /> รีเฟรชข้อมูล
+          </button>
+          {canManage && (tab === 'projects' ? (
+            <button className="btn btn-primary" onClick={() => setProjModal(true)}>
+              <Plus size={14} /> เพิ่มโครงการ
+            </button>
+          ) : (
+            <button className="btn btn-primary" onClick={() => setDocModal(true)}>
+              <Upload size={14} /> อัปโหลดเอกสาร
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Stats */}
@@ -499,6 +515,21 @@ export default function AcademicPage() {
 
           {/* Docs */}
           {tab === 'docs' && (() => {
+            if (dataErrors.docs) {
+              return (
+                <div className="card" role="alert" style={{ padding: 28, textAlign: 'center' }}>
+                  <AlertTriangle size={28} color="#d97706" style={{ marginBottom: 10 }} />
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>โหลดคลังเอกสารไม่สำเร็จ</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>
+                    ระบบยังยืนยันจำนวนเอกสารไม่ได้ ลองโหลดข้อมูลใหม่อีกครั้ง
+                  </div>
+                  <button className="btn btn-primary" onClick={loadAcademicData} disabled={loadingData}>
+                    ลองโหลดใหม่
+                  </button>
+                </div>
+              );
+            }
+
             const docsByProject = {};
             const generalDocs = [];
             const certDocs = [];
