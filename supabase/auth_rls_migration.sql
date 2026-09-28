@@ -425,10 +425,11 @@ CREATE POLICY users_self_update ON public.users FOR UPDATE TO authenticated
   WITH CHECK (id = (SELECT private.current_council_user_id()));
 REVOKE UPDATE ON public.users FROM authenticated;
 GRANT UPDATE (name, nickname, phone, avatar) ON public.users TO authenticated;
+-- The users RLS policy already removes banned rows. Keep the view free of
+-- extra predicates so it only needs the public column grants below.
 CREATE OR REPLACE VIEW public.user_directory WITH (security_invoker = true) AS
   SELECT id, name, nickname, dept_id, role, "position", avatar_color
-  FROM public.users
-  WHERE banned IS NOT TRUE;
+  FROM public.users;
 GRANT SELECT ON public.user_directory TO anon, authenticated;
 REVOKE ALL ON FUNCTION private.current_council_user_id() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION private.current_council_role() FROM PUBLIC, anon;
