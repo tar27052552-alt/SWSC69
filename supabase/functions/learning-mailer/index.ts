@@ -26,11 +26,24 @@ Deno.serve(async req => {
       if (userError || !user.user?.email || !user.user.email_confirmed_at) {
         throw userError || new Error('Learner email unavailable');
       }
+      const { data: certificate, error: certificateError } = await admin
+        .from('learning_certificates').select('edition_id').eq('id', job.certificate_id).single();
+      if (certificateError) throw certificateError;
+      let templateId: string | null = null;
+      if (certificate.edition_id === 'civic-dna-2026') {
+        const { data: subject, error: subjectError } = await admin
+          .from('learning_subject_editions').select('template_path,template_approved')
+          .eq('edition_id', certificate.edition_id).eq('subject_id', job.subject_id).single();
+        if (subjectError || !subject?.template_approved || !subject.template_path) {
+          throw subjectError || new Error('Signed certificate template unavailable');
+        }
+        templateId = subject.template_path;
+      }
       return jsonResponse({ job: {
         jobId: job.job_id, certificateId: job.certificate_id,
         subjectId: job.subject_id, fullName: job.recipient_name,
         certificateNumber: job.certificate_number, issuedAt: job.issued_at,
-        email: user.user.email, hasPdf: Boolean(job.pdf_path),
+        email: user.user.email, hasPdf: Boolean(job.pdf_path), templateId,
       } });
     }
     const jobId = String(body.jobId || '');

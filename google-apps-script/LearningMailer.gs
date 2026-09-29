@@ -23,7 +23,7 @@ function learningMailerRequest_(payload) {
 
 function learningCertificatePdf_(job) {
   const key = 'LEARNING_TEMPLATE_' + job.subjectId.replace('-', '_').toUpperCase();
-  const templateId = PropertiesService.getScriptProperties().getProperty(key);
+  const templateId = job.templateId || PropertiesService.getScriptProperties().getProperty(key);
   if (!templateId) throw new Error('Missing signed template for ' + job.subjectId);
   const copy = DriveApp.getFileById(templateId).makeCopy('Temporary ' + job.certificateNumber);
   try {

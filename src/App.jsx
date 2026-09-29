@@ -34,6 +34,7 @@ const SubmitNewsPage = lazy(() => import('./pages/SubmitNewsPage'));
 const SuggestionsPage = lazy(() => import('./pages/SuggestionsPage'));
 const ManageVideosPage = lazy(() => import('./pages/ManageVideosPage'));
 const ManagePoliciesPage = lazy(() => import('./pages/ManagePoliciesPage'));
+const LearningAdminPage = lazy(() => import('./pages/LearningAdminPage'));
 
 // A simple fallback UI while lazy components are loading
 const PageLoader = () => (
@@ -143,6 +144,7 @@ function AppRoutes() {
           <Route path="/admin-announcements" element={<PrivateRoute><AnnouncementsPage /></PrivateRoute>} />
           <Route path="/admin-videos" element={<PrivateRoute><ManageVideosPage /></PrivateRoute>} />
           <Route path="/admin-policies" element={<PrivateRoute><ManagePoliciesPage /></PrivateRoute>} />
+          <Route path="/admin-learning" element={<PrivateRoute><LearningAdminPage /></PrivateRoute>} />
           <Route path="/discipline" element={<PrivateRoute><DisciplinePage /></PrivateRoute>} />
           <Route path="/my-fines" element={<PrivateRoute><MyFinesPage /></PrivateRoute>} />
           <Route path="/finance" element={<PrivateRoute><FinancePage /></PrivateRoute>} />
