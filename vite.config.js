@@ -28,6 +28,7 @@ export default defineConfig({
       input: {
         main: resolve('./index.html'),
         admin: resolve('./admin/index.html'),
+        learn: resolve('./learn/index.html'),
       },
     },
   },

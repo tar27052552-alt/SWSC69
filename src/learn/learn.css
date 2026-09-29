@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&display=swap');
+
+:root { font-family: 'Kanit', sans-serif; color: #1c1730; background: #f6f5fb; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .55; }
+a { color: #5b35c8; }
+.learn-app { min-height: 100vh; }
+.learn-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 16px max(20px, calc((100vw - 1160px) / 2)); background: #fff; box-shadow: 0 2px 20px #24174612; }
+.learn-brand { text-decoration: none; display: flex; align-items: baseline; gap: 10px; color: #4e2386; font-weight: 700; white-space: nowrap; }
+.learn-brand span { font-size: 24px; }
+.learn-brand small { font-size: 14px; font-weight: 500; }
+.learn-header nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.learn-header nav button { border: 0; background: #f2edff; color: #4f288e; border-radius: 999px; padding: 8px 14px; }
+.learn-header nav button:hover { background: #e1d5ff; }
+.learn-main { max-width: 1160px; margin: auto; padding: 28px 20px 70px; }
+.learn-hero { padding: 44px clamp(24px, 6vw, 70px); border-radius: 28px; color: #fff; background: linear-gradient(125deg, #241449, #583299 60%, #8659df); }
+.learn-eyebrow { color: #ffd35e; font-weight: 700; letter-spacing: .05em; }
+.learn-hero h1 { font-size: clamp(28px, 5vw, 48px); line-height: 1.2; margin: 8px 0 10px; }
+.learn-hero p { color: #ede4ff; margin: 0; max-width: 650px; }
+.learn-panel, .learn-card { background: #fff; border: 1px solid #e6e1f0; border-radius: 20px; box-shadow: 0 7px 25px #2417460b; }
+.learn-panel { padding: 24px; margin-top: 22px; }
+.learn-auth { display: grid; grid-template-columns: 1fr minmax(240px, 360px); gap: 32px; align-items: center; }
+.learn-auth h2, .learn-section h2 { margin: 0 0 7px; }
+.learn-auth p { margin: 0; color: #625c70; }
+.learn-auth form { display: grid; gap: 9px; }
+.learn-auth input { width: 100%; border: 1px solid #d9d1e7; border-radius: 10px; padding: 11px 13px; }
+.learn-auth button, .learn-quiz form > button, .learn-result button { border: 0; border-radius: 10px; padding: 11px 17px; background: #6241d6; color: #fff; font-weight: 600; }
+.learn-notice { margin-top: 18px; padding: 12px 16px; background: #fff8e5; border: 1px solid #f6d888; border-radius: 12px; }
+.learn-section { margin-top: 35px; }
+.learn-section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.learn-section-heading span { color: #6f637e; }
+.learn-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.learn-card { padding: 23px; display: flex; flex-direction: column; }
+.learn-number { color: #7947bd; font-weight: 700; }
+.learn-card h3 { font-size: 21px; line-height: 1.35; margin: 8px 0; }
+.learn-card p { color: #625c70; margin: 6px 0; }
+.learn-material { border-top: 1px solid #eee8f4; margin-top: 14px; padding-top: 12px; }
+.learn-material strong { display: block; }
+.learn-card-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: auto; padding-top: 20px; }
+.learn-card-actions button { border: 1px solid #d7c8f5; background: #f4efff; color: #4f288e; border-radius: 9px; padding: 9px 13px; }
+.learn-card-actions button:last-child { background: #6241d6; color: #fff; }
+.learn-quiz { max-width: 800px; margin: 26px auto; }
+.learn-back { border: 0; background: transparent; color: #5b35c8; padding: 0; }
+.learn-quiz h2 { line-height: 1.4; }
+.learn-quiz fieldset { border: 1px solid #e1dbea; border-radius: 14px; padding: 16px; margin: 18px 0; }
+.learn-quiz legend { font-weight: 600; padding: 0 6px; }
+.learn-answer { display: flex; gap: 10px; padding: 7px 0; cursor: pointer; }
+.learn-answer input { accent-color: #6241d6; }
+.learn-result { background: #f4efff; padding: 20px; border-radius: 14px; }
+.learn-old-cert { margin-top: 28px; color: #625c70; }
+@media (max-width: 700px) {
+  .learn-header { padding: 14px 18px; align-items: flex-start; flex-direction: column; }
+  .learn-header nav { width: 100%; }
+  .learn-header nav button { font-size: 14px; }
+  .learn-auth, .learn-grid { grid-template-columns: 1fr; }
+  .learn-main { padding: 17px 14px 50px; }
+  .learn-hero { padding: 32px 22px; border-radius: 20px; }
+  .learn-panel, .learn-card { padding: 20px; }
+}
