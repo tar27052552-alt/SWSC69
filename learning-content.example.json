@@ -1,9 +1,9 @@
 {
   "subjects": [
-    {"id":"civic-1","title":"","summary":"","sections":[],"pre":[],"post":[]},
-    {"id":"civic-2","title":"","summary":"","sections":[],"pre":[],"post":[]},
-    {"id":"civic-3","title":"","summary":"","sections":[],"pre":[],"post":[]},
-    {"id":"civic-4","title":"","summary":"","sections":[],"pre":[],"post":[]},
-    {"id":"civic-5","title":"","summary":"","sections":[],"pre":[],"post":[]}
+    {"id":"civic-1","title":"","summary":"","sections":[],"quiz":[]},
+    {"id":"civic-2","title":"","summary":"","sections":[],"quiz":[]},
+    {"id":"civic-3","title":"","summary":"","sections":[],"quiz":[]},
+    {"id":"civic-4","title":"","summary":"","sections":[],"quiz":[]},
+    {"id":"civic-5","title":"","summary":"","sections":[],"quiz":[]}
   ]
 }

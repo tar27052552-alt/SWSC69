@@ -243,11 +243,11 @@ grant execute on function public.claim_learning_delivery() to service_role;
 
 create or replace function public.import_learning_subject(
   p_subject_id text, p_title text, p_summary text,
-  p_sections jsonb, p_pre jsonb, p_post jsonb
+  p_sections jsonb, p_quiz jsonb
 ) returns void
 language plpgsql security definer set search_path = ''
 as $$
-declare v_phase text; v_items jsonb; v_item jsonb; v_ordinal integer;
+declare v_phase text; v_item jsonb; v_ordinal integer;
 begin
   if jsonb_typeof(p_sections) <> 'array' or
     jsonb_array_length(p_sections) = 0 then raise exception 'Missing sections'; end if;
@@ -256,13 +256,12 @@ begin
   where id = p_subject_id;
   if not found then raise exception 'Unknown subject'; end if;
   delete from learning_private.quiz_questions where subject_id = p_subject_id;
+  if jsonb_typeof(p_quiz) <> 'array' or jsonb_array_length(p_quiz) = 0 then
+    raise exception 'Missing questions';
+  end if;
   foreach v_phase in array array['pre', 'post'] loop
-    v_items := case when v_phase = 'pre' then p_pre else p_post end;
-    if jsonb_typeof(v_items) <> 'array' or jsonb_array_length(v_items) = 0 then
-      raise exception 'Missing questions';
-    end if;
     v_ordinal := 0;
-    for v_item in select value from jsonb_array_elements(v_items) loop
+    for v_item in select value from jsonb_array_elements(p_quiz) loop
       v_ordinal := v_ordinal + 1;
       insert into learning_private.quiz_questions
         (subject_id, phase, ordinal, prompt, options, correct_option)
@@ -272,9 +271,9 @@ begin
   end loop;
 end;
 $$;
-revoke all on function public.import_learning_subject(text, text, text, jsonb, jsonb, jsonb)
+revoke all on function public.import_learning_subject(text, text, text, jsonb, jsonb)
   from public, anon, authenticated;
-grant execute on function public.import_learning_subject(text, text, text, jsonb, jsonb, jsonb)
+grant execute on function public.import_learning_subject(text, text, text, jsonb, jsonb)
   to service_role;
 
 create or replace function public.correct_learning_certificate_name(

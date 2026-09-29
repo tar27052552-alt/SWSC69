@@ -17,17 +17,14 @@ for (let index = 0; index < 5; index++) {
       !Array.isArray(subject.sections) || subject.sections.length === 0) {
     throw new Error(`Subject ${index + 1} has missing content`);
   }
-  for (const phase of ['pre', 'post']) {
-    const questions = subject[phase];
-    if (!Array.isArray(questions) || questions.length === 0) {
-      throw new Error(`${subject.id} is missing ${phase} questions`);
-    }
-    for (const question of questions) {
-      if (!question.prompt || !Array.isArray(question.options) ||
-        question.options.length < 2 || !Number.isInteger(question.correctOption) ||
-        question.correctOption < 0 || question.correctOption >= question.options.length) {
-        throw new Error(`${subject.id} has an invalid ${phase} question`);
-      }
+  if (!Array.isArray(subject.quiz) || subject.quiz.length === 0) {
+    throw new Error(`${subject.id} is missing quiz questions`);
+  }
+  for (const question of subject.quiz) {
+    if (!question.prompt || !Array.isArray(question.options) ||
+      question.options.length < 2 || !Number.isInteger(question.correctOption) ||
+      question.correctOption < 0 || question.correctOption >= question.options.length) {
+      throw new Error(`${subject.id} has an invalid question`);
     }
   }
 }
@@ -35,9 +32,9 @@ for (let index = 0; index < 5; index++) {
 for (const subject of data.subjects) {
   const { error } = await client.rpc('import_learning_subject', {
     p_subject_id: subject.id, p_title: subject.title, p_summary: subject.summary,
-    p_sections: subject.sections, p_pre: subject.pre, p_post: subject.post,
+    p_sections: subject.sections, p_quiz: subject.quiz,
   });
   if (error) throw error;
-  console.log(`Imported ${subject.id}: ${subject.pre.length + subject.post.length} questions`);
+  console.log(`Imported ${subject.id}: ${subject.quiz.length} questions for both phases`);
 }
 console.log('Import complete. Subjects remain unpublished until templates and delivery are checked.');
