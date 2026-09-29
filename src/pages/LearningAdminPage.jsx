@@ -29,6 +29,9 @@ export default function LearningAdminPage() {
   const [quiz, setQuiz] = useState([]);
   const [tab, setTab] = useState('content');
   const [note, setNote] = useState({ sourceReference: '', proposedChange: '', rationale: '' });
+  const [certificateNumber, setCertificateNumber] = useState('');
+  const [certificateLookup, setCertificateLookup] = useState(null);
+  const [correctedName, setCorrectedName] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
 
@@ -64,6 +67,25 @@ export default function LearningAdminPage() {
     } catch (error) { setNotice(error.message); }
     finally { setBusy(false); }
   };
+  async function findCertificate() {
+    setBusy(true); setNotice(''); setCertificateLookup(null);
+    try {
+      const result = await adminRequest({ action: 'lookup_certificate', certificateNumber });
+      setCertificateLookup(result.certificate);
+      setCorrectedName(result.certificate.recipient_name);
+    } catch (error) { setNotice(error.message); }
+    finally { setBusy(false); }
+  }
+  async function correctCertificate() {
+    setBusy(true); setNotice('');
+    try {
+      const result = await adminRequest({ action: 'correct_certificate',
+        certificateNumber, fullName: correctedName });
+      setCertificateLookup(null);
+      setNotice(`แก้ชื่อแล้ว กำลังสร้างและส่ง PDF ใหม่ ${result.regenerated} ใบ`);
+    } catch (error) { setNotice(error.message); }
+    finally { setBusy(false); }
+  }
   async function upload(file, kind) {
     const signed = await adminRequest({ action: 'sign_upload', subjectId,
       kind, mime: file.type });
@@ -255,6 +277,21 @@ export default function LearningAdminPage() {
           <button disabled={busy} onClick={() => doAction({ action: 'set_template', subjectId,
             templateId: draft.templateId, approved: true }, 'บันทึกแบบใบที่เซ็นแล้ว')}>
             บันทึกและอนุมัติแบบใบวิชานี้</button>
+          <div className="learning-admin-note"><h3>แก้ชื่อบนใบที่ออกแล้ว</h3>
+            <label className="learning-admin-field">เลขเกียรติบัตร<input
+              value={certificateNumber} onChange={event => {
+                setCertificateNumber(event.target.value); setCertificateLookup(null);
+              }} placeholder="SWSC-DNA-2569-000001" /></label>
+            <button disabled={busy} onClick={findCertificate}>ค้นหาใบ</button>
+            {certificateLookup && <div><p>วิชา {certificateLookup.subject_id} ·
+              ชื่อปัจจุบัน {certificateLookup.recipient_name}</p>
+              <label className="learning-admin-field">ชื่อที่แก้ไข<input value={correctedName}
+                onChange={event => setCorrectedName(event.target.value)} /></label>
+              <p>การแก้ชื่อจะสร้างและส่ง PDF ใหม่ให้ทุกวิชาที่ผู้เรียนคนนี้ได้รับใบแล้ว</p>
+              <button disabled={busy || correctedName.trim() === certificateLookup.recipient_name}
+                onClick={correctCertificate}>บันทึกชื่อและสร้างใบใหม่</button>
+            </div>}
+          </div>
         </section>}
       </div>
     </div>

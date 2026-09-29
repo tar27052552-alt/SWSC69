@@ -63,6 +63,23 @@ Deno.serve(async req => {
     const body = await req.json();
     const action = String(body.action || '');
     const subjectId = String(body.subjectId || '');
+    if (action === 'lookup_certificate' || action === 'correct_certificate') {
+      const number = String(body.certificateNumber || '').trim();
+      if (!/^SWSC-DNA-\d{4}-\d{6}$/.test(number)) return fail('เลขเกียรติบัตรไม่ถูกต้อง');
+      const { data: certificate, error } = await admin.from('learning_certificates')
+        .select('id,certificate_number,recipient_name,subject_id,issued_at,email_status')
+        .eq('edition_id', EDITION).eq('certificate_number', number).maybeSingle();
+      if (error) throw error;
+      if (!certificate) return fail('ไม่พบเกียรติบัตร', 404);
+      if (action === 'lookup_certificate') return jsonResponse({ certificate });
+      const fullName = String(body.fullName || '').trim().replace(/\s+/g, ' ');
+      if (fullName.length < 2 || fullName.length > 120) return fail('กรุณาระบุชื่อจริง 2–120 ตัวอักษร');
+      const { data: regenerated, error: correctionError } = await admin.rpc(
+        'correct_learning_v2_certificate_name',
+        { p_certificate_id: certificate.id, p_full_name: fullName });
+      if (correctionError) throw correctionError;
+      return jsonResponse({ corrected: true, regenerated });
+    }
     if (action === 'list') {
       const [{ data: edition, error: editionError },
         { data: subjects, error: subjectError },
