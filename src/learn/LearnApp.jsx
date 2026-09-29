@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { lessonCatalog } from './lessonCatalog.js';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -22,7 +23,9 @@ async function learningRequest(body) {
 
 export default function LearnApp() {
   const [session, setSession] = useState(null);
-  const [subjects, setSubjects] = useState([]);
+  const subjects = lessonCatalog;
+  const [publishedIds, setPublishedIds] = useState([]);
+  const [activeResource, setActiveResource] = useState(null);
   const [selected, setSelected] = useState(null);
   const [phase, setPhase] = useState('post');
   const [questions, setQuestions] = useState([]);
@@ -48,11 +51,10 @@ export default function LearnApp() {
       }
     });
     supabase.from('learning_subjects')
-      .select('id,ordinal,title,summary,sections,source_url')
+      .select('id')
       .eq('published', true).order('ordinal')
       .then(({ data, error }) => {
-        if (error) setNotice('ยังไม่สามารถโหลดบทเรียนได้');
-        else setSubjects(data || []);
+        if (!error) setPublishedIds((data || []).map(subject => subject.id));
       });
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -213,23 +215,46 @@ export default function LearnApp() {
               <h2>วิชาทั้งหมด</h2>
               <span>{subjects.length} วิชา</span>
             </div>
-            {subjects.length === 0 && <div className="learn-panel">กำลังเตรียมบทเรียนและแบบทดสอบ กรุณากลับมาอีกครั้ง</div>}
             <div className="learn-grid">
               {subjects.map(subject => (
                 <article className="learn-card" key={subject.id}>
                   <div className="learn-number">วิชาที่ {subject.ordinal}</div>
                   <h3>{subject.title}</h3>
                   <p>{subject.summary || 'เรียนรู้เนื้อหาและสื่อประกอบก่อนทำแบบทดสอบ'}</p>
-                  {(subject.sections || []).map((section, index) => (
-                    <div className="learn-material" key={index}>
-                      <strong>{section.title}</strong>
-                      {section.text && <p>{section.text}</p>}
-                      {section.url && <a href={section.url} target="_blank" rel="noreferrer">เปิดสื่อประกอบ ↗</a>}
-                    </div>
+                  <div className="learn-material"><strong>สิ่งที่จะได้เรียนรู้</strong>
+                    <ul>{subject.topics.map(topic => <li key={topic}>{topic}</li>)}</ul>
+                  </div>
+                  <details className="learn-material">
+                    <summary>จุดประสงค์การเรียนรู้</summary>
+                    <ul>{subject.objectives.map(objective => <li key={objective}>{objective}</li>)}</ul>
+                  </details>
+                  {['document', 'video'].map(type => (
+                    <details className="learn-material" key={type}>
+                      <summary>{type === 'document' ? '📄 เอกสารประกอบ' : '🎬 วีดิทัศน์'} ({subject.resources.filter(resource => resource.type === type).length})</summary>
+                      <div className="learn-resource-list">
+                        {subject.resources.filter(resource => resource.type === type).map(resource => (
+                          <div key={resource.url}>
+                            <button type="button" onClick={() => setActiveResource(
+                              activeResource?.url === resource.url ? null : { ...resource, subjectId: subject.id }
+                            )}>{resource.title}</button>
+                            <a href={resource.url} target="_blank" rel="noreferrer">เปิดต้นฉบับ ↗</a>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
                   ))}
+                  {activeResource?.subjectId === subject.id && (
+                    <div className="learn-viewer">
+                      <strong>{activeResource.title}</strong>
+                      <iframe title={activeResource.title} src={activeResource.embedUrl}
+                        loading="lazy" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+                      <a href={activeResource.url} target="_blank" rel="noreferrer">หากสื่อไม่แสดง เปิดต้นฉบับ ↗</a>
+                    </div>
+                  )}
+                  {!publishedIds.includes(subject.id) && <p className="learn-pending">แบบทดสอบกำลังเตรียมเปิดใช้งาน</p>}
                   <div className="learn-card-actions">
-                    <button type="button" disabled={!canQuiz || busy} onClick={() => openQuiz(subject, 'pre')}>ทดสอบก่อนเรียน</button>
-                    <button type="button" disabled={!canQuiz || busy} onClick={() => openQuiz(subject, 'post')}>ทดสอบหลังเรียน</button>
+                    <button type="button" disabled={!canQuiz || busy || !publishedIds.includes(subject.id)} onClick={() => openQuiz(subject, 'pre')}>ทดสอบก่อนเรียน</button>
+                    <button type="button" disabled={!canQuiz || busy || !publishedIds.includes(subject.id)} onClick={() => openQuiz(subject, 'post')}>ทดสอบหลังเรียน</button>
                   </div>
                 </article>
               ))}
