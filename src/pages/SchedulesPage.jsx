@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Edit2, Lock, Unlock, ChevronDown, Camera } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
-import { DUTY_LABELS, getThaiTodayStr, getThaiDayFromDateStr, resolveEffectiveSubstitute } from '../lib/dutyHelper';
+import { DUTY_LABELS, getThaiTodayStr, getThaiWeekRange, getThaiDayFromDateStr, resolveEffectiveSubstitute } from '../lib/dutyHelper';
 import logoUrl from '../assets/logo.png';
 const ALL_NAMES = [
   'อ้วน', 'ใบหม่อน', 'กร', 'แปม', 'เจมส์', 'มิก', 'ณโม', 'โฟกัส', 'น้ำภัท', 'โนโน', 'คิว', 'พอใจ',
@@ -41,6 +41,7 @@ const DayBadge = ({ day }) => {
 
 const TagList = ({ names, day, dutyType, swaps = [] }) => {
   const todayStr = getThaiTodayStr();
+  const { start: weekStartStr, end: weekEndStr } = getThaiWeekRange();
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', alignItems: 'center' }}>
@@ -54,7 +55,8 @@ const TagList = ({ names, day, dutyType, swaps = [] }) => {
         // Find swaps for this person and duty type
         const matchingSwaps = (swaps || []).filter(s => {
           if (s.original_nickname?.trim() !== trimmedName) return false;
-          if (dutyType && s.duty_type !== dutyType && !s.duty_type.startsWith(dutyType)) return false;
+          if (dutyType && s.duty_type !== dutyType && !s.duty_type?.startsWith(dutyType)) return false;
+          if (s.date < weekStartStr || s.date > weekEndStr) return false;
           const sDay = getThaiDayFromDateStr(s.date);
           return sDay === day;
         });

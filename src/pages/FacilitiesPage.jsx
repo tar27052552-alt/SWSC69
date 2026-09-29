@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { Plus, CheckCircle, Clock, XCircle, Eye, Trash2 } from 'lucide-react';
+import { Plus, X, Save } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import CollapsibleSection from '../components/CollapsibleSection';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';

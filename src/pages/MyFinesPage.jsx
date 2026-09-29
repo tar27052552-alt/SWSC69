@@ -147,15 +147,8 @@ export default function MyFinesPage() {
     setSubmitting(true);
     setLoadingStatus('กำลังตรวจสอบความถูกต้องของสลิปกับธนาคาร...');
     try {
-      // 1. Verify slip via GAS Proxy to bypass CORS
-      const apiKey = import.meta.env.VITE_SLIPOK_API_KEY;
-      const branchId = import.meta.env.VITE_SLIPOK_BRANCH_ID;
-
-      if (!apiKey || !branchId) {
-        throw new Error('ระบบตรวจสอบสลิปยังไม่ได้รับการตั้งค่า (Missing SlipOK API Keys)');
-      }
-
-      const slipOkResult = await verifySlipViaGAS(branchId, apiKey, slipPreview, "");
+      // Verify the slip on the server; the SlipOK key never enters browser code.
+      const slipOkResult = await verifySlipViaGAS(slipPreview, "");
 
       if (!slipOkResult.success) {
         let errorMsg = slipOkResult.message || 'สลิปไม่ถูกต้อง';
@@ -235,14 +228,7 @@ export default function MyFinesPage() {
     setSubmitting(true);
     setLoadingStatus('กำลังตรวจสอบความถูกต้องของสลิปกับธนาคาร...');
     try {
-      const apiKey = import.meta.env.VITE_SLIPOK_API_KEY;
-      const branchId = import.meta.env.VITE_SLIPOK_BRANCH_ID;
-
-      if (!apiKey || !branchId) {
-        throw new Error('ระบบตรวจสอบสลิปยังไม่ได้รับการตั้งค่า (Missing SlipOK API Keys)');
-      }
-
-      const slipOkResult = await verifySlipViaGAS(branchId, apiKey, slipPreview, "");
+      const slipOkResult = await verifySlipViaGAS(slipPreview, "");
 
       if (!slipOkResult.success) {
         let errorMsg = slipOkResult.message || 'สลิปไม่ถูกต้อง';
@@ -314,15 +300,8 @@ export default function MyFinesPage() {
     setSubmitting(true);
     setLoadingStatus('กำลังตรวจสอบความถูกต้องของสลิปกับธนาคาร...');
     try {
-      // 1. Verify slip via GAS Proxy to bypass CORS
-      const apiKey = import.meta.env.VITE_SLIPOK_API_KEY;
-      const branchId = import.meta.env.VITE_SLIPOK_BRANCH_ID;
-
-      if (!apiKey || !branchId) {
-        throw new Error('ระบบตรวจสอบสลิปยังไม่ได้รับการตั้งค่า (Missing SlipOK API Keys)');
-      }
-
-      const slipOkResult = await verifySlipViaGAS(branchId, apiKey, slipPreview, "");
+      // Verify the slip on the server; the SlipOK key never enters browser code.
+      const slipOkResult = await verifySlipViaGAS(slipPreview, "");
 
       if (!slipOkResult.success) {
         let errorMsg = slipOkResult.message || 'สลิปไม่ถูกต้อง';

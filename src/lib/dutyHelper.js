@@ -28,6 +28,25 @@ export function getThaiTodayStr(dateInput = new Date()) {
 }
 
 /**
+ * Returns the Monday-Sunday date range for the current week in Thailand.
+ */
+export function getThaiWeekRange(dateInput = new Date()) {
+  const todayStr = getThaiTodayStr(dateInput);
+  const [year, month, day] = todayStr.split('-').map(Number);
+  const todayUtc = new Date(Date.UTC(year, month - 1, day));
+  const daysSinceMonday = (todayUtc.getUTCDay() + 6) % 7;
+  const mondayUtc = new Date(todayUtc);
+  mondayUtc.setUTCDate(todayUtc.getUTCDate() - daysSinceMonday);
+  const sundayUtc = new Date(mondayUtc);
+  sundayUtc.setUTCDate(mondayUtc.getUTCDate() + 6);
+
+  return {
+    start: mondayUtc.toISOString().slice(0, 10),
+    end: sundayUtc.toISOString().slice(0, 10),
+  };
+}
+
+/**
  * Converts a YYYY-MM-DD string to Thai Day name ('จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์')
  */
 export function getThaiDayFromDateStr(dateStr) {

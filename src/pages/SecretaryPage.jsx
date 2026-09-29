@@ -289,7 +289,9 @@ export default function SecretaryPage() {
         const day = String(d.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       }
-    } catch (e) {}
+    } catch {
+      // Fall through to the string-based date parsing fallback below.
+    }
     if (typeof dateVal === 'string') {
       const match = dateVal.match(/^(\d{4}-\d{2}-\d{2})/);
       if (match) return match[1];

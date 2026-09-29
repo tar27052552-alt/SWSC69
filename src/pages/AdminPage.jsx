@@ -4,10 +4,10 @@ import { DEPARTMENTS, ROLES } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import { 
   Search, Plus, Edit2, Trash2, X, Save, Shield,
-  UserCheck, ShieldAlert, Camera, Users, Award, RefreshCw,
+  ShieldAlert, Camera, Users, Award, RefreshCw,
   CheckCircle2, Lock, UserX, AlertTriangle, KeyRound, Megaphone, Target
 } from 'lucide-react';
-import { supabaseSelect, supabaseUpdate } from '../lib/supabaseRest';
+import { supabaseDelete, supabaseSelect, supabaseUpdate } from '../lib/supabaseRest';
 import { supabase } from '../supabaseClient';
 
 const ROLE_LABELS = { admin: 'ผู้ดูแลระบบ', president: 'ประธานสภาฯ', dept_head: 'หัวหน้าฝ่าย', member: 'สมาชิก' };
@@ -66,7 +66,7 @@ export default function AdminPage() {
     if (isAdmin) {
       loadUsers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [isAdmin]);
 
   const filteredUsers = useMemo(() => {

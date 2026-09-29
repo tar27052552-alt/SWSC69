@@ -84,7 +84,9 @@ export default function SubmitNewsPage() {
       try {
         const parsed = JSON.parse(dutyMembers);
         if (Array.isArray(parsed)) return parsed;
-      } catch (e) {}
+      } catch {
+        // Fall back to treating the original string as one duty member.
+      }
       return [dutyMembers];
     }
     return [];

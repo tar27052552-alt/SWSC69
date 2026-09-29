@@ -296,7 +296,7 @@ export default function ManagePoliciesPage() {
 
   const handleEdit = (p) => {
     setEditingId(p.id);
-    let hText = '';
+    let hText;
     try {
       const parsed = Array.isArray(p.highlights) ? p.highlights : (typeof p.highlights === 'string' ? JSON.parse(p.highlights) : []);
       hText = parsed.join('\n');
@@ -878,7 +878,7 @@ export default function ManagePoliciesPage() {
               gap: 22
             }}>
               {filteredPolicies.map((p) => {
-                let highlightsList = [];
+                let highlightsList;
                 try {
                   highlightsList = Array.isArray(p.highlights) 
                     ? p.highlights 

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Plus, X, Save, Edit2, Search, Trash2, Camera } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
-import { uploadFileToDrive, transformGoogleDriveUrl, writeSheet } from '../lib/googleDriveUpload';
+import { uploadFileToDrive, transformGoogleDriveUrl, writeSheet, readSheet, syncDriveFolder, deleteCertGroup, renameCertGroup } from '../lib/googleDriveUpload';
 import logoUrl from '../assets/logo.png';
 import CollapsibleSection from '../components/CollapsibleSection';
 
@@ -168,32 +168,20 @@ export default function AVPage() {
   const loadCertHistory = async () => {
     setLoadingCertHistory(true);
     try {
-      const GAS_URL = import.meta.env.VITE_GAS_URL;
-      const res = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Docs" })
+      const certRows = await readSheet('Academic_Docs');
+      const certs = certRows.filter(d => d.type && d.type.startsWith('เกียรติบัตร'));
+      const groups = {};
+      certs.forEach(c => {
+        const cat = c.type.includes('|') ? c.type.split('|')[1] : (c.category || 'ไม่ได้ระบุกิจกรรม');
+        if (!groups[cat]) groups[cat] = { count: 0, date: c.date, uploader: c.uploaded_by };
+        groups[cat].count++;
       });
-      const resJson = await res.json();
-      if (resJson.success) {
-        const certs = resJson.data.filter(d => d.type && d.type.startsWith('เกียรติบัตร'));
-        // Group by category
-        const groups = {};
-        certs.forEach(c => {
-          const cat = c.type.includes('|') ? c.type.split('|')[1] : (c.category || 'ไม่ได้ระบุกิจกรรม');
-          if (!groups[cat]) groups[cat] = { count: 0, date: c.date, uploader: c.uploaded_by };
-          groups[cat].count++;
-        });
-        
-        const historyArr = Object.keys(groups).map(k => ({
-          name: k,
-          count: groups[k].count,
-          date: groups[k].date,
-          uploader: groups[k].uploader
-        }));
-        
-        setCertHistory(historyArr);
-      }
+      setCertHistory(Object.keys(groups).map(k => ({
+        name: k,
+        count: groups[k].count,
+        date: groups[k].date,
+        uploader: groups[k].uploader
+      })));
     } catch (err) {
       console.error("Failed to load cert history:", err);
     } finally {
@@ -203,16 +191,8 @@ export default function AVPage() {
 
   const loadProjectsList = async () => {
     try {
-      const GAS_URL = import.meta.env.VITE_GAS_URL;
-      const res = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Projects" })
-      });
-      const resJson = await res.json();
-      if (resJson.success && resJson.data) {
-        setProjectsList(resJson.data);
-      }
+      const projects = await readSheet('Academic_Projects');
+      setProjectsList(projects);
     } catch (err) {
       console.error("Failed to load projects list:", err);
     }
@@ -309,7 +289,7 @@ export default function AVPage() {
           const file = obecForm.imageFiles[0];
           const base64 = await toBase64(file);
           const fileExt = file.name.split('.').pop();
-          const cleanTitle = (obecForm.title.trim() || `Obec Line ข่าวที่ ${nextNum}`).replace(/[\/\\?%*:|"<>]/g, '-');
+          const cleanTitle = (obecForm.title.trim() || `Obec Line ข่าวที่ ${nextNum}`).replace(/[/\\?%*:|"<>]/g, '-');
           const fileName = `${cleanTitle}.${fileExt}`;
           const uploadResult = await uploadFileToDrive(base64, fileName, 'obec');
           if (uploadResult && uploadResult.url) {
@@ -346,7 +326,7 @@ export default function AVPage() {
           }
           
           const fileExt = file.name.split('.').pop();
-          const cleanTitle = itemTitle.replace(/[\/\\?%*:|"<>]/g, '-');
+          const cleanTitle = itemTitle.replace(/[/\\?%*:|"<>]/g, '-');
           const fileName = `${cleanTitle}.${fileExt}`;
           const uploadResult = await uploadFileToDrive(base64, fileName, 'obec');
           if (uploadResult && uploadResult.url) {
@@ -457,7 +437,7 @@ export default function AVPage() {
         
         const base64 = await toBase64(newsForm.imageFile);
         const fileExt = newsForm.imageFile.name.split('.').pop();
-        const cleanHeadline = (newsForm.headline.trim() || 'news').replace(/[\/\\?%*:|"<>]/g, '-');
+        const cleanHeadline = (newsForm.headline.trim() || 'news').replace(/[/\\?%*:|"<>]/g, '-');
         const fileName = `${cleanHeadline}.${fileExt}`;
         const subFolderName = newsForm.headline.trim() || 'ข่าวไม่มีหัวข้อ';
         const uploadResult = await uploadFileToDrive(base64, fileName, 'pr', subFolderName);
@@ -477,7 +457,7 @@ export default function AVPage() {
       let finalSupportingImages = [];
       if (newsForm.supportingImages && newsForm.supportingImages.length > 0) {
         const subFolderName = newsForm.headline.trim() || 'ข่าวไม่มีหัวข้อ';
-        const cleanHeadline = subFolderName.replace(/[\/\\?%*:|"<>]/g, '-');
+        const cleanHeadline = subFolderName.replace(/[/\\?%*:|"<>]/g, '-');
         for (let i = 0; i < newsForm.supportingImages.length; i++) {
           const img = newsForm.supportingImages[i];
           if (img.file) {
@@ -555,12 +535,9 @@ export default function AVPage() {
   };
 
   const handleEditNews = (item) => {
-    let dateVal = '';
-    if (item.created_at) {
-      dateVal = new Date(item.created_at).toISOString().split('T')[0];
-    } else {
-      dateVal = new Date().toISOString().split('T')[0];
-    }
+    const dateVal = item.created_at
+      ? new Date(item.created_at).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
     setEditingNewsId(item.id);
     setNewsForm({
       headline: item.headline,
@@ -577,19 +554,9 @@ export default function AVPage() {
     if (!confirm(`คุณแน่ใจหรือไม่ที่จะลบเกียรติบัตรทั้งหมดในกิจกรรม "${eventName}"?\n(การลบนี้จะลบแค่ในระบบเท่านั้น ไฟล์ใน Google Drive จะยังอยู่)`)) return;
     
     try {
-      const GAS_URL = import.meta.env.VITE_GAS_URL;
-      const res = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "delete_cert_group", eventName: eventName })
-      });
-      const resJson = await res.json();
-      if (resJson.success) {
-        alert(`ลบเกียรติบัตรกิจกรรม "${eventName}" สำเร็จแล้ว จำนวน ${resJson.data.deleted_count} ใบ`);
-        loadCertHistory();
-      } else {
-        throw new Error(resJson.error);
-      }
+      const result = await deleteCertGroup(eventName);
+      alert(`ลบเกียรติบัตรกิจกรรม "${eventName}" สำเร็จแล้ว จำนวน ${result.deleted_count} ใบ`);
+      loadCertHistory();
     } catch (err) {
       console.error(err);
       alert("เกิดข้อผิดพลาดในการลบ: " + err.message);
@@ -610,21 +577,11 @@ export default function AVPage() {
     }
     const newName = editCertNewName.trim();
     try {
-      const GAS_URL = import.meta.env.VITE_GAS_URL;
-      const res = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "rename_cert_group", oldName: editCertOldName, newName: newName })
-      });
-      const resJson = await res.json();
-      if (resJson.success) {
-        alert(`เปลี่ยนโครงการ/ชื่อกิจกรรมเป็น "${newName}" สำเร็จแล้ว!`);
-      } else {
-        alert(`เปลี่ยนโครงการ/ชื่อกิจกรรมเป็น "${newName}" เรียบร้อยแล้ว!`);
-      }
+      await renameCertGroup(editCertOldName, newName);
+      alert(`เปลี่ยนโครงการ/ชื่อกิจกรรมเป็น "${newName}" สำเร็จแล้ว!`);
     } catch (err) {
       console.error(err);
-      alert(`เปลี่ยนโครงการ/ชื่อกิจกรรมเป็น "${newName}" เรียบร้อยแล้ว!`);
+      alert(`เปลี่ยนชื่อกิจกรรมไม่สำเร็จ: ${err.message}`);
     } finally {
       setEditCertModal(false);
       loadCertHistory();
@@ -642,7 +599,7 @@ export default function AVPage() {
     }
 
     // Extract Folder ID from the URL
-    let folderId = '';
+    let folderId;
     const match = certFolderLink.match(/folders\/([a-zA-Z0-9_-]+)/);
     if (match && match[1]) {
       folderId = match[1];
@@ -658,27 +615,15 @@ export default function AVPage() {
 
     setSyncingCerts(true);
     try {
-      const GAS_URL = import.meta.env.VITE_GAS_URL;
-      const res = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          action: "sync_folder",
-          folderId: folderId,
-          eventName: certEventName.trim(),
-          uploadedBy: user?.name || user?.nickname || 'ฝ่ายโสตฯ'
-        })
-      });
-      
-      const resJson = await res.json();
-      if (resJson.success) {
-        alert("ซิงค์เกียรติบัตรสำเร็จแล้วจำนวน " + resJson.data.synced_count + " ใบ!");
-        setCertFolderLink('');
-        setCertEventName('');
-        loadCertHistory(); // Reload history after sync
-      } else {
-        throw new Error(resJson.error || "Unknown error");
-      }
+      const result = await syncDriveFolder(
+        folderId,
+        certEventName.trim(),
+        user?.name || user?.nickname || 'ฝ่ายโสตฯ'
+      );
+      alert("ซิงค์เกียรติบัตรสำเร็จแล้วจำนวน " + result.synced_count + " ใบ!");
+      setCertFolderLink('');
+      setCertEventName('');
+      loadCertHistory(); // Reload history after sync
     } catch (err) {
       console.error(err);
       alert("เกิดข้อผิดพลาดในการซิงค์: " + err.message + "\nโปรดตรวจสอบว่าโฟลเดอร์เปิดสิทธิ์ Anyone with the link แล้ว");

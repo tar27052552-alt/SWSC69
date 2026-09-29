@@ -1,20 +1,25 @@
+import { supabase } from '../supabaseClient';
+
 const gasUrl = import.meta.env.VITE_GAS_URL;
 
-async function callGAS(action, payload) {
+export async function callGAS(action, payload) {
   if (!gasUrl) {
-    console.warn("⚠️ [GAS Helper] Missing VITE_GAS_URL in your .env file!");
-    // If no URL is provided, we can simulate a mock behavior or alert the user
-    alert("ยังไม่ได้ตั้งค่า VITE_GAS_URL ในไฟล์ .env ของคุณ! โปรดนำโค้ดในโฟลเดอร์ scratch/google_apps_script.js ไปติดตั้งใน Google Apps Script และระบุ URL ของเว็บแอปในไฟล์ .env เพื่อเปิดใช้งานฟังก์ชันนี้");
+    console.warn("⚠️ [GAS Helper] Missing VITE_GAS_URL in your environment!");
+    alert("ยังไม่ได้ตั้งค่า VITE_GAS_URL สำหรับเชื่อมต่อ Google Apps Script");
     throw new Error("Missing VITE_GAS_URL environment variable.");
   }
   
   try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!session?.access_token) throw new Error('กรุณาเข้าสู่ระบบก่อนใช้งานส่วนนี้');
+
     const response = await fetch(gasUrl, {
       method: "POST",
       headers: {
         "Content-Type": "text/plain;charset=utf-8",
       },
-      body: JSON.stringify({ action, ...payload }),
+      body: JSON.stringify({ action, ...payload, accessToken: session.access_token }),
     });
     
     if (!response.ok) {
@@ -49,8 +54,20 @@ export async function uploadFileToDrive(fileBase64, fileName, folderCategory, su
   return callGAS("upload_file", { fileBase64, fileName, folderCategory, subFolderName });
 }
 
-export async function verifySlipViaGAS(branchId, apiKey, fileBase64, amount) {
-  return callGAS("verify_slip", { branchId, apiKey, fileBase64, amount });
+export async function verifySlipViaGAS(fileBase64, amount) {
+  return callGAS("verify_slip", { fileBase64, amount });
+}
+
+export async function syncDriveFolder(folderId, eventName, uploadedBy) {
+  return callGAS('sync_folder', { folderId, eventName, uploadedBy });
+}
+
+export async function renameCertGroup(oldName, newName) {
+  return callGAS('rename_cert_group', { oldName, newName });
+}
+
+export async function deleteCertGroup(eventName) {
+  return callGAS('delete_cert_group', { eventName });
 }
 
 /**

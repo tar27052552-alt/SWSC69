@@ -1,4 +1,4 @@
-const gasUrl = import.meta.env.VITE_GAS_URL;
+import { callGAS } from './googleDriveUpload';
 
 /**
  * ส่งการแจ้งเตือน Rich Embed ไปยัง Discord ผ่านทาง Google Apps Script API Gateway
@@ -10,44 +10,21 @@ const gasUrl = import.meta.env.VITE_GAS_URL;
  * @returns {Promise<boolean>} ผลการยิงข้อความ
  */
 export async function sendDiscordEmbedViaGAS(title, description, colorDecimal = 3066993, fields = [], imageUrl = null, channel = 'general', targetUserIds = null) {
-  if (!gasUrl) {
-    console.warn("⚠️ [Discord Webhook Helper] Missing VITE_GAS_URL in environment.");
-    return false;
-  }
-  
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-    const response = await fetch(gasUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8",
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        action: "send_discord_message",
-        title: title,
-        description: description,
-        color: colorDecimal,
-        fields: fields,
-        imageUrl: imageUrl,
-        channel: channel,
-        targetUserIds: targetUserIds
-      }),
+    const result = await callGAS('send_discord_message', {
+      title,
+      description,
+      color: colorDecimal,
+      fields,
+      imageUrl,
+      channel,
+      targetUserIds,
     });
-    clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status}`);
-    }
-    
-    const result = await response.json();
-    if (result.success && result.data?.discord && result.data.discord.success === false) {
-      console.warn("⚠️ Discord webhook failed to send:", result.data.discord.error);
+    if (result?.discord?.success === false) {
+      console.warn("⚠️ Discord webhook failed to send:", result.discord.error);
       return false;
     }
-    return result.success;
+    return Boolean(result?.discord);
   } catch (error) {
     console.error("❌ Failed to send Discord embed via GAS:", error);
     return false;

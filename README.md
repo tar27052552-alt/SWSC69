@@ -15,15 +15,8 @@ The React Compiler is not enabled on this template because of its impact on dev 
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
 
-## Supabase (ฐานข้อมูลแบบตาราง users)
+## ตั้งค่าระบบ
 
-โปรเจคนี้รองรับการล็อกอินแบบ `รหัสนักเรียน + รหัสผ่าน` ผ่าน Supabase RPC และดึงรายชื่อสมาชิกจาก Supabase ได้ (ถ้าตั้งค่า env แล้ว)
+คัดลอก `.env.example` เป็น `.env` และกำหนด `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GAS_URL` และ `VITE_ONESIGNAL_APP_ID` ตามสภาพแวดล้อม ระบบ production ใช้ Supabase Auth และ RLS; ห้ามใช้ `supabase/schema.sql` เป็นการตั้งค่า production ใหม่โดยไม่ตรวจ migrations ก่อน
 
-1) สร้างโปรเจคใน Supabase แล้วคัดลอก `Project URL` และ `anon key`
-2) สร้างไฟล์ `.env` จาก `.env.example` แล้วใส่ค่า:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-3) เปิด Supabase SQL Editor แล้วรันไฟล์ `supabase/schema.sql`
-4) (ถ้าต้องการ) รัน `supabase/seed.sql` เพื่อใส่ผู้ใช้ตัวอย่าง
-
-หมายเหตุ: `supabase/schema.sql` เป็นสคีมาพื้นฐานสำหรับเดโม/ใช้งานภายใน (เรื่อง RLS/Policy ควรเสริมก่อนใช้จริงแบบปลอดภัย)
+สำหรับตั้งค่าและเผยแพร่ Apps Script / Vercel อย่างปลอดภัย ดู [SECURITY_DEPLOYMENT.md](SECURITY_DEPLOYMENT.md).

@@ -3643,7 +3643,7 @@
               <div style="display: flex; flex-direction: column; gap: 12px;">
                 <div>
                   <label style="display: block; font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px;">เลขประจำตัวนักเรียน</label>
-                  <input type="text" id="certStudentIdPage" placeholder="ระบุเลขประจำตัว 5 หลัก เช่น 12345" style="width: 100%; padding: 12px 16px; border: 1px solid var(--gray-300); border-radius: 10px; font-size: 14px; outline: none; transition: border 0.2s;" onkeypress="if(event.key === 'Enter') searchCertificatesPage()" />
+                  <input type="text" id="certStudentIdPage" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="ระบุเลขประจำตัว 5 หลัก เช่น 12345" style="width: 100%; padding: 12px 16px; border: 1px solid var(--gray-300); border-radius: 10px; font-size: 14px; outline: none; transition: border 0.2s;" onkeypress="if(event.key === 'Enter') searchCertificatesPage()" />
                 </div>
                 <button onclick="searchCertificatesPage()" style="width: 100%; background: linear-gradient(135deg, var(--purple-600), var(--purple-700)); color: white; border: none; border-radius: 10px; padding: 12px 20px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(147, 51, 234, 0.2); transition: all 0.2s;">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -4033,7 +4033,7 @@
         <div style="margin-bottom: 15px;">
           <label style="display:block; margin-bottom:8px; font-weight:600; font-size:14px;">เลขประจำตัวนักเรียน</label>
           <div style="display:flex; gap:10px;">
-            <input type="text" id="certStudentId" placeholder="ระบุเลขประจำตัว 5 หลัก" style="flex:1; padding:10px 14px; border:1px solid var(--gray-300); border-radius:8px; outline:none;" />
+            <input type="text" id="certStudentId" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="ระบุเลขประจำตัว 5 หลัก" style="flex:1; padding:10px 14px; border:1px solid var(--gray-300); border-radius:8px; outline:none;" />
             <button onclick="searchCertificates()" style="background:var(--purple-600); color:white; border:none; border-radius:8px; padding:0 20px; font-weight:600; cursor:pointer;">ค้นหา</button>
           </div>
         </div>
@@ -4048,7 +4048,7 @@
   /* ---- SUPABASE ---- */
   const SB_URL = 'https://pzlcxctnnhjqpbhwcxqx.supabase.co';
   const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6bGN4Y3RubmhqcXBiaHdjeHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMjA0ODgsImV4cCI6MjA5NDY5NjQ4OH0.LsofMV8YVlqFxir2o76Mbw4fNOHljVrealsew4XXQkY';
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzFTrQ6TZvj6PpUAkXJfAU5asvWveVfhUoLMl4LjRAzNSOm4AaImex2NeVHfeHC6gm9/exec';
+  const GAS_URL = '%VITE_GAS_URL%';
 
   async function sbFetch(path) {
     const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
@@ -4199,22 +4199,33 @@
       .replace(/'/g, '&#039;');
   }
 
+  function safePublicUrl(value) {
+    try {
+      const url = new URL(String(value || ''));
+      return url.protocol === 'https:' ? escapeHtml(url.href) : '';
+    } catch {
+      return '';
+    }
+  }
+
   function renderDocActionButtons(files) {
     if (!files || !files.length) return '';
     return files.map(f => {
+      const fileUrl = safePublicUrl(f.file_url);
+      if (!fileUrl) return '';
       const rawType = (f.type || '').toUpperCase();
       let isPdf = rawType === 'PDF';
       let btnClass = isPdf ? 'public-doc-btn-pdf' : 'public-doc-btn-docx';
       let label = isPdf ? 'PDF' : (rawType === 'DEFAULT' || !rawType ? 'DOCX' : rawType);
 
       return `
-        <a href="${f.file_url}" target="_blank" rel="noopener noreferrer" class="public-doc-btn ${btnClass}">
+        <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" class="public-doc-btn ${btnClass}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
-          ${label}
+          ${escapeHtml(label)}
         </a>
       `;
     }).join('');
@@ -4233,27 +4244,23 @@
     if (badge) badge.textContent = 'กำลังโหลด...';
 
     try {
-      const [secRes, acadRes, projRes] = await Promise.all([
-        fetch(GAS_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "read_sheet", sheetName: "Secretary_Docs" })
-        }).then(r => r.json()).catch(() => ({ success: false })),
-        fetch(GAS_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Docs" })
-        }).then(r => r.json()).catch(() => ({ success: false })),
-        fetch(GAS_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Projects" })
-        }).then(r => r.json()).catch(() => ({ success: false }))
-      ]);
+      const response = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'read_public_documents' })
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      if (!result.success || !result.data ||
+          !Array.isArray(result.data.secretaryDocs) ||
+          !Array.isArray(result.data.academicDocs) ||
+          !Array.isArray(result.data.projects)) {
+        throw new Error(result.error || 'ข้อมูลเอกสารไม่ถูกต้อง');
+      }
 
-      const secData = (secRes.success && Array.isArray(secRes.data)) ? secRes.data : [];
-      const acadData = (acadRes.success && Array.isArray(acadRes.data)) ? acadRes.data : [];
-      const projData = (projRes.success && Array.isArray(projRes.data)) ? projRes.data : [];
+      const secData = result.data.secretaryDocs;
+      const acadData = result.data.academicDocs;
+      const projData = result.data.projects;
 
       cachedDocs.sec = secData;
       cachedDocs.academic = acadData;
@@ -4374,17 +4381,22 @@
       filterDocuments();
     } catch (err) {
       console.error('Failed to load documents:', err);
-      const projContainer = document.getElementById('projectsContentContainer');
-      if (projContainer) {
-        projContainer.innerHTML = `
+      const errorHtml = `
           <div style="text-align:center; padding:40px 20px; color:var(--gray-500); background:#fff; border-radius:14px; border:1px dashed var(--gray-300);">
             <div style="font-size:36px; margin-bottom:12px;">⚠️</div>
             <div style="font-weight:700; color:var(--gray-800); margin-bottom:4px;">ไม่สามารถโหลดเอกสารได้ในขณะนี้</div>
-            <div style="font-size:13px; color:var(--gray-500); margin-bottom:16px;">โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่อีกครั้ง</div>
+            <div style="font-size:13px; color:var(--gray-500); margin-bottom:16px;">ระบบเอกสารยังไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้ง</div>
             <button onclick="loadAllDocuments(true)" style="background:var(--purple-600); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;">ลองใหม่</button>
           </div>
         `;
-      }
+      ['projectsContentContainer', 'meetingsContentContainer', 'templatesContentContainer'].forEach(id => {
+        const container = document.getElementById(id);
+        if (container) container.innerHTML = errorHtml;
+      });
+      ['badgeTabProjects', 'badgeTabMeetings', 'badgeTabTemplates'].forEach(id => {
+        const counter = document.getElementById(id);
+        if (counter) counter.textContent = '—';
+      });
       if (badge) badge.textContent = 'ขัดข้อง';
     } finally {
       isDocsLoading = false;
@@ -4485,7 +4497,7 @@
                       <span class="public-doc-badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;">
                         ${escapeHtml(proj.title)}
                       </span>
-                      ${doc.date ? `<span>📅 ${doc.date}</span>` : ''}
+                      ${doc.date ? `<span>📅 ${escapeHtml(doc.date)}</span>` : ''}
                     </div>
                   </div>
                 </div>
@@ -4550,7 +4562,7 @@
     container.innerHTML = `
       <div class="project-folders-grid">
         ${folders.map(p => `
-          <div class="project-folder-box" onclick="openProjectFolder('${p.id}')">
+          <div class="project-folder-box" data-project-id="${escapeHtml(p.id)}">
             <div class="project-folder-top">
               <div class="project-folder-icon">📂</div>
               <div style="flex: 1; min-width: 0;">
@@ -4572,6 +4584,9 @@
         `).join('')}
       </div>
     `;
+    container.querySelectorAll('.project-folder-box').forEach(folder => {
+      folder.addEventListener('click', () => openProjectFolder(folder.dataset.projectId));
+    });
   }
 
   function renderMeetingsView() {
@@ -4616,13 +4631,13 @@
               การประชุมคณะกรรมการสภานักเรียน ครั้งที่ ${toThaiNumeral(m.sessionNum)}
             </div>
             <div class="meeting-session-meta">
-              ${m.date ? `<span>📅 วันที่ประชุม: ${m.date}</span>` : '<span>สภานักเรียนโรงเรียนสรรพวิทยาคม</span>'}
+              ${m.date ? `<span>📅 วันที่ประชุม: ${escapeHtml(m.date)}</span>` : '<span>สภานักเรียนโรงเรียนสรรพวิทยาคม</span>'}
             </div>
           </div>
         </div>
         <div class="meeting-doc-actions">
-          ${m.agendaUrl ? `
-            <a href="${m.agendaUrl}" target="_blank" rel="noopener noreferrer" class="meeting-download-btn meeting-btn-agenda">
+          ${safePublicUrl(m.agendaUrl) ? `
+            <a href="${safePublicUrl(m.agendaUrl)}" target="_blank" rel="noopener noreferrer" class="meeting-download-btn meeting-btn-agenda">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                 <polyline points="14 2 14 8 20 8"></polyline>
@@ -4633,8 +4648,8 @@
               วาระการประชุม (PDF)
             </a>
           ` : ''}
-          ${m.minutesUrl ? `
-            <a href="${m.minutesUrl}" target="_blank" rel="noopener noreferrer" class="meeting-download-btn meeting-btn-minutes">
+          ${safePublicUrl(m.minutesUrl) ? `
+            <a href="${safePublicUrl(m.minutesUrl)}" target="_blank" rel="noopener noreferrer" class="meeting-download-btn meeting-btn-minutes">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                 <polyline points="14 2 14 8 20 8"></polyline>
@@ -4729,34 +4744,33 @@
     document.body.classList.remove('modal-open'); document.documentElement.classList.remove('modal-open');
   }
 
+  async function fetchPublicCertificates(studentId) {
+    const response = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'search_public_certificates', studentId })
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const result = await response.json();
+    if (!result.success || !Array.isArray(result.data)) {
+      throw new Error(result.error || 'ค้นหาเกียรติบัตรไม่สำเร็จ');
+    }
+    return result.data;
+  }
+
   async function searchCertificates() {
     const studentId = document.getElementById('certStudentId').value.trim();
     const resultDiv = document.getElementById('certModalResult');
 
-    if (!studentId) {
-      resultDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#e53935; font-size:14px;">โปรดระบุเลขประจำตัวก่อนค้นหา</div>';
+    if (!/^\d{5}$/.test(studentId)) {
+      resultDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#e53935; font-size:14px;">กรุณากรอกเลขประจำตัวนักเรียน 5 หลัก</div>';
       return;
     }
 
     resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500);"><div class="spin" style="margin: 0 auto 15px; border-top-color: var(--purple-600); width: 30px; height: 30px;"></div>กำลังค้นหาเกียรติบัตร...</div>';
 
     try {
-      // Fetch fresh data every time to ensure newly synced certs are found
-      const res = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Docs" })
-      });
-      const resJson = await res.json();
-      
-      if (!resJson.success) {
-        throw new Error("Failed to load");
-      }
-      
-      const data = resJson.data;
-
-      // Find certificates matching Student ID (convert d.title to String to match sheet numbers)
-      const certs = data.filter(d => d.type && d.type.startsWith('เกียรติบัตร') && String(d.title) === studentId).reverse();
+      const certs = (await fetchPublicCertificates(studentId)).reverse();
 
       if (certs.length === 0) {
         resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500); font-size:14px;">ไม่พบเกียรติบัตรสำหรับเลขประจำตัวนี้</div>';
@@ -4771,7 +4785,7 @@
         }
         const cat = d.type.includes('|') ? d.type.split('|')[1] : (d.category || 'เกียรติบัตรเข้าร่วมกิจกรรม');
         return `
-        <a href="${escapeHtml(d.file_url || '#')}" target="_blank" rel="noopener noreferrer" class="doc-list-item" style="margin-bottom:8px;">
+        <a href="${safePublicUrl(d.file_url) || '#'}" target="_blank" rel="noopener noreferrer" class="doc-list-item" style="margin-bottom:8px;">
           <div class="doc-list-info">
             <div class="doc-list-title">${escapeHtml(cat)}</div>
             <div class="doc-list-meta">เลขประจำตัว: ${escapeHtml(d.title)} • ${escapeHtml(displayDate)}</div>
@@ -4789,27 +4803,15 @@
     const studentId = document.getElementById('certStudentIdPage').value.trim();
     const resultDiv = document.getElementById('certPageResult');
 
-    if (!studentId) {
-      resultDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#e53935; font-size:14px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; width: 100%;">โปรดระบุเลขประจำตัวก่อนค้นหา</div>';
+    if (!/^\d{5}$/.test(studentId)) {
+      resultDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#e53935; font-size:14px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; width: 100%;">กรุณากรอกเลขประจำตัวนักเรียน 5 หลัก</div>';
       return;
     }
 
     resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500); width: 100%;"><div class="spin" style="margin: 0 auto 15px; border-top-color: var(--purple-600); width: 30px; height: 30px;"></div>กำลังค้นหาเกียรติบัตร...</div>';
 
     try {
-      const res = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "read_sheet", sheetName: "Academic_Docs" })
-      });
-      const resJson = await res.json();
-      
-      if (!resJson.success) {
-        throw new Error("Failed to load");
-      }
-      
-      const data = resJson.data;
-      const certs = data.filter(d => d.type && d.type.startsWith('เกียรติบัตร') && String(d.title) === studentId).reverse();
+      const certs = (await fetchPublicCertificates(studentId)).reverse();
 
       if (certs.length === 0) {
         resultDiv.innerHTML = '<div style="text-align:center; padding:30px 20px; color:var(--gray-500); font-size:14px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.6); width: 100%;">ไม่พบเกียรติบัตรสำหรับเลขประจำตัวนี้</div>';
@@ -4824,7 +4826,7 @@
         }
         const cat = d.type.includes('|') ? d.type.split('|')[1] : (d.category || 'เกียรติบัตรเข้าร่วมกิจกรรม');
         return `
-        <a href="${escapeHtml(d.file_url || '#')}" target="_blank" rel="noopener noreferrer" class="doc-list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.85); border-radius: 12px; text-decoration: none; color: inherit; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+        <a href="${safePublicUrl(d.file_url) || '#'}" target="_blank" rel="noopener noreferrer" class="doc-list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.85); border-radius: 12px; text-decoration: none; color: inherit; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
           <div class="doc-list-info" style="display: flex; flex-direction: column; gap: 4px; text-align: left;">
             <div class="doc-list-title" style="font-weight: 700; color: var(--purple-950); font-size: 14px;">${escapeHtml(cat)}</div>
             <div class="doc-list-meta" style="font-size: 12px; color: var(--gray-500);">เลขประจำตัว: ${escapeHtml(d.title)} • ${escapeHtml(displayDate)}</div>

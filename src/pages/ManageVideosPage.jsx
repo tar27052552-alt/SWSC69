@@ -63,7 +63,7 @@ export default function ManageVideosPage() {
   // Helper functions for YouTube & Thumbnails
   const getYouTubeId = (url) => {
     if (!url) return null;
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/)|youtu\.be\/|\&v=)([a-zA-Z0-9_-]{11})/);
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/)|youtu\.be\/|&v=)([a-zA-Z0-9_-]{11})/);
     return match ? match[1] : null;
   };
 
@@ -164,7 +164,7 @@ export default function ManageVideosPage() {
     try {
       const base64 = await toBase64(file);
       const fileExt = file.name.split('.').pop();
-      const cleanTitle = (form.title.trim() || 'activity-video').replace(/[\/\\?%*:|"<>]/g, '-');
+      const cleanTitle = (form.title.trim() || 'activity-video').replace(/[/\\?%*:|"<>]/g, '-');
       const fileName = `${Date.now()}-${cleanTitle}.${fileExt}`;
       
       const result = await uploadFileToDrive(base64, fileName, 'obec');
