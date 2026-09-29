@@ -90,7 +90,10 @@ a { color: #5b35c8; }
 .learn-topic-body > h3 { margin: 25px 0 10px; color: #311b67; }
 .learn-topic-paragraph { white-space: pre-wrap; overflow-wrap: anywhere; margin: 12px 0; }
 .learn-page-image { margin: 20px 0; }
+.learn-page-image > button { margin-bottom: 9px; }
+.learn-page-image-scroll { max-height: 82vh; overflow: auto; }
 .learn-page-image img { display: block; width: 100%; height: auto; border: 1px solid #e5ddf1; border-radius: 9px; }
+.learn-page-image.zoomed img { width: max(100%, 900px); max-width: none; }
 .learn-page-image figcaption { color: #756d81; font-size: 13px; margin-top: 6px; }
 .learn-source-page { margin: 20px 0; padding: 16px 0; border-top: 1px solid #eee8f4; }
 .learn-source-page h3 { margin: 0 0 9px; color: #311b67; }

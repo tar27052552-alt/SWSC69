@@ -156,7 +156,7 @@ Deno.serve(async req => {
       if (!resources.some(item => item.path === path) && !blockPaths.includes(path)) {
         return fail('ไม่พบสื่อในหัวข้อนี้', 404);
       }
-      const { data, error } = await admin.storage.from('learning-materials').createSignedUrl(path, 300);
+      const { data, error } = await admin.storage.from('learning-materials').createSignedUrl(path, 3600);
       if (error) throw error;
       return jsonResponse({ url: data.signedUrl });
     }

@@ -19,14 +19,18 @@ async function request(body) {
 
 function PrivateImage({ subjectId, topicId, block }) {
   const [url, setUrl] = useState('');
+  const [zoomed, setZoomed] = useState(false);
   useEffect(() => {
     let active = true;
     request({ action: 'material', subjectId, topicId, path: block.path })
       .then(data => { if (active) setUrl(data.url); }).catch(() => {});
     return () => { active = false; };
   }, [subjectId, topicId, block.path]);
-  return url ? <figure className="learn-page-image"><img src={url}
-    alt={block.alt || 'ภาพประกอบบทเรียน'} loading="lazy" />
+  return url ? <figure className={'learn-page-image' + (zoomed ? ' zoomed' : '')}>
+    <button type="button" onClick={() => setZoomed(value => !value)}
+      aria-pressed={zoomed}>{zoomed ? 'ย่อหน้าเอกสาร' : 'ขยายหน้าเอกสาร'}</button>
+    <div className="learn-page-image-scroll"><img src={url}
+      alt={block.alt || 'ภาพประกอบบทเรียน'} loading="lazy" /></div>
     {block.caption && <figcaption>{block.caption}</figcaption>}</figure>
     : <p>กำลังโหลดภาพประกอบ…</p>;
 }
