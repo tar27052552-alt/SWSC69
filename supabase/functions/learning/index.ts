@@ -38,16 +38,33 @@ Deno.serve(async (req) => {
 
     if (action === 'me') {
       const [{ data: profile, error: profileError },
-        { data: certificates, error: certificatesError }] = await Promise.all([
+        { data: certificates, error: certificatesError },
+        { data: attempts, error: attemptsError }] = await Promise.all([
         admin.from('learning_profiles').select('full_name').eq('user_id', user.id).maybeSingle(),
         admin.from('learning_certificates')
           .select('id,subject_id,certificate_number,recipient_name,issued_at,email_status,pdf_path')
           .eq('user_id', user.id).order('issued_at', { ascending: false }),
+        admin.from('learning_attempts').select('subject_id,phase,score,total')
+          .eq('user_id', user.id),
       ]);
-      if (profileError || certificatesError) throw profileError || certificatesError;
+      if (profileError || certificatesError || attemptsError) {
+        throw profileError || certificatesError || attemptsError;
+      }
+      const progress: Record<string, { preCompleted: boolean; bestPostScore: number; postTotal: number }> = {};
+      for (const attempt of attempts || []) {
+        const item = progress[attempt.subject_id] ||= {
+          preCompleted: false, bestPostScore: -1, postTotal: 10,
+        };
+        if (attempt.phase === 'pre') item.preCompleted = true;
+        if (attempt.phase === 'post' && attempt.score > item.bestPostScore) {
+          item.bestPostScore = attempt.score;
+          item.postTotal = attempt.total;
+        }
+      }
       return jsonResponse({
         email: user.email,
         profile,
+        progress,
         certificates: (certificates || []).map(({ pdf_path: _path, ...certificate }) => ({
           ...certificate,
           downloadable: Boolean(_path),
@@ -75,13 +92,18 @@ Deno.serve(async (req) => {
       if (!/^civic-[1-5]$/.test(subjectId) || !['pre', 'post'].includes(phase)) {
         return fail('ไม่พบบทเรียนหรือแบบทดสอบ');
       }
+      const { data: allowed, error: accessError } = await admin.rpc('get_learning_course_access', {
+        p_user_id: user.id, p_subject_id: subjectId, p_phase: phase,
+      });
+      if (accessError) throw accessError;
+      if (!allowed) return fail('ยังไม่สามารถทำแบบทดสอบบทนี้ได้', 403);
       const { data: bank, error: bankError } = await admin.rpc('get_learning_question_bank', {
         p_subject_id: subjectId,
         p_phase: phase,
       });
       if (bankError) throw bankError;
       const questions = bank as QuizQuestion[];
-      if (!Array.isArray(questions) || !questions.length) {
+      if (!Array.isArray(questions) || questions.length !== 10) {
         return fail('แบบทดสอบยังไม่พร้อมใช้งาน', 503);
       }
       if (action === 'quiz') {
@@ -120,6 +142,7 @@ Deno.serve(async (req) => {
         total: questions.length,
         percent: Math.round(score * 100 / questions.length),
         passed: Boolean(result?.passed),
+        unlockedNext: phase === 'post' && score * 100 >= questions.length * 60,
         certificateId: result?.certificateId || null,
       });
     }

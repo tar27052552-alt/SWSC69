@@ -17,8 +17,8 @@ for (let index = 0; index < 5; index++) {
       !Array.isArray(subject.sections) || subject.sections.length === 0) {
     throw new Error(`Subject ${index + 1} has missing content`);
   }
-  if (!Array.isArray(subject.quiz) || subject.quiz.length === 0) {
-    throw new Error(`${subject.id} is missing quiz questions`);
+  if (!Array.isArray(subject.quiz) || subject.quiz.length !== 10) {
+    throw new Error(`${subject.id} must have exactly 10 quiz questions`);
   }
   for (const question of subject.quiz) {
     if (!question.prompt || !Array.isArray(question.options) ||

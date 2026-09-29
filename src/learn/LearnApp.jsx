@@ -25,6 +25,7 @@ export default function LearnApp() {
   const [session, setSession] = useState(null);
   const subjects = lessonCatalog;
   const [publishedIds, setPublishedIds] = useState([]);
+  const [progress, setProgress] = useState({});
   const [activeResource, setActiveResource] = useState(null);
   const [selected, setSelected] = useState(null);
   const [phase, setPhase] = useState('post');
@@ -48,6 +49,8 @@ export default function LearnApp() {
       if (!nextSession) {
         setProfile(null);
         setCertificates([]);
+        setProgress({});
+        setView('courses');
       }
     });
     supabase.from('learning_subjects')
@@ -67,6 +70,7 @@ export default function LearnApp() {
       .then(data => {
         setProfile(data.profile);
         setCertificates(data.certificates || []);
+        setProgress(data.progress || {});
       })
       .catch(error => setNotice(error.message));
   }, [session]);
@@ -126,10 +130,9 @@ export default function LearnApp() {
         action: 'submit', subjectId: selected.id, phase, answers,
       });
       setResult(data);
-      if (data.certificateId) {
-        const refreshed = await learningRequest({ action: 'me' });
-        setCertificates(refreshed.certificates || []);
-      }
+      const refreshed = await learningRequest({ action: 'me' });
+      setCertificates(refreshed.certificates || []);
+      setProgress(refreshed.progress || {});
     } catch (error) {
       setNotice(error.message);
     } finally {
@@ -159,6 +162,19 @@ export default function LearnApp() {
   }
 
   const canQuiz = Boolean(session && profile);
+  const isUnlocked = subject => subject.ordinal === 1 ||
+    (progress[`civic-${subject.ordinal - 1}`]?.bestPostScore ?? -1) * 100 >=
+      (progress[`civic-${subject.ordinal - 1}`]?.postTotal ?? 10) * 60;
+  const currentSubject = subjects.find(subject => isUnlocked(subject) &&
+    (progress[subject.id]?.bestPostScore ?? -1) * 100 <
+      (progress[subject.id]?.postTotal ?? 10) * 60) || subjects[subjects.length - 1];
+  const nextSubject = selected && subjects.find(subject => subject.ordinal === selected.ordinal + 1);
+  function openLesson(subject) {
+    setSelected(subject);
+    setActiveResource(null);
+    setResult(null);
+    setView('lesson');
+  }
   return (
     <div className="learn-app">
       <header className="learn-header">
@@ -174,7 +190,7 @@ export default function LearnApp() {
         <section className="learn-hero">
           <div className="learn-eyebrow">หลักสูตรพลเมือง DNA</div>
           <h1>ถอดรหัสความเป็นพลเมืองคุณภาพ</h1>
-          <p>เรียนรู้ได้ตามลำดับที่สะดวก ทำแบบทดสอบหลังเรียนให้ได้อย่างน้อย 80% เพื่อรับเกียรติบัตรรายวิชา</p>
+          <p>เรียนทีละวิชาจนครบ 5 บท ทำก่อนเรียนแล้วดูสื่อ จากนั้นทำหลังเรียนให้ได้ 6/10 เพื่อไปบทถัดไป และ 8/10 เพื่อรับเกียรติบัตร</p>
         </section>
 
         {notice && <div className="learn-notice" role="status">{notice}</div>}
@@ -212,67 +228,106 @@ export default function LearnApp() {
         {view === 'courses' && (
           <section className="learn-section">
             <div className="learn-section-heading">
-              <h2>วิชาทั้งหมด</h2>
+              <h2>เส้นทางเรียน 5 บท</h2>
               <span>{subjects.length} วิชา</span>
             </div>
-            <div className="learn-grid">
+            {canQuiz && publishedIds.includes(currentSubject.id) && (
+              <button className="learn-continue" onClick={() => progress[currentSubject.id]?.preCompleted
+                ? openLesson(currentSubject) : openQuiz(currentSubject, 'pre')}>
+                เรียนต่อ: บทที่ {currentSubject.ordinal} →
+              </button>
+            )}
+            <div className="learn-course-list">
               {subjects.map(subject => (
-                <article className="learn-card" key={subject.id}>
-                  <div className="learn-number">วิชาที่ {subject.ordinal}</div>
-                  <h3>{subject.title}</h3>
-                  <p>{subject.summary || 'เรียนรู้เนื้อหาและสื่อประกอบก่อนทำแบบทดสอบ'}</p>
-                  <div className="learn-material"><strong>สิ่งที่จะได้เรียนรู้</strong>
-                    <ul>{subject.topics.map(topic => <li key={topic}>{topic}</li>)}</ul>
+                <article className="learn-course" key={subject.id}>
+                  <div className="learn-course-index">{subject.ordinal}</div>
+                  <div className="learn-course-info">
+                    <div className="learn-number">บทที่ {subject.ordinal} · {
+                      !publishedIds.includes(subject.id) ? 'กำลังเตรียมเปิด' :
+                      !isUnlocked(subject) ? '🔒 ยังไม่ปลดล็อก' :
+                      (progress[subject.id]?.bestPostScore ?? -1) >= 8 ? 'ผ่านเกณฑ์เกียรติบัตร' :
+                      (progress[subject.id]?.bestPostScore ?? -1) >= 6 ? 'ผ่านบทเรียน' :
+                      progress[subject.id]?.preCompleted ? 'กำลังเรียน' : 'ยังไม่เริ่ม'
+                    }</div>
+                    <h3>{subject.title}</h3>
+                    <p>{subject.summary}</p>
+                    {(progress[subject.id]?.bestPostScore ?? -1) >= 0 &&
+                      <small>คะแนนหลังเรียนสูงสุด {progress[subject.id].bestPostScore}/{progress[subject.id].postTotal}</small>}
                   </div>
-                  <details className="learn-material">
-                    <summary>จุดประสงค์การเรียนรู้</summary>
-                    <ul>{subject.objectives.map(objective => <li key={objective}>{objective}</li>)}</ul>
-                  </details>
-                  {['document', 'video'].map(type => (
-                    <details className="learn-material" key={type}>
-                      <summary>{type === 'document' ? '📄 เอกสารประกอบ' : '🎬 วีดิทัศน์'} ({subject.resources.filter(resource => resource.type === type).length})</summary>
-                      <div className="learn-resource-list">
-                        {subject.resources.filter(resource => resource.type === type).map(resource => (
-                          <div key={resource.url}>
-                            <button type="button" onClick={() => setActiveResource(
-                              activeResource?.url === resource.url ? null : { ...resource, subjectId: subject.id }
-                            )}>{resource.title}</button>
-                            <a href={resource.url} target="_blank" rel="noreferrer">เปิดต้นฉบับ ↗</a>
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  ))}
-                  {activeResource?.subjectId === subject.id && (
-                    <div className="learn-viewer">
-                      <strong>{activeResource.title}</strong>
-                      <iframe title={activeResource.title} src={activeResource.embedUrl}
-                        loading="lazy" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
-                      <a href={activeResource.url} target="_blank" rel="noreferrer">หากสื่อไม่แสดง เปิดต้นฉบับ ↗</a>
-                    </div>
-                  )}
-                  {!publishedIds.includes(subject.id) && <p className="learn-pending">แบบทดสอบกำลังเตรียมเปิดใช้งาน</p>}
-                  <div className="learn-card-actions">
-                    <button type="button" disabled={!canQuiz || busy || !publishedIds.includes(subject.id)} onClick={() => openQuiz(subject, 'pre')}>ทดสอบก่อนเรียน</button>
-                    <button type="button" disabled={!canQuiz || busy || !publishedIds.includes(subject.id)} onClick={() => openQuiz(subject, 'post')}>ทดสอบหลังเรียน</button>
-                  </div>
+                  <button type="button" disabled={busy || (publishedIds.includes(subject.id) && (!canQuiz || !isUnlocked(subject)))}
+                    onClick={() => !publishedIds.includes(subject.id) || progress[subject.id]?.preCompleted
+                      ? openLesson(subject) : openQuiz(subject, 'pre')}>
+                    {!publishedIds.includes(subject.id) ? 'ดูสื่อบทเรียน →' :
+                      progress[subject.id]?.preCompleted ? 'เปิดบทเรียน →' : 'เริ่มบทเรียน →'}
+                  </button>
                 </article>
               ))}
             </div>
           </section>
         )}
 
+        {view === 'lesson' && selected && (
+          <section className="learn-section learn-lesson">
+            <button className="learn-back" onClick={() => setView('courses')}>← กลับไปเส้นทางเรียน</button>
+            <div className="learn-number">บทที่ {selected.ordinal} จาก 5</div>
+            <h2>{selected.title}</h2>
+            <p>{selected.summary}</p>
+            {!publishedIds.includes(selected.id) &&
+              <p className="learn-pending">เปิดให้ดูสื่อประกอบก่อน ข้อสอบและความคืบหน้ายังไม่เปิดใช้งาน</p>}
+            <div className="learn-material"><strong>สิ่งที่จะได้เรียนรู้</strong>
+              <ul>{selected.topics.map(topic => <li key={topic}>{topic}</li>)}</ul>
+            </div>
+            <details className="learn-material"><summary>จุดประสงค์การเรียนรู้</summary>
+              <ul>{selected.objectives.map(objective => <li key={objective}>{objective}</li>)}</ul>
+            </details>
+            {['document', 'video'].map(type => (
+              <div className="learn-material" key={type}>
+                <h3>{type === 'document' ? 'เอกสารประกอบ' : 'วิดีโอบทเรียน'}</h3>
+                <div className="learn-resource-list">
+                  {selected.resources.filter(resource => resource.type === type).map(resource => (
+                    <div key={resource.url}>
+                      <button type="button" onClick={() => setActiveResource(
+                        activeResource?.url === resource.url ? null : resource
+                      )}>{resource.title}</button>
+                      <a href={resource.url} target="_blank" rel="noreferrer">เปิดต้นฉบับ ↗</a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {activeResource && <div className="learn-viewer">
+              <strong>{activeResource.title}</strong>
+              <iframe title={activeResource.title} src={activeResource.embedUrl}
+                loading="lazy" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+              <a href={activeResource.url} target="_blank" rel="noreferrer">หากสื่อไม่แสดง เปิดต้นฉบับ ↗</a>
+            </div>}
+            <div className="learn-lesson-footer">
+              <p>เรียนจบแล้ว ทำแบบทดสอบหลังเรียน 10 ข้อ · 6/10 ไปบทถัดไป · 8/10 รับเกียรติบัตร</p>
+              <button disabled={!canQuiz || busy || !publishedIds.includes(selected.id)} onClick={() => openQuiz(selected, 'post')}>
+                ทำแบบทดสอบหลังเรียน →
+              </button>
+            </div>
+          </section>
+        )}
+
         {view === 'quiz' && selected && (
           <section className="learn-panel learn-quiz">
-            <button className="learn-back" onClick={() => setView('courses')}>← กลับไปบทเรียน</button>
+            <button className="learn-back" onClick={() => setView(phase === 'post' ? 'lesson' : 'courses')}>← กลับไปบทเรียน</button>
             <h2>{phase === 'pre' ? 'ทดสอบก่อนเรียน' : 'ทดสอบหลังเรียน'}: {selected.title}</h2>
-            <p>{phase === 'pre' ? 'คะแนนนี้ไม่มีผลต่อเกียรติบัตร' : 'ผ่านเมื่อได้อย่างน้อย 80% หากยังไม่ผ่านสามารถทำใหม่ได้'}</p>
+            <p>{phase === 'pre' ? 'ข้อสอบ 10 ข้อ คะแนนนี้ไม่มีผลต่อการปลดล็อกหรือเกียรติบัตร' : 'ถูก 6/10 เปิดบทถัดไป · ถูก 8/10 รับเกียรติบัตร · ทำซ้ำได้'}</p>
             {result ? (
               <div className="learn-result" role="status">
                 <strong>ได้ {result.score}/{result.total} ข้อ ({result.percent}%)</strong>
-                <p>{result.passed ? 'ผ่านเกณฑ์แล้ว กำลังจัดทำและส่งเกียรติบัตรทางอีเมล' :
-                  phase === 'pre' ? 'พร้อมเริ่มเรียนได้เลย' : 'ยังไม่ผ่านเกณฑ์ ลองทบทวนแล้วทำใหม่ได้'}</p>
-                <button onClick={() => openQuiz(selected, phase)}>ทำแบบทดสอบอีกครั้ง</button>
+                <p>{phase === 'pre' ? 'ทำก่อนเรียนครบแล้ว เริ่มดูบทเรียนได้' : result.passed ?
+                  'ผ่านเกณฑ์เกียรติบัตรแล้ว กำลังจัดทำและส่งทางอีเมล' : result.unlockedNext ?
+                  'ผ่านเกณฑ์ไปบทถัดไปแล้ว กลับมาสอบซ้ำเพื่อรับเกียรติบัตรได้' :
+                  'ยังไม่ผ่านเกณฑ์ไปบทถัดไป ทบทวนแล้วทำซ้ำได้'}</p>
+                <div className="learn-result-actions">
+                  <button onClick={() => openLesson(selected)}>{phase === 'pre' ? 'เริ่มเรียน →' : 'ทบทวนบทเรียน'}</button>
+                  {phase === 'post' && <button onClick={() => openQuiz(selected, 'post')}>ทำแบบทดสอบอีกครั้ง</button>}
+                  {phase === 'post' && result.unlockedNext && nextSubject && publishedIds.includes(nextSubject.id) &&
+                    <button onClick={() => openQuiz(nextSubject, 'pre')}>ไปบทที่ {nextSubject.ordinal} →</button>}
+                </div>
               </div>
             ) : (
               <form onSubmit={submitQuiz}>
