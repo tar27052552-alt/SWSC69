@@ -4151,6 +4151,9 @@
   let cachedMeetings = [];
   let cachedTemplates = [];
   let isDocsLoading = false;
+  const PUBLIC_DOCS_CACHE_KEY = 'swsc-public-documents-v2';
+  const PUBLIC_DOCS_CACHE_MS = 5 * 60 * 1000;
+  const PUBLIC_DOCS_SNAPSHOT_URL = '%BASE_URL%documents-snapshot.json';
 
   function toThaiNumeral(n) {
     const numToThai = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
@@ -4231,36 +4234,11 @@
     }).join('');
   }
 
-  async function loadAllDocuments(forceRefresh = false) {
-    if (cachedDocs.sec && cachedDocs.academic && !forceRefresh) {
-      filterDocuments();
-      return;
-    }
-
-    if (isDocsLoading) return;
-    isDocsLoading = true;
-
+  function applyPublicDocuments(data) {
     const badge = document.getElementById('docTotalCountBadge');
-    if (badge) badge.textContent = 'กำลังโหลด...';
-
-    try {
-      const response = await fetch(GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'read_public_documents' })
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const result = await response.json();
-      if (!result.success || !result.data ||
-          !Array.isArray(result.data.secretaryDocs) ||
-          !Array.isArray(result.data.academicDocs) ||
-          !Array.isArray(result.data.projects)) {
-        throw new Error(result.error || 'ข้อมูลเอกสารไม่ถูกต้อง');
-      }
-
-      const secData = result.data.secretaryDocs;
-      const acadData = result.data.academicDocs;
-      const projData = result.data.projects;
+    const secData = data.secretaryDocs;
+    const acadData = data.academicDocs;
+    const projData = data.projects;
 
       cachedDocs.sec = secData;
       cachedDocs.academic = acadData;
@@ -4379,8 +4357,91 @@
 
       // Render the current view
       filterDocuments();
+  }
+
+  function isPublicDocumentsData(data) {
+    return data &&
+      Array.isArray(data.secretaryDocs) &&
+      Array.isArray(data.academicDocs) &&
+      Array.isArray(data.projects);
+  }
+
+  async function loadAllDocuments(forceRefresh = false) {
+    if (isDocsLoading) return;
+    if (cachedDocs.sec && cachedDocs.academic && !forceRefresh) {
+      filterDocuments();
+      return;
+    }
+    isDocsLoading = true;
+
+    const badge = document.getElementById('docTotalCountBadge');
+    let hasData = !!(cachedDocs.sec && cachedDocs.academic);
+    let recentCache = false;
+
+    if (!forceRefresh && !hasData) {
+      try {
+        const stored = JSON.parse(localStorage.getItem(PUBLIC_DOCS_CACHE_KEY) || 'null');
+        if (stored && isPublicDocumentsData(stored.data)) {
+          applyPublicDocuments(stored.data);
+          hasData = true;
+          recentCache = Date.now() - stored.savedAt < PUBLIC_DOCS_CACHE_MS;
+        }
+      } catch (cacheError) {
+        console.warn('Could not read document cache:', cacheError);
+      }
+    }
+
+    if (!forceRefresh && !hasData) {
+      try {
+        const snapshotResponse = await fetch(PUBLIC_DOCS_SNAPSHOT_URL);
+        if (snapshotResponse.ok) {
+          const snapshot = await snapshotResponse.json();
+          if (isPublicDocumentsData(snapshot)) {
+            applyPublicDocuments(snapshot);
+            hasData = true;
+          }
+        }
+      } catch (snapshotError) {
+        console.warn('Could not load document snapshot:', snapshotError);
+      }
+    }
+
+    if (recentCache) {
+      isDocsLoading = false;
+      return;
+    }
+    if (!hasData && badge) badge.textContent = 'กำลังโหลด...';
+
+    try {
+      const response = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'read_public_documents' })
+      });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const result = await response.json();
+      if (!result.success || !isPublicDocumentsData(result.data)) {
+        throw new Error(result.error || 'ข้อมูลเอกสารไม่ถูกต้อง');
+      }
+      applyPublicDocuments(result.data);
+      try {
+        localStorage.setItem(PUBLIC_DOCS_CACHE_KEY, JSON.stringify({
+          savedAt: Date.now(),
+          data: result.data
+        }));
+      } catch (cacheError) {
+        console.warn('Could not save document cache:', cacheError);
+      }
     } catch (err) {
       console.error('Failed to load documents:', err);
+      if (hasData) {
+        applyPublicDocuments({
+          secretaryDocs: cachedDocs.sec,
+          academicDocs: cachedDocs.academic,
+          projects: cachedDocs.projects
+        });
+        return;
+      }
       const errorHtml = `
           <div style="text-align:center; padding:40px 20px; color:var(--gray-500); background:#fff; border-radius:14px; border:1px dashed var(--gray-300);">
             <div style="font-size:36px; margin-bottom:12px;">⚠️</div>
@@ -6804,20 +6865,17 @@
     initParticles();
     initScrollReveal();
 
-    // Safety fallback: Hide loading screen after 3s max only if network completely fails
-    const maxLoadingTimer = setTimeout(hideLoadingScreen, 3000);
+    // Show the page after its first paint; remote content can fill in afterward.
+    requestAnimationFrame(() => setTimeout(hideLoadingScreen, 100));
 
-    // Wait strictly for essential main page content (news & announcements) to finish rendering
     const mainNewsPromise = loadNews().then(count => {
       const el = document.getElementById('statNews');
       if (el) { el.dataset.target = count || 0; }
     });
     const mainAnnouncePromise = loadAnnouncements();
 
-    Promise.all([mainNewsPromise, mainAnnouncePromise]).finally(() => {
-      clearTimeout(maxLoadingTimer);
-      // Give 100ms for browser paint then hide loading screen
-      setTimeout(hideLoadingScreen, 100);
+    Promise.all([mainNewsPromise, mainAnnouncePromise]).catch(error => {
+      console.error('Could not load initial news or announcements:', error);
     });
 
     // Secondary items load in background
