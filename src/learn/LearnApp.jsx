@@ -278,7 +278,7 @@ export default function LearnApp() {
       </nav>
     </header>
     <main className="learn-main">
-      <section className="learn-hero"><div className="learn-hero-content">
+      <section className={`learn-hero ${view === 'courses' ? '' : 'learn-hero-compact'}`}><div className="learn-hero-content">
         <div className="learn-eyebrow"><span className="learn-eyebrow-dot" /> SWSC LEARNING · 5 วิชา</div>
         <h1>ถอดรหัสความเป็น<br /><em>พลเมืองคุณภาพ</em></h1>
         <p>เรียนทีละวิชาในเว็บเดียว ทบทวนได้ตามจังหวะของคุณ และรับเกียรติบัตรเมื่อสอบผ่านเกณฑ์</p>
