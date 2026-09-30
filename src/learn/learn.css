@@ -152,6 +152,7 @@ a { color: #5b35c8; }
 .learn-header nav button:hover { background: #f7f0ff; color: #4a1270; }
 .learn-header nav button.active { background: #f3e8ff; border-color: #e8d3fa; color: #4a1270; }
 .learn-header nav button.learn-signout { color: #806884; }
+.learn-menu-toggle { display: none; }
 .learn-main { max-width: 1220px; padding-top: 30px; }
 .learn-hero { min-height: 330px; display: flex; align-items: center; justify-content: space-between; gap: 36px; position: relative; overflow: hidden; padding: 44px clamp(26px, 5.5vw, 72px); border: 1px solid #704386; background: linear-gradient(110deg, #1e0a2e 0%, #36104f 55%, #6b21a8 100%); box-shadow: 0 20px 50px #4a127033; }
 .learn-hero::before { content: ''; position: absolute; inset: 0 auto auto 0; width: 56%; height: 4px; background: linear-gradient(90deg, #fbbf24, #f59e0b, transparent); }
@@ -252,11 +253,16 @@ a { color: #5b35c8; }
   .learn-reading { max-width: 100%; }
 }
 @media (max-width: 700px) {
-  .learn-header { position: static; align-items: stretch; gap: 10px; padding: 12px 14px; }
+  .learn-header { position: relative; display: flex; flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; min-height: 64px; padding: 10px 14px; }
   .learn-brand img { width: 110px; max-height: 34px; }
   .learn-brand span { font-size: 18px; }
-  .learn-header nav { display: flex; flex-wrap: nowrap; justify-content: flex-start; width: 100%; max-width: 100%; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
-  .learn-header nav button { flex: 0 0 auto; min-height: 44px; padding: 9px 12px; font-size: 13px; white-space: nowrap; }
+  .learn-menu-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid #e6d6ef; border-radius: 11px; background: #f9f3fc; color: #4a1270; font-weight: 700; }
+  .learn-menu-icon { display: grid; gap: 3px; width: 16px; }
+  .learn-menu-icon i { display: block; width: 16px; height: 2px; border-radius: 2px; background: currentColor; }
+  .learn-header nav { display: none; width: 100%; margin-top: 5px; padding: 8px; border: 1px solid #eee4f3; border-radius: 14px; background: #fff; box-shadow: 0 12px 24px #29113d16; }
+  .learn-header nav.is-open { display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px; }
+  .learn-header nav button { width: 100%; min-height: 46px; padding: 10px 14px; border-radius: 9px; text-align: left; font-size: 15px; }
+  .learn-header nav button.learn-signout { margin-top: 5px; border-top: 1px solid #eee4f3; border-radius: 0 0 9px 9px; }
   .learn-main { min-width: 0; padding: 16px 12px 54px; }
   .learn-hero { min-height: 0; padding: 32px 23px; border-radius: 21px; }
   .learn-hero-compact { padding: 16px 20px; }
@@ -301,6 +307,7 @@ a { color: #5b35c8; }
   .learn-brand { gap: 6px; }
   .learn-brand img { width: 88px; }
   .learn-brand span { font-size: 16px; }
+  .learn-menu-toggle { padding-inline: 10px; }
   .learn-course { padding: 14px; }
   .learn-course-info h3 { font-size: 18px; }
   .learn-pdf-head div { grid-template-columns: 1fr; }

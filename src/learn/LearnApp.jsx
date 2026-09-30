@@ -63,6 +63,7 @@ function Block({ subjectId, topicId, block }) {
 
 export default function LearnApp() {
   const [session, setSession] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [published, setPublished] = useState(false);
   const [catalog, setCatalog] = useState(lessonCatalog.map(subject => ({
     id: subject.id, ordinal: subject.ordinal, title: subject.title, summary: subject.summary,
@@ -265,16 +266,21 @@ export default function LearnApp() {
         <img src={`${import.meta.env.BASE_URL}all-logos.webp`} alt="ตราโรงเรียนและสภานักเรียน" />
         <span>SWSC.OFFICIAL</span>
       </a>
-      <nav aria-label="เมนูบทเรียน">
+      <button type="button" className="learn-menu-toggle" aria-expanded={menuOpen}
+        aria-controls="learn-navigation" onClick={() => setMenuOpen(value => !value)}>
+        <span className="learn-menu-icon" aria-hidden="true"><i /><i /><i /></span>
+        เมนู
+      </button>
+      <nav id="learn-navigation" className={menuOpen ? 'is-open' : ''} aria-label="เมนูบทเรียน">
         <button className={!['certificates', 'profile'].includes(view) ? 'active' : ''}
           aria-current={!['certificates', 'profile'].includes(view) ? 'page' : undefined}
-          onClick={() => setView(needsProfile ? 'profile' : 'courses')}>เส้นทางเรียน</button>
+          onClick={() => { setView(needsProfile ? 'profile' : 'courses'); setMenuOpen(false); }}>เส้นทางเรียน</button>
         <button className={view === 'certificates' ? 'active' : ''} aria-current={view === 'certificates' ? 'page' : undefined}
-          onClick={() => setView(needsProfile ? 'profile' : 'certificates')}>เกียรติบัตรของฉัน</button>
+          onClick={() => { setView(needsProfile ? 'profile' : 'certificates'); setMenuOpen(false); }}>เกียรติบัตรของฉัน</button>
         {session && <button className={view === 'profile' ? 'active' : ''}
           aria-current={view === 'profile' ? 'page' : undefined}
-          onClick={() => setView('profile')}>ข้อมูลส่วนตัว</button>}
-        {session && <button className="learn-signout" onClick={() => supabase.auth.signOut()}>ออกจากระบบ</button>}
+          onClick={() => { setView('profile'); setMenuOpen(false); }}>ข้อมูลส่วนตัว</button>}
+        {session && <button className="learn-signout" onClick={() => { setMenuOpen(false); supabase.auth.signOut(); }}>ออกจากระบบ</button>}
       </nav>
     </header>
     <main className="learn-main">
