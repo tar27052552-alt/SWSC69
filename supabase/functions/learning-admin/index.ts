@@ -63,6 +63,34 @@ Deno.serve(async req => {
     const body = await req.json();
     const action = String(body.action || '');
     const subjectId = String(body.subjectId || '');
+    if (action === 'learner_overview') {
+      const { data, error } = await admin.rpc('learning_admin_summary');
+      if (error) throw error;
+      return jsonResponse({ summary: data });
+    }
+    if (action === 'learner_roster') {
+      const search = String(body.search || '').trim();
+      const filterSubject = String(body.filterSubject || '');
+      const status = String(body.status || 'all');
+      const page = Number(body.page || 1);
+      if (search.length > 100 || (filterSubject && !subjectPattern.test(filterSubject)) ||
+        !['all', 'not_started', 'learning', 'passed', 'eligible'].includes(status) ||
+        !Number.isInteger(page) || page < 1 || page > 100000) return fail('ตัวกรองไม่ถูกต้อง');
+      const { data, error } = await admin.rpc('learning_admin_roster', {
+        p_search: search, p_subject_id: filterSubject || null, p_status: status,
+        p_offset: (page - 1) * 20, p_limit: 20,
+      });
+      if (error) throw error;
+      return jsonResponse({ roster: data });
+    }
+    if (action === 'learner_detail') {
+      const userId = String(body.userId || '');
+      if (!/^[0-9a-f-]{36}$/i.test(userId)) return fail('ไม่พบผู้เรียน');
+      const { data, error } = await admin.rpc('learning_admin_detail', { p_user_id: userId });
+      if (error) throw error;
+      if (!data) return fail('ไม่พบผู้เรียนในหลักสูตรนี้', 404);
+      return jsonResponse({ learner: data });
+    }
     if (action === 'decide_name_change') {
       const requestId = String(body.requestId || '');
       if (!/^[0-9a-f-]{36}$/i.test(requestId)) return fail('ไม่พบคำขอ');

@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import { lessonCatalog, lessonPrimaryStartPages } from '../learn/lessonCatalog.js';
 import { lessonIntroBlocks } from '../learn/lessonNarratives.js';
+import LearningLearners from './LearningLearners.jsx';
 import './LearningAdminPage.css';
 
 async function adminRequest(body) {
@@ -28,7 +29,7 @@ export default function LearningAdminPage() {
   const [subjectId, setSubjectId] = useState('civic-1');
   const [draft, setDraft] = useState(null);
   const [quiz, setQuiz] = useState([]);
-  const [tab, setTab] = useState('content');
+  const [tab, setTab] = useState('learners');
   const [note, setNote] = useState({ sourceReference: '', proposedChange: '', rationale: '' });
   const [certificateNumber, setCertificateNumber] = useState('');
   const [certificateLookup, setCertificateLookup] = useState(null);
@@ -142,21 +143,22 @@ export default function LearningAdminPage() {
       </div>
     </header>
     {notice && <div className="learning-admin-notice" role="status">{notice}</div>}
-    <div className="learning-admin-layout">
-      <aside className="learning-admin-subjects" aria-label="รายวิชา">
+    <div className={'learning-admin-layout' + (tab === 'learners' ? ' learning-admin-layout-wide' : '')}>
+      {tab !== 'learners' && <aside className="learning-admin-subjects" aria-label="รายวิชา">
         {data?.subjects.map(item => <button key={item.subject_id}
           className={subjectId === item.subject_id ? 'active' : ''}
           onClick={() => setSubjectId(item.subject_id)}>
           <span>วิชาที่ {item.ordinal}</span><strong>{item.title}</strong>
           <small>เนื้อหา {item.content_reviewed ? '✓' : 'รอตรวจ'} · ข้อสอบ {item.quiz_reviewed ? '✓' : 'รอตรวจ'}</small>
         </button>)}
-      </aside>
+      </aside>}
       <div className="learning-admin-main">
         <nav className="learning-admin-tabs" aria-label="ส่วนจัดการ">
-          {[['content', 'เนื้อหา'], ['quiz', 'ข้อสอบ 10 ข้อ'], ['review', 'ข้อเสนอแก้ไข'], ['certificate', 'เกียรติบัตร']].map(
+          {[['learners', 'ติดตามผู้เรียน'], ['content', 'เนื้อหา'], ['quiz', 'ข้อสอบ 10 ข้อ'], ['review', 'ข้อเสนอแก้ไข'], ['certificate', 'เกียรติบัตร']].map(
             ([id, label]) => <button key={id} className={tab === id ? 'active' : ''}
               onClick={() => setTab(id)}>{label}</button>)}
         </nav>
+        {tab === 'learners' && <LearningLearners />}
         {draft && tab === 'content' && <section>
           <div className="learning-admin-toolbar"><div><h2>ฉบับร่างวิชาที่ {subject?.ordinal}</h2>
             <p>เผยแพร่รุ่น {subject?.published_revision || 0} · ฉบับร่างรุ่น {subject?.draft_revision || 0}</p></div>
