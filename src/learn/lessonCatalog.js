@@ -1,6 +1,12 @@
 const drive = (title, id) => ({ title, type: 'document', url: `https://drive.google.com/file/d/${id}/view`, embedUrl: `https://drive.google.com/file/d/${id}/preview` });
 const video = (title, id) => ({ title, type: 'video', url: `https://www.youtube.com/watch?v=${id}`, embedUrl: `https://www.youtube-nocookie.com/embed/${id}` });
 
+export const lessonPrimaryStartPages = {
+  'civic-1': [1, 3, 9, 12], 'civic-2': [1, 2, 3, 6],
+  'civic-3': [1, 4, 14, 15], 'civic-4': [1, 6, 12, 14],
+  'civic-5': [1, 11, 19, 23],
+};
+
 // Source: https://sites.google.com/sappha.ac.th/swscstudentcouncil/บทเรียนออนไลน์
 // The signed certificate templates and private answer keys are intentionally not stored here.
 export const lessonCatalog = [
@@ -32,7 +38,7 @@ export const lessonCatalog = [
     id: 'civic-2', ordinal: 2, title: 'การเป็นพลเมืองคุณภาพ',
     summary: 'ความหมายของพลเมือง จิตอาสา จิตสำนึกสาธารณะ และคุณลักษณะพลเมือง',
     objectives: ['อธิบายความหมายของพลเมือง', 'แยกจิตอาสาออกจากจิตสำนึกสาธารณะ', 'อธิบายคุณลักษณะพลเมืองในระบอบประชาธิปไตย'],
-    topics: ['ประชาชนและพลเมือง', 'จิตอาสาและจิตสำนึกสาธารณะ', 'คุณลักษณะของพลเมืองคุณภาพ', 'ศส.ปชต. และเครือข่ายพลเมือง'],
+    topics: ['ประชาชนและพลเมือง', 'จิตอาสาและจิตสำนึกสาธารณะ', 'คุณลักษณะของพลเมืองคุณภาพ', 'การดำเนินชีวิตอย่างพอเพียงและการมีส่วนร่วมในชุมชน'],
     resources: [
       drive('การเป็นพลเมืองคุณภาพ', '1n_h5SAS1ueHdYaChTuFt-EG3SzZVv_8F'),
       drive('พลเมืองคุณภาพ', '1IMcXX--UmBr4f6mBJJXkpTalB5egHrrQ'),

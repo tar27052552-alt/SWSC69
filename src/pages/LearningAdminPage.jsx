@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
-import { lessonCatalog } from '../learn/lessonCatalog.js';
+import { lessonCatalog, lessonPrimaryStartPages } from '../learn/lessonCatalog.js';
+import { lessonIntroBlocks } from '../learn/lessonNarratives.js';
 import './LearningAdminPage.css';
 
 async function adminRequest(body) {
@@ -58,6 +59,27 @@ export default function LearningAdminPage() {
     update(next.topics[index]);
     return next;
   });
+  const insertReadingCopy = () => {
+    const catalog = lessonCatalog.find(item => item.id === subjectId);
+    const primaryDocument = catalog.resources.find(item => item.type === 'document');
+    const primaryId = primaryDocument.url.split('/')[5];
+    const primaryPath = `civic-dna-2026/${subjectId}/${primaryId}.pdf`;
+    setDraft(current => ({ ...current, topics: current.topics.map((topic, index) => {
+      const blocks = [...lessonIntroBlocks(subjectId, index), ...topic.blocks.filter(block =>
+        block.editorialSource !== 'lesson-narrative-v1' &&
+        !(block.type === 'paragraph' && block.text ===
+          (catalog.objectives[index] || catalog.summary)))];
+      const startPage = lessonPrimaryStartPages[subjectId][index];
+      const resources = topic.resources.map(item => item.path === primaryPath
+        ? { ...item, startPage } : item);
+      if (!resources.some(item => item.path === primaryPath)) resources.unshift({
+        type: 'document', title: primaryDocument.title, path: primaryPath,
+        startPage, toc: [], sourceId: primaryId,
+      });
+      return { ...topic, blocks, resources };
+    }) }));
+    setNotice('ใส่คำเกริ่นและ PDF ต้นฉบับแล้ว ตรวจไฟล์กับหัวข้อก่อนกดบันทึก');
+  };
   const doAction = async (body, message) => {
     setBusy(true); setNotice('');
     try {
@@ -76,15 +98,10 @@ export default function LearningAdminPage() {
     } catch (error) { setNotice(error.message); }
     finally { setBusy(false); }
   }
-  async function correctCertificate() {
-    setBusy(true); setNotice('');
-    try {
-      const result = await adminRequest({ action: 'correct_certificate',
-        certificateNumber, fullName: correctedName });
-      setCertificateLookup(null);
-      setNotice(`แก้ชื่อแล้ว กำลังสร้างและส่ง PDF ใหม่ ${result.regenerated} ใบ`);
-    } catch (error) { setNotice(error.message); }
-    finally { setBusy(false); }
+  async function createNameRequest() {
+    await doAction({ action: 'create_name_request', certificateNumber,
+      fullName: correctedName }, 'บันทึกคำขอแล้ว กรุณาตรวจและอนุมัติจากรายการด้านล่าง');
+    setCertificateLookup(null);
   }
   async function upload(file, kind) {
     const signed = await adminRequest({ action: 'sign_upload', subjectId,
@@ -143,6 +160,7 @@ export default function LearningAdminPage() {
         {draft && tab === 'content' && <section>
           <div className="learning-admin-toolbar"><div><h2>ฉบับร่างวิชาที่ {subject?.ordinal}</h2>
             <p>เผยแพร่รุ่น {subject?.published_revision || 0} · ฉบับร่างรุ่น {subject?.draft_revision || 0}</p></div>
+            <button type="button" disabled={busy} onClick={insertReadingCopy}>ใช้ PDF ต้นฉบับ</button>
             <button disabled={busy} onClick={() => doAction({ action: 'save_subject', subjectId,
               title: draft.title, summary: draft.summary, topics: draft.topics }, 'บันทึกฉบับร่างแล้ว')}>
               บันทึกฉบับร่าง</button></div>
@@ -277,7 +295,19 @@ export default function LearningAdminPage() {
           <button disabled={busy} onClick={() => doAction({ action: 'set_template', subjectId,
             templateId: draft.templateId, approved: true }, 'บันทึกแบบใบที่เซ็นแล้ว')}>
             บันทึกและอนุมัติแบบใบวิชานี้</button>
-          <div className="learning-admin-note"><h3>แก้ชื่อบนใบที่ออกแล้ว</h3>
+          <div className="learning-admin-note"><h3>คำขอเปลี่ยนชื่อบนเกียรติบัตร</h3>
+            {(data?.nameRequests || []).length === 0 && <p>ไม่มีคำขอที่รอพิจารณา</p>}
+            {(data?.nameRequests || []).map(item => <div key={item.id} className="learning-admin-note">
+              <p>ชื่อบนใบเดิม: {item.currentName} → ชื่อใหม่: <strong>{item.requested_name}</strong></p>
+              <p>ผู้เรียน {item.user_id} · เกียรติบัตร {item.certificateCount} ใบ</p>
+              <p>ส่งคำขอ {new Date(item.created_at).toLocaleString('th-TH')}</p>
+              <button disabled={busy} onClick={() => doAction({ action: 'decide_name_change',
+                requestId: item.id, approve: true }, 'อนุมัติแล้ว ออกเลขใหม่และจัดคิวส่งใบทุกวิชา')}>
+                อนุมัติและออกใบใหม่</button>
+              <button disabled={busy} onClick={() => doAction({ action: 'decide_name_change',
+                requestId: item.id, approve: false }, 'ปฏิเสธคำขอแล้ว ผู้เรียนส่งใหม่ได้')}>
+                ปฏิเสธ</button>
+            </div>)}
             <label className="learning-admin-field">เลขเกียรติบัตร<input
               value={certificateNumber} onChange={event => {
                 setCertificateNumber(event.target.value); setCertificateLookup(null);
@@ -285,11 +315,16 @@ export default function LearningAdminPage() {
             <button disabled={busy} onClick={findCertificate}>ค้นหาใบ</button>
             {certificateLookup && <div><p>วิชา {certificateLookup.subject_id} ·
               ชื่อปัจจุบัน {certificateLookup.recipient_name}</p>
+              {certificateLookup.status === 'revoked' ? <p>เลขใบนี้ถูกยกเลิกเมื่อ {
+                new Date(certificateLookup.revoked_at).toLocaleString('th-TH')}
+                {certificateLookup.auditUrl && <> · <a href={certificateLookup.auditUrl}
+                  target="_blank" rel="noreferrer">เปิด PDF เก่าสำหรับตรวจสอบ</a></>}</p> : <>
               <label className="learning-admin-field">ชื่อที่แก้ไข<input value={correctedName}
                 onChange={event => setCorrectedName(event.target.value)} /></label>
-              <p>การแก้ชื่อจะสร้างและส่ง PDF ใหม่ให้ทุกวิชาที่ผู้เรียนคนนี้ได้รับใบแล้ว</p>
+              <p>สร้างคำขอจากหลังบ้านให้ผู้เรียนคนนี้ โดยใช้สิทธิ์และขั้นตอนอนุมัติเดียวกัน</p>
               <button disabled={busy || correctedName.trim() === certificateLookup.recipient_name}
-                onClick={correctCertificate}>บันทึกชื่อและสร้างใบใหม่</button>
+                onClick={createNameRequest}>สร้างคำขอเปลี่ยนชื่อ</button>
+              </>}
             </div>}
           </div>
         </section>}

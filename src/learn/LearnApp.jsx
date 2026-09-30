@@ -5,7 +5,6 @@ import { lessonCatalog } from './lessonCatalog.js';
 const supabase = createClient(import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY,
   { auth: { storageKey: 'swsc-learner-auth', persistSession: true, detectSessionInUrl: true } });
-const oldCertificatesUrl = 'https://sites.google.com/sappha.ac.th/swscstudentcouncil/สืบค้นเกียรติบัตร';
 
 async function request(body) {
   const { data, error } = await supabase.functions.invoke('learning-v2', { body });
@@ -15,6 +14,13 @@ async function request(body) {
   }
   if (data?.error) throw new Error(data.error);
   return data;
+}
+
+function profileRequestMessage(error) {
+  if (/หลักสูตรยังไม่เปิดใช้งาน|Unknown action/i.test(error.message)) {
+    return 'ระบบข้อมูลบทเรียนที่เชื่อมอยู่ยังไม่รองรับการบันทึกโปรไฟล์ ต้องอัปเดต Supabase ก่อนจึงจะบันทึกได้';
+  }
+  return error.message;
 }
 
 function PrivateImage({ subjectId, topicId, block }) {
@@ -63,10 +69,15 @@ export default function LearnApp() {
     topics: subject.topics.map((title, index) => ({ id: subject.id + '-t' + (index + 1), title })),
   })));
   const [profile, setProfile] = useState(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [profileUnavailable, setProfileUnavailable] = useState(false);
   const [progress, setProgress] = useState({});
   const [certificates, setCertificates] = useState([]);
   const [certificatesEnabled, setCertificatesEnabled] = useState(false);
   const [nameInput, setNameInput] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [certificateNameInput, setCertificateNameInput] = useState('');
+  const [nameChangeRequest, setNameChangeRequest] = useState(null);
   const [selected, setSelected] = useState(null);
   const [topic, setTopic] = useState(null);
   const [topicIndex, setTopicIndex] = useState(0);
@@ -76,6 +87,7 @@ export default function LearnApp() {
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
   const [resource, setResource] = useState(null);
+  const [pdfResource, setPdfResource] = useState(null);
   const [pdfUrl, setPdfUrl] = useState('');
   const [view, setView] = useState(new URLSearchParams(location.search).get('view') === 'certificates'
     ? 'certificates' : 'courses');
@@ -86,9 +98,16 @@ export default function LearnApp() {
   const loadMe = useCallback(async () => {
     const data = await request({ action: 'me' });
     setProfile(data.profile);
+    setNameInput(data.profile?.full_name || '');
+    setPhoneInput(data.profile?.phone || '');
+    setCertificateNameInput(data.profile?.certificate_name || '');
+    setNameChangeRequest(data.nameChangeRequest);
     setProgress(data.progress || {});
     setCertificates(data.certificates || []);
     setCertificatesEnabled(Boolean(data.certificatesEnabled));
+    setProfileLoaded(true);
+    setProfileUnavailable(false);
+    if (!data.profile?.full_name || !data.profile?.phone) setView('profile');
   }, []);
 
   useEffect(() => {
@@ -97,7 +116,8 @@ export default function LearnApp() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
       if (!active) return;
       setSession(next);
-      if (!next) { setProfile(null); setProgress({}); setCertificates([]); setView('courses'); }
+      if (!next) { setProfile(null); setProfileLoaded(false); setProfileUnavailable(false);
+        setProgress({}); setCertificates([]); setView('courses'); }
     });
     request({ action: 'catalog' }).then(data => {
       if (!active) return;
@@ -108,8 +128,13 @@ export default function LearnApp() {
   }, []);
 
   useEffect(() => {
-    if (session && published) Promise.resolve().then(loadMe).catch(error => setNotice(error.message));
-  }, [session, published, loadMe]);
+    if (session) Promise.resolve().then(loadMe).catch(error => {
+      setProfileLoaded(true);
+      setProfileUnavailable(true);
+      setView('profile');
+      setNotice(profileRequestMessage(error));
+    });
+  }, [session, loadMe]);
 
   async function googleSignIn() {
     setBusy(true); setNotice('');
@@ -119,11 +144,22 @@ export default function LearnApp() {
     });
     if (error) { setNotice(error.message); setBusy(false); }
   }
-  async function saveName(event) {
+  async function saveProfile(event) {
     event.preventDefault(); setBusy(true); setNotice('');
     try {
-      const data = await request({ action: 'save_name', fullName: nameInput });
-      setProfile({ full_name: data.fullName });
+      const wasIncomplete = !profile?.full_name || !profile?.phone;
+      await request({ action: 'save_profile', fullName: nameInput, phone: phoneInput });
+      await loadMe();
+      if (wasIncomplete) setView('courses');
+      setNotice('บันทึกข้อมูลส่วนตัวแล้ว');
+    } catch (error) { setNotice(profileRequestMessage(error)); }
+    finally { setBusy(false); }
+  }
+  async function requestNameChange(event) {
+    event.preventDefault(); setBusy(true); setNotice('');
+    try {
+      await request({ action: 'request_name_change', fullName: certificateNameInput });
+      await loadMe(); setNotice('ส่งคำขอเปลี่ยนชื่อบนเกียรติบัตรแล้ว');
     } catch (error) { setNotice(error.message); }
     finally { setBusy(false); }
   }
@@ -143,17 +179,26 @@ export default function LearnApp() {
     finally { setBusy(false); }
   }
   async function openTopic(subject, index) {
-    setBusy(true); setNotice(''); setResource(null); setPdfUrl('');
+    setBusy(true); setNotice(''); setResource(null); setPdfResource(null); setPdfUrl('');
     try {
       const data = await request({ action: 'topic', subjectId: subject.id,
         topicId: subject.topics[index].id });
       setSelected(subject); setTopic(data.topic); setTopicIndex(index); setView('topic');
+      const firstDocument = data.topic.resources?.find(item => item.type === 'document');
+      if (firstDocument) {
+        const material = await request({ action: 'material', subjectId: subject.id,
+          topicId: data.topic.id, path: firstDocument.path });
+        setPdfResource(firstDocument); setPdfUrl(material.url);
+      }
     } catch (error) { setNotice(error.message); }
     finally { setBusy(false); }
   }
   function openSubject(subject) {
     setSelected(subject);
-    if (!published || !session || !profile || !unlocked(subject)) { setView('preview'); return; }
+    if (session && profileLoaded && (!profile?.full_name || !profile?.phone)) {
+      setView('profile'); return;
+    }
+    if (!published || !session || !profile?.phone || !unlocked(subject)) { setView('preview'); return; }
     const progressItem = stateOf(subject);
     if (!progressItem.preCompleted) { openQuiz(subject, 'pre'); return; }
     const next = subject.topics.findIndex(item => !progressItem.completedTopicIds.includes(item.id));
@@ -170,12 +215,12 @@ export default function LearnApp() {
     finally { setBusy(false); }
   }
   async function openResource(item) {
-    if (item.type === 'video') { setResource(item); setPdfUrl(''); return; }
+    if (item.type === 'video') { setResource(item); return; }
     setBusy(true); setNotice('');
     try {
       const data = await request({ action: 'material', subjectId: selected.id,
         topicId: topic.id, path: item.path });
-      setResource(item); setPdfUrl(data.url);
+      setPdfResource(item); setPdfUrl(data.url);
     } catch (error) { setNotice(error.message); }
     finally { setBusy(false); }
   }
@@ -212,35 +257,82 @@ export default function LearnApp() {
 
   const current = catalog.find(subject => unlocked(subject) && stateOf(subject).bestPostScore < 6)
     || catalog[catalog.length - 1];
+  const needsProfile = Boolean(session && profileLoaded && !profileUnavailable &&
+    (!profile?.full_name || !profile?.phone));
   return <div className="learn-app">
     <header className="learn-header">
-      <a className="learn-brand" href={import.meta.env.BASE_URL}><span>SWSC</span><small>พลเมือง DNA</small></a>
+      <a className="learn-brand" href={import.meta.env.BASE_URL} aria-label="กลับหน้าเว็บหลัก SWSC.OFFICIAL">
+        <img src={`${import.meta.env.BASE_URL}all-logos.webp`} alt="ตราโรงเรียนและสภานักเรียน" />
+        <span>SWSC.OFFICIAL</span>
+      </a>
       <nav aria-label="เมนูบทเรียน">
-        <button onClick={() => setView('courses')}>เส้นทางเรียน</button>
-        <button onClick={() => setView('certificates')}>เกียรติบัตรของฉัน</button>
-        {session && <button onClick={() => supabase.auth.signOut()}>ออกจากระบบ</button>}
+        <button className={!['certificates', 'profile'].includes(view) ? 'active' : ''}
+          aria-current={!['certificates', 'profile'].includes(view) ? 'page' : undefined}
+          onClick={() => setView(needsProfile ? 'profile' : 'courses')}>เส้นทางเรียน</button>
+        <button className={view === 'certificates' ? 'active' : ''} aria-current={view === 'certificates' ? 'page' : undefined}
+          onClick={() => setView(needsProfile ? 'profile' : 'certificates')}>เกียรติบัตรของฉัน</button>
+        {session && <button className={view === 'profile' ? 'active' : ''}
+          aria-current={view === 'profile' ? 'page' : undefined}
+          onClick={() => setView('profile')}>ข้อมูลส่วนตัว</button>}
+        {session && <button className="learn-signout" onClick={() => supabase.auth.signOut()}>ออกจากระบบ</button>}
       </nav>
     </header>
     <main className="learn-main">
-      <section className="learn-hero"><div className="learn-eyebrow">หลักสูตรออนไลน์ · 5 วิชา</div>
-        <h1>ถอดรหัสความเป็นพลเมืองคุณภาพ</h1>
-        <p>เริ่มจากข้อสอบก่อนเรียน อ่านทีละหัวข้อ แล้วทำข้อสอบหลังเรียนให้ได้ 6/10 เพื่อไปต่อ หรือ 8/10 เพื่อรับเกียรติบัตร</p>
+      <section className="learn-hero"><div className="learn-hero-content">
+        <div className="learn-eyebrow"><span className="learn-eyebrow-dot" /> SWSC LEARNING · 5 วิชา</div>
+        <h1>ถอดรหัสความเป็น<br /><em>พลเมืองคุณภาพ</em></h1>
+        <p>เรียนทีละวิชาในเว็บเดียว ทบทวนได้ตามจังหวะของคุณ และรับเกียรติบัตรเมื่อสอบผ่านเกณฑ์</p>
+        <div className="learn-hero-rule"><span>6/10 <small>ปลดล็อกวิชาถัดไป</small></span>
+          <span>8/10 <small>รับเกียรติบัตร</small></span></div>
+      </div><div className="learn-hero-seal" aria-hidden="true"><span>SWSC</span><strong>DNA</strong>
+        <small>พลเมืองคุณภาพ</small></div>
       </section>
-      {notice && <div className="learn-notice" role="status">{notice}</div>}
+      {notice && view !== 'profile' && <div className="learn-notice" role="status">{notice}</div>}
       {!published && <div className="learn-panel">หลักสูตรกำลังตรวจเนื้อหาและข้อสอบทั้ง 5 วิชา คุณดูโครงบทได้ก่อนเปิดเรียน</div>}
-      {!session && published && <section className="learn-panel learn-auth"><div>
-        <h2>เข้าสู่ระบบเพื่อเริ่มเรียน</h2><p>ใช้บัญชี Google ของคุณ อีเมลนี้จะใช้ส่งเกียรติบัตร</p>
+      {!session && <section className="learn-panel learn-auth"><div>
+        <h2>เข้าสู่ระบบด้วย Google</h2><p>{published
+          ? 'ใช้อีเมล Google เพื่อบันทึกความคืบหน้าและรับเกียรติบัตร'
+          : 'ลงชื่อเข้าใช้ไว้ก่อนได้ เมื่อผู้ดูแลตรวจบทเรียนครบจึงจะเริ่มเรียนได้'}</p>
       </div><button disabled={busy} onClick={googleSignIn}>เข้าสู่ระบบด้วย Google</button></section>}
-      {session && published && !profile && <section className="learn-panel learn-auth"><div>
-        <h2>ชื่อจริงสำหรับเกียรติบัตร</h2><p>กรอกชื่อและนามสกุลให้ตรงกับที่ต้องการแสดงบนใบ</p>
-      </div><form onSubmit={saveName}><label htmlFor="learner-name">ชื่อและนามสกุล</label>
-        <input id="learner-name" value={nameInput} required minLength={2} maxLength={120}
-          onChange={event => setNameInput(event.target.value)} />
-        <button disabled={busy}>บันทึกชื่อ</button></form></section>}
+      {session && !published && <div className="learn-panel">เข้าสู่ระบบแล้วด้วย {session.user.email} ·
+        หลักสูตรจะเปิดหลังผู้ดูแลตรวจเนื้อหาและข้อสอบครบ</div>}
+      {view === 'profile' && session && <section className="learn-section learn-profile-section">
+        <div className="learn-section-heading"><div><div className="learn-section-kicker">บัญชีผู้เรียน</div>
+          <h2>ข้อมูลส่วนตัว</h2></div></div>
+        {notice && <div className="learn-notice" role="status">{notice}</div>}
+        {needsProfile && <div className="learn-profile-required" role="status">
+          <span aria-hidden="true">✦</span><div><strong>กรอกข้อมูลก่อนเริ่มเรียน</strong>
+            <p>ระบุชื่อและเบอร์มือถือให้ครบ แล้วระบบจะพากลับไปเส้นทางเรียน</p></div></div>}
+        <div className="learn-profile-layout"><div className="learn-panel learn-profile-card">
+        <div className="learn-profile-card-head"><span className="learn-profile-icon" aria-hidden="true">✦</span>
+          <div><h3>ข้อมูลสำหรับการเรียน</h3><p>แก้ชื่อและเบอร์มือถือได้ทุกเมื่อ</p></div></div>
+        <div className="learn-readonly-field"><span>อีเมล Google</span><strong>{session.user.email}</strong>
+          <small>ใช้สำหรับเข้าสู่ระบบและรับเกียรติบัตร · เปลี่ยนไม่ได้</small></div>
+        <form onSubmit={saveProfile} className="learn-profile-form">
+          <label htmlFor="profile-name">ชื่อและนามสกุล</label>
+          <input id="profile-name" value={nameInput} required minLength={2} maxLength={120}
+            autoFocus={!profile?.full_name}
+            onChange={event => setNameInput(event.target.value)} />
+          <label htmlFor="profile-phone">เบอร์มือถือไทย 10 หลัก</label>
+          <input id="profile-phone" value={phoneInput} required inputMode="numeric" pattern="0[689][0-9]{8}"
+            maxLength={10} autoFocus={Boolean(profile?.full_name && !profile?.phone)}
+            onChange={event => setPhoneInput(event.target.value)} />
+          <button disabled={busy}>บันทึกข้อมูลส่วนตัว</button>
+        </form></div>
+        <aside className="learn-profile-aside"><div className="learn-panel learn-certificate-note">
+          <span className="learn-note-icon" aria-hidden="true">✦</span>
+          <h3>ชื่อบนเกียรติบัตร</h3>
+          <p>{profile?.certificate_name || 'ระบบจะใช้ชื่อที่คุณกรอกเมื่อออกเกียรติบัตรใบแรก'}</p>
+          <small>{profile?.certificate_name ? 'ชื่อนี้ถูกตรึงไว้ การแก้ชื่อในข้อมูลส่วนตัวจะไม่เปลี่ยนใบที่ออกแล้ว' :
+            'ตรวจชื่อให้ถูกต้องก่อนสอบผ่านเกณฑ์รับใบแรก'}</small>
+          {profile?.certificate_name && <button onClick={() => setView('certificates')}>ดูเกียรติบัตรและคำขอเปลี่ยนชื่อ →</button>}
+        </div></aside></div>
+      </section>}
 
       {view === 'courses' && <section className="learn-section">
-        <div className="learn-section-heading"><h2>เส้นทางเรียน 5 วิชา</h2><span>เรียนตามลำดับ</span></div>
-        {session && profile && published && current && <button className="learn-continue"
+        <div className="learn-section-heading"><div><div className="learn-section-kicker">COURSE JOURNEY</div>
+          <h2>เส้นทางเรียน 5 วิชา</h2></div><span>เรียนตามลำดับ</span></div>
+        {session && profile?.phone && published && current && <button className="learn-continue"
           onClick={() => openSubject(current)}>กลับมาเรียนต่อ: วิชาที่ {current.ordinal} →</button>}
         <div className="learn-course-list">{catalog.map(subject => {
           const item = stateOf(subject);
@@ -254,8 +346,8 @@ export default function LearnApp() {
               item.preCompleted ? 'เรียนแล้ว ' + item.completedTopicIds.length + '/4 หัวข้อ' : 'ยังไม่เริ่ม'
             }</div><h3>{subject.title}</h3><p>{subject.summary}</p>
               {item.bestPostScore >= 0 && <small>คะแนนสูงสุด {item.bestPostScore}/10</small>}
-            </div><button disabled={busy || (published && session && profile && locked)}
-              onClick={() => openSubject(subject)}>{!published || !session || !profile ? 'ดูโครงบท' :
+            </div><button disabled={busy || (published && session && profile?.phone && locked)}
+              onClick={() => openSubject(subject)}>{!published || !session || !profile?.phone ? 'ดูโครงบท' :
                 locked ? 'ล็อกอยู่' : 'เข้าเรียน →'}</button>
           </article>;
         })}</div>
@@ -267,7 +359,7 @@ export default function LearnApp() {
         <h3>หัวข้อในวิชานี้</h3><ol>{selected.topics.map(item => <li key={item.id}>{item.title}</li>)}</ol>
         <p>{!published ? 'หลักสูตรยังอยู่ระหว่างตรวจเนื้อหา' :
           !session ? 'เข้าสู่ระบบด้วย Google เพื่อเรียนเนื้อหา' :
-          !profile ? 'กรอกชื่อจริงก่อนเริ่มเรียน' : 'ผ่านวิชาก่อนหน้าให้ได้อย่างน้อย 6/10'}</p>
+          !profile?.phone ? 'กรอกชื่อและเบอร์มือถือก่อนเริ่มเรียน' : 'ผ่านวิชาก่อนหน้าให้ได้อย่างน้อย 6/10'}</p>
       </section>}
 
       {view === 'topic' && selected && topic && <section className="learn-section learn-lesson learn-reading">
@@ -282,9 +374,24 @@ export default function LearnApp() {
               className={index === topicIndex ? 'active' : ''}
               onClick={() => openTopic(selected, index)}>{index + 1}. {item.title}</button>;
           })}</aside><div className="learn-topic-body">
-            {(topic.blocks || []).map((block, index) => <Block key={topic.id + '-' + index}
+            <p className="learn-reading-note">อ่าน PDF ต้นฉบับตามลำดับหน้า ภาพ ตาราง และข้อความจะอยู่ครบในไฟล์เดียว</p>
+            {(topic.blocks || []).filter(block => block.type !== 'page').map((block, index) => <Block key={topic.id + '-' + index}
               subjectId={selected.id} topicId={topic.id} block={block} />)}
-            {(topic.resources || []).length > 0 && <div className="learn-material"><h3>สื่อประกอบหัวข้อนี้</h3>
+            {!pdfUrl && (topic.blocks || []).filter(block => block.type === 'page').map((block, index) =>
+              <Block key={topic.id + '-page-' + index} subjectId={selected.id} topicId={topic.id} block={block} />)}
+            {pdfUrl && pdfResource && <div className="learn-viewer learn-pdf-viewer">
+              <div className="learn-pdf-head"><strong>{pdfResource.title}</strong>
+                <div><a href={pdfUrl + '#page=' + (pdfResource.startPage || 1)} target="_blank" rel="noopener noreferrer">ขยายเต็มจอ ↗</a>
+                  <a href={pdfUrl + '&download=' + encodeURIComponent(pdfResource.title + '.pdf')}>ดาวน์โหลด PDF ↓</a></div></div>
+              {pdfResource.toc?.length > 0 && <nav className="learn-pdf-toc" aria-label="สารบัญเอกสาร">
+                {pdfResource.toc.map((item, index) => <a key={index}
+                  href={pdfUrl + '#page=' + item.page} target="learn-pdf-frame">{item.title}</a>)}
+              </nav>}
+              <iframe key={pdfUrl + pdfResource.startPage} name="learn-pdf-frame" title={pdfResource.title}
+                src={pdfUrl + '#page=' + (pdfResource.startPage || 1)} />
+              <p>หากเครื่องของคุณไม่แสดง PDF ในกรอบ ให้กด “ขยายเต็มจอ”</p>
+            </div>}
+            {(topic.resources || []).length > 0 && <div className="learn-material"><h3>เอกสารและวิดีโอในหัวข้อนี้</h3>
               <div className="learn-resource-list">{topic.resources.map((item, index) =>
                 <button key={item.type + index} onClick={() => openResource(item)}>
                   {item.type === 'video' ? '▶' : '▤'} {item.title}</button>)}</div></div>}
@@ -294,15 +401,6 @@ export default function LearnApp() {
                 loading="lazy" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
               <button type="button" onClick={reportVideo} disabled={busy}>
                 แจ้งผู้ดูแลว่าวิดีโอเปิดไม่ได้</button>
-            </div>}
-            {resource?.type === 'document' && pdfUrl && <div className="learn-viewer">
-              <strong>{resource.title}</strong>
-              {resource.toc?.length > 0 && <nav className="learn-pdf-toc" aria-label="สารบัญเอกสาร">
-                {resource.toc.map((item, index) => <a key={index}
-                  href={pdfUrl + '#page=' + item.page} target="learn-pdf-frame">{item.title}</a>)}
-              </nav>}
-              <iframe name="learn-pdf-frame" title={resource.title} src={pdfUrl} />
-              <a href={pdfUrl} download>ดาวน์โหลด PDF</a>
             </div>}
             <div className="learn-lesson-footer"><p>อ่านและดูสื่อในหัวข้อนี้แล้ว กดเพื่อไปหัวข้อถัดไป</p>
               <button disabled={busy} onClick={completeTopic}>เรียนหัวข้อนี้จบแล้ว →</button></div>
@@ -341,7 +439,8 @@ export default function LearnApp() {
       </section>}
 
       {view === 'certificates' && <section className="learn-section">
-        <div className="learn-section-heading"><h2>เกียรติบัตรของฉัน</h2></div>
+        <div className="learn-section-heading"><div><div className="learn-section-kicker">MY CERTIFICATES</div>
+          <h2>เกียรติบัตรของฉัน</h2></div></div>
         {!session && <div className="learn-panel">เข้าสู่ระบบด้วย Google เพื่อดูเกียรติบัตร</div>}
         {session && certificates.length === 0 && <div className="learn-panel">
           {certificatesEnabled ? 'ยังไม่มีเกียรติบัตรจากหลักสูตรนี้' :
@@ -357,8 +456,20 @@ export default function LearnApp() {
             <button disabled={busy || !certificate.downloadable}
               onClick={() => resendCertificate(certificate.id)}>ส่งอีเมลอีกครั้ง</button></div>
         </article>)}</div>
-        <p className="learn-old-cert">เกียรติบัตรจากเว็บเดิม: <a href={oldCertificatesUrl}
-          target="_blank" rel="noreferrer">ระบบค้นหาเดิม ↗</a></p>
+        {session && profile?.certificate_name && <div className="learn-panel learn-name-change">
+          <div className="learn-name-change-heading"><span className="learn-note-icon" aria-hidden="true">✦</span>
+            <h3>ขอเปลี่ยนชื่อบนเกียรติบัตร</h3></div>
+          <p>ชื่อที่ใช้อยู่: {profile.certificate_name} · เมื่ออนุมัติ ระบบจะยกเลิกเลขใบเดิมและออกใบใหม่ทุกวิชา</p>
+          {profile.reissue_used_at ? <p>ใช้สิทธิ์เปลี่ยนชื่อแล้ว</p> :
+            nameChangeRequest?.status === 'pending' ? <p>คำขอชื่อ “{nameChangeRequest.requested_name}” รอผู้ดูแลพิจารณา</p> :
+              <form className="learn-profile-form" onSubmit={requestNameChange}>
+                {nameChangeRequest?.status === 'rejected' && <p>คำขอก่อนหน้าถูกปฏิเสธ{ nameChangeRequest.admin_note ? `: ${nameChangeRequest.admin_note}` : ''} คุณส่งใหม่ได้</p>}
+                <label htmlFor="certificate-new-name">ชื่อใหม่บนเกียรติบัตร</label>
+                <input id="certificate-new-name" required minLength={2} maxLength={120}
+                  value={certificateNameInput} onChange={event => setCertificateNameInput(event.target.value)} />
+                <button disabled={busy || certificateNameInput.trim() === profile.certificate_name}>ส่งคำขอ</button>
+              </form>}
+        </div>}
       </section>}
     </main>
   </div>;

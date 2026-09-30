@@ -53,16 +53,15 @@ Deno.serve(async req => {
     if (authError || !user?.email || !user.email_confirmed_at || !tokenUsesGoogle(token, user)) {
       return fail('กรุณาเข้าสู่ระบบด้วยบัญชี Google ที่ยืนยันแล้ว', 401);
     }
-    if (!edition.published) return fail('หลักสูตรยังไม่เปิดใช้งาน', 503);
-
     const { data: enrollment, error: enrollmentError } = await admin.from('learning_enrollments')
-      .select('full_name').eq('user_id', user.id).eq('edition_id', EDITION).maybeSingle();
+      .select('full_name,phone,certificate_name,reissue_used_at').eq('user_id', user.id).eq('edition_id', EDITION).maybeSingle();
     if (enrollmentError) throw enrollmentError;
 
     if (action === 'me') {
       const [{ data: attempts, error: attemptError },
         { data: completions, error: completionError },
-        { data: certificates, error: certificateError }] = await Promise.all([
+        { data: certificates, error: certificateError },
+        { data: requests, error: requestError }] = await Promise.all([
         admin.from('learning_attempts').select('subject_id,phase,score,total')
           .eq('user_id', user.id).eq('edition_id', EDITION),
         admin.from('learning_topic_completions').select('subject_id,topic_id')
@@ -70,8 +69,10 @@ Deno.serve(async req => {
         admin.from('learning_certificates')
           .select('id,subject_id,certificate_number,recipient_name,issued_at,email_status,pdf_path')
           .eq('user_id', user.id).eq('edition_id', EDITION).order('issued_at', { ascending: false }),
+        admin.from('learning_certificate_name_requests').select('id,requested_name,status,created_at,admin_note')
+          .eq('user_id', user.id).eq('edition_id', EDITION).order('created_at', { ascending: false }).limit(1),
       ]);
-      if (attemptError || completionError || certificateError) throw attemptError || completionError || certificateError;
+      if (attemptError || completionError || certificateError || requestError) throw attemptError || completionError || certificateError || requestError;
       const progress: Record<string, { preCompleted: boolean; bestPostScore: number; completedTopicIds: string[] }> = {};
       for (const attempt of attempts || []) {
         const item = progress[attempt.subject_id] ||= { preCompleted: false, bestPostScore: -1, completedTopicIds: [] };
@@ -83,21 +84,33 @@ Deno.serve(async req => {
         item.completedTopicIds.push(completion.topic_id);
       }
       return jsonResponse({ email: user.email, profile: enrollment, progress,
+        nameChangeRequest: requests?.[0] || null,
         certificatesEnabled: edition.certificates_enabled,
         certificates: (certificates || []).map(({ pdf_path: _path, ...certificate }) =>
           ({ ...certificate, downloadable: Boolean(_path) })) });
     }
-    if (action === 'save_name') {
+    if (action === 'save_profile') {
       const name = String(body.fullName || '').trim().replace(/\s+/g, ' ');
       if (name.length < 2 || name.length > 120) return fail('กรุณาระบุชื่อจริง 2–120 ตัวอักษร');
-      if (enrollment) return jsonResponse({ fullName: enrollment.full_name });
-      const { data, error } = await admin.from('learning_enrollments')
-        .insert({ user_id: user.id, edition_id: EDITION, full_name: name })
-        .select('full_name').single();
+      const phone = String(body.phone || '').trim();
+      if (!/^0[689][0-9]{8}$/.test(phone)) return fail('กรุณากรอกเบอร์มือถือไทย 10 หลัก ขึ้นต้น 06, 08 หรือ 09');
+      const { error } = await admin.rpc('save_learning_v2_profile', {
+        p_user_id: user.id, p_full_name: name, p_phone: phone,
+      });
       if (error) throw error;
-      return jsonResponse({ fullName: data.full_name });
+      return jsonResponse({ saved: true });
     }
-    if (!enrollment) return fail('กรุณาบันทึกชื่อจริงก่อนเริ่มเรียน', 403);
+    if (action === 'request_name_change') {
+      const name = String(body.fullName || '').trim().replace(/\s+/g, ' ');
+      if (name.length < 2 || name.length > 120) return fail('กรุณาระบุชื่อใหม่ 2–120 ตัวอักษร');
+      const { data, error } = await admin.rpc('request_learning_v2_name_change', {
+        p_user_id: user.id, p_full_name: name,
+      });
+      if (error) return fail(error.message, 409);
+      return jsonResponse({ requestId: data });
+    }
+    if (action !== 'download' && action !== 'resend' && !edition.published) return fail('หลักสูตรยังไม่เปิดใช้งาน', 503);
+    if (!enrollment?.phone) return fail('กรุณาบันทึกชื่อและเบอร์มือถือก่อนเริ่มเรียน', 403);
 
     const subjectId = String(body.subjectId || '');
     const subjectActions = ['topic', 'complete_topic', 'material', 'report_media', 'quiz', 'submit'];

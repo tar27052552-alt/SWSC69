@@ -63,35 +63,71 @@ Deno.serve(async req => {
     const body = await req.json();
     const action = String(body.action || '');
     const subjectId = String(body.subjectId || '');
-    if (action === 'lookup_certificate' || action === 'correct_certificate') {
+    if (action === 'decide_name_change') {
+      const requestId = String(body.requestId || '');
+      if (!/^[0-9a-f-]{36}$/i.test(requestId)) return fail('ไม่พบคำขอ');
+      if (typeof body.approve !== 'boolean') return fail('กรุณาเลือกอนุมัติหรือปฏิเสธ');
+      const { data, error } = await admin.rpc('decide_learning_v2_name_change', {
+        p_request_id: requestId, p_approve: body.approve,
+        p_admin_id: authData.user.id, p_note: String(body.note || '').trim() || null,
+      });
+      if (error) return fail(error.message, 409);
+      return jsonResponse({ regenerated: data });
+    }
+    if (action === 'create_name_request') {
+      const number = String(body.certificateNumber || '').trim();
+      const name = String(body.fullName || '').trim().replace(/\s+/g, ' ');
+      if (!/^SWSC-DNA-\d{4}-\d{6}$/.test(number) || name.length < 2 || name.length > 120) {
+        return fail('เลขใบหรือชื่อใหม่ไม่ถูกต้อง');
+      }
+      const { data: certificate, error: findError } = await admin.from('learning_certificates')
+        .select('user_id').eq('edition_id', EDITION).eq('certificate_number', number).maybeSingle();
+      if (findError) throw findError;
+      if (!certificate) return fail('ไม่พบเกียรติบัตร', 404);
+      const { data, error } = await admin.rpc('request_learning_v2_name_change', {
+        p_user_id: certificate.user_id, p_full_name: name,
+      });
+      if (error) return fail(error.message, 409);
+      return jsonResponse({ requestId: data });
+    }
+    if (action === 'lookup_certificate') {
       const number = String(body.certificateNumber || '').trim();
       if (!/^SWSC-DNA-\d{4}-\d{6}$/.test(number)) return fail('เลขเกียรติบัตรไม่ถูกต้อง');
       const { data: certificate, error } = await admin.from('learning_certificates')
         .select('id,certificate_number,recipient_name,subject_id,issued_at,email_status')
         .eq('edition_id', EDITION).eq('certificate_number', number).maybeSingle();
       if (error) throw error;
-      if (!certificate) return fail('ไม่พบเกียรติบัตร', 404);
-      if (action === 'lookup_certificate') return jsonResponse({ certificate });
-      const fullName = String(body.fullName || '').trim().replace(/\s+/g, ' ');
-      if (fullName.length < 2 || fullName.length > 120) return fail('กรุณาระบุชื่อจริง 2–120 ตัวอักษร');
-      const { data: regenerated, error: correctionError } = await admin.rpc(
-        'correct_learning_v2_certificate_name',
-        { p_certificate_id: certificate.id, p_full_name: fullName });
-      if (correctionError) throw correctionError;
-      return jsonResponse({ corrected: true, regenerated });
+      if (certificate) return jsonResponse({ certificate });
+      const { data: archived, error: archiveError } = await admin.from('learning_certificate_history')
+        .select('certificate_number,recipient_name,subject_id,issued_at,pdf_path,revoked_at,status')
+        .eq('edition_id', EDITION).eq('certificate_number', number).maybeSingle();
+      if (archiveError) throw archiveError;
+      if (!archived) return fail('ไม่พบเกียรติบัตร', 404);
+      let auditUrl: string | null = null;
+      if (archived.pdf_path) {
+        const { data: signed, error: signedError } = await admin.storage.from('learning-certificates')
+          .createSignedUrl(archived.pdf_path, 60);
+        if (signedError) throw signedError;
+        auditUrl = signed.signedUrl;
+      }
+      const { pdf_path: _path, ...safeArchive } = archived;
+      return jsonResponse({ certificate: { ...safeArchive, auditUrl } });
     }
     if (action === 'list') {
       const [{ data: edition, error: editionError },
         { data: subjects, error: subjectError },
-        { data: notes, error: noteError }] = await Promise.all([
+        { data: notes, error: noteError },
+        { data: nameRequests, error: nameError }] = await Promise.all([
         admin.from('learning_editions').select('published,certificates_enabled')
           .eq('id', EDITION).single(),
         admin.from('learning_subject_editions').select('*')
           .eq('edition_id', EDITION).order('ordinal'),
         admin.from('learning_review_notes').select('*')
           .eq('edition_id', EDITION).order('created_at'),
+        admin.from('learning_certificate_name_requests').select('*')
+          .eq('edition_id', EDITION).eq('status', 'pending').order('created_at'),
       ]);
-      if (editionError || subjectError || noteError) throw editionError || subjectError || noteError;
+      if (editionError || subjectError || noteError || nameError) throw editionError || subjectError || noteError || nameError;
       const quizCounts = await Promise.all((subjects || []).map(async subject => {
         const { data, error } = await admin.rpc('get_learning_v2_draft_questions', {
           p_subject_id: subject.subject_id,
@@ -99,7 +135,17 @@ Deno.serve(async req => {
         if (error) throw error;
         return { subjectId: subject.subject_id, count: (data || []).length };
       }));
-      return jsonResponse({ edition, subjects, notes, quizCounts });
+      const requestUsers = [...new Set((nameRequests || []).map(item => item.user_id))];
+      const { data: currentCertificates, error: currentError } = requestUsers.length
+        ? await admin.from('learning_certificates').select('user_id,recipient_name,certificate_number')
+          .eq('edition_id', EDITION).in('user_id', requestUsers)
+        : { data: [], error: null };
+      if (currentError) throw currentError;
+      const detailedRequests = (nameRequests || []).map(item => ({ ...item,
+        currentName: currentCertificates?.find(cert => cert.user_id === item.user_id)?.recipient_name || '',
+        certificateCount: currentCertificates?.filter(cert => cert.user_id === item.user_id).length || 0,
+      }));
+      return jsonResponse({ edition, subjects, notes, nameRequests: detailedRequests, quizCounts });
     }
     if (!subjectPattern.test(subjectId) && !['publish', 'activate_certificates'].includes(action)) {
       return fail('ไม่พบวิชา');

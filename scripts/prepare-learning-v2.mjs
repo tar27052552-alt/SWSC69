@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { lessonCatalog } from '../src/learn/lessonCatalog.js';
+import { lessonCatalog, lessonPrimaryStartPages } from '../src/learn/lessonCatalog.js';
+import { lessonIntroBlocks } from '../src/learn/lessonNarratives.js';
 
 const root = resolve('.learning-source');
 await mkdir(root, { recursive: true });
@@ -83,7 +84,7 @@ for (let subjectIndex = 0; subjectIndex < 5; subjectIndex++) {
   }
   const topics = source.topics.map((title, index) => ({
     id: source.id + '-t' + (index + 1), title,
-    blocks: [{ type: 'paragraph', text: source.objectives[index] || source.summary }],
+    blocks: lessonIntroBlocks(source.id, index),
     resources: [],
   }));
   const reviewNotes = [];
@@ -132,13 +133,30 @@ for (let subjectIndex = 0; subjectIndex < 5; subjectIndex++) {
     }
     documentIndex++;
   }
+  const primaryDocument = source.resources.find(item => item.type === 'document');
+  const primaryId = primaryDocument.url.split('/')[5];
+  const primaryPath = 'civic-dna-2026/' + source.id + '/' + primaryId + '.pdf';
+  for (const topic of topics) {
+    const startPage = lessonPrimaryStartPages[source.id][topics.indexOf(topic)];
+    if (!topic.resources.some(item => item.path === primaryPath)) topic.resources.unshift({
+      type: 'document', title: primaryDocument.title, path: primaryPath,
+      startPage, toc: [], sourceId: primaryId,
+    });
+    else topic.resources.find(item => item.path === primaryPath).startPage = startPage;
+  }
+  const quiz = await formQuestions(formIds[subjectIndex], answerKeys[subjectIndex]);
+  if (source.id === 'civic-3') {
+    // The old option combined electing representatives with a referendum,
+    // although the source describes a referendum as direct participation.
+    quiz[9].options[1] = 'การใช้สิทธิเลือกตั้งผู้แทนระดับชาติหรือระดับท้องถิ่น';
+  }
   subjects.push({ id: source.id, title: source.title, summary: source.summary,
-    topics, quiz: await formQuestions(formIds[subjectIndex], answerKeys[subjectIndex]),
+    topics, quiz,
     reviewNotes,
     sourceForm: 'https://docs.google.com/forms/d/' + formIds[subjectIndex] + '/viewform' });
 }
-const totalDocuments = subjects.flatMap(subject => subject.topics.flatMap(topic =>
-  topic.resources.filter(item => item.type === 'document'))).length;
+const totalDocuments = new Set(subjects.flatMap(subject => subject.topics.flatMap(topic =>
+  topic.resources.filter(item => item.type === 'document').map(item => item.path)))).size;
 const totalVideos = subjects.flatMap(subject => subject.topics.flatMap(topic =>
   topic.resources.filter(item => item.type === 'video'))).length;
 if (totalDocuments !== 12 || totalVideos !== 60) throw new Error('Incomplete source resources');

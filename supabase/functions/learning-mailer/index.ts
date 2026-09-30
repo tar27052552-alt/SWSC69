@@ -61,12 +61,16 @@ Deno.serve(async req => {
       if (bytes.length > 10_485_760 || new TextDecoder().decode(bytes.slice(0, 5)) !== '%PDF-') {
         return jsonResponse({ error: 'Invalid PDF' }, 400);
       }
-      const path = `${job.certificate_id}.pdf`;
+      const { data: current, error: currentError } = await admin.from('learning_certificates')
+        .select('certificate_number').eq('id', job.certificate_id).single();
+      if (currentError || !current) return jsonResponse({ error: 'Certificate unavailable' }, 404);
+      const path = `${job.certificate_id}/${current.certificate_number}.pdf`;
       const { error: uploadError } = await admin.storage.from('learning-certificates')
-        .upload(path, bytes, { contentType: 'application/pdf', upsert: true });
-      if (uploadError) throw uploadError;
+        .upload(path, bytes, { contentType: 'application/pdf', upsert: false });
+      if (uploadError && !String(uploadError.message).includes('already exists')) throw uploadError;
       const { error: updateError } = await admin.from('learning_certificates')
-        .update({ pdf_path: path, email_status: 'ready' }).eq('id', job.certificate_id);
+        .update({ pdf_path: path, email_status: 'ready' }).eq('id', job.certificate_id)
+        .eq('certificate_number', current.certificate_number);
       if (updateError) throw updateError;
       return jsonResponse({ uploaded: true });
     }
