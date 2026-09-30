@@ -228,9 +228,13 @@ export default function LearnApp() {
       </section>
       {notice && <div className="learn-notice" role="status">{notice}</div>}
       {!published && <div className="learn-panel">หลักสูตรกำลังตรวจเนื้อหาและข้อสอบทั้ง 5 วิชา คุณดูโครงบทได้ก่อนเปิดเรียน</div>}
-      {!session && published && <section className="learn-panel learn-auth"><div>
-        <h2>เข้าสู่ระบบเพื่อเริ่มเรียน</h2><p>ใช้บัญชี Google ของคุณ อีเมลนี้จะใช้ส่งเกียรติบัตร</p>
+      {!session && <section className="learn-panel learn-auth"><div>
+        <h2>เข้าสู่ระบบด้วย Google</h2><p>{published
+          ? 'ใช้อีเมล Google เพื่อบันทึกความคืบหน้าและรับเกียรติบัตร'
+          : 'ลงชื่อเข้าใช้ไว้ก่อนได้ เมื่อผู้ดูแลตรวจบทเรียนครบจึงจะเริ่มเรียนได้'}</p>
       </div><button disabled={busy} onClick={googleSignIn}>เข้าสู่ระบบด้วย Google</button></section>}
+      {session && !published && <div className="learn-panel">เข้าสู่ระบบแล้วด้วย {session.user.email} ·
+        หลักสูตรจะเปิดหลังผู้ดูแลตรวจเนื้อหาและข้อสอบครบ</div>}
       {session && published && !profile && <section className="learn-panel learn-auth"><div>
         <h2>ชื่อจริงสำหรับเกียรติบัตร</h2><p>กรอกชื่อและนามสกุลให้ตรงกับที่ต้องการแสดงบนใบ</p>
       </div><form onSubmit={saveName}><label htmlFor="learner-name">ชื่อและนามสกุล</label>
