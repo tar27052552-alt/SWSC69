@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, BookOpen, Check, Flag, LoaderCircle, Maximize2, Play } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { lessonCatalog } from './lessonCatalog.js';
+import { latestPosition, mediaKey, readLocalPosition, topicMedia, writeLocalPosition } from './mediaSequence.js';
 
 const supabase = createClient(import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -90,6 +92,12 @@ export default function LearnApp() {
   const [resource, setResource] = useState(null);
   const [pdfResource, setPdfResource] = useState(null);
   const [pdfUrl, setPdfUrl] = useState('');
+  const [mediaIndex, setMediaIndex] = useState(0);
+  const [lastPosition, setLastPosition] = useState(null);
+  const [resumeEnabled, setResumeEnabled] = useState(false);
+  const mediaStart = useRef(null);
+  const videoStage = useRef(null);
+  const [videoLoading, setVideoLoading] = useState(false);
   const [view, setView] = useState(new URLSearchParams(location.search).get('view') === 'certificates'
     ? 'certificates' : 'courses');
   const [busy, setBusy] = useState(false);
@@ -104,6 +112,7 @@ export default function LearnApp() {
     setCertificateNameInput(data.profile?.certificate_name || '');
     setNameChangeRequest(data.nameChangeRequest);
     setProgress(data.progress || {});
+    setLastPosition(data.lastPosition || null);
     setCertificates(data.certificates || []);
     setCertificatesEnabled(Boolean(data.certificatesEnabled));
     setProfileLoaded(true);
@@ -118,11 +127,12 @@ export default function LearnApp() {
       if (!active) return;
       setSession(next);
       if (!next) { setProfile(null); setProfileLoaded(false); setProfileUnavailable(false);
-        setProgress({}); setCertificates([]); setView('courses'); }
+        setProgress({}); setCertificates([]); setLastPosition(null); setView('courses'); }
     });
     request({ action: 'catalog' }).then(data => {
       if (!active) return;
       setPublished(Boolean(data.published));
+      setResumeEnabled(data.resumeEnabled === true);
       if (data.published && data.subjects?.length === 5) setCatalog(data.subjects);
     }).catch(error => { if (active) setNotice(error.message); });
     return () => { active = false; listener.subscription.unsubscribe(); };
@@ -136,6 +146,9 @@ export default function LearnApp() {
       setNotice(profileRequestMessage(error));
     });
   }, [session, loadMe]);
+  useEffect(() => {
+    if (view === 'topic' && resource) mediaStart.current?.scrollIntoView({ block: 'start' });
+  }, [view, resource]);
 
   async function googleSignIn() {
     setBusy(true); setNotice('');
@@ -179,18 +192,46 @@ export default function LearnApp() {
     } catch (error) { setNotice(error.message); }
     finally { setBusy(false); }
   }
-  async function openTopic(subject, index) {
+  async function saveMediaPosition(subject, activeTopic, item) {
+    const position = { subjectId: subject.id, topicId: activeTopic.id,
+      resourceKey: mediaKey(item), updatedAt: new Date().toISOString() };
+    writeLocalPosition(session?.user.id, position);
+    setLastPosition(position);
+    if (resumeEnabled) {
+      try {
+        const saved = await request({ action: 'save_position', ...position });
+        const synced = { ...position, updatedAt: saved.updatedAt };
+        writeLocalPosition(session?.user.id, synced);
+        setLastPosition(synced);
+      } catch {
+        setNotice('จำตำแหน่งในเครื่องแล้ว แต่ยังบันทึกข้ามอุปกรณ์ไม่ได้ กรุณาลองอีกครั้งเมื่อเชื่อมต่อได้');
+      }
+    }
+  }
+  async function showMedia(subject, activeTopic, item, index) {
+    if (item.type === 'document') {
+      const material = await request({ action: 'material', subjectId: subject.id,
+        topicId: activeTopic.id, path: item.path });
+      setPdfResource(item); setPdfUrl(material.url);
+    } else { setPdfResource(null); setPdfUrl(''); setVideoLoading(true); }
+    setResource(item); setMediaIndex(index);
+    await saveMediaPosition(subject, activeTopic, item);
+  }
+  async function openTopic(subject, index, restore = true) {
     setBusy(true); setNotice(''); setResource(null); setPdfResource(null); setPdfUrl('');
     try {
       const data = await request({ action: 'topic', subjectId: subject.id,
         topicId: subject.topics[index].id });
       setSelected(subject); setTopic(data.topic); setTopicIndex(index); setView('topic');
-      const firstDocument = data.topic.resources?.find(item => item.type === 'document');
-      if (firstDocument) {
-        const material = await request({ action: 'material', subjectId: subject.id,
-          topicId: data.topic.id, path: firstDocument.path });
-        setPdfResource(firstDocument); setPdfUrl(material.url);
-      }
+      const media = topicMedia(data.topic);
+      const local = readLocalPosition(session?.user.id);
+      const saved = restore ? latestPosition(data.position,
+        local?.topicId === data.topic.id ? local : null,
+        lastPosition?.topicId === data.topic.id ? lastPosition : null) : null;
+      const savedIndex = saved ? media.findIndex(item => mediaKey(item) === saved.resourceKey) : -1;
+      const nextIndex = savedIndex >= 0 ? savedIndex : 0;
+      setMediaIndex(nextIndex);
+      if (media[nextIndex]) await showMedia(subject, data.topic, media[nextIndex], nextIndex);
     } catch (error) { setNotice(error.message); }
     finally { setBusy(false); }
   }
@@ -202,6 +243,11 @@ export default function LearnApp() {
     if (!published || !session || !profile?.phone || !unlocked(subject)) { setView('preview'); return; }
     const progressItem = stateOf(subject);
     if (!progressItem.preCompleted) { openQuiz(subject, 'pre'); return; }
+    const saved = latestPosition(lastPosition, readLocalPosition(session?.user.id));
+    const savedIndex = saved?.subjectId === subject.id
+      ? subject.topics.findIndex(item => item.id === saved.topicId) : -1;
+    if (savedIndex >= 0 && subject.topics.slice(0, savedIndex).every(item =>
+      progressItem.completedTopicIds.includes(item.id))) { openTopic(subject, savedIndex); return; }
     const next = subject.topics.findIndex(item => !progressItem.completedTopicIds.includes(item.id));
     openTopic(subject, next < 0 ? 0 : next);
   }
@@ -210,18 +256,17 @@ export default function LearnApp() {
     try {
       await request({ action: 'complete_topic', subjectId: selected.id, topicId: topic.id });
       await loadMe();
-      if (topicIndex + 1 < selected.topics.length) await openTopic(selected, topicIndex + 1);
+      if (topicIndex + 1 < selected.topics.length) await openTopic(selected, topicIndex + 1, false);
       else setView('subject_done');
     } catch (error) { setNotice(error.message); }
     finally { setBusy(false); }
   }
-  async function openResource(item) {
-    if (item.type === 'video') { setResource(item); return; }
+  async function moveMedia(index) {
+    const item = topicMedia(topic)[index];
+    if (!item || busy) return;
     setBusy(true); setNotice('');
     try {
-      const data = await request({ action: 'material', subjectId: selected.id,
-        topicId: topic.id, path: item.path });
-      setPdfResource(item); setPdfUrl(data.url);
+      await showMedia(selected, topic, item, index);
     } catch (error) { setNotice(error.message); }
     finally { setBusy(false); }
   }
@@ -233,6 +278,10 @@ export default function LearnApp() {
       setNotice('ส่งรายการวิดีโอให้ผู้ดูแลตรวจสอบแล้ว');
     } catch (error) { setNotice(error.message); }
     finally { setBusy(false); }
+  }
+  async function expandVideo() {
+    try { await videoStage.current?.requestFullscreen(); }
+    catch { setNotice('เปิดเต็มจอไม่ได้ กรุณาใช้ปุ่มเต็มจอภายในวิดีโอ'); }
   }
   async function submitQuiz(event) {
     event.preventDefault(); setBusy(true); setNotice('');
@@ -256,8 +305,13 @@ export default function LearnApp() {
     finally { setBusy(false); }
   }
 
-  const current = catalog.find(subject => unlocked(subject) && stateOf(subject).bestPostScore < 6)
+  const savedPosition = latestPosition(lastPosition, readLocalPosition(session?.user.id));
+  const current = catalog.find(subject => subject.id === savedPosition?.subjectId && unlocked(subject))
+    || catalog.find(subject => unlocked(subject) && stateOf(subject).bestPostScore < 6)
     || catalog[catalog.length - 1];
+  const media = topicMedia(topic);
+  const videos = media.filter(item => item.type === 'video');
+  const videoIndex = resource?.type === 'video' ? videos.findIndex(item => mediaKey(item) === mediaKey(resource)) : -1;
   const needsProfile = Boolean(session && profileLoaded && !profileUnavailable &&
     (!profile?.full_name || !profile?.phone));
   return <div className="learn-app">
@@ -380,10 +434,24 @@ export default function LearnApp() {
               className={index === topicIndex ? 'active' : ''}
               onClick={() => openTopic(selected, index)}>{index + 1}. {item.title}</button>;
           })}</aside><div className="learn-topic-body">
-            <p className="learn-reading-note">อ่าน PDF ต้นฉบับตามลำดับหน้า ภาพ ตาราง และข้อความจะอยู่ครบในไฟล์เดียว</p>
-            {(topic.blocks || []).filter(block => block.type !== 'page').map((block, index) => <Block key={topic.id + '-' + index}
+            <div ref={mediaStart} className="learn-media-heading" aria-live="polite">
+              <div className="learn-media-heading-label"><span className="learn-media-kind" aria-hidden="true">
+                {resource?.type === 'video' ? <Play size={18} /> : <BookOpen size={18} />}</span>
+                <span>{resource?.type === 'video'
+              ? `วิดีโอ ${videoIndex + 1} จาก ${videos.length}`
+              : `สไลด์ ${mediaIndex + 1} จาก ${media.filter(item => item.type === 'document').length || 1}`}</span></div>
+              <small>สื่อ {mediaIndex + 1} / {media.length || 1}</small>
+              <div className="learn-media-track" role="progressbar" aria-label="ตำแหน่งสื่อในหัวข้อ"
+                aria-valuemin={1} aria-valuemax={media.length || 1} aria-valuenow={mediaIndex + 1}>
+                <div style={{ width: `${((mediaIndex + 1) / (media.length || 1)) * 100}%` }} /></div></div>
+            <div className="learn-media-stage" key={resource ? mediaKey(resource) : topic.id}>
+            {!resource && media.length > 0 && <div className="learn-media-loading" role="status">
+              {busy ? 'กำลังเปิดสื่อ…' : <button type="button" onClick={() => moveMedia(mediaIndex)}>ลองเปิดสื่ออีกครั้ง</button>}
+            </div>}
+            {resource?.type !== 'video' && <p className="learn-reading-note">อ่านสไลด์ต้นฉบับ แล้วกดต่อไปเพื่อดูวิดีโอในหัวข้อนี้</p>}
+            {resource?.type !== 'video' && (topic.blocks || []).filter(block => block.type !== 'page').map((block, index) => <Block key={topic.id + '-' + index}
               subjectId={selected.id} topicId={topic.id} block={block} />)}
-            {!pdfUrl && (topic.blocks || []).filter(block => block.type === 'page').map((block, index) =>
+            {media.length === 0 && (topic.blocks || []).filter(block => block.type === 'page').map((block, index) =>
               <Block key={topic.id + '-page-' + index} subjectId={selected.id} topicId={topic.id} block={block} />)}
             {pdfUrl && pdfResource && <div className="learn-viewer learn-pdf-viewer">
               <div className="learn-pdf-head"><strong>{pdfResource.title}</strong>
@@ -397,19 +465,38 @@ export default function LearnApp() {
                 src={pdfUrl + '#page=' + (pdfResource.startPage || 1)} />
               <p>หากเครื่องของคุณไม่แสดง PDF ในกรอบ ให้กด “ขยายเต็มจอ”</p>
             </div>}
-            {(topic.resources || []).length > 0 && <div className="learn-material"><h3>เอกสารและวิดีโอในหัวข้อนี้</h3>
-              <div className="learn-resource-list">{topic.resources.map((item, index) =>
-                <button key={item.type + index} onClick={() => openResource(item)}>
-                  {item.type === 'video' ? '▶' : '▤'} {item.title}</button>)}</div></div>}
-            {resource?.type === 'video' && <div className="learn-viewer"><strong>{resource.title}</strong>
-              <iframe title={resource.title}
-                src={'https://www.youtube-nocookie.com/embed/' + resource.videoId}
-                loading="lazy" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
-              <button type="button" onClick={reportVideo} disabled={busy}>
-                แจ้งผู้ดูแลว่าวิดีโอเปิดไม่ได้</button>
+            {resource?.type === 'video' && <div className="learn-viewer learn-video-viewer">
+              <div className="learn-video-caption"><span className="learn-video-caption-kicker">พลเมือง DNA · วิดีโอประกอบบทเรียน</span>
+                <h3>{resource.title}</h3></div>
+              <div className="learn-video-screen" ref={videoStage}>
+                {videoLoading && <div className="learn-video-loading" role="status"><LoaderCircle size={26} />
+                  <span>กำลังเปิดวิดีโอ…</span></div>}
+                <iframe key={resource.videoId} title={resource.title}
+                  src={'https://www.youtube-nocookie.com/embed/' + resource.videoId +
+                    '?playsinline=1&rel=0&origin=' + encodeURIComponent(location.origin)}
+                  onLoad={() => setVideoLoading(false)}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+              </div>
+              <div className="learn-video-tools"><span>กดเล่นในกรอบ หรือใช้ปุ่มเต็มจอในวิดีโอ</span>
+                {typeof document.documentElement.requestFullscreen === 'function' &&
+                  <button type="button" className="learn-video-fullscreen" onClick={expandVideo}>
+                    <Maximize2 size={16} aria-hidden="true" /> ขยายเต็มจอ</button>}
+                <button type="button" className="learn-video-report" onClick={reportVideo} disabled={busy}>
+                  <Flag size={15} aria-hidden="true" /> แจ้งวิดีโอมีปัญหา</button></div>
             </div>}
-            <div className="learn-lesson-footer"><p>อ่านและดูสื่อในหัวข้อนี้แล้ว กดเพื่อไปหัวข้อถัดไป</p>
-              <button disabled={busy} onClick={completeTopic}>เรียนหัวข้อนี้จบแล้ว →</button></div>
+            </div>
+            {media[mediaIndex + 1] && <p className="learn-media-up-next"><span>ถัดไป</span> {media[mediaIndex + 1].title}</p>}
+            <div className="learn-media-navigation">
+              <button type="button" className="learn-media-previous" disabled={busy || mediaIndex === 0}
+                onClick={() => moveMedia(mediaIndex - 1)}><ArrowLeft size={18} aria-hidden="true" /> ก่อนหน้า</button>
+              {mediaIndex + 1 < media.length
+                ? <button type="button" disabled={busy} onClick={() => moveMedia(mediaIndex + 1)}>
+                  {resource?.type === 'document' && media[mediaIndex + 1]?.type === 'video' ? 'ไปดูวิดีโอ' : 'ต่อไป'}
+                  <ArrowRight size={18} aria-hidden="true" /></button>
+                : <button type="button" disabled={busy} onClick={completeTopic}>
+                  <Check size={18} aria-hidden="true" /> จบหัวข้อนี้และไปต่อ</button>}
+            </div>
           </div></div>
       </section>}
 
@@ -455,8 +542,9 @@ export default function LearnApp() {
           <div className="learn-number">{certificate.certificate_number}</div>
           <h3>{catalog.find(item => item.id === certificate.subject_id)?.title}</h3>
           <p>ชื่อผู้รับ: {certificate.recipient_name}</p>
-          <p>วันที่ออก: {new Date(certificate.issued_at).toLocaleDateString('th-TH')}</p>
-          <p>สถานะอีเมล: {certificate.email_status === 'sent' ? 'ส่งแล้ว' : 'กำลังดำเนินการ'}</p>
+          <p>วันที่ออก: {new Date(certificate.issued_at).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}</p>
+          <p>สถานะอีเมล: {certificate.email_status === 'sent' ? 'ส่งแล้ว' :
+            certificate.email_status === 'failed' ? 'ส่งไม่สำเร็จ กรุณากดส่งอีเมลอีกครั้ง' : 'กำลังดำเนินการ'}</p>
           <div className="learn-card-actions"><button disabled={!certificate.downloadable}
             onClick={() => downloadCertificate(certificate.id)}>ดาวน์โหลด PDF</button>
             <button disabled={busy || !certificate.downloadable}

@@ -68,7 +68,7 @@ function AppRoutes() {
 
   useEffect(() => {
     const oneSignalAppId = import.meta.env.VITE_ONESIGNAL_APP_ID;
-    if (!oneSignalAppId) return;
+    if (!oneSignalAppId || import.meta.env.DEV) return;
 
     if (!user) {
       if (globalLastOneSignalUser !== null) {
@@ -166,7 +166,8 @@ function AppRoutes() {
 export default function App() {
   useEffect(() => {
     const oneSignalAppId = import.meta.env.VITE_ONESIGNAL_APP_ID;
-    if (oneSignalAppId) {
+    if (oneSignalAppId && !import.meta.env.DEV && !window.oneSignalInitializing && !window.oneSignalInitialized) {
+      window.oneSignalInitializing = true;
       const base = import.meta.env.BASE_URL || '/';
 
       // Patch: intercept service worker registration to fix path for subdirectory
@@ -235,9 +236,15 @@ export default function App() {
           }
         };
         console.log('OneSignal init with options:', JSON.stringify(initOptions));
-        await OneSignal.init(initOptions);
-        window.oneSignalInitialized = true;
-        window.dispatchEvent(new CustomEvent('onesignal-init-complete'));
+        try {
+          await OneSignal.init(initOptions);
+          window.oneSignalInitialized = true;
+          window.dispatchEvent(new CustomEvent('onesignal-init-complete'));
+        } catch (error) {
+          console.error('OneSignal initialization failed:', error);
+        } finally {
+          window.oneSignalInitializing = false;
+        }
       });
     }
   }, []);
@@ -258,7 +265,7 @@ export default function App() {
     const checkForUpdate = async () => {
       if (!localHash) return;
       try {
-        const res = await fetch('./admin/index.html?t=' + Date.now(), { cache: 'no-store' });
+        const res = await fetch(`${import.meta.env.BASE_URL}admin/index.html?t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) return;
         const text = await res.text();
         const match = text.match(/src="[^"]*\/assets\/admin-([^.]+)\.js"/);

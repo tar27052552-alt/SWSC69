@@ -3,6 +3,9 @@ import { corsHeaders, getAdminClient, jsonResponse } from '../_shared/auth.ts';
 
 const EDITION = 'civic-dna-2026';
 type Topic = { id: string; title: string; blocks?: unknown[]; resources?: Array<{ type: string; path?: string; videoId?: string }> };
+const positionResponse = (value: { subject_id: string; topic_id: string; resource_key: string; updated_at: string } | null) =>
+  value ? { subjectId: value.subject_id, topicId: value.topic_id,
+    resourceKey: value.resource_key, updatedAt: value.updated_at } : null;
 
 function fail(error: string, status = 400) { return jsonResponse({ error }, status); }
 
@@ -30,7 +33,7 @@ Deno.serve(async req => {
         .select('subject_id,ordinal,title,summary,published_topics,published_revision')
         .eq('edition_id', EDITION).order('ordinal');
       if (error) throw error;
-      return jsonResponse({ published: edition.published,
+      return jsonResponse({ published: edition.published, resumeEnabled: true,
         subjects: (data || []).map(subject => ({
           id: subject.subject_id, ordinal: subject.ordinal, title: subject.title,
           summary: subject.summary, revision: subject.published_revision,
@@ -61,7 +64,8 @@ Deno.serve(async req => {
       const [{ data: attempts, error: attemptError },
         { data: completions, error: completionError },
         { data: certificates, error: certificateError },
-        { data: requests, error: requestError }] = await Promise.all([
+        { data: requests, error: requestError },
+        { data: positions, error: positionError }] = await Promise.all([
         admin.from('learning_attempts').select('subject_id,phase,score,total')
           .eq('user_id', user.id).eq('edition_id', EDITION),
         admin.from('learning_topic_completions').select('subject_id,topic_id')
@@ -71,8 +75,10 @@ Deno.serve(async req => {
           .eq('user_id', user.id).eq('edition_id', EDITION).order('issued_at', { ascending: false }),
         admin.from('learning_certificate_name_requests').select('id,requested_name,status,created_at,admin_note')
           .eq('user_id', user.id).eq('edition_id', EDITION).order('created_at', { ascending: false }).limit(1),
+        admin.from('learning_media_positions').select('subject_id,topic_id,resource_key,updated_at')
+          .eq('user_id', user.id).eq('edition_id', EDITION).order('updated_at', { ascending: false }).limit(1),
       ]);
-      if (attemptError || completionError || certificateError || requestError) throw attemptError || completionError || certificateError || requestError;
+      if (attemptError || completionError || certificateError || requestError || positionError) throw attemptError || completionError || certificateError || requestError || positionError;
       const progress: Record<string, { preCompleted: boolean; bestPostScore: number; completedTopicIds: string[] }> = {};
       for (const attempt of attempts || []) {
         const item = progress[attempt.subject_id] ||= { preCompleted: false, bestPostScore: -1, completedTopicIds: [] };
@@ -84,6 +90,7 @@ Deno.serve(async req => {
         item.completedTopicIds.push(completion.topic_id);
       }
       return jsonResponse({ email: user.email, profile: enrollment, progress,
+        lastPosition: positionResponse(positions?.[0] || null),
         nameChangeRequest: requests?.[0] || null,
         certificatesEnabled: edition.certificates_enabled,
         certificates: (certificates || []).map(({ pdf_path: _path, ...certificate }) =>
@@ -113,7 +120,7 @@ Deno.serve(async req => {
     if (!enrollment?.phone) return fail('กรุณาบันทึกชื่อและเบอร์มือถือก่อนเริ่มเรียน', 403);
 
     const subjectId = String(body.subjectId || '');
-    const subjectActions = ['topic', 'complete_topic', 'material', 'report_media', 'quiz', 'submit'];
+    const subjectActions = ['topic', 'save_position', 'complete_topic', 'material', 'report_media', 'quiz', 'submit'];
     let subject: { ordinal: number; published_topics: Topic[]; published_revision: number } | null = null;
     let attempts: Array<{ subject_id: string; phase: string; score: number }> = [];
     let completions: Array<{ topic_id: string }> = [];
@@ -146,7 +153,26 @@ Deno.serve(async req => {
 
     if (action === 'topic') {
       if (!canOpenTopic) return fail('ทำแบบทดสอบก่อนเรียนและเรียนหัวข้อก่อนหน้าให้ครบ', 403);
-      return jsonResponse({ topic: topics[topicIndex], index: topicIndex, total: topics.length });
+      const { data: position, error } = await admin.from('learning_media_positions')
+        .select('subject_id,topic_id,resource_key,updated_at').eq('user_id', user.id)
+        .eq('edition_id', EDITION).eq('topic_id', topics[topicIndex].id).maybeSingle();
+      if (error) throw error;
+      return jsonResponse({ topic: topics[topicIndex], index: topicIndex, total: topics.length,
+        position: positionResponse(position) });
+    }
+    if (action === 'save_position') {
+      if (!canOpenTopic) return fail('หัวข้อนี้ยังไม่ปลดล็อก', 403);
+      const resourceKey = String(body.resourceKey || '');
+      const allowed = topics[topicIndex].resources?.some(item =>
+        resourceKey === (item.type === 'video' ? `video:${item.videoId}` : `document:${item.path}`));
+      if (!allowed) return fail('ไม่พบสื่อในหัวข้อนี้', 404);
+      const updatedAt = new Date().toISOString();
+      const { error } = await admin.from('learning_media_positions').upsert({
+        user_id: user.id, edition_id: EDITION, subject_id: subjectId,
+        topic_id: topics[topicIndex].id, resource_key: resourceKey, updated_at: updatedAt,
+      }, { onConflict: 'user_id,edition_id,topic_id' });
+      if (error) throw error;
+      return jsonResponse({ saved: true, updatedAt });
     }
     if (action === 'complete_topic') {
       if (!canOpenTopic) return fail('หัวข้อนี้ยังไม่ปลดล็อก', 403);
@@ -207,7 +233,7 @@ Deno.serve(async req => {
         p_subject_id: subjectId,
       });
       if (error) throw error;
-      const questions = data || [];
+      const questions: Array<{ id: string; prompt: string; options: string[]; correct_option: number }> = data || [];
       if (questions.length !== 10) return fail('แบบทดสอบยังไม่พร้อม', 503);
       if (action === 'quiz') return jsonResponse({ revision: subject?.published_revision,
         questions: questions.map(({ correct_option: _key, ...item }) => item) });

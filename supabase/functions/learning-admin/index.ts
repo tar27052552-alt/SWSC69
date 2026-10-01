@@ -183,7 +183,8 @@ Deno.serve(async req => {
         p_subject_id: subjectId,
       });
       if (error) throw error;
-      return jsonResponse({ questions: (data || []).map(item => ({
+      const questions: Array<{ prompt: string; options: string[]; correct_option: number }> = data || [];
+      return jsonResponse({ questions: questions.map(item => ({
         prompt: item.prompt, options: item.options, correctOption: item.correct_option,
       })) });
     }

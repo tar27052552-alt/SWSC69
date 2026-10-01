@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { topicMedia, latestPosition, mediaKey } from '../src/learn/mediaSequence.js';
+const resources=[{type:'video',videoId:'one'},{type:'document',path:'slides.pdf'},{type:'video',videoId:'two'}];
+assert.deepEqual(topicMedia({resources}).map(mediaKey),['document:slides.pdf','video:one','video:two']);
+assert.equal(latestPosition(null,{subjectId:'civic-1',topicId:'t1',resourceKey:'video:one',updatedAt:'2026-01-01'},{subjectId:'civic-1',topicId:'t1',resourceKey:'video:two',updatedAt:'2026-01-02'}).resourceKey,'video:two');
+const app=fs.readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');
+assert(!app.includes("fetch('./admin/index.html"),'Update URL must not resolve inside /admin/admin');
+assert(app.includes('${import.meta.env.BASE_URL}admin/index.html'),'Update URL must use Vite base');
+assert(app.includes('!window.oneSignalInitializing && !window.oneSignalInitialized'),'OneSignal must initialize once');
+for(const base of ['/', '/SWSC69/'])assert.equal(new URL(`${base}admin/index.html`, 'https://example.test'+base+'admin/').pathname,base+'admin/index.html');
+console.log('Local navigation regression checks passed');
