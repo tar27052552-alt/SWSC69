@@ -35,7 +35,7 @@ export async function callGAS(action, payload) {
   } catch (error) {
     console.error("❌ Google Apps Script Request failed:", error);
     // Don't trigger blocking alert popups for background read calls
-    if (action !== "read_sheet") {
+    if (!["read_sheet", "send_discord_message"].includes(action)) {
       alert(`เกิดข้อผิดพลาดในการเชื่อมต่อ Google Apps Script: ${error.message}\n(คำแนะนำ: โปรดตรวจสอบว่าได้ตั้งค่า "Who has access" เป็น "Anyone" ใน Google Apps Script แล้วหรือยัง)`);
     }
     throw error;

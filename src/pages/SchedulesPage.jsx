@@ -309,7 +309,7 @@ export default function SchedulesPage() {
 
   const canEditTab = (tabId) => {
     if (tabId === 'swaps') return false;
-    if (isAdmin || isDiscipline) return true;   // admin / ปกครอง แก้ได้ทุก tab
+    if (isAdmin || isPresident || isDiscipline) return true;   // admin / ปกครอง แก้ได้ทุก tab
     if (isPR && tabId === 'pr_news') return true; // PR แก้ได้เฉพาะเวรส่งข่าว
     return false;
   };

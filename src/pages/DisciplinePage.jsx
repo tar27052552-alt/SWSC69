@@ -1,3 +1,4 @@
+import { canManageDepartment } from '../lib/councilPermissions';
 import { useState, useEffect } from 'react';
 import { DEPARTMENTS } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
@@ -37,7 +38,7 @@ const MOCK_FINES = [];
 
 export default function DisciplinePage() {
   const { user, isDeptHead, isAdmin, checkInState, cleanDutyState, greetingDutyState } = useAuth();
-  const canManage = isAdmin || user?.deptId === 2;
+  const canManage = canManageDepartment(user, 2);
   const [activeTab, setActiveTab] = useState('list');
   const [collapsedSections, setCollapsedSections] = useState({});
 
@@ -662,65 +663,25 @@ export default function DisciplinePage() {
     saveEnabledDays(newDays);
   };
 
+  const updateCalendarException = async (kind, date, remove = false, replaceDay = 'จันทร์') => {
+    if (!canManage || !date) return false;
+    try {
+      const { data, error } = await supabase.rpc('set_council_calendar_exception', {
+        p_kind: kind, p_date: date, p_remove: remove, p_replace_day: replaceDay,
+      });
+      if (error) throw error;
+      setDisabledDates(data.disabled_dates || []); setSubstituteDates(data.substitute_dates || []);
+      return true;
+    } catch (error) { alert('บันทึกวันเรียนไม่สำเร็จ: ' + error.message); return false; }
+  };
   const handleAddDisabledDate = async () => {
-    if (!newDisabledDate || disabledDates.includes(newDisabledDate)) return;
-    const newDates = [...disabledDates, newDisabledDate].sort();
-    setDisabledDates(newDates);
-    setNewDisabledDate('');
-    try {
-      const { error } = await supabase
-        .from('attendance_settings')
-        .upsert([{ key: 'disabled_dates', value: newDates }], { onConflict: 'key' });
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error saving disabled dates:', err);
-    }
+    if (await updateCalendarException('holiday', newDisabledDate)) setNewDisabledDate('');
   };
-
-  const handleRemoveDisabledDate = async (dateStr) => {
-    const newDates = disabledDates.filter(d => d !== dateStr);
-    setDisabledDates(newDates);
-    try {
-      const { error } = await supabase
-        .from('attendance_settings')
-        .upsert([{ key: 'disabled_dates', value: newDates }], { onConflict: 'key' });
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error saving disabled dates:', err);
-    }
-  };
-
+  const handleRemoveDisabledDate = date => updateCalendarException('holiday', date, true);
   const handleAddSubstituteDate = async () => {
-    if (!newSubstituteDate) return;
-    const newObj = { date: newSubstituteDate, replaceDay: newSubstituteReplaceDay };
-    const filtered = substituteDates.filter(s => (typeof s === 'string' ? s : s.date) !== newSubstituteDate);
-    const newDates = [...filtered, newObj];
-    setSubstituteDates(newDates);
-    setNewSubstituteDate('');
-    try {
-      const { error } = await supabase
-        .from('attendance_settings')
-        .upsert([{ key: 'substitute_dates', value: newDates }], { onConflict: 'key' });
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error saving substitute dates:', err);
-    }
+    if (await updateCalendarException('substitute', newSubstituteDate, false, newSubstituteReplaceDay)) setNewSubstituteDate('');
   };
-
-  const handleRemoveSubstituteDate = async (dateStr) => {
-    const newDates = substituteDates.filter(s => (typeof s === 'string' ? s : s.date) !== dateStr);
-    setSubstituteDates(newDates);
-    try {
-      const { error } = await supabase
-        .from('attendance_settings')
-        .upsert([{ key: 'substitute_dates', value: newDates }], { onConflict: 'key' });
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error removing substitute date:', err);
-    }
-  };
-
-
+  const handleRemoveSubstituteDate = date => updateCalendarException('substitute', date, true);
 
   const loadAttendance = async () => {
     try {

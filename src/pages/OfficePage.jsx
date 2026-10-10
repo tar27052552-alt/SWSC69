@@ -1,3 +1,4 @@
+import { canManageDepartment } from '../lib/councilPermissions';
 import { useState, useEffect } from 'react';
 import { Plus, X, Save } from 'lucide-react';
 import { supabase } from '../supabaseClient';
@@ -8,7 +9,7 @@ const MOCK_USAGE_LOG = [];
 
 export default function OfficePage() {
   const { user, isAdmin } = useAuth();
-  const canManage = isAdmin || user?.deptId === 4;
+  const canManage = canManageDepartment(user, 4);
   const [log, setLog] = useState(MOCK_USAGE_LOG);
   const [usersList, setUsersList] = useState([]);
   const [modal, setModal] = useState(false);

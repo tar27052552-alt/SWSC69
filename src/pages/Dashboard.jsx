@@ -184,6 +184,7 @@ export default function Dashboard() {
         supabase.from('student_attendance').select('date, user_id').eq('status', 'leave').in('date', datesToCheck)
       ]);
 
+      if (checksRes.error || finesRes.error || attRes.error) throw checksRes.error || finesRes.error || attRes.error;
       const allChecks = checksRes.data || [];
       const allFines = finesRes.data || [];
       const allAttendance = attRes.data || [];
@@ -271,6 +272,8 @@ export default function Dashboard() {
               .select();
 
             if (insertError) {
+              // Another tab/job may have already recorded this fine. Never notify twice.
+              if (insertError.code === '23505') continue;
               console.error(`Failed to insert auto-fine for ${nickname} on ${dateStr}:`, insertError);
               continue;
             }
@@ -340,6 +343,7 @@ export default function Dashboard() {
         supabase.from('student_attendance').select('date, user_id').eq('status', 'leave').in('date', datesToCheck)
       ]);
 
+      if (checksRes.error || finesRes.error || attRes.error) throw checksRes.error || finesRes.error || attRes.error;
       const allChecks = checksRes.data || [];
       const allFines = finesRes.data || [];
       const allAttendance = attRes.data || [];
@@ -418,6 +422,8 @@ export default function Dashboard() {
               .select();
 
             if (insertError) {
+              // Another tab/job may have already recorded this fine. Never notify twice.
+              if (insertError.code === '23505') continue;
               console.error(`Failed to insert clean auto-fine for ${nickname} on ${dateStr}:`, insertError);
               continue;
             }

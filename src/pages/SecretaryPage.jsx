@@ -1,3 +1,4 @@
+import { canManageDepartment } from '../lib/councilPermissions';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, X, Save, FileText, Download, ChevronDown, ChevronUp, Upload, Loader } from 'lucide-react';
@@ -8,7 +9,7 @@ import CollapsibleSection from '../components/CollapsibleSection';
 
 export default function SecretaryPage() {
   const { user, isAdmin } = useAuth();
-  const canManage = isAdmin || user?.deptId === 7;
+  const canManage = canManageDepartment(user, 7);
   const [meetings, setMeetings] = useState([]);
   const [docs, setDocs] = useState([]);
   const [usersList, setUsersList] = useState([]);

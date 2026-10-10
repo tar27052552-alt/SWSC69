@@ -1,3 +1,4 @@
+import { canManageDepartment } from '../lib/councilPermissions';
 import { useState, useEffect } from 'react';
 import { Plus, X, Save } from 'lucide-react';
 import { supabase } from '../supabaseClient';
@@ -8,7 +9,7 @@ const MOCK_EVENTS = [];
 
 export default function RecreationPage() {
   const { user, isAdmin } = useAuth();
-  const canManage = isAdmin || user?.deptId === 6;
+  const canManage = canManageDepartment(user, 6);
   const [events, setEvents] = useState(MOCK_EVENTS);
   const [usersList, setUsersList] = useState([]);
   const [modal, setModal] = useState(false);

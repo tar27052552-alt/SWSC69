@@ -7,7 +7,7 @@ import {
   ShieldAlert, Camera, Users, Award, RefreshCw,
   CheckCircle2, Lock, UserX, AlertTriangle, KeyRound, Megaphone, Target
 } from 'lucide-react';
-import { supabaseDelete, supabaseSelect, supabaseUpdate } from '../lib/supabaseRest';
+import { supabaseSelect } from '../lib/supabaseRest';
 import { supabase } from '../supabaseClient';
 
 const ROLE_LABELS = { admin: 'ผู้ดูแลระบบ', president: 'ประธานสภาฯ', dept_head: 'หัวหน้าฝ่าย', member: 'สมาชิก' };
@@ -153,80 +153,35 @@ export default function AdminPage() {
   };
 
   const handleDelete = async (u) => {
-    if (!confirm(`ยืนยันต้องการลบผู้ใช้ "${u.name} (${u.nickname})" ออกจากระบบหรือไม่?\n\n⚠️ ประวัติย้อนหลังทั้งหมดของผู้ใชี้ (ค่าปรับ, ประวัติการเข้าเรียน, รายงานเวร, การแจ้งเตือน) จะถูกลบออกทั้งหมดโดยสมบูรณ์`)) return;
+    if (!confirm(`ยืนยันปิดใช้งานสมาชิก "${u.name} (${u.nickname})" ออกจากระบบหรือไม่?\n\nสมาชิกจะเข้าสู่ระบบไม่ได้ โดยเก็บประวัติการเงิน การเช็คชื่อ และรายงานเวรทั้งหมดไว้`)) return;
     try {
       const { error } = await supabase.functions.invoke('admin-users', {
-        body: { action: 'delete', userId: u.id },
+        body: { action: 'archive', userId: u.id },
       });
       if (error) throw error;
-      alert('ลบผู้ใช้และประวัติทั้งหมดของผู้ใช้คนนี้เรียบร้อยแล้ว!');
+      alert('ปิดใช้งานสมาชิกแล้ว ประวัติทั้งหมดถูกเก็บไว้');
       loadUsers();
     } catch (err) {
-      alert('ลบไม่สำเร็จ: ' + err.message);
+      alert('ปิดใช้งานไม่สำเร็จ: ' + err.message);
     }
   };
 
   const handleCleanupOrphanedData = async () => {
-    if (!confirm('ต้องการตรวจสอบและล้างประวัติย้อนหลัง (ค่าปรับ, เช็คชื่อ, เวร ฯลฯ) ของสมาชิกที่ถูกลบไปแล้วทั้งหมดใช่หรือไม่?')) return;
+    setLoading(true);
     try {
-      setLoading(true);
-      const validUsers = await supabaseSelect('user_directory', '?select=id,nickname');
-      const validUserIds = new Set((validUsers || []).map(u => String(u.id)));
-      const validNicknames = new Set((validUsers || []).map(u => u.nickname).filter(Boolean));
-
-      const allFines = await supabaseSelect('discipline_fines', '?select=id,user_id,nickname');
-      const orphanFines = (allFines || []).filter(f => {
-        const idMatch = f.user_id && validUserIds.has(String(f.user_id));
-        const nickMatch = f.nickname && validNicknames.has(f.nickname);
-        return !idMatch && !nickMatch;
-      });
-
-      const allAtt = await supabaseSelect('student_attendance', '?select=id,user_id,nickname');
-      const orphanAtt = (allAtt || []).filter(a => {
-        const idMatch = a.user_id && validUserIds.has(String(a.user_id));
-        const nickMatch = a.nickname && validNicknames.has(a.nickname);
-        return !idMatch && !nickMatch;
-      });
-
-      let deletedCount = 0;
-      for (const fine of orphanFines) {
-        await supabaseDelete('discipline_fines', `?id=eq.${fine.id}`);
-        deletedCount++;
-      }
-      for (const att of orphanAtt) {
-        await supabaseDelete('student_attendance', `?id=eq.${att.id}`);
-        deletedCount++;
-      }
-
-      // Clean up finance_fees payments for deleted users
-      try {
-        const allFees = await supabaseSelect('finance_fees', '?select=id,payments');
-        if (allFees) {
-          for (const fee of allFees) {
-            if (!fee.payments) continue;
-            let changed = false;
-            const nextPayments = { ...fee.payments };
-            for (const uid of Object.keys(nextPayments)) {
-              if (!validUserIds.has(uid)) {
-                delete nextPayments[uid];
-                changed = true;
-              }
-            }
-            if (changed) {
-              await supabaseUpdate('finance_fees', { payments: nextPayments }, `?id=eq.${fee.id}`);
-            }
-          }
-        }
-      } catch (e) { console.error('Error cleaning fee payments:', e); }
-
-      alert(`ล้างประวัติค้างของผู้ใช้ที่ถูกลบเรียบร้อยแล้ว! (รวมลบประวัติ ${deletedCount} รายการ)`);
-      loadUsers();
-    } catch (err) {
-      console.error('Error cleaning up orphaned data:', err);
-      alert('เกิดข้อผิดพลาดในการล้างข้อมูล: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
+      const { data, error } = await supabase.functions.invoke('admin-users', { body: { action: 'list' } });
+      if (error) throw error;
+      const members = data?.users || [];
+      const validIds = new Set((members || []).map(member => String(member.id)));
+      const fines = await supabaseSelect('discipline_fines', '?select=id,user_id');
+      const attendance = await supabaseSelect('student_attendance', '?select=id,user_id');
+      const fees = await supabaseSelect('finance_fees', '?select=id,payments');
+      const orphanFines = (fines || []).filter(item => !validIds.has(String(item.user_id)));
+      const orphanAttendance = (attendance || []).filter(item => !validIds.has(String(item.user_id)));
+      const orphanPayments = (fees || []).reduce((count, fee) => count + Object.keys(fee.payments || {}).filter(id => !validIds.has(id)).length, 0);
+      alert(`ตรวจพบประวัติที่ไม่มีสมาชิกอ้างอิง: ค่าปรับ ${orphanFines.length} รายการ, เช็คชื่อ ${orphanAttendance.length} รายการ, การชำระ ${orphanPayments} รายการ\nเก็บประวัติทั้งหมดไว้ ไม่มีการลบข้อมูล`);
+    } catch (error) { alert('ตรวจสอบประวัติไม่สำเร็จ: ' + error.message); }
+    finally { setLoading(false); }
   };
 
   return (
@@ -271,10 +226,10 @@ export default function AdminPage() {
             onClick={handleCleanupOrphanedData}
             className="btn btn-warning"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
-            title="ล้างประวัติค่าปรับ/เช็คชื่อของสมาชิกที่ถูกลบไปแล้ว"
+            title="ตรวจประวัติโดยไม่ลบข้อมูล"
           >
             <Trash2 size={16} />
-            <span>ล้างประวัติผู้ใช้ที่ถูกลบ</span>
+            <span>ตรวจประวัติที่ไม่มีสมาชิก</span>
           </button>
           <button
             onClick={openAdd}
@@ -537,7 +492,7 @@ export default function AdminPage() {
                               style={{ fontSize: 11.5, padding: '4px 8px' }}
                               disabled={isSelf}
                             >
-                              <Trash2 size={12} /> ลบ
+                              <UserX size={12} /> ปิดใช้งาน
                             </button>
                           </div>
                         </td>

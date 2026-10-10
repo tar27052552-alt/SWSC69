@@ -1918,8 +1918,12 @@ function sendOneSignalPush(title, message, targetUserIds) {
     var response = UrlFetchApp.fetch("https://onesignal.com/api/v1/notifications", options);
     var code = response.getResponseCode();
     if (code >= 200 && code < 300) {
-      console.log("OneSignal push notification sent successfully: " + response.getContentText());
-      return { success: true };
+      var delivery = JSON.parse(response.getContentText());
+      if (!delivery.id || (delivery.recipients != null && Number(delivery.recipients) === 0)) {
+        return { success: false, error: 'OneSignal ไม่พบอุปกรณ์ผู้รับที่สมัครรับแจ้งเตือน' };
+      }
+      console.log("OneSignal accepted notification: " + delivery.id);
+      return { success: true, notificationId: delivery.id, recipients: delivery.recipients };
     } else {
       console.error("OneSignal push notification error: " + response.getContentText());
       return { success: false, error: "Status " + code };

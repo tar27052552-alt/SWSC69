@@ -1,3 +1,4 @@
+import { canManageCalendar } from '../lib/councilPermissions';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, RefreshCw, X, Trash2, Edit2, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-react';
@@ -33,10 +34,11 @@ export default function CalendarPage() {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   
   const [isAdding, setIsAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [editId, setEditId] = useState(null);
   const [newEv, setNewEv] = useState({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', checkAttendance: false, attendanceStartTime: '07:00', attendanceLimitTime: '08:00', desc: '', replaceDay: 'จันทร์' });
 
-  const canManage = isAdmin || isPresident || user?.deptId === 1 || user?.deptId === 7;
+  const canManage = canManageCalendar(user);
 
   useEffect(() => {
     async function loadData() {
@@ -100,143 +102,52 @@ export default function CalendarPage() {
     };
   }, []);
 
+  const refreshCalendar = async () => {
+    const results = await Promise.all([
+      supabase.from('events').select('*').order('date'),
+      supabase.from('event_participants').select('*'),
+      supabase.from('attendance_settings').select('*'),
+    ]);
+    for (const result of results) if (result.error) throw result.error;
+    setEvents((results[0].data || []).map(event => ({ ...event, desc: event.description || '' })));
+    setParticipants(results[1].data || []);
+    setDisabledDates(results[2].data.find(item => item.key === 'disabled_dates')?.value || []);
+    setSubstituteDates(results[2].data.find(item => item.key === 'substitute_dates')?.value || []);
+  };
   const handleSaveEvent = async () => {
-    if (!newEv.title || !newEv.date) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-    
-    try {
-      const color = TYPE_COLORS[newEv.type] || '#43a047';
-      const isCheckAttendance = newEv.locationCategory === 'external' ? false : (newEv.checkAttendance || false);
-      const startTime = newEv.attendanceStartTime || '07:00';
-      const limitTime = newEv.attendanceLimitTime || '08:00';
-
-      // 1. Sync Holiday in attendance_settings
-      if (newEv.type === 'holiday') {
-        const datesToAdd = [];
-        let curr = new Date(newEv.date);
-        const end = new Date(newEv.endDate || newEv.date);
-        while (curr <= end) {
-          const yyyy = curr.getFullYear();
-          const mm = String(curr.getMonth() + 1).padStart(2, '0');
-          const dd = String(curr.getDate()).padStart(2, '0');
-          datesToAdd.push(`${yyyy}-${mm}-${dd}`);
-          curr.setDate(curr.getDate() + 1);
-        }
-
-        const newDisabledDates = Array.from(new Set([...disabledDates, ...datesToAdd])).sort();
-        setDisabledDates(newDisabledDates);
-        await supabase
-          .from('attendance_settings')
-          .upsert([{ key: 'disabled_dates', value: newDisabledDates }], { onConflict: 'key' });
-      }
-
-      // 2. Sync Substitute Date in attendance_settings
-      if (newEv.type === 'substitute') {
-        const newObj = { date: newEv.date, replaceDay: newEv.replaceDay || 'จันทร์' };
-        const filtered = substituteDates.filter(s => (typeof s === 'string' ? s : s.date) !== newEv.date);
-        const newSubstitutes = [...filtered, newObj];
-        setSubstituteDates(newSubstitutes);
-        await supabase
-          .from('attendance_settings')
-          .upsert([{ key: 'substitute_dates', value: newSubstitutes }], { onConflict: 'key' });
-      }
-
-      let eventDesc = newEv.desc || '';
-      if (newEv.type === 'substitute' && !eventDesc.includes('เรียนชดเชย')) {
-        eventDesc = `เรียนชดเชยแทนตารางวัน${newEv.replaceDay || 'จันทร์'} ${eventDesc ? '(' + eventDesc + ')' : ''}`;
-      }
-      
-      if (editId) {
-        const { error } = await supabase
-          .from('events')
-          .update({
-            title: newEv.title,
-            date: newEv.date,
-            end_date: newEv.endDate || newEv.date,
-            location_category: newEv.locationCategory || 'internal',
-            check_attendance: isCheckAttendance,
-            attendance_start_time: startTime,
-            attendance_limit_time: limitTime,
-            type: newEv.type,
-            color: color,
-            description: eventDesc
-          })
-          .eq('id', editId);
-          
-        if (error) throw error;
-
-        await supabase.from('event_participants').delete().eq('event_id', editId);
-
-        if (selectedParticipants.length > 0) {
-          const participantRecords = selectedParticipants.map(userId => ({
-            event_id: editId,
-            user_id: userId
-          }));
-          await supabase.from('event_participants').insert(participantRecords);
-        }
-
-        alert('แก้ไขรายการเรียบร้อยแล้ว!');
-
-      } else {
-        const { data, error } = await supabase
-          .from('events')
-          .insert([{
-            title: newEv.title,
-            date: newEv.date,
-            end_date: newEv.endDate || newEv.date,
-            location_category: newEv.locationCategory || 'internal',
-            check_attendance: isCheckAttendance,
-            attendance_start_time: startTime,
-            attendance_limit_time: limitTime,
-            type: newEv.type,
-            color: color,
-            description: eventDesc
-          }])
-          .select();
-
-        if (error) throw error;
-        const newEventId = data[0].id;
-
-        if (selectedParticipants.length > 0) {
-          const participantRecords = selectedParticipants.map(userId => ({
-            event_id: newEventId,
-            user_id: userId
-          }));
-          await supabase.from('event_participants').insert(participantRecords);
-        }
-
-        const typeLabel = TYPE_LABELS[newEv.type] || 'กิจกรรม';
-        const embedTitle = `📅 ประกาศปฏิทินสภาฯ: ${typeLabel}`;
-        const embedDesc = `หัวข้อ: **${newEv.title}** (${typeLabel})`;
-        const locLabel = newEv.locationCategory === 'external' ? 'ภายนอกโรงเรียน (นอกสถานที่)' : 'ภายในโรงเรียน';
-        const fields = [
-          { name: "📆 วันที่", value: newEv.date === (newEv.endDate || newEv.date) 
-              ? new Date(newEv.date).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-              : `${new Date(newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${new Date(newEv.endDate || newEv.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`, inline: true },
-          { name: "📍 สถานที่", value: locLabel, inline: true },
-          { name: "📋 เช็คชื่อ / ยกเว้นเข้าแถว", value: isCheckAttendance ? `เช็คชื่อในกิจกรรม (${startTime} - ${limitTime} น.)` : "ไม่ต้องเช็คชื่อ (ไม่ส่งผลต่อการเข้าแถวปกติ)", inline: false },
-          { name: "📝 รายละเอียดเพิ่มเติม", value: eventDesc || "ไม่มี", inline: false }
-        ];
-        const targetUserIds = usersList.map(u => String(u.id));
-        sendDiscordEmbedViaGAS(embedTitle, embedDesc, newEv.type === 'holiday' ? 15158332 : 3447003, fields, null, 'calendar', targetUserIds.length > 0 ? targetUserIds : null);
-
-        alert('เพิ่มรายการเข้าสู่ปฏิทินเรียบร้อยแล้ว!');
-      }
-      
-      setIsAdding(false);
-      setEditId(null);
-      setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', checkAttendance: false, attendanceStartTime: '07:00', attendanceLimitTime: '08:00', desc: '', replaceDay: 'จันทร์' });
-      setSelectedParticipants([]);
-      
-      const { data } = await supabase.from('events').select('*').order('date', { ascending: true });
-      setEvents((data || []).map(e => ({ ...e, desc: e.description || e.desc })));
-
-      const { data: pData } = await supabase.from('event_participants').select('*');
-      setParticipants(pData || []);
-      
-    } catch (err) {
-      console.error('Error saving event:', err);
-      alert('ไม่สามารถบันทึกรายการได้: ' + err.message);
+    if (saving || !canManage) return;
+    if (!newEv.title.trim() || !newEv.date || (newEv.endDate && newEv.endDate < newEv.date)) {
+      alert('กรุณากรอกชื่อและช่วงวันที่ให้ถูกต้อง'); return;
     }
+    setSaving(true);
+    let saved = false;
+    try {
+      const event = {
+        title: newEv.title.trim(), date: newEv.date, end_date: newEv.endDate || newEv.date,
+        type: newEv.type, color: TYPE_COLORS[newEv.type] || '#43a047',
+        description: newEv.desc || '', location_category: newEv.locationCategory || 'internal',
+        check_attendance: Boolean(newEv.checkAttendance),
+        attendance_start_time: newEv.attendanceStartTime || '07:00',
+        attendance_limit_time: newEv.attendanceLimitTime || '08:00',
+        substitute_for_day: newEv.type === 'substitute' ? newEv.replaceDay : null,
+      };
+      const { error } = await supabase.rpc('save_council_event', {
+        p_event: event, p_participants: selectedParticipants, p_event_id: editId,
+      });
+      if (error) throw error;
+      saved = true;
+      setIsAdding(false); setEditId(null); setSelectedParticipants([]);
+      setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', checkAttendance: false, attendanceStartTime: '07:00', attendanceLimitTime: '08:00', desc: '', replaceDay: 'จันทร์' });
+      alert('บันทึกกิจกรรมและรายชื่อผู้เข้าร่วมเรียบร้อยแล้ว');
+      // Notification delivery has its own persistent queue and status banner.
+      void sendDiscordEmbedViaGAS(`📅 ปฏิทินสภาฯ: ${TYPE_LABELS[event.type] || 'กิจกรรม'}`,
+        `**${event.title}** · ${event.date} ถึง ${event.end_date}`, 3447003,
+        [{ name: 'รายละเอียด', value: event.description || 'ไม่มี', inline: false }],
+        null, 'calendar', usersList.map(member => String(member.id)));
+      await refreshCalendar();
+    } catch (error) {
+      alert((saved ? 'บันทึกแล้ว แต่โหลดข้อมูลใหม่ไม่สำเร็จ กรุณารีเฟรช: ' : 'บันทึกไม่สำเร็จ: ') + error.message);
+    } finally { setSaving(false); }
   };
 
   const handleEditEvent = (ev) => {
@@ -251,7 +162,7 @@ export default function CalendarPage() {
       attendanceStartTime: ev.attendance_start_time || '07:00',
       attendanceLimitTime: ev.attendance_limit_time || '08:00',
       desc: ev.desc || ev.description || '',
-      replaceDay: 'จันทร์'
+      replaceDay: ev.substitute_for_day || 'จันทร์'
     });
     
     const eventParts = participants.filter(p => p.event_id === ev.id).map(p => p.user_id);
@@ -260,55 +171,34 @@ export default function CalendarPage() {
   };
 
   const handleDeleteEvent = async (eventId) => {
-    if (!window.confirm('คุณต้องการลบรายการนี้ออกจากปฏิทินใช่หรือไม่?')) return;
+    if (saving || !canManage || !window.confirm('ลบกิจกรรมนี้พร้อมรายชื่อผู้เข้าร่วมและวันหยุด/วันชดเชยที่เกี่ยวข้อง?')) return;
+    setSaving(true);
+    let deleted = false;
     try {
-      const targetEv = events.find(e => e.id === eventId);
-      if (targetEv) {
-        if (targetEv.type === 'holiday') {
-          handleRemoveHoliday(targetEv.date);
-        } else if (targetEv.type === 'substitute') {
-          handleRemoveSubstitute(targetEv.date);
-        }
-      }
-
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', eventId);
+      const { error } = await supabase.rpc('delete_council_event', { p_event_id: eventId });
       if (error) throw error;
-      
-      setEvents(prev => prev.filter(e => e.id !== eventId));
-      setParticipants(prev => prev.filter(p => p.event_id !== eventId));
-      alert('ลบรายการเรียบร้อยแล้ว!');
-    } catch (err) {
-      console.error('Error deleting event:', err);
-      alert('เกิดข้อผิดพลาดในการลบรายการ: ' + err.message);
-    }
+      deleted = true;
+      setEvents(previous => previous.filter(event => event.id !== eventId));
+      setParticipants(previous => previous.filter(item => item.event_id !== eventId));
+      await refreshCalendar();
+      alert('ลบกิจกรรมและอัปเดตวันเรียนเรียบร้อยแล้ว');
+    } catch (error) { alert((deleted ? 'ลบแล้ว แต่โหลดข้อมูลใหม่ไม่สำเร็จ: ' : 'ลบไม่สำเร็จ: ') + error.message); }
+    finally { setSaving(false); }
   };
-
-  const handleRemoveHoliday = async (dateStr) => {
+  const removeCalendarException = async (kind, dateStr) => {
+    if (saving || !canManage) return;
+    setSaving(true);
     try {
-      const updated = disabledDates.filter(d => d !== dateStr);
-      setDisabledDates(updated);
-      await supabase
-        .from('attendance_settings')
-        .upsert([{ key: 'disabled_dates', value: updated }], { onConflict: 'key' });
-    } catch (err) {
-      console.error('Error removing holiday:', err);
-    }
+      const { data, error } = await supabase.rpc('set_council_calendar_exception', {
+        p_kind: kind, p_date: dateStr, p_remove: true,
+      });
+      if (error) throw error;
+      setDisabledDates(data.disabled_dates || []); setSubstituteDates(data.substitute_dates || []);
+    } catch (error) { alert('ปรับวันเรียนไม่สำเร็จ: ' + error.message); }
+    finally { setSaving(false); }
   };
-
-  const handleRemoveSubstitute = async (dateStr) => {
-    try {
-      const updated = substituteDates.filter(s => (typeof s === 'string' ? s : s.date) !== dateStr);
-      setSubstituteDates(updated);
-      await supabase
-        .from('attendance_settings')
-        .upsert([{ key: 'substitute_dates', value: updated }], { onConflict: 'key' });
-    } catch (err) {
-      console.error('Error removing substitute date:', err);
-    }
-  };
+  const handleRemoveHoliday = dateStr => removeCalendarException('holiday', dateStr);
+  const handleRemoveSubstitute = dateStr => removeCalendarException('substitute', dateStr);
 
   const firstDay = new Date(yr, mo, 1).getDay();
   const daysInMonth = new Date(yr, mo + 1, 0).getDate();
@@ -889,7 +779,7 @@ export default function CalendarPage() {
 
             <div className="modal-footer" style={{ background: '#f8fafc', padding: '14px 20px', borderTop: '1px solid #e2e8f0' }}>
               <button className="btn btn-gray" onClick={() => setIsAdding(false)} style={{ borderRadius: 10 }}>ยกเลิก</button>
-              <button className="btn btn-primary" onClick={handleSaveEvent} style={{ background: 'linear-gradient(135deg, #00bcd4, #00838f)', borderRadius: 10, fontWeight: 700 }}>
+              <button className="btn btn-primary" disabled={saving} onClick={handleSaveEvent} style={{ background: 'linear-gradient(135deg, #00bcd4, #00838f)', borderRadius: 10, fontWeight: 700 }}>
                 {editId ? 'บันทึกการแก้ไข' : 'บันทึกรายการ'}
               </button>
             </div>

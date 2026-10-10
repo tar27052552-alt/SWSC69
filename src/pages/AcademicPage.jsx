@@ -1,3 +1,4 @@
+import { canManageDepartment } from '../lib/councilPermissions';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, X, Save, Search, FileText, Upload, Download, Loader, AlertTriangle, RotateCw } from 'lucide-react';
@@ -16,7 +17,7 @@ const PROJECT_STATUS = {
 
 export default function AcademicPage() {
   const { isAdmin, user } = useAuth();
-  const canManage = isAdmin || user?.deptId === 3;
+  const canManage = canManageDepartment(user, 3);
   const [projects, setProjects] = useState([]);
   const [docs, setDocs] = useState([]);
   const [usersList, setUsersList] = useState([]);

@@ -130,6 +130,11 @@ export default function SettingsPage() {
         { name: '📝 เนื้อหาประกาศ', value: adminMessage, inline: false }
       ];
 
+      const { error: inboxError } = await supabase.rpc('create_council_announcement', {
+        p_target_ids: targetUserIds, p_message: adminMessage.trim(),
+      });
+      if (inboxError) throw inboxError;
+
       const success = await sendDiscordEmbedViaGAS(
         title,
         description,
@@ -141,20 +146,7 @@ export default function SettingsPage() {
       );
 
       if (!success) {
-        throw new Error('ส่งข้อความผ่านทางระบบแจ้งเตือนไม่สำเร็จ');
-      }
-
-      // Record in Supabase notifications table
-      try {
-        await supabase
-          .from('notifications')
-          .insert(targetUserIds.map((targetUserId) => ({
-            type: 'announcement',
-            user_id: String(targetUserId),
-            message: `📢 ประกาศด่วนโดย ${user?.nickname || user?.name || 'ผู้ดูแลระบบ'}: ${adminMessage}`
-          })));
-      } catch (errDb) {
-        console.error('Failed to save announcement in DB:', errDb);
+        setSendError('บันทึกประกาศในเว็บแล้ว แต่ส่งภายนอกไม่สำเร็จ ตรวจคิวแจ้งเตือนด้านบนเพื่อส่งซ้ำ');
       }
 
       setSendSuccess(true);
@@ -726,14 +718,14 @@ export default function SettingsPage() {
                 {sendSuccess && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderRadius: 6, background: 'rgba(76, 175, 80, 0.08)', border: '1px solid rgba(76, 175, 80, 0.3)', color: '#2e7d32', fontSize: 13 }}>
                     <CheckCircle2 size={16} />
-                    <span>ส่งข้อความแจ้งเตือนประกาศหาผู้รับสำเร็จแล้ว!</span>
+                    <span>บันทึกประกาศในเว็บแล้ว ดูสถานะส่งภายนอกด้านบน</span>
                   </div>
                 )}
 
                 {sendError && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderRadius: 6, background: 'rgba(244, 67, 54, 0.08)', border: '1px solid rgba(244, 67, 54, 0.3)', color: '#c62828', fontSize: 13 }}>
                     <XCircle size={16} />
-                    <span>ส่งประกาศไม่สำเร็จ: {sendError}</span>
+                    <span>{sendError}</span>
                   </div>
                 )}
 

@@ -1,3 +1,5 @@
+import { useAuth } from '../context/AuthContext';
+import { canManageDepartment } from '../lib/councilPermissions';
 import { useState, useEffect } from 'react';
 import { Plus, X, Save } from 'lucide-react';
 import { supabase } from '../supabaseClient';
@@ -6,6 +8,8 @@ import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 const MOCK_GUESTS = [];
 
 export default function ReceptionPage() {
+  const { user } = useAuth();
+  const canManage = canManageDepartment(user, 10);
   const [guests, setGuests] = useState(MOCK_GUESTS);
   const [usersList, setUsersList] = useState([]);
   const [modal, setModal] = useState(false);
@@ -104,6 +108,7 @@ export default function ReceptionPage() {
     }
   };
 
+  if (!canManage) return <div className="card"><div className="card-body">เฉพาะเจ้าหน้าที่ฝ่ายนี้ ประธาน และผู้ดูแลระบบ</div></div>;
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

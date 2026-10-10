@@ -306,9 +306,9 @@ export default function LearnApp() {
   }
 
   const savedPosition = latestPosition(lastPosition, readLocalPosition(session?.user.id));
-  const current = catalog.find(subject => subject.id === savedPosition?.subjectId && unlocked(subject))
-    || catalog.find(subject => unlocked(subject) && stateOf(subject).bestPostScore < 6)
-    || catalog[catalog.length - 1];
+  const current = catalog.find(subject => unlocked(subject) && stateOf(subject).bestPostScore < 6);
+  const reviewSubject = catalog.find(subject => subject.id === savedPosition?.subjectId && unlocked(subject));
+  const canStudy = Boolean(session && profileLoaded && profile?.full_name && profile?.phone && published);
   const media = topicMedia(topic);
   const videos = media.filter(item => item.type === 'video');
   const videoIndex = resource?.type === 'video' ? videos.findIndex(item => mediaKey(item) === mediaKey(resource)) : -1;
@@ -338,7 +338,7 @@ export default function LearnApp() {
       </nav>
     </header>
     <main className="learn-main">
-      <section className={`learn-hero ${view === 'courses' ? '' : 'learn-hero-compact'}`}><div className="learn-hero-content">
+      <section className={`learn-hero ${view === 'courses' ? '' : 'learn-hero-compact'}`}><div className="learn-hero-ambient" aria-hidden="true" /><div className="learn-hero-content">
         <div className="learn-eyebrow"><span className="learn-eyebrow-dot" /> SWSC LEARNING · 5 วิชา</div>
         <h1>ถอดรหัสความเป็น<br /><em>พลเมืองคุณภาพ</em></h1>
         <p>เรียนทีละวิชาในเว็บเดียว ทบทวนได้ตามจังหวะของคุณ และรับเกียรติบัตรเมื่อสอบผ่านเกณฑ์</p>
@@ -392,11 +392,19 @@ export default function LearnApp() {
       {view === 'courses' && <section className="learn-section">
         <div className="learn-section-heading"><div><div className="learn-section-kicker">COURSE JOURNEY</div>
           <h2>เส้นทางเรียน 5 วิชา</h2></div><span>เรียนตามลำดับ</span></div>
-        {session && profile?.phone && published && current && <button className="learn-continue"
-          onClick={() => openSubject(current)}>กลับมาเรียนต่อ: วิชาที่ {current.ordinal} →</button>}
+        {canStudy && <div className="learn-journey-actions">
+          {current ? <button className="learn-continue" disabled={busy}
+            onClick={() => openSubject(current)}>{current.ordinal > 1 && !stateOf(current).preCompleted
+              ? 'เรียนวิชาถัดไป' : 'เรียนต่อ'}: วิชาที่ {current.ordinal} →</button>
+            : <p className="learn-journey-complete">ผ่านครบทั้ง 5 วิชาแล้ว เลือกทบทวนหรือสอบเพิ่มคะแนนได้ด้านล่าง</p>}
+          {reviewSubject && <button className="learn-review" disabled={busy}
+            onClick={() => openSubject(reviewSubject)}>ทบทวนตำแหน่งล่าสุด: วิชาที่ {reviewSubject.ordinal}</button>}
+        </div>}
         <div className="learn-course-list">{catalog.map(subject => {
           const item = stateOf(subject);
           const locked = !unlocked(subject);
+          const readyForPost = canStudy && !locked && item.preCompleted && subject.topics.length > 0 &&
+            subject.topics.every(topic => item.completedTopicIds.includes(topic.id));
           return <article className="learn-course" key={subject.id}>
             <div className="learn-course-index">{subject.ordinal}</div>
             <div className="learn-course-info"><div className="learn-number">วิชาที่ {subject.ordinal} · {
@@ -406,9 +414,13 @@ export default function LearnApp() {
               item.preCompleted ? 'เรียนแล้ว ' + item.completedTopicIds.length + '/4 หัวข้อ' : 'ยังไม่เริ่ม'
             }</div><h3>{subject.title}</h3><p>{subject.summary}</p>
               {item.bestPostScore >= 0 && <small>คะแนนสูงสุด {item.bestPostScore}/10</small>}
-            </div><button disabled={busy || (published && session && profile?.phone && locked)}
+            </div><div className="learn-course-actions"><button disabled={busy || (published && session && profile?.phone && locked)}
               onClick={() => openSubject(subject)}>{!published || !session || !profile?.phone ? 'ดูโครงบท' :
-                locked ? 'ล็อกอยู่' : 'เข้าเรียน →'}</button>
+                locked ? 'ล็อกอยู่' : readyForPost ? 'ทบทวนบทเรียน' : 'เข้าเรียน →'}</button>
+              {readyForPost && <button disabled={busy} onClick={() => openQuiz(subject, 'post')}>
+                {item.bestPostScore < 0 ? 'ทำแบบทดสอบหลังเรียน' :
+                  item.bestPostScore < 8 ? 'สอบเพิ่มคะแนน' : 'สอบอีกครั้ง'}</button>}
+            </div>
           </article>;
         })}</div>
       </section>}

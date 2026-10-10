@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
-import { lessonCatalog, lessonPrimaryStartPages } from '../learn/lessonCatalog.js';
-import { lessonIntroBlocks } from '../learn/lessonNarratives.js';
+import { lessonCatalog } from '../learn/lessonCatalog.js';
 import LearningLearners from './LearningLearners.jsx';
 import './LearningAdminPage.css';
 
@@ -18,11 +17,6 @@ async function adminRequest(body) {
 const emptyTopics = subjectId => lessonCatalog.find(item => item.id === subjectId)?.topics.map(
   (title, index) => ({ id: subjectId + '-t' + (index + 1), title, blocks: [], resources: [] })) || [];
 const emptyQuestion = () => ({ prompt: '', options: ['', '', '', ''], correctOption: 0 });
-function videoIdFrom(value) {
-  const match = String(value).match(/(?:watch\?v=|youtu\.be\/|embed\/)([\w-]{11})/);
-  return match?.[1] || String(value).trim();
-}
-
 export default function LearningAdminPage() {
   const { isAdmin } = useAuth();
   const [data, setData] = useState(null);
@@ -55,32 +49,6 @@ export default function LearningAdminPage() {
   if (!isAdmin) return <div className="learning-admin"><h1>เฉพาะผู้ดูแลระบบ</h1></div>;
   const subject = data?.subjects.find(item => item.subject_id === subjectId);
   const notes = data?.notes.filter(item => item.subject_id === subjectId) || [];
-  const updateTopic = (index, update) => setDraft(current => {
-    const next = structuredClone(current);
-    update(next.topics[index]);
-    return next;
-  });
-  const insertReadingCopy = () => {
-    const catalog = lessonCatalog.find(item => item.id === subjectId);
-    const primaryDocument = catalog.resources.find(item => item.type === 'document');
-    const primaryId = primaryDocument.url.split('/')[5];
-    const primaryPath = `civic-dna-2026/${subjectId}/${primaryId}.pdf`;
-    setDraft(current => ({ ...current, topics: current.topics.map((topic, index) => {
-      const blocks = [...lessonIntroBlocks(subjectId, index), ...topic.blocks.filter(block =>
-        block.editorialSource !== 'lesson-narrative-v1' &&
-        !(block.type === 'paragraph' && block.text ===
-          (catalog.objectives[index] || catalog.summary)))];
-      const startPage = lessonPrimaryStartPages[subjectId][index];
-      const resources = topic.resources.map(item => item.path === primaryPath
-        ? { ...item, startPage } : item);
-      if (!resources.some(item => item.path === primaryPath)) resources.unshift({
-        type: 'document', title: primaryDocument.title, path: primaryPath,
-        startPage, toc: [], sourceId: primaryId,
-      });
-      return { ...topic, blocks, resources };
-    }) }));
-    setNotice('ใส่คำเกริ่นและ PDF ต้นฉบับแล้ว ตรวจไฟล์กับหัวข้อก่อนกดบันทึก');
-  };
   const doAction = async (body, message) => {
     setBusy(true); setNotice('');
     try {
@@ -112,31 +80,10 @@ export default function LearningAdminPage() {
     if (error) throw error;
     return signed.path;
   }
-  async function addImage(topicIndex, file) {
-    if (!file) return;
-    setBusy(true);
-    try {
-      const path = await upload(file, 'image');
-      updateTopic(topicIndex, topic => topic.blocks.push({ type: 'image', path, alt: file.name }));
-      setNotice('อัปโหลดภาพแล้ว กดบันทึกฉบับร่างเพื่อเก็บในบทเรียน');
-    } catch (error) { setNotice(error.message); }
-    finally { setBusy(false); }
-  }
-  async function addPdf(topicIndex, file) {
-    if (!file) return;
-    setBusy(true);
-    try {
-      const path = await upload(file, 'document');
-      updateTopic(topicIndex, topic => topic.resources.push({ type: 'document', title: file.name, path, toc: [] }));
-      setNotice('อัปโหลด PDF แล้ว กดบันทึกฉบับร่างเพื่อเก็บในบทเรียน');
-    } catch (error) { setNotice(error.message); }
-    finally { setBusy(false); }
-  }
-
   return <div className="learning-admin">
     <header className="learning-admin-head"><div><span>จัดการหลักสูตร</span>
       <h1>พลเมือง DNA</h1>
-      <p>แก้เนื้อหาฉบับร่าง ตรวจคำถาม และเผยแพร่เมื่อครบทั้ง 5 วิชา</p></div>
+      <p>ติดตามผู้เรียน จัดการข้อสอบ และเกียรติบัตร</p></div>
       <div className="learning-admin-state">
         <strong>{data?.edition.published ? 'เปิดเรียนแล้ว' : 'ยังไม่เปิดเรียน'}</strong>
         <small>{data?.edition.certificates_enabled ? 'ออกเกียรติบัตรได้' : 'รอแบบใบที่เซ็น'}</small>
@@ -154,96 +101,11 @@ export default function LearningAdminPage() {
       </aside>}
       <div className="learning-admin-main">
         <nav className="learning-admin-tabs" aria-label="ส่วนจัดการ">
-          {[['learners', 'ติดตามผู้เรียน'], ['content', 'เนื้อหา'], ['quiz', 'ข้อสอบ 10 ข้อ'], ['review', 'ข้อเสนอแก้ไข'], ['certificate', 'เกียรติบัตร']].map(
+          {[['learners', 'ติดตามผู้เรียน'], ['quiz', 'ข้อสอบ 10 ข้อ'], ['review', 'ข้อเสนอแก้ไข'], ['certificate', 'เกียรติบัตร']].map(
             ([id, label]) => <button key={id} className={tab === id ? 'active' : ''}
               onClick={() => setTab(id)}>{label}</button>)}
         </nav>
         {tab === 'learners' && <LearningLearners />}
-        {draft && tab === 'content' && <section>
-          <div className="learning-admin-toolbar"><div><h2>ฉบับร่างวิชาที่ {subject?.ordinal}</h2>
-            <p>เผยแพร่รุ่น {subject?.published_revision || 0} · ฉบับร่างรุ่น {subject?.draft_revision || 0}</p></div>
-            <button type="button" disabled={busy} onClick={insertReadingCopy}>ใช้ PDF ต้นฉบับ</button>
-            <button disabled={busy} onClick={() => doAction({ action: 'save_subject', subjectId,
-              title: draft.title, summary: draft.summary, topics: draft.topics }, 'บันทึกฉบับร่างแล้ว')}>
-              บันทึกฉบับร่าง</button></div>
-          <label className="learning-admin-field">ชื่อวิชา<input value={draft.title}
-            onChange={event => setDraft({ ...draft, title: event.target.value })} /></label>
-          <label className="learning-admin-field">คำอธิบาย<textarea value={draft.summary}
-            onChange={event => setDraft({ ...draft, summary: event.target.value })} /></label>
-          {draft.topics.map((topic, topicIndex) => <article className="learning-admin-topic" key={topic.id}>
-            <div className="learning-admin-topic-head"><span>หัวข้อ {topicIndex + 1}</span>
-              <input aria-label={'ชื่อหัวข้อ ' + (topicIndex + 1)} value={topic.title}
-                onChange={event => updateTopic(topicIndex, item => { item.title = event.target.value; })} /></div>
-            <div className="learning-admin-blocks">{topic.blocks.map((block, blockIndex) =>
-              <div className="learning-admin-block" key={blockIndex}>
-                <div className="learning-admin-block-tools"><span>{block.type === 'heading' ? 'หัวข้อย่อย' :
-                  block.type === 'paragraph' ? 'ข้อความ' : block.type === 'image' ? 'ภาพ' :
-                  block.type === 'page' ? 'หน้าเอกสาร' : 'ตาราง'}</span>
-                  <button disabled={blockIndex === 0} onClick={() => updateTopic(topicIndex, item => {
-                    [item.blocks[blockIndex - 1], item.blocks[blockIndex]] =
-                      [item.blocks[blockIndex], item.blocks[blockIndex - 1]];
-                  })}>↑</button>
-                  <button disabled={blockIndex === topic.blocks.length - 1} onClick={() => updateTopic(topicIndex, item => {
-                    [item.blocks[blockIndex + 1], item.blocks[blockIndex]] =
-                      [item.blocks[blockIndex], item.blocks[blockIndex + 1]];
-                  })}>↓</button>
-                  <button onClick={() => updateTopic(topicIndex, item => item.blocks.splice(blockIndex, 1))}>ลบ</button>
-                </div>
-                {(block.type === 'heading' || block.type === 'paragraph') && <textarea value={block.text}
-                  rows={block.type === 'heading' ? 2 : 6}
-                  onChange={event => updateTopic(topicIndex, item => {
-                    item.blocks[blockIndex].text = event.target.value;
-                  })} />}
-                {block.type === 'image' && <label>คำอธิบายภาพ<input value={block.alt || ''}
-                  onChange={event => updateTopic(topicIndex, item => {
-                    item.blocks[blockIndex].alt = event.target.value;
-                  })} /></label>}
-                {block.type === 'page' && <label>ข้อความจากเอกสารต้นฉบับ<textarea value={block.text || ''}
-                  rows={8} onChange={event => updateTopic(topicIndex, item => {
-                    item.blocks[blockIndex].text = event.target.value;
-                  })} /></label>}
-                {block.type === 'table' && <textarea value={(block.rows || []).map(row => row.join(' | ')).join('\n')}
-                  rows={5} aria-label="ตาราง คั่นคอลัมน์ด้วย |"
-                  onChange={event => updateTopic(topicIndex, item => {
-                    item.blocks[blockIndex].rows = event.target.value.split('\n').map(row =>
-                      row.split('|').map(cell => cell.trim()));
-                  })} />}
-              </div>)}</div>
-            <div className="learning-admin-add">
-              <button onClick={() => updateTopic(topicIndex, item =>
-                item.blocks.push({ type: 'heading', text: '' }))}>+ หัวข้อย่อย</button>
-              <button onClick={() => updateTopic(topicIndex, item =>
-                item.blocks.push({ type: 'paragraph', text: '' }))}>+ ข้อความ</button>
-              <button onClick={() => updateTopic(topicIndex, item =>
-                item.blocks.push({ type: 'table', rows: [['', '']] }))}>+ ตาราง</button>
-              <label>+ ภาพ<input type="file" accept="image/png,image/jpeg,image/webp" hidden
-                onChange={event => addImage(topicIndex, event.target.files?.[0])} /></label>
-            </div>
-            <h3>สื่อในหัวข้อนี้</h3>
-            {topic.resources.map((item, resourceIndex) => <div className="learning-admin-resource" key={resourceIndex}>
-              <span>{item.type === 'video' ? '▶ วิดีโอ' : '▤ PDF'}</span>
-              <input aria-label="ชื่อสื่อ" value={item.title}
-                onChange={event => updateTopic(topicIndex, target => {
-                  target.resources[resourceIndex].title = event.target.value;
-                })} />
-              {item.type === 'video' && <input aria-label="YouTube ID" value={item.videoId}
-                onChange={event => updateTopic(topicIndex, target => {
-                  target.resources[resourceIndex].videoId = videoIdFrom(event.target.value);
-                })} />}
-              <button onClick={() => updateTopic(topicIndex, target =>
-                target.resources.splice(resourceIndex, 1))}>ลบ</button>
-            </div>)}
-            <div className="learning-admin-add">
-              <button onClick={() => updateTopic(topicIndex, item =>
-                item.resources.push({ type: 'video', title: '', videoId: '' }))}>+ วิดีโอ</button>
-              <label>+ PDF<input type="file" accept="application/pdf" hidden
-                onChange={event => addPdf(topicIndex, event.target.files?.[0])} /></label>
-            </div>
-          </article>)}
-          <button disabled={busy || subject?.content_reviewed} onClick={() =>
-            doAction({ action: 'review', subjectId, kind: 'content', approved: true },
-              'อนุมัติเนื้อหาวิชานี้แล้ว')}>อนุมัติเนื้อหาวิชานี้</button>
-        </section>}
         {tab === 'quiz' && <section><div className="learning-admin-toolbar"><div>
           <h2>คำถามจาก Google Forms เดิม</h2><p>ก่อนเรียนและหลังเรียนใช้ 10 ข้อเดียวกัน</p></div>
           <button disabled={busy} onClick={() => doAction({ action: 'replace_quiz', subjectId,

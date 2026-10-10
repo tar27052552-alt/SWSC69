@@ -1,3 +1,4 @@
+import { canManageDepartment } from '../lib/councilPermissions';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Edit2, Check, Clock, Trash2, CheckCircle, XCircle, Info, Calendar, Sparkles, Save, X, Music, Send } from 'lucide-react';
@@ -78,8 +79,8 @@ const TABS = [
 export default function PRPage() {
   const { user, isAdmin, isPresident } = useAuth();
   const isPR = user?.deptId === 5;
-  // PR / admin = รับข่าวและอนุมัติได้ (ประธานไม่สามารถแก้ไข/อนุมัติได้ ได้แค่ดู)
-  const canManageNews = isAdmin || isPR;
+  // ใช้สิทธิ์เดียวกับนโยบายฝ่ายประชาสัมพันธ์บนเซิร์ฟเวอร์
+  const canManageNews = canManageDepartment(user, 5);
 
   const [nowDate, setNowDate] = useState(() => new Date());
 

@@ -1,3 +1,5 @@
+import { useAuth } from '../context/AuthContext';
+import { canManageDepartment } from '../lib/councilPermissions';
 import { useState, useEffect } from 'react';
 import { Plus, X, Save } from 'lucide-react';
 import { supabase } from '../supabaseClient';
@@ -7,6 +9,8 @@ import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 const MOCK_REQUESTS = [];
 
 export default function FacilitiesPage() {
+  const { user } = useAuth();
+  const canManage = canManageDepartment(user, 8);
   const [requests, setRequests] = useState(MOCK_REQUESTS);
   const [usersList, setUsersList] = useState([]);
   const [modal, setModal] = useState(false);
@@ -158,6 +162,7 @@ export default function FacilitiesPage() {
     setForm({ title: '', requester: '', eventDate: '', time: '', chairs: '', tables: '', other: '' });
   };
 
+  if (!canManage) return <div className="card"><div className="card-body">เฉพาะเจ้าหน้าที่ฝ่ายนี้ ประธาน และผู้ดูแลระบบ</div></div>;
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

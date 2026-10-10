@@ -1,5 +1,7 @@
+import PushSubscriptionControl from './PushSubscriptionControl';
+import NotificationDeliveryStatus from './NotificationDeliveryStatus';
 import { useState, useRef, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Calendar, Bell, UserCircle,
@@ -72,7 +74,7 @@ function formatRelativeTime(dateStr) {
 export default function Layout({ children }) {
   const { user, logout, isAdmin, isPresident, notifications, setNotifications } = useAuth();
   const navigate = useNavigate();
-  const path = window.location.pathname;
+  const { pathname: path } = useLocation();
   const unread = (notifications || []).filter(n => !n.read).length;
   const notifs = notifications || [];
 
@@ -548,21 +550,7 @@ export default function Layout({ children }) {
                       <span style={{ fontWeight:700, fontSize:15 }}>🔔 การแจ้งเตือน</span>
                       {unread > 0 && <button onClick={markAllRead} style={{ background:'none', border:'none', color:'var(--primary)', fontSize:13, fontWeight:600, cursor:'pointer' }}>อ่านทั้งหมด</button>}
                     </div>
-                    {typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
-                      <div style={{ padding: '8px 16px', background: '#eff6ff', borderBottom: '1px solid #dbeafe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 12, color: '#1e40af', fontWeight: 600 }}>เปิดรับแจ้งเตือนแบบป๊อบอัพบนอุปกรณ์</span>
-                        <button 
-                          onClick={() => {
-                            Notification.requestPermission().then(() => {
-                              window.location.reload();
-                            });
-                          }}
-                          style={{ padding: '4px 10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-                        >
-                          เปิดใช้งาน
-                        </button>
-                      </div>
-                    )}
+                    <PushSubscriptionControl userId={user.id} />
                     <div className="notif-body">
                       {notifs.length === 0 ? (
                         <div style={{ padding:32, textAlign:'center', color:'#9e9e9e', fontSize:14 }}>ไม่มีการแจ้งเตือน</div>
@@ -652,7 +640,7 @@ export default function Layout({ children }) {
         </header>
 
         <main className="main-content">
-          {children}
+          <NotificationDeliveryStatus userId={user?.id} />{children}
         </main>
       </div>
 

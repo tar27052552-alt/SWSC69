@@ -1,3 +1,4 @@
+import { canManageDepartment, academicYear } from '../lib/councilPermissions';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { DEPARTMENTS } from '../data/mockData';
@@ -19,17 +20,20 @@ const STATUS_STYLE = {
   rejected: { label: 'ไม่อนุมัติ',   badge: 'badge-red',    icon: <XCircle size={12}/> },
 };
 
-const BUDGET_TOTAL = 15000;
+
 
 export default function FinancePage() {
   const { user, isAdmin, isDeptHead, isPresident } = useAuth();
-  const isFinance = user?.deptId === 1 || isAdmin;
+  const isFinance = canManageDepartment(user, 1);
   const [requests, setRequests] = useState([]);
   const [tab, setTab] = useState('requests');
   const [modal, setModal] = useState(false);
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectNote, setRejectNote] = useState('');
   const [search, setSearch] = useState('');
+  const [financeYear] = useState(academicYear());
+  const [financeNotice, setFinanceNotice] = useState('');
+  const [financeBusy, setFinanceBusy] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const initForm = { title:'', category: EXPENSE_CATEGORIES[0], amount:'', note:'' };
   const [form, setForm] = useState(initForm);
@@ -82,9 +86,9 @@ export default function FinancePage() {
     const nick = (userObj.nickname || '').trim().toLowerCase();
     const name = (userObj.name || '').trim().toLowerCase();
     return dfines.filter(f => {
-      if (f.userId && String(f.userId) === uid) return true;
-      if (f.nickname && nick && f.nickname.trim().toLowerCase() === nick) return true;
-      if (f.userName && name && f.userName.trim().toLowerCase() === name) return true;
+      if (f.userId) return String(f.userId) === uid;
+      if (f.nickname && nick && f.nickname.trim().toLowerCase() === nick && usersList.filter(u => (u.nickname || '').trim().toLowerCase() === nick).length === 1) return true;
+      if (f.userName && name && f.userName.trim().toLowerCase() === name && usersList.filter(u => (u.name || '').trim().toLowerCase() === name).length === 1) return true;
       return false;
     });
   };
@@ -104,7 +108,8 @@ export default function FinancePage() {
         .from('finance_requests')
         .select('*')
         .order('created_at', { ascending: false });
-      if (!reqErr && reqData) {
+      if (reqErr) throw reqErr;
+      if (reqData) {
         const mappedReqs = reqData.map(r => ({
           id: r.id,
           title: r.title,
@@ -115,7 +120,7 @@ export default function FinancePage() {
           date: r.date,
           status: r.status,
           note: r.note,
-          approvedBy: r.approved_by
+          approvedBy: r.approved_by, requesterId: r.requester_id, disbursedAt: r.disbursed_at, academicYear: r.academic_year
         }));
         setRequests(mappedReqs);
       }
@@ -152,6 +157,8 @@ export default function FinancePage() {
       }
     } catch (err) {
       console.error('Error loading finance data:', err);
+      setFinanceNotice('โหลดข้อมูลการเงินไม่สำเร็จ: ' + err.message);
+      return false;
     }
   };
 
@@ -182,20 +189,24 @@ export default function FinancePage() {
   }, []);
 
   const filtered = requests.filter(r => {
-    const ms = r.title.toLowerCase().includes(search.toLowerCase()) || 
-               r.requester.toLowerCase().includes(search.toLowerCase()) || 
-               r.category.toLowerCase().includes(search.toLowerCase());
+    const ms = (r.title || '').toLowerCase().includes(search.toLowerCase()) || 
+               (r.requester || '').toLowerCase().includes(search.toLowerCase()) || 
+               (r.category || '').toLowerCase().includes(search.toLowerCase());
     const mf = filterStatus === 'all' || r.status === filterStatus;
-    return ms && mf;
+    return ms && mf && r.academicYear === financeYear;
   });
 
   const handleSubmit = async () => {
-    if (!form.title || !form.amount) return;
+    if (financeBusy) return;
+    if (!form.title.trim() || !Number.isInteger(Number(form.amount)) || Number(form.amount) <= 0) return alert('กรุณากรอกจำนวนเงินเป็นบาทจำนวนเต็มที่มากกว่า 0');
+    setFinanceBusy(true);
     const newRequest = {
       title: form.title,
       category: form.category,
-      amount: parseInt(form.amount),
+      amount: Number(form.amount),
       requester: user.nickname,
+      requester_id: user.id,
+      academic_year: academicYear(),
       dept_id: user.deptId,
       date: new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'2-digit' }),
       status: 'pending',
@@ -220,12 +231,13 @@ export default function FinancePage() {
           date: data[0].date,
           status: data[0].status,
           note: data[0].note,
-          approvedBy: data[0].approved_by
+          approvedBy: data[0].approved_by, requesterId: data[0].requester_id, disbursedAt: data[0].disbursed_at, academicYear: data[0].academic_year
         };
         setRequests(prev => [inserted, ...prev]);
+        setModal(false); setForm(initForm);
 
         // Send Discord notification for new withdrawal request
-        const dept = inserted.deptId ? (() => { const DEPTS = [{id:'finance',short:'การเงิน'},{id:'academic',short:'วิชาการ'},{id:'pr',short:'ประชาสัมพันธ์'},{id:'discipline',short:'กิจการ'},{id:'secretary',short:'เลขาฯ'},{id:'av',short:'โสตฯ'},{id:'facilities',short:'อาคารฯ'}]; return DEPTS.find(d=>d.id===inserted.deptId)?.short || inserted.deptId; })() : 'ไม่ระบุ';
+        const dept = DEPARTMENTS.find(item => item.id === inserted.deptId)?.short || 'ไม่ระบุ';
         const embedTitle = `📋 คำขอเบิกเงินสภานักเรียนใหม่`;
         const embedDesc = `มีสมาชิกยื่นคำขอเบิกเงินเข้ามาในระบบ กรุณาตรวจสอบและดำเนินการ`;
         const embedFields = [
@@ -245,15 +257,14 @@ export default function FinancePage() {
       console.error('Error inserting finance request:', err);
       alert('เกิดข้อผิดพลาดในการส่งคำขอ: ' + err.message);
     }
-    setModal(false); setForm(initForm);
+    setFinanceBusy(false);
   };
 
   const approve = async (id) => {
+    if (financeBusy || !isFinance) return;
+    setFinanceBusy(true);
     try {
-      const { error } = await supabase
-        .from('finance_requests')
-        .update({ status: 'approved', approved_by: user.nickname })
-        .eq('id', id);
+      const { error } = await supabase.rpc('review_council_finance_request', { p_request_id: id, p_status: 'approved' });
       if (error) throw error;
       const target = requests.find(r => r.id === id);
       setRequests(prev => prev.map(r => r.id===id ? { ...r, status:'approved', approvedBy: user.nickname } : r));
@@ -269,7 +280,7 @@ export default function FinancePage() {
           { name: '✍️ อนุมัติโดย', value: user.nickname, inline: true }
         ];
         
-        const requesterUser = usersList.find(u => u.nickname === target.requester);
+        const requesterUser = usersList.find(u => String(u.id) === String(target.requesterId));
         const targetUserId = requesterUser ? String(requesterUser.id) : null;
         
         sendDiscordEmbedViaGAS(embedTitle, embedDesc, 3066993, embedFields, null, 'finance', targetUserId ? [targetUserId] : null); // สีเขียวสำหรับอนุมัติ
@@ -277,18 +288,18 @@ export default function FinancePage() {
     } catch (err) {
       console.error('Error approving request:', err);
       alert('เกิดข้อผิดพลาดในการอนุมัติคำขอ: ' + err.message);
-    }
+    } finally { setFinanceBusy(false); }
   };
 
   const reject = async (id, note) => {
+    if (financeBusy || !isFinance) return;
+    setFinanceBusy(true);
     try {
-      const { error } = await supabase
-        .from('finance_requests')
-        .update({ status: 'rejected', note: note })
-        .eq('id', id);
+      const { error } = await supabase.rpc('review_council_finance_request', { p_request_id: id, p_status: 'rejected', p_note: note });
       if (error) throw error;
       const target = requests.find(r => r.id === id);
       setRequests(prev => prev.map(r => r.id===id ? { ...r, status:'rejected', note } : r));
+      setRejectModal(null); setRejectNote('');
 
       // Send Discord notification for rejection
       if (target) {
@@ -301,7 +312,7 @@ export default function FinancePage() {
           { name: '📝 เหตุผลการปฏิเสธ', value: note || 'ไม่ระบุ', inline: false }
         ];
         
-        const requesterUser = usersList.find(u => u.nickname === target.requester);
+        const requesterUser = usersList.find(u => String(u.id) === String(target.requesterId));
         const targetUserId = requesterUser ? String(requesterUser.id) : null;
         
         sendDiscordEmbedViaGAS(embedTitle, embedDesc, 15158332, embedFields, null, 'finance', targetUserId ? [targetUserId] : null); // สีแดงสำหรับปฏิเสธ
@@ -309,13 +320,22 @@ export default function FinancePage() {
     } catch (err) {
       console.error('Error rejecting request:', err);
       alert('เกิดข้อผิดพลาดในการปฏิเสธคำขอ: ' + err.message);
-    }
-    setRejectModal(null); setRejectNote('');
+    } finally { setFinanceBusy(false); }
   };
 
-  const totalApproved = requests.filter(r=>r.status==='approved').reduce((s,r)=>s+r.amount,0);
-  const totalPending  = requests.filter(r=>r.status==='pending').reduce((s,r)=>s+r.amount,0);
-  const budgetLeft = BUDGET_TOTAL - totalApproved;
+  const yearlyRequests = requests.filter(request => request.academicYear === financeYear);
+  const disburse = async request => {
+    if (financeBusy || !isFinance || !window.confirm(`ยืนยันจ่ายเงินจริง ${request.amount.toLocaleString()} บาท สำหรับ ${request.title}?`)) return;
+    setFinanceBusy(true);
+    try {
+      const { error } = await supabase.rpc('disburse_council_finance_request', { p_request_id: request.id });
+      if (error) throw error;
+      setFinanceNotice('บันทึกการจ่ายเงินจริงแล้ว');
+      const loaded = await loadFinanceData();
+      if (loaded === false) setFinanceNotice('บันทึกการจ่ายเงินจริงแล้ว แต่โหลดรายการล่าสุดไม่สำเร็จ กรุณารีเฟรชโดยไม่บันทึกจ่ายซ้ำ');
+    } catch (error) { setFinanceNotice('บันทึกการจ่ายไม่สำเร็จ: ' + error.message); }
+    finally { setFinanceBusy(false); }
+  };
 
   const viewSlip = async (fine) => {
     if (fine.paymentSlip) {
@@ -1127,13 +1147,14 @@ export default function FinancePage() {
         </button>
       </div>
 
+      {financeNotice && <p role="status">{financeNotice}</p>}
       {/* ── STATS CARDS ── */}
       <div className="stats-row" style={{ marginBottom:24, gridTemplateColumns: 'repeat(4, 1fr)' }}>
         {[
-          { label:'คำขอทั้งหมด', value: requests.length, bg:'#eff6ff', color:'#2563eb', icon:'📋' },
-          { label:'รออนุมัติ', value: requests.filter(r=>r.status==='pending').length, bg:'#fefce8', color:'#ca8a04', icon:'⏳' },
-          { label:'อนุมัติแล้ว', value: requests.filter(r=>r.status==='approved').length, bg:'#f0fdf4', color:'#16a34a', icon:'✅' },
-          { label:'ไม่อนุมัติ', value: requests.filter(r=>r.status==='rejected').length, bg:'#fef2f2', color:'#dc2626', icon:'❌' },
+          { label:'คำขอทั้งหมด', value: yearlyRequests.length, bg:'#eff6ff', color:'#2563eb', icon:'📋' },
+          { label:'รออนุมัติ', value: yearlyRequests.filter(r=>r.status==='pending').length, bg:'#fefce8', color:'#ca8a04', icon:'⏳' },
+          { label:'อนุมัติแล้ว', value: yearlyRequests.filter(r=>r.status==='approved').length, bg:'#f0fdf4', color:'#16a34a', icon:'✅' },
+          { label:'ไม่อนุมัติ', value: yearlyRequests.filter(r=>r.status==='rejected').length, bg:'#fef2f2', color:'#dc2626', icon:'❌' },
         ].map(s => (
           <div key={s.label} className="stat-box" style={{ padding: '16px 20px', borderRadius: 16 }}>
             <div className="stat-icon-box" style={{ background: s.bg, color: s.color, width: 44, height: 44, fontSize: 20, borderRadius: 12 }}>
@@ -1203,15 +1224,16 @@ export default function FinancePage() {
                       <td style={{ fontSize:12 }}>{r.date}</td>
                       <td>
                         <span className={`badge ${s.badge}`} style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
-                          {s.icon} {s.label}
+                          {s.icon} {r.disbursedAt ? 'จ่ายแล้ว' : s.label}
                         </span>
                         {r.approvedBy && <div style={{ fontSize:10, color:'#9e9e9e', marginTop:2 }}>โดย: {r.approvedBy}</div>}
                       </td>
                       {isFinance && (
                         <td>
+                          {r.status === 'approved' && !r.disbursedAt && <button disabled={financeBusy} className="btn btn-primary btn-sm" onClick={() => disburse(r)}>บันทึกจ่ายเงินจริง</button>}
                           {r.status === 'pending' && (
                             <div style={{ display:'flex', gap:5 }}>
-                              <button onClick={()=>approve(r.id)} className="btn btn-success btn-sm" style={{ fontSize:11 }}>✓ อนุมัติ</button>
+                              <button disabled={financeBusy} onClick={()=>approve(r.id)} className="btn btn-success btn-sm" style={{ fontSize:11 }}>✓ อนุมัติ</button>
                               <button onClick={()=>setRejectModal(r.id)} className="btn btn-danger btn-sm" style={{ fontSize:11 }}>✕ ไม่อนุมัติ</button>
                             </div>
                           )}
@@ -1355,22 +1377,11 @@ export default function FinancePage() {
                                       onChange={async (e) => {
                                         const val = e.target.value === 'paid';
                                         try {
-                                          let nextPayments = { ...(fee.payments || {}) };
-                                          if (val) {
-                                            if (typeof nextPayments[u.id] === 'object') {
-                                              nextPayments[u.id] = { ...nextPayments[u.id], paid: true, status: 'paid' };
-                                            } else {
-                                              nextPayments[u.id] = true;
-                                            }
-                                          } else {
-                                            delete nextPayments[u.id];
-                                          }
-                                          const { error } = await supabase
-                                            .from('finance_fees')
-                                            .update({ payments: nextPayments })
-                                            .eq('id', fee.id);
+                                          const { data: payments, error } = await supabase.rpc('record_council_fee_payments', {
+                                            p_fee_id: fee.id, p_user_ids: [u.id], p_paid: Boolean(val),
+                                          });
                                           if (error) throw error;
-                                          setFees(prev => prev.map(f => f.id === fee.id ? { ...f, payments: nextPayments } : f));
+                                          setFees(prev => prev.map(f => f.id === fee.id ? { ...f, payments } : f));
                                         } catch (err) {
                                           console.error('Error updating fee payment:', err);
                                           alert('เกิดข้อผิดพลาดในการบันทึกการชำระเงิน: ' + err.message);
@@ -1455,28 +1466,17 @@ export default function FinancePage() {
                   const targetFee = fees.find(f => f.id === collectModal);
                   if (!targetFee) return;
 
-                  let nextPayments = { ...(targetFee.payments || {}) };
-
-                  if (collectMode === 'all') {
-                    usersList.filter(u => u.role !== 'admin').forEach(u => {
-                      nextPayments[u.id] = true;
-                    });
-                  } else if (collectUserId) {
-                    nextPayments[collectUserId] = true;
-                  }
-
-                  const { error } = await supabase
-                    .from('finance_fees')
-                    .update({ payments: nextPayments })
-                    .eq('id', collectModal);
+                  const memberIds = collectMode === 'all' ? usersList.filter(member => member.role !== 'admin').map(member => member.id) : [collectUserId].filter(Boolean);
+                  const { data: payments, error } = await supabase.rpc('record_council_fee_payments', {
+                    p_fee_id: collectModal, p_user_ids: memberIds,
+                  });
                   if (error) throw error;
-
-                  setFees(prev => prev.map(f => f.id === collectModal ? { ...f, payments: nextPayments } : f));
+                  setFees(prev => prev.map(f => f.id === collectModal ? { ...f, payments } : f));
+                  setCollectModal(null);
                 } catch (err) {
                   console.error('Error confirming fee payments:', err);
                   alert('เกิดข้อผิดพลาดในการบันทึกการชำระเงิน: ' + err.message);
                 }
-                setCollectModal(null);
               }} disabled={collectMode === 'individual' && !collectUserId}>
                 <Save size={14}/> ยืนยัน
               </button>
@@ -2205,7 +2205,7 @@ export default function FinancePage() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-gray" onClick={()=>setModal(false)}>ยกเลิก</button>
-              <button className="btn btn-primary" onClick={handleSubmit} disabled={!form.title||!form.amount}>
+              <button className="btn btn-primary" onClick={handleSubmit} disabled={financeBusy||!form.title||!form.amount}>
                 <Save size={14}/> ส่งคำขอ
               </button>
             </div>
@@ -2224,7 +2224,7 @@ export default function FinancePage() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-gray" onClick={()=>setRejectModal(null)}>ยกเลิก</button>
-              <button className="btn btn-danger" onClick={()=>reject(rejectModal, rejectNote)}>ยืนยันไม่อนุมัติ</button>
+              <button className="btn btn-danger" disabled={financeBusy} onClick={()=>reject(rejectModal, rejectNote)}>ยืนยันไม่อนุมัติ</button>
             </div>
           </div>
         </div>

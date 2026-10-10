@@ -104,41 +104,18 @@ Deno.serve(async (req) => {
       return jsonResponse({ user: saved });
     }
 
-    if (body.action === 'delete') {
+    if (body.action === 'archive' || body.action === 'delete') {
       const userId = String(body.userId || '');
       const { data: target, error: targetError } = await admin.from('users')
         .select('id,auth_user_id,nickname').eq('id', userId).single();
       if (targetError) throw targetError;
       if (!userId || target.auth_user_id === authData.user.id) {
-        return jsonResponse({ error: 'ไม่สามารถลบบัญชีนี้ได้' }, 400);
+        return jsonResponse({ error: 'ไม่สามารถปิดใช้งานบัญชีนี้ได้' }, 400);
       }
 
-      const cleanup = [
-        ['discipline_fines', 'user_id', userId], ['student_attendance', 'user_id', userId],
-        ['notifications', 'user_id', userId], ['event_participants', 'user_id', userId],
-      ];
-      for (const [table, column, value] of cleanup) {
-        const { error } = await admin.from(table).delete().eq(column, value);
-        if (error) throw error;
-      }
-      if (target.nickname) {
-        const { error: cleanError } = await admin.from('clean_duty_checks').delete().eq('nickname', target.nickname);
-        const { error: greetingError } = await admin.from('greeting_duty_checks').delete().eq('nickname', target.nickname);
-        if (cleanError) throw cleanError;
-        if (greetingError) throw greetingError;
-      }
-      const { data: fees, error: feesError } = await admin.from('finance_fees').select('id,payments');
-      if (feesError) throw feesError;
-      for (const fee of fees || []) {
-        if (!fee.payments?.[userId]) continue;
-        const payments = { ...fee.payments };
-        delete payments[userId];
-        const { error } = await admin.from('finance_fees').update({ payments }).eq('id', fee.id);
-        if (error) throw error;
-      }
-      if (target.auth_user_id) await admin.auth.admin.deleteUser(target.auth_user_id);
-      const { error: deleteError } = await admin.from('users').delete().eq('id', userId);
-      if (deleteError) throw deleteError;
+      // Preserve every ledger/attendance row and the account ID for audit.
+      const { error: archiveError } = await admin.from('users').update({ banned: true }).eq('id', userId);
+      if (archiveError) throw archiveError;
       return jsonResponse({ success: true });
     }
 
