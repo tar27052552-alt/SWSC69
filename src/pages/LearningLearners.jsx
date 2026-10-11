@@ -22,6 +22,9 @@ function scoreText(progress) {
 
 export default function LearningLearners() {
   const [summary, setSummary] = useState(null);
+  const [summaryError, setSummaryError] = useState('');
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryUpdatedAt, setSummaryUpdatedAt] = useState(null);
   const [roster, setRoster] = useState({ rows: [], total: 0 });
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
@@ -40,9 +43,12 @@ export default function LearningLearners() {
   }, [search]);
   useEffect(() => {
     let active = true;
+    setSummaryLoading(true); setSummaryError('');
     adminRequest({ action: 'learner_overview' }).then(result => {
-      if (active) setSummary(result.summary);
-    }).catch(cause => { if (active) setError(cause.message); });
+      if (!result.summary) throw new Error('ไม่พบข้อมูลสถิติ');
+      if (active) { setSummary(result.summary); setSummaryUpdatedAt(new Date().toISOString()); }
+    }).catch(cause => { if (active) { setSummary(null); setSummaryUpdatedAt(null); setSummaryError(cause.message); } })
+      .finally(() => { if (active) setSummaryLoading(false); });
     return () => { active = false; };
   }, [refreshKey]);
   useEffect(() => {
@@ -71,12 +77,15 @@ export default function LearningLearners() {
   return <section className="learning-learners" aria-label="ติดตามผู้เรียน">
     <div className="learning-learners-heading"><div><h2>ติดตามผู้เรียน</h2>
       <p>ข้อมูลของหลักสูตรพลเมือง DNA · เวลาที่แสดงเป็นเวลาไทย</p></div>
-      <button type="button" onClick={() => setRefreshKey(value => value + 1)}>รีเฟรชข้อมูล</button></div>
+      <button type="button" disabled={summaryLoading || loading} onClick={() => setRefreshKey(value => value + 1)}>รีเฟรชข้อมูล</button></div>
+    <p className="learning-learners-updated">{summaryLoading ? 'กำลังโหลดสถิติ…' : summaryUpdatedAt ? `ข้อมูลล่าสุด ${dateText(summaryUpdatedAt)} · ยอดรวมทั้งหลักสูตร ไม่ขึ้นกับตัวกรองรายชื่อ` : 'ยังไม่มีข้อมูลสถิติ'}</p>
+    {summaryError && <p className="learning-learners-error" role="alert">โหลดสถิติไม่สำเร็จ: {summaryError}</p>}
     {error && <p className="learning-learners-error" role="alert">{error}</p>}
     <div className="learning-learners-stats">
       {[['ผู้เรียนทั้งหมด', summary?.learners], ['เริ่มเรียนแล้ว', summary?.started],
-        ['ผ่านครบ 5 วิชา', summary?.completed], ['ถึงเกณฑ์รับใบอย่างน้อย 1 วิชา', summary?.eligible]]
-        .map(([label, value]) => <div key={label}><span>{label}</span><strong>{value ?? '—'}</strong></div>)}
+        ['ผ่าน 8/10 ครบ 5 วิชา', summary?.eligible], ['เกียรติบัตรพร้อมดาวน์โหลด', summary?.certificatesReady],
+        ['ใบที่กำลังจัดทำ/จัดทำไม่สำเร็จ', summary?.certificatesPending]]
+        .map(([label, value]) => <div key={label}><span>{label}</span><strong>{summaryLoading ? '…' : value ?? '—'}</strong></div>)}
     </div>
     <div className="learning-learners-subjects">
       {(summary?.subjects || []).map(item => <div key={item.id}><strong>วิชาที่ {item.ordinal} · {item.title}</strong>

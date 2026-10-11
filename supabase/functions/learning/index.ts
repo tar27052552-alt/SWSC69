@@ -34,6 +34,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const action = String(body.action || '');
+    if (action === 'resend') return jsonResponse({ error: 'รับเกียรติบัตรผ่านหน้าเว็บเท่านั้น ไม่มีบริการส่งอีเมล' }, 410);
     const admin = getAdminClient();
 
     if (action === 'me') {

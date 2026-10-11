@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, Check, Flag, LoaderCircle, Maximize2, Play } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Check, Flag, Maximize2, Play } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import MediaLoading from './MediaLoading.jsx';
+import { materialIsFresh } from './materialCache.js';
 import { lessonCatalog } from './lessonCatalog.js';
 import { latestPosition, mediaKey, readLocalPosition, topicMedia, writeLocalPosition } from './mediaSequence.js';
 
@@ -9,7 +11,25 @@ const supabase = createClient(import.meta.env.VITE_SUPABASE_URL,
   { auth: { storageKey: 'swsc-learner-auth', persistSession: true, detectSessionInUrl: true } });
 
 async function request(body) {
-  const { data, error } = await supabase.functions.invoke('learning-v2', { body });
+  const controller = new AbortController();
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error('การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่'));
+    }, 30000);
+  });
+  let response;
+  try { response = await Promise.race([
+    supabase.functions.invoke('learning-v2', { body, signal: controller.signal }), deadline,
+  ]); }
+  catch (error) {
+    if (controller.signal.aborted) throw new Error('การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่', { cause: error });
+    throw error;
+  }
+  finally { clearTimeout(timer); }
+  if (controller.signal.aborted) throw new Error('การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่');
+  const { data, error } = response;
   if (error) {
     const details = await error.context?.json?.().catch(() => null);
     throw new Error(details?.error || error.message);
@@ -98,6 +118,13 @@ export default function LearnApp() {
   const mediaStart = useRef(null);
   const videoStage = useRef(null);
   const [videoLoading, setVideoLoading] = useState(false);
+  const mediaEpoch = useRef(0);
+  const materialCache = useRef(new Map());
+  const positionQueue = useRef(Promise.resolve());
+  const accountId = useRef(null);
+  const [mediaFailure, setMediaFailure] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const retryMedia = useRef(null);
   const [view, setView] = useState(new URLSearchParams(location.search).get('view') === 'certificates'
     ? 'certificates' : 'courses');
   const [busy, setBusy] = useState(false);
@@ -105,7 +132,9 @@ export default function LearnApp() {
     new URL(location.href).searchParams.get('error_description') || '');
 
   const loadMe = useCallback(async () => {
+    const owner = accountId.current;
     const data = await request({ action: 'me' });
+    if (accountId.current !== owner) return;
     setProfile(data.profile);
     setNameInput(data.profile?.full_name || '');
     setPhoneInput(data.profile?.phone || '');
@@ -118,13 +147,18 @@ export default function LearnApp() {
     setProfileLoaded(true);
     setProfileUnavailable(false);
     if (!data.profile?.full_name || !data.profile?.phone) setView('profile');
-  }, []);
+  }, [setView]);
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(({ data }) => { if (active) setSession(data.session); });
+    supabase.auth.getSession().then(({ data }) => { if (active) { accountId.current = data.session?.user.id || null; setSession(data.session); } });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
       if (!active) return;
+      if (accountId.current !== (next?.user.id || null)) {
+        accountId.current = next?.user.id || null; mediaEpoch.current++;
+        positionQueue.current = Promise.resolve();
+        materialCache.current.clear(); setResource(null); setPdfUrl(''); setBusy(false);
+      }
       setSession(next);
       if (!next) { setProfile(null); setProfileLoaded(false); setProfileUnavailable(false);
         setProgress({}); setCertificates([]); setLastPosition(null); setView('courses'); }
@@ -139,7 +173,9 @@ export default function LearnApp() {
   }, []);
 
   useEffect(() => {
+    const owner = session?.user.id;
     if (session) Promise.resolve().then(loadMe).catch(error => {
+      if (accountId.current !== owner) return;
       setProfileLoaded(true);
       setProfileUnavailable(true);
       setView('profile');
@@ -149,6 +185,9 @@ export default function LearnApp() {
   useEffect(() => {
     if (view === 'topic' && resource) mediaStart.current?.scrollIntoView({ block: 'start' });
   }, [view, resource]);
+  useEffect(() => {
+    if (!['topic', 'topic_loading', 'quiz', 'quiz_loading'].includes(view)) mediaEpoch.current++;
+  }, [view]);
 
   async function googleSignIn() {
     setBusy(true); setNotice('');
@@ -183,46 +222,76 @@ export default function LearnApp() {
     (progress['civic-' + (subject.ordinal - 1)]?.bestPostScore ?? -1) >= 6;
 
   async function openQuiz(subject, nextPhase) {
+    const epoch = ++mediaEpoch.current;
+    setSelected(subject); setView('quiz_loading');
     setBusy(true); setNotice('');
     try {
       const data = await request({ action: 'quiz', subjectId: subject.id, phase: nextPhase });
+      if (epoch !== mediaEpoch.current) return;
       setSelected(subject); setPhase(nextPhase); setQuestions(data.questions);
       setQuizRevision(data.revision);
       setAnswers({}); setResult(null); setView('quiz');
-    } catch (error) { setNotice(error.message); }
-    finally { setBusy(false); }
+    } catch (error) {
+      if (epoch === mediaEpoch.current) { setNotice(error.message); setView('courses'); }
+    } finally { if (epoch === mediaEpoch.current) setBusy(false); }
   }
   async function saveMediaPosition(subject, activeTopic, item) {
+    const owner = session?.user.id;
     const position = { subjectId: subject.id, topicId: activeTopic.id,
       resourceKey: mediaKey(item), updatedAt: new Date().toISOString() };
     writeLocalPosition(session?.user.id, position);
     setLastPosition(position);
     if (resumeEnabled) {
       try {
-        const saved = await request({ action: 'save_position', ...position });
+        const pending = positionQueue.current.catch(() => {}).then(() =>
+          accountId.current === owner ? request({ action: 'save_position', ...position }) : null);
+        positionQueue.current = pending;
+        const saved = await pending;
+        if (!saved || accountId.current !== owner) return;
+        const current = readLocalPosition(owner);
+        if (current?.resourceKey !== position.resourceKey || current?.topicId !== position.topicId) return;
         const synced = { ...position, updatedAt: saved.updatedAt };
-        writeLocalPosition(session?.user.id, synced);
-        setLastPosition(synced);
+        if (accountId.current !== owner) return;
+        const latest = latestPosition(readLocalPosition(owner), synced);
+        writeLocalPosition(owner, latest);
+        setLastPosition(previous => latestPosition(previous, latest));
       } catch {
+        if (accountId.current !== owner) return;
         setNotice('จำตำแหน่งในเครื่องแล้ว แต่ยังบันทึกข้ามอุปกรณ์ไม่ได้ กรุณาลองอีกครั้งเมื่อเชื่อมต่อได้');
       }
     }
   }
-  async function showMedia(subject, activeTopic, item, index) {
+  async function showMedia(subject, activeTopic, item, index, epoch) {
+    setMediaFailure(false);
     if (item.type === 'document') {
-      const material = await request({ action: 'material', subjectId: subject.id,
-        topicId: activeTopic.id, path: item.path });
-      setPdfResource(item); setPdfUrl(material.url);
+      // openTopic already checks access to the new topic before sharing its PDF URL.
+      const key = `${session?.user.id}:${item.path}`;
+      let material = materialCache.current.get(key);
+      if (!materialIsFresh(material)) {
+        material = await request({ action: 'material', subjectId: subject.id,
+          topicId: activeTopic.id, path: item.path });
+        if (epoch !== mediaEpoch.current) return;
+        // Older backends omit expiry: display the URL but do not retain it.
+        if (material.expiresAt) materialCache.current.set(key, material);
+      }
+      if (epoch !== mediaEpoch.current) return;
+      setPdfLoading(true); setPdfResource(item); setPdfUrl(material.url);
     } else { setPdfResource(null); setPdfUrl(''); setVideoLoading(true); }
+    if (epoch !== mediaEpoch.current) return;
     setResource(item); setMediaIndex(index);
-    await saveMediaPosition(subject, activeTopic, item);
+    void saveMediaPosition(subject, activeTopic, item);
   }
   async function openTopic(subject, index, restore = true) {
-    setBusy(true); setNotice(''); setResource(null); setPdfResource(null); setPdfUrl('');
+    const epoch = ++mediaEpoch.current;
+    retryMedia.current = () => openTopic(subject, index, restore);
+    setSelected(subject); setTopicIndex(index); setView('topic_loading');
+    setBusy(true); setNotice(''); setMediaFailure(false);
+    setResource(null); setPdfResource(null); setPdfUrl('');
     try {
       const data = await request({ action: 'topic', subjectId: subject.id,
         topicId: subject.topics[index].id });
-      setSelected(subject); setTopic(data.topic); setTopicIndex(index); setView('topic');
+      if (epoch !== mediaEpoch.current) return;
+      setTopic(data.topic); setView('topic');
       const media = topicMedia(data.topic);
       const local = readLocalPosition(session?.user.id);
       const saved = restore ? latestPosition(data.position,
@@ -231,9 +300,10 @@ export default function LearnApp() {
       const savedIndex = saved ? media.findIndex(item => mediaKey(item) === saved.resourceKey) : -1;
       const nextIndex = savedIndex >= 0 ? savedIndex : 0;
       setMediaIndex(nextIndex);
-      if (media[nextIndex]) await showMedia(subject, data.topic, media[nextIndex], nextIndex);
-    } catch (error) { setNotice(error.message); }
-    finally { setBusy(false); }
+      if (media[nextIndex]) await showMedia(subject, data.topic, media[nextIndex], nextIndex, epoch);
+    } catch (error) {
+      if (epoch === mediaEpoch.current) { setNotice(error.message); setMediaFailure(true); }
+    } finally { if (epoch === mediaEpoch.current) setBusy(false); }
   }
   function openSubject(subject) {
     setSelected(subject);
@@ -252,23 +322,28 @@ export default function LearnApp() {
     openTopic(subject, next < 0 ? 0 : next);
   }
   async function completeTopic() {
+    const epoch = ++mediaEpoch.current;
     setBusy(true); setNotice('');
     try {
       await request({ action: 'complete_topic', subjectId: selected.id, topicId: topic.id });
+      if (epoch !== mediaEpoch.current) return;
       await loadMe();
+      if (epoch !== mediaEpoch.current) return;
       if (topicIndex + 1 < selected.topics.length) await openTopic(selected, topicIndex + 1, false);
       else setView('subject_done');
-    } catch (error) { setNotice(error.message); }
-    finally { setBusy(false); }
+    } catch (error) { if (epoch === mediaEpoch.current) setNotice(error.message); }
+    finally { if (epoch === mediaEpoch.current) setBusy(false); }
   }
-  async function moveMedia(index) {
+  async function moveMedia(index, retry = false) {
     const item = topicMedia(topic)[index];
     if (!item || busy) return;
-    setBusy(true); setNotice('');
-    try {
-      await showMedia(selected, topic, item, index);
-    } catch (error) { setNotice(error.message); }
-    finally { setBusy(false); }
+    const epoch = ++mediaEpoch.current;
+    retryMedia.current = () => moveMedia(index, true);
+    if (retry) materialCache.current.clear();
+    setBusy(true); setNotice(''); setMediaIndex(index); setResource(null); setPdfUrl(''); setMediaFailure(false);
+    try { await showMedia(selected, topic, item, index, epoch); }
+    catch (error) { if (epoch === mediaEpoch.current) { setNotice(error.message); setMediaFailure(true); } }
+    finally { if (epoch === mediaEpoch.current) setBusy(false); }
   }
   async function reportVideo() {
     setBusy(true); setNotice('');
@@ -284,27 +359,37 @@ export default function LearnApp() {
     catch { setNotice('เปิดเต็มจอไม่ได้ กรุณาใช้ปุ่มเต็มจอภายในวิดีโอ'); }
   }
   async function submitQuiz(event) {
-    event.preventDefault(); setBusy(true); setNotice('');
+    event.preventDefault();
+    if (busy || !questions.length || questions.some(question => answers[question.id] == null)) return;
+    const epoch = ++mediaEpoch.current;
+    setBusy(true); setNotice('');
     try {
-      setResult(await request({ action: 'submit', subjectId: selected.id, phase,
-        revision: quizRevision, answers }));
+      const submitted = await request({ action: 'submit', subjectId: selected.id, phase,
+        revision: quizRevision, answers });
+      if (epoch !== mediaEpoch.current) return;
+      setResult(submitted);
       await loadMe();
-    } catch (error) { setNotice(error.message); }
-    finally { setBusy(false); }
+    } catch (error) { if (epoch === mediaEpoch.current) setNotice(error.message); }
+    finally { if (epoch === mediaEpoch.current) setBusy(false); }
   }
   async function downloadCertificate(id) {
+    // Open on the click itself so mobile popup blockers do not reject the PDF.
+    const popup = window.open('about:blank', '_blank');
+    if (popup) {
+      popup.opener = null;
+      popup.document.title = 'กำลังเตรียมเกียรติบัตร';
+      popup.document.body.textContent = 'กำลังเตรียมเกียรติบัตร กรุณารอสักครู่…';
+      popup.document.body.style.cssText = 'padding:32px;font:18px sans-serif;color:#492065;background:#faf7ff';
+    }
+    const owner = accountId.current;
     try {
       const data = await request({ action: 'download', certificateId: id });
-      window.open(data.url, '_blank', 'noopener,noreferrer');
-    } catch (error) { setNotice(error.message); }
+      if (accountId.current !== owner) { popup?.close(); return; }
+      if (popup && !popup.closed) popup.location.replace(data.url);
+      else window.location.assign(data.url);
+    } catch (error) { popup?.close(); if (accountId.current === owner) setNotice(error.message); }
   }
-  async function resendCertificate(id) {
-    setBusy(true);
-    try { await request({ action: 'resend', certificateId: id }); setNotice('เพิ่มเกียรติบัตรเข้าคิวส่งแล้ว'); }
-    catch (error) { setNotice(error.message); }
-    finally { setBusy(false); }
-  }
-
+  const answeredCount = questions.filter(question => answers[question.id] != null).length;
   const savedPosition = latestPosition(lastPosition, readLocalPosition(session?.user.id));
   const current = catalog.find(subject => unlocked(subject) && stateOf(subject).bestPostScore < 6);
   const reviewSubject = catalog.find(subject => subject.id === savedPosition?.subjectId && unlocked(subject));
@@ -314,6 +399,12 @@ export default function LearnApp() {
   const videoIndex = resource?.type === 'video' ? videos.findIndex(item => mediaKey(item) === mediaKey(resource)) : -1;
   const needsProfile = Boolean(session && profileLoaded && !profileUnavailable &&
     (!profile?.full_name || !profile?.phone));
+  function navigate(nextView) {
+    if (view === 'quiz' && !result && answeredCount &&
+      !window.confirm('คำตอบที่กำลังทำจะไม่ถูกบันทึก ต้องการออกจากแบบทดสอบหรือไม่?')) return;
+    mediaEpoch.current++; setBusy(false);
+    setView(nextView); setMenuOpen(false);
+  }
   return <div className="learn-app">
     <header className="learn-header">
       <a className="learn-brand" href={import.meta.env.BASE_URL} aria-label="กลับหน้าเว็บหลัก SWSC.OFFICIAL">
@@ -328,12 +419,12 @@ export default function LearnApp() {
       <nav id="learn-navigation" className={menuOpen ? 'is-open' : ''} aria-label="เมนูบทเรียน">
         <button className={!['certificates', 'profile'].includes(view) ? 'active' : ''}
           aria-current={!['certificates', 'profile'].includes(view) ? 'page' : undefined}
-          onClick={() => { setView(needsProfile ? 'profile' : 'courses'); setMenuOpen(false); }}>เส้นทางเรียน</button>
+          onClick={() => navigate(needsProfile ? 'profile' : 'courses')}>เส้นทางเรียน</button>
         <button className={view === 'certificates' ? 'active' : ''} aria-current={view === 'certificates' ? 'page' : undefined}
-          onClick={() => { setView(needsProfile ? 'profile' : 'certificates'); setMenuOpen(false); }}>เกียรติบัตรของฉัน</button>
+          onClick={() => navigate(needsProfile ? 'profile' : 'certificates')}>เกียรติบัตรของฉัน</button>
         {session && <button className={view === 'profile' ? 'active' : ''}
           aria-current={view === 'profile' ? 'page' : undefined}
-          onClick={() => { setView('profile'); setMenuOpen(false); }}>ข้อมูลส่วนตัว</button>}
+          onClick={() => navigate('profile')}>ข้อมูลส่วนตัว</button>}
         {session && <button className="learn-signout" onClick={() => { setMenuOpen(false); supabase.auth.signOut(); }}>ออกจากระบบ</button>}
       </nav>
     </header>
@@ -343,7 +434,7 @@ export default function LearnApp() {
         <h1>ถอดรหัสความเป็น<br /><em>พลเมืองคุณภาพ</em></h1>
         <p>เรียนทีละวิชาในเว็บเดียว ทบทวนได้ตามจังหวะของคุณ และรับเกียรติบัตรเมื่อสอบผ่านเกณฑ์</p>
         <div className="learn-hero-rule"><span>6/10 <small>ปลดล็อกวิชาถัดไป</small></span>
-          <span>8/10 <small>รับเกียรติบัตร</small></span></div>
+          <span>8/10 ทุกวิชา <small>รับใบจบหลักสูตร</small></span></div>
       </div><div className="learn-hero-seal" aria-hidden="true"><span>SWSC</span><strong>DNA</strong>
         <small>พลเมืองคุณภาพ</small></div>
       </section>
@@ -434,8 +525,17 @@ export default function LearnApp() {
           !profile?.phone ? 'กรอกชื่อและเบอร์มือถือก่อนเริ่มเรียน' : 'ผ่านวิชาก่อนหน้าให้ได้อย่างน้อย 6/10'}</p>
       </section>}
 
+      {view === 'quiz_loading' && selected && <section className="learn-section learn-lesson">
+        <button className="learn-back" onClick={() => navigate('courses')}>← เส้นทางเรียน</button>
+        <h2>{selected.title}</h2><MediaLoading label="กำลังโหลดแบบทดสอบ" />
+      </section>}
+      {view === 'topic_loading' && selected && <section className="learn-section learn-lesson">
+        <button className="learn-back" onClick={() => { mediaEpoch.current++; setBusy(false); setView('courses'); }}>← เส้นทางเรียน</button>
+        <h2>{selected.topics[topicIndex]?.title}</h2>
+        <MediaLoading label="กำลังโหลดหัวข้อ" failed={mediaFailure} onRetry={() => retryMedia.current?.()} />
+      </section>}
       {view === 'topic' && selected && topic && <section className="learn-section learn-lesson learn-reading">
-        <button className="learn-back" onClick={() => setView('courses')}>← เส้นทางเรียน</button>
+        <button className="learn-back" onClick={() => { mediaEpoch.current++; setBusy(false); setView('courses'); }}>← เส้นทางเรียน</button>
         <div className="learn-number">วิชาที่ {selected.ordinal} · หัวข้อ {topicIndex + 1} จาก {selected.topics.length}</div>
         <h2>{topic.title}</h2><p>{selected.title}</p>
         <div className="learn-topic-layout"><aside className="learn-topic-toc" aria-label="สารบัญวิชา">
@@ -457,9 +557,10 @@ export default function LearnApp() {
                 aria-valuemin={1} aria-valuemax={media.length || 1} aria-valuenow={mediaIndex + 1}>
                 <div style={{ width: `${((mediaIndex + 1) / (media.length || 1)) * 100}%` }} /></div></div>
             <div className="learn-media-stage" key={resource ? mediaKey(resource) : topic.id}>
-            {!resource && media.length > 0 && <div className="learn-media-loading" role="status">
-              {busy ? 'กำลังเปิดสื่อ…' : <button type="button" onClick={() => moveMedia(mediaIndex)}>ลองเปิดสื่ออีกครั้ง</button>}
-            </div>}
+            {!resource && media.length > 0 && <MediaLoading
+              label={media[mediaIndex]?.type === 'video' ? 'กำลังเปิดวิดีโอ' : 'กำลังเปิด PDF'}
+              mediaType={media[mediaIndex]?.type}
+              failed={mediaFailure} onRetry={() => retryMedia.current?.()} />}
             {resource?.type !== 'video' && <p className="learn-reading-note">อ่านสไลด์ต้นฉบับ แล้วกดต่อไปเพื่อดูวิดีโอในหัวข้อนี้</p>}
             {resource?.type !== 'video' && (topic.blocks || []).filter(block => block.type !== 'page').map((block, index) => <Block key={topic.id + '-' + index}
               subjectId={selected.id} topicId={topic.id} block={block} />)}
@@ -467,22 +568,25 @@ export default function LearnApp() {
               <Block key={topic.id + '-page-' + index} subjectId={selected.id} topicId={topic.id} block={block} />)}
             {pdfUrl && pdfResource && <div className="learn-viewer learn-pdf-viewer">
               <div className="learn-pdf-head"><strong>{pdfResource.title}</strong>
-                <div><a href={pdfUrl + '#page=' + (pdfResource.startPage || 1)} target="_blank" rel="noopener noreferrer">ขยายเต็มจอ ↗</a>
-                  <a href={pdfUrl + '&download=' + encodeURIComponent(pdfResource.title + '.pdf')}>ดาวน์โหลด PDF ↓</a></div></div>
+                <div><a href={pdfUrl + '#page=' + (pdfResource.startPage || 1) + '&view=FitH'} target="_blank" rel="noopener noreferrer">เปิด PDF เต็มหน้าจอ ↗</a>
+                  <a href={pdfUrl + (pdfUrl.includes('?') ? '&' : '?') + 'download=' + encodeURIComponent(pdfResource.title + '.pdf')}>ดาวน์โหลด PDF ↓</a></div></div>
               {pdfResource.toc?.length > 0 && <nav className="learn-pdf-toc" aria-label="สารบัญเอกสาร">
                 {pdfResource.toc.map((item, index) => <a key={index}
                   href={pdfUrl + '#page=' + item.page} target="learn-pdf-frame">{item.title}</a>)}
               </nav>}
-              <iframe key={pdfUrl + pdfResource.startPage} name="learn-pdf-frame" title={pdfResource.title}
-                src={pdfUrl + '#page=' + (pdfResource.startPage || 1)} />
-              <p>หากเครื่องของคุณไม่แสดง PDF ในกรอบ ให้กด “ขยายเต็มจอ”</p>
+              <div className="learn-pdf-screen">
+              {pdfLoading && <MediaLoading label="กำลังเปิด PDF" overlay
+                fallbackUrl={pdfUrl + '#page=' + (pdfResource.startPage || 1) + '&view=FitH'} />}
+              <iframe onLoad={() => setPdfLoading(false)} key={pdfUrl + pdfResource.startPage} name="learn-pdf-frame" title={pdfResource.title}
+                src={pdfUrl + '#page=' + (pdfResource.startPage || 1) + '&view=FitH'} />
+              </div>
+              <p>หากมือถือไม่แสดงเอกสารในกรอบ ให้กด “เปิด PDF เต็มหน้าจอ” หรือดาวน์โหลดเพื่ออ่าน</p>
             </div>}
             {resource?.type === 'video' && <div className="learn-viewer learn-video-viewer">
               <div className="learn-video-caption"><span className="learn-video-caption-kicker">พลเมือง DNA · วิดีโอประกอบบทเรียน</span>
                 <h3>{resource.title}</h3></div>
               <div className="learn-video-screen" ref={videoStage}>
-                {videoLoading && <div className="learn-video-loading" role="status"><LoaderCircle size={26} />
-                  <span>กำลังเปิดวิดีโอ…</span></div>}
+                {videoLoading && <MediaLoading label="กำลังเปิดวิดีโอ" overlay />}
                 <iframe key={resource.videoId} title={resource.title}
                   src={'https://www.youtube-nocookie.com/embed/' + resource.videoId +
                     '?playsinline=1&rel=0&origin=' + encodeURIComponent(location.origin)}
@@ -518,28 +622,42 @@ export default function LearnApp() {
         <button onClick={() => openQuiz(selected, 'post')}>ทำแบบทดสอบหลังเรียน →</button>
       </section>}
       {view === 'quiz' && selected && <section className="learn-panel learn-quiz">
-        <button className="learn-back" onClick={() => setView('courses')}>← เส้นทางเรียน</button>
+        <button className="learn-back" disabled={busy} onClick={() => { if (!result && answeredCount && !window.confirm('คำตอบที่กำลังทำจะไม่ถูกบันทึก ต้องการออกจากแบบทดสอบหรือไม่?')) return; setView('courses'); }}>← เส้นทางเรียน</button>
         <h2>{phase === 'pre' ? 'แบบทดสอบก่อนเรียน' : 'แบบทดสอบหลังเรียน'} · {selected.title}</h2>
         <p>{phase === 'pre' ? '10 ข้อ · คะแนนนี้ไม่ใช้ตัดสินผล' :
-          '6/10 เปิดวิชาถัดไป · 8/10 ได้สิทธิ์เกียรติบัตร · สอบซ้ำได้'}</p>
+          '6/10 เปิดวิชาถัดไป · ผ่าน 8/10 ครบ 5 วิชา รับเกียรติบัตร · สอบซ้ำได้'}</p>
         {result ? <div className="learn-result" role="status"><strong>ได้ {result.score}/10 ข้อ</strong>
           <p>{phase === 'pre' ? 'ทำก่อนเรียนครบแล้ว เริ่มหัวข้อแรกได้' :
             result.passed ? result.certificatePending ?
-              'ผ่านเกณฑ์แล้ว ระบบจะออกใบให้เมื่อแบบใบที่เซ็นพร้อม' :
-              'ผ่านเกณฑ์เกียรติบัตรแล้ว' : result.unlockedNext ?
+              'วิชานี้ผ่าน 8/10 แล้ว ต้องผ่านครบ 5 วิชาจึงรับเกียรติบัตรได้' :
+              'วิชานี้ผ่าน 8/10 แล้ว เมื่อผ่านครบ 5 วิชาจะได้รับเกียรติบัตร' : result.unlockedNext ?
                 'ไปวิชาถัดไปได้ และกลับมาสอบซ้ำเพื่อรับเกียรติบัตรได้' :
                 'ทบทวนบทเรียนแล้วสอบซ้ำได้'}</p>
           <div className="learn-result-actions"><button onClick={() => openTopic(selected, 0)}>กลับไปบทเรียน</button>
             {phase === 'post' && <button onClick={() => openQuiz(selected, 'post')}>สอบซ้ำ</button>}
             {phase === 'post' && result.unlockedNext && catalog[selected.ordinal] &&
               <button onClick={() => openSubject(catalog[selected.ordinal])}>ไปวิชาที่ {selected.ordinal + 1}</button>}
-          </div></div> : <form onSubmit={submitQuiz}>{questions.map((question, index) =>
-          <fieldset key={question.id}><legend>{index + 1}. {question.prompt}</legend>
+          </div></div> : <form onSubmit={submitQuiz} aria-busy={busy}>
+          <div className="learn-quiz-progress"><strong>ตอบแล้ว {answeredCount} / {questions.length} ข้อ</strong>
+            <p>เลือกคำตอบที่ถูกต้องที่สุดหนึ่งคำตอบ</p>
+            <progress aria-label="ความคืบหน้าการตอบข้อสอบ" value={answeredCount} max={questions.length || 1} />
+            <nav className="learn-quiz-jumps" aria-label="ไปยังข้อสอบ">{questions.map((question, index) =>
+              <button type="button" key={question.id} className={answers[question.id] != null ? 'answered' : ''}
+                aria-label={`ข้อ ${index + 1} ${answers[question.id] != null ? 'ตอบแล้ว' : 'ยังไม่ตอบ'}`}
+                onClick={() => { const target = document.getElementById(`learn-question-${index}`); target?.scrollIntoView({ block: 'start' }); target?.focus({ preventScroll: true }); }}>{index + 1}</button>)}</nav>
+          </div>{questions.map((question, index) =>
+          <fieldset key={question.id} id={`learn-question-${index}`} tabIndex={-1} disabled={busy}><legend>{index + 1}. {question.prompt}</legend>
             {question.options.map((option, optionIndex) => <label key={optionIndex} className="learn-answer">
               <input type="radio" name={question.id} required checked={answers[question.id] === optionIndex}
                 onChange={() => setAnswers(previous => ({ ...previous, [question.id]: optionIndex }))} />
               <span>{option}</span></label>)}</fieldset>)}
-          <button disabled={busy || Object.keys(answers).length !== questions.length}>ส่งคำตอบ</button>
+          <div className="learn-quiz-submitbar"><span role="status">{answeredCount === questions.length && questions.length ? 'ตอบครบแล้ว ตรวจคำตอบก่อนส่งได้' : `เหลืออีก ${questions.length - answeredCount} ข้อ`}</span>
+            <button type="submit" disabled={busy || !questions.length || answeredCount !== questions.length}>{busy ? 'กำลังตรวจคำตอบ…' : 'ส่งคำตอบ'}</button>
+            {answeredCount < questions.length && <button type="button" className="learn-quiz-find" onClick={() => {
+              const index = questions.findIndex(question => answers[question.id] == null);
+              const target = document.getElementById(`learn-question-${index}`); target?.scrollIntoView({ block: 'start' }); target?.focus({ preventScroll: true });
+            }}>ไปข้อที่ยังไม่ตอบ</button>}
+          </div>
         </form>}
       </section>}
 
@@ -549,23 +667,19 @@ export default function LearnApp() {
         {!session && <div className="learn-panel">เข้าสู่ระบบด้วย Google เพื่อดูเกียรติบัตร</div>}
         {session && certificates.length === 0 && <div className="learn-panel">
           {certificatesEnabled ? 'ยังไม่มีเกียรติบัตรจากหลักสูตรนี้' :
-            'หากสอบผ่าน 8/10 ระบบจะบันทึกสิทธิ์ไว้ และออกใบเมื่อแบบใบที่เซ็นพร้อม'}</div>}
+            'เมื่อเรียนครบและสอบผ่าน 8/10 ทั้ง 5 วิชา จะได้รับเกียรติบัตรจบหลักสูตรหนึ่งใบ เมื่อแบบใบพร้อม'}</div>}
         <div className="learn-grid">{certificates.map(certificate => <article className="learn-card" key={certificate.id}>
-          <div className="learn-number">{certificate.certificate_number}</div>
-          <h3>{catalog.find(item => item.id === certificate.subject_id)?.title}</h3>
+          <h3>เกียรติบัตรจบหลักสูตรพลเมือง DNA</h3>
           <p>ชื่อผู้รับ: {certificate.recipient_name}</p>
           <p>วันที่ออก: {new Date(certificate.issued_at).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}</p>
-          <p>สถานะอีเมล: {certificate.email_status === 'sent' ? 'ส่งแล้ว' :
-            certificate.email_status === 'failed' ? 'ส่งไม่สำเร็จ กรุณากดส่งอีเมลอีกครั้ง' : 'กำลังดำเนินการ'}</p>
+          <p>{certificate.downloadable ? 'เกียรติบัตรพร้อมดาวน์โหลด' : 'กำลังจัดทำเกียรติบัตร PDF'}</p>
           <div className="learn-card-actions"><button disabled={!certificate.downloadable}
-            onClick={() => downloadCertificate(certificate.id)}>ดาวน์โหลด PDF</button>
-            <button disabled={busy || !certificate.downloadable}
-              onClick={() => resendCertificate(certificate.id)}>ส่งอีเมลอีกครั้ง</button></div>
+            onClick={() => downloadCertificate(certificate.id)}>ดาวน์โหลด PDF</button></div>
         </article>)}</div>
         {session && profile?.certificate_name && <div className="learn-panel learn-name-change">
           <div className="learn-name-change-heading"><span className="learn-note-icon" aria-hidden="true">✦</span>
             <h3>ขอเปลี่ยนชื่อบนเกียรติบัตร</h3></div>
-          <p>ชื่อที่ใช้อยู่: {profile.certificate_name} · เมื่ออนุมัติ ระบบจะยกเลิกเลขใบเดิมและออกใบใหม่ทุกวิชา</p>
+          <p>ชื่อที่ใช้อยู่: {profile.certificate_name} · เมื่ออนุมัติ ระบบจะยกเลิกใบเดิมและสร้าง PDF ใหม่ทุกวิชา</p>
           {profile.reissue_used_at ? <p>ใช้สิทธิ์เปลี่ยนชื่อแล้ว</p> :
             nameChangeRequest?.status === 'pending' ? <p>คำขอชื่อ “{nameChangeRequest.requested_name}” รอผู้ดูแลพิจารณา</p> :
               <form className="learn-profile-form" onSubmit={requestNameChange}>

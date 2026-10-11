@@ -25,9 +25,6 @@ export default function LearningAdminPage() {
   const [quiz, setQuiz] = useState([]);
   const [tab, setTab] = useState('learners');
   const [note, setNote] = useState({ sourceReference: '', proposedChange: '', rationale: '' });
-  const [certificateNumber, setCertificateNumber] = useState('');
-  const [certificateLookup, setCertificateLookup] = useState(null);
-  const [correctedName, setCorrectedName] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
 
@@ -37,7 +34,7 @@ export default function LearningAdminPage() {
     const subject = result.subjects.find(item => item.subject_id === subjectId);
     if (subject) setDraft({ title: subject.draft_title, summary: subject.draft_summary,
       topics: subject.draft_topics?.length ? subject.draft_topics : emptyTopics(subjectId),
-      templateId: subject.template_path || '' });
+      templateId: subject.template_path || '1qLThJkZy0U4Md50EdAq9eT2Ei-W2OZNJd_U1pnj8qRc' });
     const quizResult = await adminRequest({ action: 'read_quiz', subjectId });
     setQuiz(quizResult.questions?.length ? quizResult.questions : Array.from({ length: 10 }, emptyQuestion));
     return result;
@@ -58,28 +55,6 @@ export default function LearningAdminPage() {
     } catch (error) { setNotice(error.message); }
     finally { setBusy(false); }
   };
-  async function findCertificate() {
-    setBusy(true); setNotice(''); setCertificateLookup(null);
-    try {
-      const result = await adminRequest({ action: 'lookup_certificate', certificateNumber });
-      setCertificateLookup(result.certificate);
-      setCorrectedName(result.certificate.recipient_name);
-    } catch (error) { setNotice(error.message); }
-    finally { setBusy(false); }
-  }
-  async function createNameRequest() {
-    await doAction({ action: 'create_name_request', certificateNumber,
-      fullName: correctedName }, 'บันทึกคำขอแล้ว กรุณาตรวจและอนุมัติจากรายการด้านล่าง');
-    setCertificateLookup(null);
-  }
-  async function upload(file, kind) {
-    const signed = await adminRequest({ action: 'sign_upload', subjectId,
-      kind, mime: file.type });
-    const { error } = await supabase.storage.from('learning-materials')
-      .uploadToSignedUrl(signed.path, signed.token, file, { contentType: file.type });
-    if (error) throw error;
-    return signed.path;
-  }
   return <div className="learning-admin">
     <header className="learning-admin-head"><div><span>จัดการหลักสูตร</span>
       <h1>พลเมือง DNA</h1>
@@ -153,7 +128,7 @@ export default function LearningAdminPage() {
         </section>}
         {tab === 'certificate' && draft && <section><h2>แบบเกียรติบัตรที่เซ็นแล้ว</h2>
           <p>ใช้ Google Slides ที่มีลายเซ็นครบ และมีช่อง <code>{'{{NAME}}'}</code>,
-            <code>{'{{ISSUED_DATE}}'}</code>, <code>{'{{CERT_NUMBER}}'}</code></p>
+            <code>{'{{ISSUED_DATE}}'}</code></p>
           <label className="learning-admin-field">ลิงก์หรือ ID ของ Google Slides<input value={draft.templateId}
             onChange={event => setDraft({ ...draft, templateId: event.target.value })} /></label>
           <button disabled={busy} onClick={() => doAction({ action: 'set_template', subjectId,
@@ -172,24 +147,6 @@ export default function LearningAdminPage() {
                 requestId: item.id, approve: false }, 'ปฏิเสธคำขอแล้ว ผู้เรียนส่งใหม่ได้')}>
                 ปฏิเสธ</button>
             </div>)}
-            <label className="learning-admin-field">เลขเกียรติบัตร<input
-              value={certificateNumber} onChange={event => {
-                setCertificateNumber(event.target.value); setCertificateLookup(null);
-              }} placeholder="SWSC-DNA-2569-000001" /></label>
-            <button disabled={busy} onClick={findCertificate}>ค้นหาใบ</button>
-            {certificateLookup && <div><p>วิชา {certificateLookup.subject_id} ·
-              ชื่อปัจจุบัน {certificateLookup.recipient_name}</p>
-              {certificateLookup.status === 'revoked' ? <p>เลขใบนี้ถูกยกเลิกเมื่อ {
-                new Date(certificateLookup.revoked_at).toLocaleString('th-TH')}
-                {certificateLookup.auditUrl && <> · <a href={certificateLookup.auditUrl}
-                  target="_blank" rel="noreferrer">เปิด PDF เก่าสำหรับตรวจสอบ</a></>}</p> : <>
-              <label className="learning-admin-field">ชื่อที่แก้ไข<input value={correctedName}
-                onChange={event => setCorrectedName(event.target.value)} /></label>
-              <p>สร้างคำขอจากหลังบ้านให้ผู้เรียนคนนี้ โดยใช้สิทธิ์และขั้นตอนอนุมัติเดียวกัน</p>
-              <button disabled={busy || correctedName.trim() === certificateLookup.recipient_name}
-                onClick={createNameRequest}>สร้างคำขอเปลี่ยนชื่อ</button>
-              </>}
-            </div>}
           </div>
         </section>}
       </div>

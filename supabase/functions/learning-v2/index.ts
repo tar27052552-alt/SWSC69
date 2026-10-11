@@ -24,6 +24,7 @@ Deno.serve(async req => {
   try {
     const body = await req.json();
     const action = String(body.action || '');
+    if (action === 'resend') return jsonResponse({ error: 'รับเกียรติบัตรผ่านหน้าเว็บเท่านั้น ไม่มีบริการส่งอีเมล' }, 410);
     const admin = getAdminClient();
     const { data: edition, error: editionError } = await admin.from('learning_editions')
       .select('published,certificates_enabled').eq('id', EDITION).single();
@@ -197,7 +198,7 @@ Deno.serve(async req => {
       }
       const { data, error } = await admin.storage.from('learning-materials').createSignedUrl(path, 3600);
       if (error) throw error;
-      return jsonResponse({ url: data.signedUrl });
+      return jsonResponse({ url: data.signedUrl, expiresAt: new Date(Date.now() + 3600000).toISOString() });
     }
     if (action === 'report_media') {
       if (!canOpenTopic) return fail('สื่อนี้ยังไม่ปลดล็อก', 403);
@@ -269,7 +270,7 @@ Deno.serve(async req => {
         const { data, error: signedError } = await admin.storage.from('learning-certificates')
           .createSignedUrl(certificate.pdf_path, 60);
         if (signedError) throw signedError;
-        return jsonResponse({ url: data.signedUrl });
+        return jsonResponse({ url: data.signedUrl, expiresAt: new Date(Date.now() + 60000).toISOString() });
       }
       if (!certificate.pdf_path) return fail('เกียรติบัตรกำลังจัดทำ', 409);
       if (certificate.emailed_at && Date.now() - Date.parse(certificate.emailed_at) < 600_000) {

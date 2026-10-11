@@ -18,6 +18,7 @@ Deno.serve(async req => {
     const body = await req.json();
     const action = String(body.action || '');
     if (action === 'claim') {
+      if (body.outputMode !== 'web') return jsonResponse({ error: 'Update the PDF worker: certificates are web-only' }, 410);
       const { data, error } = await admin.rpc('claim_learning_delivery');
       if (error) throw error;
       const job = data?.[0];
@@ -43,7 +44,7 @@ Deno.serve(async req => {
         jobId: job.job_id, certificateId: job.certificate_id,
         subjectId: job.subject_id, fullName: job.recipient_name,
         certificateNumber: job.certificate_number, issuedAt: job.issued_at,
-        email: user.user.email, hasPdf: Boolean(job.pdf_path), templateId,
+        hasPdf: Boolean(job.pdf_path), templateId,
       } });
     }
     const jobId = String(body.jobId || '');
@@ -95,12 +96,11 @@ Deno.serve(async req => {
         sent_at: success ? new Date().toISOString() : null,
         available_at: success ? new Date().toISOString() :
           new Date(Date.now() + Math.min(60, 2 ** Math.min(job.attempts, 8)) * 60_000).toISOString(),
-        last_error: success ? null : String(body.error || 'Email failed').slice(0, 500),
+        last_error: success ? null : String(body.error || 'PDF generation failed').slice(0, 500),
       }).eq('id', jobId);
       if (updateError) throw updateError;
       const { error: certificateError } = await admin.from('learning_certificates').update({
-        email_status: success ? 'sent' : 'failed',
-        ...(success ? { emailed_at: new Date().toISOString() } : {}),
+        email_status: success ? 'ready' : 'failed',
       }).eq('id', job.certificate_id);
       if (certificateError) throw certificateError;
       return jsonResponse({ completed: true });
