@@ -436,9 +436,9 @@ export default function AVPage() {
       if (newsForm.imageFile) {
         
         const base64 = await toBase64(newsForm.imageFile);
-        const fileExt = newsForm.imageFile.name.split('.').pop();
-        const cleanHeadline = (newsForm.headline.trim() || 'news').replace(/[/\\?%*:|"<>]/g, '-');
-        const fileName = `${cleanHeadline}.${fileExt}`;
+        // The image is converted to JPEG above; keep storage names short
+        // independently of the full news headline.
+        const fileName = `news_${Date.now()}.jpg`;
         const subFolderName = newsForm.headline.trim() || 'ข่าวไม่มีหัวข้อ';
         const uploadResult = await uploadFileToDrive(base64, fileName, 'pr', subFolderName);
         if (uploadResult && uploadResult.url) {
@@ -457,14 +457,13 @@ export default function AVPage() {
       let finalSupportingImages = [];
       if (newsForm.supportingImages && newsForm.supportingImages.length > 0) {
         const subFolderName = newsForm.headline.trim() || 'ข่าวไม่มีหัวข้อ';
-        const cleanHeadline = subFolderName.replace(/[/\\?%*:|"<>]/g, '-');
+        const imageBatchId = Date.now();
         for (let i = 0; i < newsForm.supportingImages.length; i++) {
           const img = newsForm.supportingImages[i];
           if (img.file) {
             // New file selected — upload to Google Drive
             const base64 = await toBase64(img.file);
-            const fileExt = img.file.name.split('.').pop();
-            const fileName = `${cleanHeadline}_sub_${i + 1}.${fileExt}`;
+            const fileName = `news_${imageBatchId}_sub_${i + 1}.jpg`;
             const uploadResult = await uploadFileToDrive(base64, fileName, 'pr', subFolderName);
             if (uploadResult && uploadResult.url) {
               finalSupportingImages.push(uploadResult.url);

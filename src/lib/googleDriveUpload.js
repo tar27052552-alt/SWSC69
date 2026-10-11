@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { normalizeUploadFileName } from './uploadFileName';
 
 const gasUrl = import.meta.env.VITE_GAS_URL;
 
@@ -51,7 +52,7 @@ export async function callGAS(action, payload) {
  * @returns {Promise<{fileId: string, url: string, fileName: string}>} ข้อมูลไฟล์ที่อัปโหลดและลิงก์ตรง
  */
 export async function uploadFileToDrive(fileBase64, fileName, folderCategory, subFolderName = null) {
-  return callGAS("upload_file", { fileBase64, fileName, folderCategory, subFolderName });
+  return callGAS("upload_file", { fileBase64, fileName: normalizeUploadFileName(fileName), folderCategory, subFolderName });
 }
 
 export async function verifySlipViaGAS(fileBase64, amount) {
