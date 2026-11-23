@@ -1,0 +1,1 @@
+import"./modulepreload-polyfill-P2Xu9kJm.js";import{t as e}from"./mockData-DK9iMlXv.js";var t=document.getElementById(`statFactions`);t&&(t.dataset.target=e.length,t.textContent=e.length);
