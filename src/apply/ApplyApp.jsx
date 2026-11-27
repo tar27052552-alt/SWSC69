@@ -12,6 +12,7 @@ import { callRecruitment, uploadRecruitmentDoc } from './recruitmentApi';
 import ApplicationFormPrint, { InlineApplicationPreview } from './ApplicationFormPrint';
 import { loadMemberAttachmentPages } from './docPageRenderer';
 import GoogleSignInModal from './GoogleSignInModal';
+import { LoadingOverlay, LoadingScreen } from './LoadingState';
 import SignaturePad from './SignaturePad';
 import { calculateAge } from './thaiDateUtils';
 import {
@@ -143,6 +144,7 @@ export default function ApplyApp() {
     return { settings: null, approvedParties: [] };
   });
   const [myState, setMyState] = useState(null);
+  const [myStateError, setMyStateError] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -228,6 +230,7 @@ export default function ApplyApp() {
   }, []);
 
   const loadMyState = useCallback(async () => {
+    setMyStateError('');
     try {
       const data = await callRecruitment({ action: 'my_state' }, { requireAuth: true });
       setMyState(data);
@@ -328,6 +331,7 @@ export default function ApplyApp() {
         });
       }
     } catch (err) {
+      setMyStateError(err.message || 'ไม่สามารถโหลดข้อมูลบัญชีได้ กรุณาลองใหม่อีกครั้ง');
       showNotice('error', err.message);
     }
   }, []);
@@ -807,6 +811,19 @@ export default function ApplyApp() {
   const homeUrl = `${import.meta.env.BASE_URL || '/'}`;
   const showCompactHeader = Boolean(session && viewMode === 'workspace' && isSchoolUser && myState?.eligible !== false);
 
+  if (!authReady || (loading && !settingsLoaded)) {
+    return (
+      <div className="pf-public apply-root">
+        <PublicNavigation activeHref="apply/" />
+        <LoadingScreen
+          fullscreen
+          title="กำลังเข้าสู่ระบบรับสมัคร..."
+          subtitle="กำลังตรวจสอบสถานะการรับสมัครและสิทธิ์การเข้าถึง กรุณารอสักครู่"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="pf-public apply-root">
       <PublicNavigation activeHref="apply/" />
@@ -1005,10 +1022,12 @@ export default function ApplyApp() {
         {/* ── WORKSPACE VIEW (Authenticated @sappha.ac.th & Eligible M.4 ONLY) ── */}
         {isSchoolUser && myState?.eligible !== false && viewMode === 'workspace' && (
           !myState ? (
-            <section className="apply-card" style={{ textAlign: 'center', padding: '40px 24px', color: '#6b7280' }}>
-              <RefreshCw size={24} className="spin" style={{ marginBottom: 10, color: '#6b21a8' }} />
-              <div style={{ fontSize: 15, fontWeight: 600, color: '#2d1046' }}>กำลังตรวจสอบสิทธิ์และโหลดข้อมูลบัญชี...</div>
-            </section>
+            <LoadingScreen
+              title="กำลังตรวจสอบสิทธิ์และโหลดข้อมูลบัญชี..."
+              subtitle="กำลังดึงข้อมูลพรรค ใบสมัคร และสถานะของคุณ"
+              error={myStateError}
+              onRetry={loadMyState}
+            />
           ) : (
           <>
             {myState?.isTestAccount && isUpcoming && (
@@ -2520,6 +2539,29 @@ export default function ApplyApp() {
           }}
         />
       )}
+
+      {/* ── Global Branded Action Loading Overlay ── */}
+      <LoadingOverlay
+        visible={Boolean(printBusy || uploadingKey || busy)}
+        title={
+          printBusy === 'bundle'
+            ? 'กำลังเตรียมชุดเอกสารทั้งพรรค (PDF)...'
+            : printBusy === 'single'
+              ? 'กำลังเตรียมเอกสารใบสมัครและไฟล์แนบ...'
+              : uploadingKey
+                ? 'กำลังอัปโหลดเอกสารเข้าระบบ...'
+                : 'กำลังบันทึกและส่งข้อมูล...'
+        }
+        subtitle={
+          printBusy === 'bundle'
+            ? 'กำลังดึงรูปภาพและแปลงไฟล์แนบของสมาชิกทุกคน อาจใช้เวลาสักครู่'
+            : printBusy === 'single'
+              ? 'กำลังจัดหน้าใบสมัคร ปพ.6 และใบรับรองความประพฤติ'
+              : uploadingKey
+                ? 'กรุณารอจนกว่าการอัปโหลดจะเสร็จสมบูรณ์ อย่าเพิ่งปิดหน้านี้'
+                : 'กรุณารอสักครู่ ระบบกำลังยืนยันข้อมูลกับเซิร์ฟเวอร์'
+        }
+      />
     </div>
   );
 }

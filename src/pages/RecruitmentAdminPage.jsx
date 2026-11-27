@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { callRecruitment } from '../apply/recruitmentApi';
 import ApplicationFormPrint from '../apply/ApplicationFormPrint';
+import { LoadingOverlay, LoadingScreen } from '../apply/LoadingState';
 import { loadMemberAttachmentPages } from '../apply/docPageRenderer';
 import { calculateAge, formatThaiBirthDate } from '../apply/thaiDateUtils';
 import {
@@ -589,7 +590,11 @@ export default function RecruitmentAdminPage() {
       </div>
 
       {loading ? (
-        <div className="rec-card" style={{ textAlign: 'center', padding: 48, color: '#64748b' }}>กำลังโหลดข้อมูลระบบรับสมัคร...</div>
+        <LoadingScreen
+          title="กำลังโหลดข้อมูลระบบรับสมัคร..."
+          subtitle="กำลังดึงรายชื่อพรรค สมาชิก และสถานะการตรวจสอบจากฐานข้อมูล"
+          onRetry={loadOverview}
+        />
       ) : (
         <>
           {/* ── TAB 1: PARTIES REVIEW ── */}
@@ -1551,6 +1556,22 @@ export default function RecruitmentAdminPage() {
           onClose={() => setPrintApp(null)}
         />
       )}
+
+      <LoadingOverlay
+        visible={Boolean(printBusy || busy)}
+        title={
+          printBusy === 'bundle'
+            ? 'กำลังเตรียมชุดเอกสารรวมเล่มทั้งพรรค...'
+            : printBusy
+              ? 'กำลังเตรียมใบสมัครและไฟล์แนบสำหรับพิมพ์...'
+              : 'กำลังบันทึกข้อมูล...'
+        }
+        subtitle={
+          printBusy === 'bundle'
+            ? 'กำลังดึงรูปและเอกสารแนบของสมาชิกทุกคน อาจใช้เวลาสักครู่'
+            : 'กรุณารอสักครู่ อย่าเพิ่งปิดหน้าต่างนี้'
+        }
+      />
     </div>
   );
 }
