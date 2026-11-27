@@ -1004,6 +1004,12 @@ export default function ApplyApp() {
 
         {/* ── WORKSPACE VIEW (Authenticated @sappha.ac.th & Eligible M.4 ONLY) ── */}
         {isSchoolUser && myState?.eligible !== false && viewMode === 'workspace' && (
+          !myState ? (
+            <section className="apply-card" style={{ textAlign: 'center', padding: '40px 24px', color: '#6b7280' }}>
+              <RefreshCw size={24} className="spin" style={{ marginBottom: 10, color: '#6b21a8' }} />
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#2d1046' }}>กำลังตรวจสอบสิทธิ์และโหลดข้อมูลบัญชี...</div>
+            </section>
+          ) : (
           <>
             {myState?.isTestAccount && isUpcoming && (
               <div className="apply-alert amber" style={{ marginBottom: 14 }}>
@@ -1032,12 +1038,12 @@ export default function ApplyApp() {
                     {[
                       { val: countdown.days, label: 'วัน' },
                       { val: countdown.hours, label: 'ชั่วโมง' },
-                      { val: countdown.minutes, label: 'นาที' },
-                      { val: countdown.seconds, label: 'วินาที' },
+                      { val: countdown.mins, label: 'นาที' },
+                      { val: countdown.secs, label: 'วินาที' },
                     ].map((unit) => (
                       <div key={unit.label} style={{ minWidth: 74, padding: '12px 14px', borderRadius: 14, background: '#faf5ff', border: '1px solid #e9dff2' }}>
                         <div style={{ fontSize: 24, fontWeight: 800, color: '#4a1270', lineHeight: 1.1 }}>
-                          {String(unit.val).padStart(2, '0')}
+                          {String(unit.val ?? 0).padStart(2, '0')}
                         </div>
                         <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{unit.label}</div>
                       </div>
@@ -1045,7 +1051,7 @@ export default function ApplyApp() {
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <button type="button" className="btn-purple" onClick={() => setViewMode('overview')}>
+                  <button type="button" className="btn-purple" onClick={() => setViewMode('landing')}>
                     ดูกำหนดการและรายละเอียดการรับสมัคร
                   </button>
                   <button type="button" className="btn-outline" onClick={handleSignOut}>
@@ -2128,6 +2134,7 @@ export default function ApplyApp() {
               </>
             )}
           </>
+          )
         )}
 
         {/* ── LANDING / PUBLIC VIEW (Strictly NO forms & NO documents before login!) ── */}
