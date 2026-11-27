@@ -145,6 +145,7 @@ export default function ApplyApp() {
   });
   const [myState, setMyState] = useState(null);
   const [myStateError, setMyStateError] = useState('');
+  const [showCreateParty, setShowCreateParty] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -1079,65 +1080,12 @@ export default function ApplyApp() {
                 </div>
               </section>
             ) : !party ? (
-              <div className="apply-grid-2">
-                {/* Create Party */}
-                <section className="apply-card">
-                  <h2 className="apply-card-title"><Plus size={18} /> สร้างพรรคใหม่ (สำหรับหัวหน้าพรรค)</h2>
-                  <p className="apply-card-sub">
-                    สร้างพรรคแล้วระบบจะออก <strong>ลิงก์เชิญและรหัสพรรค</strong> ให้เพื่อนอีก {targetCount - 1} คนกดเข้ามากรอกใบสมัครและอัปโหลดเอกสารของตัวเองได้
-                  </p>
-                  <form onSubmit={handleCreateParty} className="form-grid">
-                    <div className="form-field full">
-                      <label>ชื่อพรรค *</label>
-                      <input
-                        required
-                        placeholder="เช่น พรรคสรรพวิทย์ก้าวหน้า"
-                        value={createForm.party_name}
-                        onChange={(e) => setCreateForm({ ...createForm, party_name: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-field full">
-                      <label>สโลแกนพรรค</label>
-                      <input
-                        placeholder="สโลแกนสั้นๆ ประจำพรรค"
-                        value={createForm.slogan}
-                        onChange={(e) => setCreateForm({ ...createForm, slogan: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-field full">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: '#6b21a8', background: '#faf5ff', border: '1px solid #e9dff2', borderRadius: 10, padding: '8px 12px' }}>
-                        <Lock size={14} /> ข้อมูลหัวหน้าพรรคด้านล่างดึงจากรายชื่อ ม.4 ของโรงเรียนอัตโนมัติ (ไม่สามารถแก้ไขได้)
-                      </div>
-                    </div>
-                    <div className="form-field">
-                      <label>คำนำหน้า (ล็อกตามรายชื่อ)</label>
-                      <input readOnly disabled value={createForm.prefix} />
-                    </div>
-                    <div className="form-field">
-                      <label>ชื่อ-นามสกุล (ล็อกตามรายชื่อ)</label>
-                      <input readOnly disabled value={createForm.full_name} />
-                    </div>
-                    <div className="form-field">
-                      <label>เลขประจำตัวนักเรียน (ล็อกตามรายชื่อ)</label>
-                      <input readOnly disabled value={createForm.student_id} />
-                    </div>
-                    <div className="form-field">
-                      <label>ชั้น / ห้อง / เลขที่ (ล็อกตามรายชื่อ)</label>
-                      <input readOnly disabled value={`${createForm.classroom}${createForm.student_no ? ` เลขที่ ${createForm.student_no}` : ''}`} />
-                    </div>
-                    <div className="form-field full">
-                      <button type="submit" className="btn-gold" disabled={busy || !isRegOpen}>
-                        <Plus size={16} /> สร้างพรรคและรับลิงก์เชิญสมาชิก
-                      </button>
-                    </div>
-                  </form>
-                </section>
-
-                {/* Join Party */}
-                <section className="apply-card">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 680, margin: '0 auto' }}>
+                {/* Primary Card: Join Party (28 of 29 members) */}
+                <section className="apply-card" style={{ borderColor: '#d8b4fe', boxShadow: '0 10px 30px rgba(74, 18, 112, 0.08)' }}>
                   <h2 className="apply-card-title"><UserPlus size={18} /> เข้าร่วมพรรคด้วยรหัสเชิญ</h2>
                   <p className="apply-card-sub">
-                    หากหัวหน้าพรรคสร้างพรรคไว้แล้ว กรอกรหัสเชิญ (เช่น <code>SW70-XXXXXXXX</code>) เพื่อเข้าสู่พรรคและกรอกข้อมูลของคุณ
+                    หากหัวหน้าพรรคสร้างพรรคไว้แล้ว กรอกรหัสเชิญ (เช่น <code>SW70-XXXXXXXX</code>) หรือกดผ่านลิงก์เชิญจากหัวหน้าพรรคเพื่อเข้ากรอกใบสมัครของคุณ
                   </p>
                   <form onSubmit={handleJoinParty} className="form-grid">
                     <div className="form-field full">
@@ -1147,18 +1095,88 @@ export default function ApplyApp() {
                         placeholder="SW70-XXXXXXXX"
                         value={joinCodeInput}
                         onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
-                        style={{ fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}
+                        style={{ fontWeight: 700, fontSize: 16, letterSpacing: '1.2px', textTransform: 'uppercase' }}
                       />
                     </div>
                     <div className="form-field full">
-                      <button type="submit" className="btn-purple" disabled={busy || !isRegOpen}>
-                        <UserPlus size={16} /> เข้าร่วมพรรค
+                      <button type="submit" className="btn-purple" disabled={busy || !isRegOpen} style={{ width: '100%', justifyContent: 'center', padding: '12px 18px', fontSize: 15 }}>
+                        <UserPlus size={17} /> เข้าร่วมพรรค
                       </button>
                     </div>
                   </form>
-                  <div style={{ marginTop: 18, padding: 14, borderRadius: 12, background: '#faf5ff', fontSize: 13.5, color: '#52525b' }}>
+                  <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 12, background: '#faf5ff', fontSize: 13.5, color: '#52525b' }}>
                     <strong>หมายเหตุ:</strong> ขอรับ <strong>ลิงก์เชิญ</strong> หรือ <strong>รหัสเชิญ</strong> จากหัวหน้าพรรคของคุณ (1 บัญชี <code>@{allowedDomain}</code> สามารถสังกัดได้เพียง 1 พรรคเท่านั้น)
                   </div>
+                </section>
+
+                {/* Secondary Collapsible Card: Create Party (Leader ONLY) */}
+                <section className="apply-card" style={{ borderStyle: showCreateParty ? 'solid' : 'dashed', borderColor: '#e2d9ee', background: showCreateParty ? '#ffffff' : '#fcfaff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: 15.5, color: '#2d1046', display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <Plus size={17} style={{ color: '#b45309' }} /> สร้างพรรคใหม่ (สำหรับหัวหน้าพรรคเท่านั้น)
+                      </div>
+                      <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+                        เฉพาะผู้สมัครตำแหน่งหัวหน้าพรรค 1 คนต่อพรรค เพื่อสร้างพรรคและรับลิงก์เชิญเพื่อนอีก {targetCount - 1} คน
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className={showCreateParty ? 'btn-outline' : 'btn-gold'}
+                      onClick={() => setShowCreateParty((prev) => !prev)}
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      {showCreateParty ? 'ซ่อนฟอร์มสร้างพรรค' : 'ฉันเป็นหัวหน้าพรรค — สร้างพรรคใหม่'}
+                    </button>
+                  </div>
+
+                  {showCreateParty && (
+                    <form onSubmit={handleCreateParty} className="form-grid" style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid #f1e9f9' }}>
+                      <div className="form-field full">
+                        <label>ชื่อพรรค *</label>
+                        <input
+                          required
+                          placeholder="เช่น พรรคสรรพวิทย์ก้าวหน้า"
+                          value={createForm.party_name}
+                          onChange={(e) => setCreateForm({ ...createForm, party_name: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-field full">
+                        <label>สโลแกนพรรค</label>
+                        <input
+                          placeholder="สโลแกนสั้นๆ ประจำพรรค"
+                          value={createForm.slogan}
+                          onChange={(e) => setCreateForm({ ...createForm, slogan: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-field full">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: '#6b21a8', background: '#faf5ff', border: '1px solid #e9dff2', borderRadius: 10, padding: '8px 12px' }}>
+                          <Lock size={14} /> ข้อมูลหัวหน้าพรรคด้านล่างดึงจากรายชื่อ ม.4 ของโรงเรียนอัตโนมัติ (ไม่สามารถแก้ไขได้)
+                        </div>
+                      </div>
+                      <div className="form-field">
+                        <label>คำนำหน้า (ล็อกตามรายชื่อ)</label>
+                        <input readOnly disabled value={createForm.prefix} />
+                      </div>
+                      <div className="form-field">
+                        <label>ชื่อ-นามสกุล (ล็อกตามรายชื่อ)</label>
+                        <input readOnly disabled value={createForm.full_name} />
+                      </div>
+                      <div className="form-field">
+                        <label>เลขประจำตัวนักเรียน (ล็อกตามรายชื่อ)</label>
+                        <input readOnly disabled value={createForm.student_id} />
+                      </div>
+                      <div className="form-field">
+                        <label>ชั้น / ห้อง / เลขที่ (ล็อกตามรายชื่อ)</label>
+                        <input readOnly disabled value={`${createForm.classroom}${createForm.student_no ? ` เลขที่ ${createForm.student_no}` : ''}`} />
+                      </div>
+                      <div className="form-field full">
+                        <button type="submit" className="btn-gold" disabled={busy || !isRegOpen}>
+                          <Plus size={16} /> สร้างพรรคและรับลิงก์เชิญสมาชิก
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </section>
               </div>
             ) : (
