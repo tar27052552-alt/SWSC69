@@ -1,0 +1,1 @@
+import{r as e}from"./jsx-runtime-iNieIFhS.js";var t=e(`chevron-up`,[[`path`,{d:`m18 15-6-6-6 6`,key:`153udz`}]]);export{t};
