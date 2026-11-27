@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Maximize2, PenTool, RotateCcw, X } from 'lucide-react';
+import { Check, PenTool, RotateCcw, X } from 'lucide-react';
 
 function exportTrimmedPng(canvas) {
   const w = canvas.width;
@@ -201,10 +201,10 @@ export default function SignaturePad({
           <div className="sig-pad-actions">
             <button
               type="button"
-              className="btn-outline sig-pad-btn"
+              className="btn-purple sig-pad-btn"
               onClick={openFullscreen}
             >
-              <Maximize2 size={13} /> ขยายเต็มจอเพื่อเซ็น
+              <PenTool size={13} /> {value ? 'เซ็นใหม่' : 'แตะเพื่อเซ็นชื่อ'}
             </button>
             {Boolean(value) && (
               <button
@@ -219,12 +219,29 @@ export default function SignaturePad({
         )}
       </div>
 
-      <DrawingCanvas
-        value={value}
-        onChange={onChange}
+      <button
+        type="button"
+        className={`sig-preview-card ${value ? 'has-sig' : ''} ${disabled ? 'is-disabled' : ''}`}
+        style={{ minHeight: Math.min(height, 148) }}
+        onClick={openFullscreen}
         disabled={disabled}
-        height={height}
-      />
+      >
+        {value ? (
+          <>
+            <img src={value} alt={label} className="sig-preview-img" />
+            <div className="sig-pad-baseline" aria-hidden="true" />
+            {!disabled && <span className="sig-preview-badge">แตะเพื่อเซ็นใหม่</span>}
+          </>
+        ) : (
+          <div className="sig-preview-empty">
+            <div className="sig-preview-icon">
+              <PenTool size={20} />
+            </div>
+            <strong>{disabled ? 'ยังไม่มีลายเซ็น' : 'แตะที่นี่เพื่อเปิดกรอบเซ็นชื่อ'}</strong>
+            {!disabled && <span>เปิดหน้าต่างเซ็นแบบเต็มจอ ป้องกันการเผลอขีดโดนตอนเลื่อนหน้า</span>}
+          </div>
+        )}
+      </button>
 
       {fullscreenOpen && createPortal(
         <div className="sig-fs-backdrop" role="dialog" aria-modal="true" aria-label={label}>
@@ -232,7 +249,7 @@ export default function SignaturePad({
             <div className="sig-fs-head">
               <div>
                 <strong>{label}</strong>
-                <span>ใช้นิ้วหรือปากกาเซ็นชื่อให้เต็มกรอบด้านล่าง (รองรับทั้งแนวตั้งและแนวนอน)</span>
+                <span>ใช้นิ้ว ปากกา หรือเมาส์เซ็นชื่อในกรอบด้านล่าง แล้วกด &ldquo;ใช้ลายเซ็นนี้&rdquo;</span>
               </div>
               <button
                 type="button"
@@ -264,6 +281,7 @@ export default function SignaturePad({
               <button
                 type="button"
                 className="btn-purple"
+                disabled={!fsDraft}
                 onClick={confirmFullscreen}
               >
                 <Check size={16} /> ใช้ลายเซ็นนี้

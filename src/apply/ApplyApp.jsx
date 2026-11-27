@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   AlertCircle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Award, Calendar, Camera,
   Check, CheckCircle2, Clock, Cloud, CloudOff, Copy, Edit3, Eye, FileText, Lock, LogIn,
-  LogOut, PenTool, Plus, Printer, RefreshCw, Send, ShieldCheck, Trash2, Upload,
+  LogOut, Megaphone, PenTool, Plus, Printer, RefreshCw, Send, ShieldCheck, Trash2, Upload,
   UserPlus, Users, X,
 } from 'lucide-react';
 import { applySupabase as supabase } from './applySupabaseClient';
@@ -905,17 +905,21 @@ export default function ApplyApp() {
           </div>
 
           {settings.announcement_note && (
-            <div style={{ marginTop: 12, padding: '8px 16px', borderRadius: 999, background: '#fffbeb', border: '1px solid #fcd34d', fontSize: 13.5, color: '#92400e', fontWeight: 600 }}>
-              📢 {settings.announcement_note}
+            <div style={{ marginTop: 12, padding: '8px 16px', borderRadius: 999, background: '#fffbeb', border: '1px solid #fcd34d', fontSize: 13.5, color: '#92400e', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              <Megaphone size={15} style={{ flexShrink: 0 }} />
+              <span>{settings.announcement_note}</span>
             </div>
           )}
 
           {countdown && !countdown.expired && !countdown.noTarget && Boolean(settings.is_open ?? true) && (
             <div className="apply-countdown-wrap" aria-label={countdown.phase === 'upcoming' ? 'นับถอยหลังวันเปิดรับสมัคร' : 'นับถอยหลังวันปิดรับสมัคร'}>
-              <div className="apply-countdown-label">
-                {countdown.phase === 'upcoming'
-                  ? `⏳ เหลืออีกกี่วันถึงจะเปิดรับสมัคร • เปิดรับ ${openDateLabel}${closeDateLabel ? ` – ${closeDateLabel}` : ''}`
-                  : `⏳ เหลือเวลาปิดรับสมัคร • ปิดรับ ${closeDateLabel}`}
+              <div className="apply-countdown-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Clock size={14} style={{ flexShrink: 0 }} />
+                <span>
+                  {countdown.phase === 'upcoming'
+                    ? `เหลืออีกกี่วันถึงจะเปิดรับสมัคร • เปิดรับ ${openDateLabel}${closeDateLabel ? ` – ${closeDateLabel}` : ''}`
+                    : `เหลือเวลาปิดรับสมัคร • ปิดรับ ${closeDateLabel}`}
+                </span>
               </div>
               <div className="apply-countdown">
                 <div className="apply-countdown-box"><strong>{countdown.days}</strong><span>วัน</span></div>
@@ -1264,7 +1268,7 @@ export default function ApplyApp() {
                         </div>
                       </div>
 
-                      <div className="table-wrap">
+                      <div className="table-wrap apply-members-desktop-table">
                         <table className="apply-table">
                           <thead>
                             <tr>
@@ -1346,7 +1350,7 @@ export default function ApplyApp() {
                                   <td>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
                                       <span className={`pill ${comp.submitted ? 'pill-emerald' : 'pill-amber'}`}>
-                                        {comp.submitted ? '🔒 ส่งใบสมัครแล้ว' : 'กำลังกรอก'}
+                                        {comp.submitted ? <><Lock size={12} /> ส่งใบสมัครแล้ว</> : 'กำลังกรอก'}
                                       </span>
                                       <StatusPill status={m.member_status} map={MEMBER_STATUS_META} />
                                     </div>
@@ -1400,6 +1404,135 @@ export default function ApplyApp() {
                             })}
                           </tbody>
                         </table>
+                      </div>
+
+                      {/* Mobile Member Card List (<= 768px) */}
+                      <div className="apply-member-cards">
+                        {members.map((m, idx) => {
+                          const comp = getMemberCompleteness(m, minGpax);
+                          return (
+                            <div key={m.id} className="apply-member-card">
+                              <div className="apply-member-card-top">
+                                <div className="apply-member-card-rank">
+                                  <span className="apply-member-num">#{idx + 1}</span>
+                                  {isLeader && isEditable && (
+                                    <span style={{ display: 'inline-flex', gap: 4 }}>
+                                      <button
+                                        type="button"
+                                        className="btn-outline"
+                                        title="เลื่อนขึ้น"
+                                        disabled={busy || idx === 0}
+                                        style={{ padding: '4px 7px', borderRadius: 8, minHeight: 30 }}
+                                        onClick={() => moveMemberOrder(idx, -1)}
+                                      >
+                                        <ArrowUp size={13} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn-outline"
+                                        title="เลื่อนลง"
+                                        disabled={busy || idx === members.length - 1}
+                                        style={{ padding: '4px 7px', borderRadius: 8, minHeight: 30 }}
+                                        onClick={() => moveMemberOrder(idx, 1)}
+                                      >
+                                        <ArrowDown size={13} />
+                                      </button>
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                  <span className={`pill ${comp.submitted ? 'pill-emerald' : 'pill-amber'}`}>
+                                    {comp.submitted ? <><Lock size={11} /> ส่งแล้ว</> : 'กำลังกรอก'}
+                                  </span>
+                                  <StatusPill status={m.member_status} map={MEMBER_STATUS_META} />
+                                </div>
+                              </div>
+
+                              <div className="apply-member-card-identity">
+                                <div style={{ fontWeight: 700, fontSize: 15, color: '#2d1046' }}>
+                                  {m.full_name ? `${m.prefix}${m.full_name}` : <span style={{ color: '#9ca3af' }}>ยังไม่กรอกชื่อ</span>}
+                                  {m.is_leader && <span className="pill pill-purple" style={{ marginLeft: 6 }}>หัวหน้าพรรค</span>}
+                                </div>
+                                <div style={{ fontSize: 12.5, color: '#52525b', marginTop: 2 }}>
+                                  {m.classroom || '-'} •{' '}
+                                  <strong style={{ color: Number(m.gpax) >= minGpax ? '#047857' : '#be123c' }}>
+                                    GPAX {m.gpax !== null && m.gpax !== undefined ? Number(m.gpax).toFixed(2) : '-'}
+                                  </strong>
+                                  {m.student_id ? ` • ${m.student_id}` : ''}
+                                </div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: '#4a1270', marginTop: 3 }}>
+                                  {m.position_label}
+                                </div>
+                                {m.review_note && (
+                                  <div style={{ fontSize: 12, color: '#be123c', marginTop: 4 }}>หมายเหตุ: {m.review_note}</div>
+                                )}
+                              </div>
+
+                              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 8 }}>
+                                {REQUIRED_DOCS.map((doc) => {
+                                  const hasDoc = Boolean(m[doc.field]) || (doc.key === 'consent' && hasOnlineGuardianConsent(m));
+                                  return (
+                                    <span key={doc.key} className={`pill ${hasDoc ? 'pill-emerald' : 'pill-rose'}`}>
+                                      {hasDoc ? '✓' : '✗'} {doc.shortLabel}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                              {!comp.complete && (
+                                <div style={{ fontSize: 12, color: '#be123c', marginTop: 6 }}>
+                                  ขาด: {comp.missing.join(', ')}
+                                </div>
+                              )}
+
+                              {(((isLeader || m.id === myMember?.id) && isEditable && !comp.submitted)
+                                || (isEditable && ((isLeader && !m.is_leader) || (!isLeader && m.id === myMember?.id)))) && (
+                                <div className="apply-member-card-actions">
+                                  {(isLeader || m.id === myMember?.id) && isEditable && !comp.submitted && (
+                                    <button
+                                      type="button"
+                                      className="btn-outline"
+                                      style={{ flex: 1, justifyContent: 'center', fontSize: 13 }}
+                                      onClick={() => setEditingMember({
+                                        memberId: m.id,
+                                        email: m.email,
+                                        prefix: m.prefix || 'นาย',
+                                        full_name: m.full_name || '',
+                                        nickname: m.nickname || '',
+                                        student_id: m.student_id || '',
+                                        classroom: m.classroom || 'ม.4/1',
+                                        study_plan: m.study_plan || '',
+                                        birth_date: m.birth_date || '',
+                                        nationality: m.nationality || 'ไทย',
+                                        religion: m.religion || 'พุทธ',
+                                        experience: m.experience || '',
+                                        is_special_room: Boolean(m.is_special_room),
+                                        special_room_or_club: m.special_room_or_club || '',
+                                        gpax: m.gpax ?? '',
+                                        phone: m.phone || '',
+                                        position_key: m.position_key || 'academic',
+                                        doc_grade_path: m.doc_grade_path,
+                                        doc_conduct_path: m.doc_conduct_path,
+                                        doc_consent_path: m.doc_consent_path,
+                                      })}
+                                    >
+                                      <Edit3 size={14} /> แก้ไข
+                                    </button>
+                                  )}
+                                  {isEditable && ((isLeader && !m.is_leader) || (!isLeader && m.id === myMember?.id)) && (
+                                    <button
+                                      type="button"
+                                      className="btn-danger-soft"
+                                      style={{ flex: 1, justifyContent: 'center', fontSize: 13 }}
+                                      onClick={() => handleRemoveMember(m)}
+                                    >
+                                      <Trash2 size={14} /> {m.id === myMember?.id ? 'ออกจากพรรค' : 'ลบ'}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </section>
 
@@ -2234,7 +2367,7 @@ export default function ApplyApp() {
                   <div key={pos.key} className="apply-struct-item">
                     <strong>{i + 1}. {pos.label}</strong>
                     <div className="apply-struct-meta">
-                      {pos.group} • {pos.maxSlots === 1 ? 'บังคับ 1 คน' : 'อย่างน้อย 1 คน'}
+                      {pos.group}
                     </div>
                   </div>
                 ))}

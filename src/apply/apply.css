@@ -982,6 +982,81 @@ button, .btn-link {
   border-bottom: 1px dotted #cbd5e1;
   pointer-events: none;
 }
+.sig-preview-card {
+  position: relative;
+  width: 100%;
+  border: 1.5px dashed #c084fc;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+  touch-action: pan-y;
+}
+.sig-preview-card:hover:not(:disabled) {
+  border-color: var(--purple-600);
+  background: #fcfaff;
+  box-shadow: 0 6px 18px rgba(107, 33, 168, 0.08);
+}
+.sig-preview-card.has-sig {
+  border-style: solid;
+  border-color: #d8b4fe;
+  background: #ffffff;
+}
+.sig-preview-card.is-disabled {
+  opacity: 0.78;
+  cursor: not-allowed;
+  background: #f8fafc;
+}
+.sig-preview-img {
+  max-height: 92px;
+  max-width: 100%;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+}
+.sig-preview-badge {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--purple-700);
+  background: #f3e8ff;
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+.sig-preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--purple-800);
+}
+.sig-preview-empty strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+.sig-preview-empty span {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.sig-preview-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f3e8ff, #fef3c7);
+  color: var(--purple-700);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .online-consent-panel {
   margin: 12px 0;
   padding: 14px;
@@ -1372,4 +1447,132 @@ button, .btn-link {
   .apply-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .apply-hero-cta { width: 100%; }
   .apply-hero-cta > button { width: 100%; justify-content: center; }
+}
+
+/* ── Enhanced Mobile Usability (Phones <= 768px) ── */
+.apply-root {
+  overflow-x: clip;
+}
+.apply-member-cards {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .apply-members-desktop-table {
+    display: none;
+  }
+  .apply-member-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .apply-member-card {
+    background: #fcfaff;
+    border: 1px solid #e9dff2;
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .apply-member-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .apply-member-card-rank {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .apply-member-num {
+    font-weight: 800;
+    font-size: 13.5px;
+    color: var(--purple-800);
+    background: #f3e8ff;
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+  .apply-member-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #f1e9f9;
+  }
+
+  /* Prevent iOS Safari auto-zoom on form fields */
+  .form-field input,
+  .form-field select,
+  .form-field textarea {
+    font-size: 16px !important;
+    min-height: 44px;
+  }
+
+  /* Comfortable mobile spacing & touch targets */
+  .apply-card-title {
+    font-size: 15.5px;
+    padding: 8px 14px;
+    line-height: 1.35;
+    max-width: 100%;
+    white-space: normal;
+  }
+  .invite-box {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px;
+  }
+  .invite-code {
+    font-size: 20px;
+    word-break: break-all;
+  }
+  .invite-box > div:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  .invite-box button {
+    width: 100%;
+    justify-content: center;
+  }
+  .wizard-a4-preview-box {
+    padding: 10px 4px;
+    margin: 10px -4px;
+  }
+  .wizard-bottom-bar > button {
+    white-space: nowrap;
+    font-size: 13.5px;
+  }
+  .wizard-bottom-status {
+    font-size: 12px;
+    text-align: center;
+  }
+  .modal-backdrop,
+  .sig-fs-backdrop {
+    padding: 10px;
+  }
+  .modal-panel {
+    padding: 18px 14px;
+    max-height: 92dvh;
+    border-radius: 16px;
+  }
+  .sig-fs-modal {
+    border-radius: 16px;
+    max-height: 94dvh;
+  }
+  .sig-fs-body {
+    padding: 10px;
+  }
+  .sig-fs-foot {
+    padding: 10px 12px;
+  }
+  .sig-fs-foot > button {
+    flex: 1;
+    justify-content: center;
+    min-height: 44px;
+  }
+  .wizard-confirm-modal {
+    padding: 18px 16px;
+    border-radius: 16px;
+  }
 }
