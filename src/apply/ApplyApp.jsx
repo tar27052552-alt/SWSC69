@@ -338,6 +338,7 @@ export default function ApplyApp() {
   }, []);
 
   useEffect(() => {
+    try { localStorage.removeItem('swsc_oauth_return'); } catch { /* ignore */ }
     let mounted = true;
     (async () => {
       setLoading(true);
