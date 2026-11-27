@@ -3,6 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <script>
+    // Forward Supabase OAuth callbacks back to the originating sub-app (e.g. /apply/ or /learn/)
+    // so users never land on the home/news page if Supabase falls back to the root Site URL.
+    (function () {
+      try {
+        var raw = localStorage.getItem('swsc_oauth_return');
+        if (!raw) return;
+        var parsed = JSON.parse(raw);
+        var hasAuthParams = /[?#&](access_token|refresh_token|code|error|error_description)=/i.test(location.search + location.hash);
+        if (!parsed || !parsed.url || (Date.now() - (parsed.ts || 0) > 300000)) {
+          localStorage.removeItem('swsc_oauth_return');
+          return;
+        }
+        if (hasAuthParams) {
+          var target = new URL(parsed.url, location.origin);
+          if (target.origin === location.origin && target.pathname !== location.pathname) {
+            var incoming = new URLSearchParams(location.search);
+            incoming.forEach(function (v, k) { target.searchParams.set(k, v); });
+            localStorage.removeItem('swsc_oauth_return');
+            location.replace(target.pathname + target.search + location.hash);
+            return;
+          }
+        }
+      } catch (_) {
+        // ignore storage errors
+      }
+    })();
     // Fix broken relative URLs in GitHub Pages subdirectories when missing trailing slash
     if (!location.pathname.endsWith('/') && !location.pathname.split('/').pop().includes('.')) {
       location.replace(location.pathname + '/' + location.search + location.hash);
