@@ -1,0 +1,23 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { newsAsPortfolio, mergePortfolioYears, newsImageUrl } from '../src/lib/newsPortfolio.js';
+test('tagged news uses its publication date academic year and stable source link', () => {
+  const news = {id:11,category:'ผลงาน',headline:'ผลงานเด่น',detail:'รายละเอียด',created_at:'2026-10-07T00:00:00Z',image_url:'https://drive.google.com/file/d/image123/view',supporting_images:['https://example.com/extra.jpg']};
+  const item = newsAsPortfolio(news);
+  assert.equal(item.id,'news-11'); assert.equal(item.academic_year,2569); assert.equal(item.activity_date,'2026-10-07');
+  assert.equal(item.cover_path,'https://drive.google.com/thumbnail?id=image123&sz=w1600');
+  assert.equal(item.image_paths.length,1);
+  assert.equal(newsAsPortfolio({...news,category:'ข่าวโรงเรียน'}),null);
+  assert.equal(newsAsPortfolio({...news,created_at:'bad'}),null);
+  assert.equal(newsAsPortfolio({...news,created_at:'2026-04-30T16:59:00Z'}).academic_year,2568);
+  assert.equal(newsAsPortfolio({...news,created_at:'2026-04-30T17:00:00Z'}).academic_year,2569);
+  assert.equal(newsAsPortfolio({...news,created_at:'2026-03-31T00:00:00Z',detail:'คณะกรรมการสภานักเรียน ปีการศึกษา 2569 ขอแสดงความยินดี รางวัลปีการศึกษา 2568'}).academic_year,2569);
+  assert.equal(newsAsPortfolio({...news,created_at:'2026-03-31T00:00:00Z',detail:'สภานักเรียน ปีการศึกษา ๒๕๖๙'}).academic_year,2569);
+  assert.equal(newsAsPortfolio({...news,academic_year:2567,detail:'ปีการศึกษา 2569'}).academic_year,2567);
+  assert.equal(newsAsPortfolio({...news,portfolio_academic_year:2566,academic_year:2567}).academic_year,2566);
+  assert.equal(newsAsPortfolio({...news,portfolio_featured:true}).featured,true);
+  assert.equal(newsAsPortfolio({...news,portfolio_hidden:true}),null);
+  assert.equal(newsImageUrl('javascript:alert(1)'),null);
+  const years=mergePortfolioYears([{academic_year:2568,cohort_name:'รุ่นพี่'}],[item,item]);
+  assert.deepEqual(years.map(x=>x.academic_year),[2569,2568]); assert.equal(years[1].cohort_name,'รุ่นพี่');
+});

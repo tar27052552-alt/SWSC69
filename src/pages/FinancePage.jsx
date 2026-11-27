@@ -1,8 +1,8 @@
 import { canManageDepartment, academicYear } from '../lib/councilPermissions';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { DEPARTMENTS } from '../data/mockData';
-import { Plus, X, Save, Search, CheckCircle, Clock, XCircle, Eye, Camera, ChevronDown, ChevronUp, Download, Users, ListFilter, AlertCircle, FileText } from 'lucide-react';
+import { Plus, X, Save, Search, CheckCircle, Clock, XCircle, Eye, Camera, ChevronDown, ChevronUp, Users, FileText } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { transformGoogleDriveUrl } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
@@ -23,7 +23,7 @@ const STATUS_STYLE = {
 
 
 export default function FinancePage() {
-  const { user, isAdmin, isDeptHead, isPresident } = useAuth();
+  const { user } = useAuth();
   const isFinance = canManageDepartment(user, 1);
   const [requests, setRequests] = useState([]);
   const [tab, setTab] = useState('requests');
@@ -93,100 +93,84 @@ export default function FinancePage() {
     });
   };
 
-  const loadFinanceData = async () => {
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [financeUpdatedAt, setFinanceUpdatedAt] = useState(null);
+  const financeRequest = useRef(null);
+  const financeRevision = useRef(0);
+  const loadFinanceData = useCallback(async () => {
+    if (financeRequest.current || document.hidden) return false;
+    const revision = financeRevision.current;
+    const controller = new AbortController();
+    financeRequest.current = controller;
+    setFinanceLoading(true);
+    let timer;
     try {
-      // โหลดสมาชิกจริง - ปรับแต่งลดปริมาณข้อมูล (หลีกเลี่ยงโหลดรูปโปรไฟล์)
-      const { data: uData, error: uErr } = await supabase
-        .from('user_directory')
-        .select('id, name, nickname, role, dept_id, position, avatar_color');
-      if (!uErr && uData) {
-        setUsersList(uData);
+      const results = await Promise.race([
+        Promise.all([
+          supabase.from('user_directory').select('id, name, nickname, role, dept_id, position, avatar_color').abortSignal(controller.signal),
+          supabase.from('finance_requests').select('*').order('created_at', { ascending: false }).abortSignal(controller.signal),
+          supabase.from('finance_fees').select('*').order('created_at', { ascending: false }).abortSignal(controller.signal),
+          supabase.from('discipline_fines').select('id, user_id, user_name, nickname, violation, amount, date, note, by, paid, payment_status').order('created_at', { ascending: false }).abortSignal(controller.signal),
+        ]),
+        new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('หมดเวลารอข้อมูล กรุณาลองใหม่')); }, 30000); }),
+      ]);
+      if (financeRequest.current !== controller || controller.signal.aborted || financeRevision.current !== revision) return false;
+      const failed = results.find(result => result.error);
+      if (failed) throw failed.error;
+      const [members, requestRows, feeRows, fineRows] = results.map(result => result.data || []);
+      // Commit the whole snapshot only after every query succeeds.
+      setUsersList(members);
+      setRequests(requestRows.map(r => ({ id: r.id, title: r.title, category: r.category,
+        amount: r.amount, requester: r.requester, deptId: r.dept_id, date: r.date,
+        status: r.status, note: r.note, approvedBy: r.approved_by, requesterId: r.requester_id,
+        disbursedAt: r.disbursed_at, academicYear: r.academic_year })));
+      setFees(feeRows);
+      setDfines(fineRows.map(d => ({ id: d.id, userId: d.user_id, userName: d.user_name,
+        nickname: d.nickname, violation: d.violation, amount: d.amount, date: d.date,
+        note: d.note, by: d.by, paid: d.paid,
+        paymentStatus: d.payment_status || (d.paid ? 'paid' : 'unpaid'), paymentSlip: null })));
+      setFinanceNotice('');
+      setFinanceUpdatedAt(new Date());
+      return true;
+    } catch (error) {
+      if (financeRequest.current === controller) {
+        setFinanceNotice('โหลดข้อมูลการเงินไม่สำเร็จ: ' + error.message + ' · ข้อมูลที่แสดงอาจไม่เป็นปัจจุบัน');
       }
-
-      // โหลดคำขอเบิกเงิน
-      const { data: reqData, error: reqErr } = await supabase
-        .from('finance_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (reqErr) throw reqErr;
-      if (reqData) {
-        const mappedReqs = reqData.map(r => ({
-          id: r.id,
-          title: r.title,
-          category: r.category,
-          amount: r.amount,
-          requester: r.requester,
-          deptId: r.dept_id,
-          date: r.date,
-          status: r.status,
-          note: r.note,
-          approvedBy: r.approved_by, requesterId: r.requester_id, disbursedAt: r.disbursed_at, academicYear: r.academic_year
-        }));
-        setRequests(mappedReqs);
-      }
-
-      // โหลดรายการเก็บเงิน
-      const { data: feesData, error: feesErr } = await supabase
-        .from('finance_fees')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (!feesErr && feesData) {
-        setFees(feesData);
-      }
-
-      // โหลดค่าปรับ - หลีกเลี่ยงโหลดรูปสลิปทันทีเพื่อเพิ่มความเร็วในการโหลด 100 เท่า!
-      const { data: finesData } = await supabase
-        .from('discipline_fines')
-        .select('id, user_id, user_name, nickname, violation, amount, date, note, by, paid, payment_status')
-        .order('created_at', { ascending: false });
-      if (finesData) {
-        setDfines(finesData.map(d => ({
-          id: d.id,
-          userId: d.user_id,
-          userName: d.user_name,
-          nickname: d.nickname,
-          violation: d.violation,
-          amount: d.amount,
-          date: d.date,
-          note: d.note,
-          by: d.by,
-          paid: d.paid,
-          paymentStatus: d.payment_status || (d.paid ? 'paid' : 'unpaid'),
-          paymentSlip: null, // จะโหลดทางออนไลน์เฉพาะเมื่อคลิก
-        })));
-      }
-    } catch (err) {
-      console.error('Error loading finance data:', err);
-      setFinanceNotice('โหลดข้อมูลการเงินไม่สำเร็จ: ' + err.message);
       return false;
+    } finally {
+      clearTimeout(timer);
+      if (financeRequest.current === controller) {
+        financeRequest.current = null;
+        setFinanceLoading(false);
+      }
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadFinanceData();
-
-    const interval = setInterval(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      setRequests([]); setFees([]); setDfines([]); setUsersList([]);
+      setFinanceUpdatedAt(null); setFinanceNotice('');
       loadFinanceData();
-    }, 10000);
-
-    const channel = supabase
-      .channel('finance-page-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_requests' }, () => {
-        loadFinanceData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_fees' }, () => {
-        loadFinanceData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'discipline_fines' }, () => {
-        loadFinanceData();
-      })
+    });
+    const refresh = () => { if (!document.hidden) loadFinanceData(); };
+    const interval = setInterval(refresh, 10000);
+    document.addEventListener('visibilitychange', refresh);
+    const channel = supabase.channel('finance-page-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_requests' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_fees' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'discipline_fines' }, refresh)
       .subscribe();
-
     return () => {
+      active = false;
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', refresh);
+      financeRequest.current?.abort();
+      financeRequest.current = null;
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [loadFinanceData, user?.id]);
 
   const filtered = requests.filter(r => {
     const ms = (r.title || '').toLowerCase().includes(search.toLowerCase()) || 
@@ -233,6 +217,7 @@ export default function FinancePage() {
           note: data[0].note,
           approvedBy: data[0].approved_by, requesterId: data[0].requester_id, disbursedAt: data[0].disbursed_at, academicYear: data[0].academic_year
         };
+        financeRevision.current++;
         setRequests(prev => [inserted, ...prev]);
         setModal(false); setForm(initForm);
 
@@ -267,6 +252,7 @@ export default function FinancePage() {
       const { error } = await supabase.rpc('review_council_finance_request', { p_request_id: id, p_status: 'approved' });
       if (error) throw error;
       const target = requests.find(r => r.id === id);
+      financeRevision.current++;
       setRequests(prev => prev.map(r => r.id===id ? { ...r, status:'approved', approvedBy: user.nickname } : r));
 
       // Send Discord notification for approval
@@ -298,6 +284,7 @@ export default function FinancePage() {
       const { error } = await supabase.rpc('review_council_finance_request', { p_request_id: id, p_status: 'rejected', p_note: note });
       if (error) throw error;
       const target = requests.find(r => r.id === id);
+      financeRevision.current++;
       setRequests(prev => prev.map(r => r.id===id ? { ...r, status:'rejected', note } : r));
       setRejectModal(null); setRejectNote('');
 
@@ -365,6 +352,7 @@ export default function FinancePage() {
         .update({ paid: true, payment_status: 'paid' })
         .eq('id', fine.id);
       if (error) throw error;
+      financeRevision.current++;
       setDfines(prev => prev.map(f => f.id === fine.id ? { ...f, paid: true, paymentStatus: 'paid' } : f));
       setSlipViewModal(null);
 
@@ -391,6 +379,7 @@ export default function FinancePage() {
         .update({ paid: false, payment_status: 'unpaid', payment_slip: null })
         .eq('id', fine.id);
       if (error) throw error;
+      financeRevision.current++;
       setDfines(prev => prev.map(f => f.id === fine.id ? { ...f, paid: false, paymentStatus: 'unpaid', paymentSlip: null } : f));
       setSlipViewModal(null);
 
@@ -418,6 +407,7 @@ export default function FinancePage() {
         .update({ paid: false, payment_status: 'unpaid', payment_slip: null })
         .eq('id', fine.id);
       if (error) throw error;
+      financeRevision.current++;
       setDfines(prev => prev.map(f => f.id === fine.id ? { ...f, paid: false, paymentStatus: 'unpaid', paymentSlip: null } : f));
 
       // ส่งการแจ้งเตือน
@@ -444,6 +434,7 @@ export default function FinancePage() {
         .update({ paid: true, payment_status: 'paid' })
         .eq('id', fineId);
       if (error) throw error;
+      financeRevision.current++;
       setDfines(prev => prev.map(f => f.id === fineId ? { ...f, paid: true, paymentStatus: 'paid' } : f));
 
       // ส่งการแจ้งเตือน
@@ -1147,7 +1138,11 @@ export default function FinancePage() {
         </button>
       </div>
 
-      {financeNotice && <p role="status">{financeNotice}</p>}
+      <div className="council-data-status" role="status">
+        <span>{financeLoading ? 'กำลังโหลดข้อมูล…' : financeUpdatedAt ? `ข้อมูลล่าสุด ${financeUpdatedAt.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}` : 'ยังไม่ได้โหลดข้อมูล'}</span>
+        <button className="btn btn-secondary btn-sm" disabled={financeLoading} onClick={loadFinanceData}>รีเฟรชข้อมูล</button>
+        {financeNotice && <p role="alert">{financeNotice}</p>}
+      </div>
       {/* ── STATS CARDS ── */}
       <div className="stats-row" style={{ marginBottom:24, gridTemplateColumns: 'repeat(4, 1fr)' }}>
         {[
@@ -1161,7 +1156,7 @@ export default function FinancePage() {
               {s.icon}
             </div>
             <div>
-              <div className="stat-value" style={{ color: s.color, fontSize: 24 }}>{s.value}</div>
+              <div className="stat-value" style={{ color: s.color, fontSize: 24 }}>{financeUpdatedAt ? s.value : '—'}</div>
               <div className="stat-label" style={{ fontSize: 12, fontWeight: 700 }}>{s.label}</div>
             </div>
           </div>
@@ -1245,7 +1240,7 @@ export default function FinancePage() {
               </tbody>
             </table>
           </div>
-          {filtered.length===0 && <div style={{ textAlign:'center', padding:'32px', color:'#9e9e9e' }}>ไม่พบคำขอ</div>}
+          {filtered.length===0 && <div style={{ textAlign:'center', padding:'32px', color:'#9e9e9e' }}>{financeUpdatedAt ? 'ไม่พบคำขอ' : financeLoading ? 'กำลังโหลดคำขอ…' : 'ยังโหลดคำขอไม่สำเร็จ'}</div>}
         </div>
       )}
 
@@ -1381,6 +1376,7 @@ export default function FinancePage() {
                                             p_fee_id: fee.id, p_user_ids: [u.id], p_paid: Boolean(val),
                                           });
                                           if (error) throw error;
+                                          financeRevision.current++;
                                           setFees(prev => prev.map(f => f.id === fee.id ? { ...f, payments } : f));
                                         } catch (err) {
                                           console.error('Error updating fee payment:', err);
@@ -1427,7 +1423,7 @@ export default function FinancePage() {
               </div>
             );
           })}
-          {fees.length === 0 && <div style={{ textAlign:'center', padding:'32px', color:'#9e9e9e' }}>ยังไม่มีรายการเก็บเงิน</div>}
+          {fees.length === 0 && <div style={{ textAlign:'center', padding:'32px', color:'#9e9e9e' }}>{financeUpdatedAt ? 'ยังไม่มีรายการเก็บเงิน' : financeLoading ? 'กำลังโหลดรายการ…' : 'ยังโหลดรายการไม่สำเร็จ'}</div>}
         </div>
       )}
 
@@ -1471,6 +1467,7 @@ export default function FinancePage() {
                     p_fee_id: collectModal, p_user_ids: memberIds,
                   });
                   if (error) throw error;
+                  financeRevision.current++;
                   setFees(prev => prev.map(f => f.id === collectModal ? { ...f, payments } : f));
                   setCollectModal(null);
                 } catch (err) {
@@ -1527,6 +1524,7 @@ export default function FinancePage() {
                     .select();
                   if (error) throw error;
                   if (data && data[0]) {
+                    financeRevision.current++;
                     setFees(prev => [data[0], ...prev]);
                     
                     // Send Discord embed notification

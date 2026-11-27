@@ -72,7 +72,7 @@ Deno.serve(async req => {
         admin.from('learning_topic_completions').select('subject_id,topic_id')
           .eq('user_id', user.id).eq('edition_id', EDITION),
         admin.from('learning_certificates')
-          .select('id,subject_id,certificate_number,recipient_name,issued_at,email_status,pdf_path')
+          .select('id,subject_id,certificate_number,recipient_name,issued_at,email_status,pdf_path,learning_delivery_jobs(status,created_at)')
           .eq('user_id', user.id).eq('edition_id', EDITION).order('issued_at', { ascending: false }),
         admin.from('learning_certificate_name_requests').select('id,requested_name,status,created_at,admin_note')
           .eq('user_id', user.id).eq('edition_id', EDITION).order('created_at', { ascending: false }).limit(1),
@@ -94,8 +94,10 @@ Deno.serve(async req => {
         lastPosition: positionResponse(positions?.[0] || null),
         nameChangeRequest: requests?.[0] || null,
         certificatesEnabled: edition.certificates_enabled,
-        certificates: (certificates || []).map(({ pdf_path: _path, ...certificate }) =>
-          ({ ...certificate, downloadable: Boolean(_path) })) });
+        certificates: (certificates || []).map(({ pdf_path: _path, learning_delivery_jobs: jobs, ...certificate }) => {
+          return { ...certificate, downloadable: Boolean(_path), generationStatus: _path ? 'ready' :
+            certificateGenerationStatus(_path, jobs, certificate.email_status) };
+        }) });
     }
     if (action === 'save_profile') {
       const name = String(body.fullName || '').trim().replace(/\s+/g, ' ');
@@ -296,3 +298,4 @@ Deno.serve(async req => {
     return fail('ระบบบทเรียนขัดข้อง กรุณาลองใหม่', 500);
   }
 });
+import { certificateGenerationStatus } from '../_shared/certificateStatus.js';

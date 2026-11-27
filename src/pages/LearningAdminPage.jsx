@@ -1,59 +1,65 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../supabaseClient';
-import { lessonCatalog } from '../learn/lessonCatalog.js';
+import { adminRequest } from '../lib/learningAdminRequest';
 import LearningLearners from './LearningLearners.jsx';
 import './LearningAdminPage.css';
 
-async function adminRequest(body) {
-  const { data, error } = await supabase.functions.invoke('learning-admin', { body });
-  if (error) {
-    const details = await error.context?.json?.().catch(() => null);
-    throw new Error(details?.error || error.message);
-  }
-  if (data?.error) throw new Error(data.error);
-  return data;
-}
-const emptyTopics = subjectId => lessonCatalog.find(item => item.id === subjectId)?.topics.map(
-  (title, index) => ({ id: subjectId + '-t' + (index + 1), title, blocks: [], resources: [] })) || [];
+
 const emptyQuestion = () => ({ prompt: '', options: ['', '', '', ''], correctOption: 0 });
 export default function LearningAdminPage() {
   const { isAdmin } = useAuth();
   const [data, setData] = useState(null);
   const [subjectId, setSubjectId] = useState('civic-1');
-  const [draft, setDraft] = useState(null);
   const [quiz, setQuiz] = useState([]);
   const [tab, setTab] = useState('learners');
   const [note, setNote] = useState({ sourceReference: '', proposedChange: '', rationale: '' });
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [certificateJobs, setCertificateJobs] = useState([]);
+  const [templates, setTemplates] = useState({
+    'civic-1': '', 'civic-2': '', 'civic-3': '', 'civic-4': '', 'civic-5': '', 'civic-all': '',
+  });
+  const [jobsError, setJobsError] = useState('');
+  const loadEpoch = useRef(0);
+  const actionBusy = useRef(false);
 
   const load = useCallback(async () => {
+    const epoch = ++loadEpoch.current;
     const result = await adminRequest({ action: 'list' });
+    if (epoch !== loadEpoch.current) return result;
     setData(result);
-    const subject = result.subjects.find(item => item.subject_id === subjectId);
-    if (subject) setDraft({ title: subject.draft_title, summary: subject.draft_summary,
-      topics: subject.draft_topics?.length ? subject.draft_topics : emptyTopics(subjectId),
-      templateId: subject.template_path || '1qLThJkZy0U4Md50EdAq9eT2Ei-W2OZNJd_U1pnj8qRc' });
+    const nextTemplates = { 'civic-all': result.edition?.course_template_path || '' };
+    for (const item of result.subjects || []) nextTemplates[item.subject_id] = item.template_path || '';
+    setTemplates(nextTemplates);
+    try {
+      const jobs = await adminRequest({ action: 'certificate_jobs' });
+      if (epoch !== loadEpoch.current) return result;
+      setCertificateJobs(jobs.certificates || []); setJobsError('');
+    } catch (error) { if (epoch === loadEpoch.current) setJobsError(error.message); }
     const quizResult = await adminRequest({ action: 'read_quiz', subjectId });
+    if (epoch !== loadEpoch.current) return result;
     setQuiz(quizResult.questions?.length ? quizResult.questions : Array.from({ length: 10 }, emptyQuestion));
     return result;
   }, [subjectId]);
   useEffect(() => {
     if (isAdmin) Promise.resolve().then(load).catch(error => setNotice(error.message));
+    const invalidate = () => { loadEpoch.current++; };
+    return invalidate;
   }, [isAdmin, load]);
 
   if (!isAdmin) return <div className="learning-admin"><h1>เฉพาะผู้ดูแลระบบ</h1></div>;
   const subject = data?.subjects.find(item => item.subject_id === subjectId);
   const notes = data?.notes.filter(item => item.subject_id === subjectId) || [];
   const doAction = async (body, message) => {
+    if (actionBusy.current) return;
+    actionBusy.current = true;
     setBusy(true); setNotice('');
     try {
       await adminRequest(body);
       await load();
       setNotice(message);
     } catch (error) { setNotice(error.message); }
-    finally { setBusy(false); }
+    finally { actionBusy.current = false; setBusy(false); }
   };
   return <div className="learning-admin">
     <header className="learning-admin-head"><div><span>จัดการหลักสูตร</span>
@@ -65,8 +71,8 @@ export default function LearningAdminPage() {
       </div>
     </header>
     {notice && <div className="learning-admin-notice" role="status">{notice}</div>}
-    <div className={'learning-admin-layout' + (tab === 'learners' ? ' learning-admin-layout-wide' : '')}>
-      {tab !== 'learners' && <aside className="learning-admin-subjects" aria-label="รายวิชา">
+    <div className={'learning-admin-layout' + (['learners', 'certificate'].includes(tab) ? ' learning-admin-layout-wide' : '')}>
+      {tab !== 'learners' && tab !== 'certificate' && <aside className="learning-admin-subjects" aria-label="รายวิชา">
         {data?.subjects.map(item => <button key={item.subject_id}
           className={subjectId === item.subject_id ? 'active' : ''}
           onClick={() => setSubjectId(item.subject_id)}>
@@ -126,14 +132,49 @@ export default function LearningAdminPage() {
               ...note }, 'เพิ่มข้อเสนอแล้ว')}>เพิ่มข้อเสนอ</button>
           </div>
         </section>}
-        {tab === 'certificate' && draft && <section><h2>แบบเกียรติบัตรที่เซ็นแล้ว</h2>
+        {tab === 'certificate' && <section><h2>แบบเกียรติบัตรที่เซ็นแล้ว (5 บท + รวม)</h2>
+          <p>ผ่าน 8/10 แต่ละบทรับเกียรติบัตรรายบท และเมื่อผ่าน 8/10 ครบทั้ง 5 บทรับเกียรติบัตรรวมเพิ่มอีก 1 ใบ</p>
           <p>ใช้ Google Slides ที่มีลายเซ็นครบ และมีช่อง <code>{'{{NAME}}'}</code>,
             <code>{'{{ISSUED_DATE}}'}</code></p>
-          <label className="learning-admin-field">ลิงก์หรือ ID ของ Google Slides<input value={draft.templateId}
-            onChange={event => setDraft({ ...draft, templateId: event.target.value })} /></label>
-          <button disabled={busy} onClick={() => doAction({ action: 'set_template', subjectId,
-            templateId: draft.templateId, approved: true }, 'บันทึกแบบใบที่เซ็นแล้ว')}>
-            บันทึกและอนุมัติแบบใบวิชานี้</button>
+          {(data?.subjects || []).map(item => <div key={item.subject_id} className="learning-admin-note">
+            <label className="learning-admin-field">
+              บทที่ {item.ordinal} · {item.title} {item.template_approved ? '✓ อนุมัติแล้ว' : '(รอตั้งค่า)'}
+              <input value={templates[item.subject_id] || ''}
+                placeholder="ลิงก์หรือ ID ของ Google Slides"
+                onChange={event => setTemplates(prev => ({ ...prev, [item.subject_id]: event.target.value }))} />
+            </label>
+            <button disabled={busy || !(templates[item.subject_id] || '').trim()}
+              onClick={() => doAction({ action: 'set_template', subjectId: item.subject_id,
+                templateId: templates[item.subject_id], approved: true },
+                `บันทึกและอนุมัติแบบเกียรติบัตรบทที่ ${item.ordinal} แล้ว`)}>
+              บันทึกและอนุมัติบทที่ {item.ordinal}</button>
+          </div>)}
+          <div className="learning-admin-note">
+            <label className="learning-admin-field">
+              เกียรติบัตรรวม (จบครบทั้ง 5 บท) {data?.edition?.course_template_approved ? '✓ อนุมัติแล้ว' : '(รอตั้งค่า)'}
+              <input value={templates['civic-all'] || ''}
+                placeholder="ลิงก์หรือ ID ของ Google Slides ใบรวม"
+                onChange={event => setTemplates(prev => ({ ...prev, 'civic-all': event.target.value }))} />
+            </label>
+            <button disabled={busy || !(templates['civic-all'] || '').trim()}
+              onClick={() => doAction({ action: 'set_template', subjectId: 'civic-all',
+                templateId: templates['civic-all'], approved: true }, 'บันทึกและอนุมัติแบบเกียรติบัตรรวมแล้ว')}>
+              บันทึกและอนุมัติแบบเกียรติบัตรรวม</button>
+          </div>
+          <div className="learning-admin-note"><h3>สถานะการจัดทำ PDF · 100 ใบล่าสุด</h3>
+            {jobsError && <p role="alert">โหลดสถานะไม่ได้: {jobsError}</p>}
+            <button disabled={busy} onClick={() => doAction({ action: 'certificate_jobs' }, 'อัปเดตสถานะแล้ว')}>รีเฟรชสถานะ</button>
+            {!jobsError && certificateJobs.length === 0 && <p>ยังไม่มีเกียรติบัตร</p>}
+            {certificateJobs.map(item => <div key={item.id} className="learning-admin-note">
+              <strong>{item.recipient_name}</strong>
+              <p>{item.subject_id === 'civic-all' ? 'เกียรติบัตรรวมจบหลักสูตร' :
+                (() => {
+                  const found = data?.subjects.find(s => s.subject_id === item.subject_id);
+                  return found ? `บทที่ ${found.ordinal}: ${found.title}` : item.subject_id || '';
+                })()} · {({ pending: 'รอจัดทำ', processing: 'กำลังจัดทำ', ready: 'พร้อมดาวน์โหลด', failed: 'จัดทำไม่สำเร็จ' })[item.generationStatus]}</p>
+              {item.generationStatus === 'failed' && <button disabled={busy} onClick={() => doAction({ action: 'retry_certificate_pdf', certificateId: item.id }, 'จัดคิวสร้าง PDF ของใบเดิมใหม่แล้ว')}>ลองสร้าง PDF ใหม่</button>}
+            </div>)}
+          </div>
           <div className="learning-admin-note"><h3>คำขอเปลี่ยนชื่อบนเกียรติบัตร</h3>
             {(data?.nameRequests || []).length === 0 && <p>ไม่มีคำขอที่รอพิจารณา</p>}
             {(data?.nameRequests || []).map(item => <div key={item.id} className="learning-admin-note">
@@ -156,7 +197,8 @@ export default function LearningAdminPage() {
       <button disabled={busy || !data?.subjects.every(item => item.content_reviewed && item.quiz_reviewed)}
         onClick={() => doAction({ action: 'publish' }, 'เผยแพร่หลักสูตรครบ 5 วิชาแล้ว')}>เผยแพร่หลักสูตร</button>
       <button disabled={busy || !data?.edition.published ||
-        !data?.subjects.every(item => item.template_approved)}
+        !data?.subjects.every(item => item.template_approved) ||
+        !data?.edition.course_template_approved}
         onClick={() => doAction({ action: 'activate_certificates' },
           'เปิดออกเกียรติบัตรและจัดคิวผู้สอบผ่านแล้ว')}>เปิดออกเกียรติบัตร</button>
     </footer>

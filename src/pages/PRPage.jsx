@@ -86,6 +86,7 @@ export default function PRPage() {
 
   useEffect(() => {
     const interval = setInterval(() => {
+      if (document.hidden) return;
       const d = new Date();
       if (d.getDate() !== nowDate.getDate() || d.getMonth() !== nowDate.getMonth() || d.getFullYear() !== nowDate.getFullYear()) {
         setNowDate(d);

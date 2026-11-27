@@ -1,3 +1,5 @@
+import { thaiToday } from '../lib/eventAttendance';
+import '../components/eventAttendance.css';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CheckCircle, AlertTriangle, MapPin } from 'lucide-react';
@@ -9,10 +11,10 @@ import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 import { resolveEffectiveSubstitute } from '../lib/dutyHelper';
 
 const TH_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
-const toGregorianStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const toGregorianStr = thaiToday;
 
 export default function CheckInPage() {
-  const { user, checkInState, setCheckInState } = useAuth();
+  const { eventContext, eventContextReady, eventContextError, user, checkInState, setCheckInState } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(0); // 0=start, 1=locating, 2=camera
   const [photoUrl, setPhotoUrl] = useState(null);
@@ -29,8 +31,12 @@ export default function CheckInPage() {
   const [submitting, setSubmitting] = useState(false);
   const isSubmitting = useRef(false);
   const [currentDate, setCurrentDate] = useState(() => new Date());
-  const [isExemptToday, setIsExemptToday] = useState(false);
+  const [legacyExemptToday, setIsExemptToday] = useState(false);
   const [todayEventTitle, setTodayEventTitle] = useState('');
+
+  const isExemptToday = eventContext ? eventContext.mode === 'exempt' && eventContext.system_active : legacyExemptToday;
+  const isEventCheck = eventContext?.mode === 'check';
+  const gps = useRef(null);
 
   // GPS Settings State
   const [schoolCenterLat, setSchoolCenterLat] = useState('16.713228');
@@ -56,7 +62,7 @@ export default function CheckInPage() {
           const myTodayEvents = eventsData.filter(ev => {
             const start = ev.date;
             const end = ev.end_date || ev.date;
-            return ev.location_category === 'external' && myEventIds.includes(ev.id) && todayStr >= start && todayStr <= end;
+            return !ev.attendance_by_day && ev.location_category === 'external' && myEventIds.includes(ev.id) && todayStr >= start && todayStr <= end;
           });
 
           if (myTodayEvents.length > 0) {
@@ -129,6 +135,7 @@ export default function CheckInPage() {
 
     // 10-second interval to check/update date
     const timer = setInterval(() => {
+      if (document.hidden) return;
       setCurrentDate(new Date());
     }, 10000);
 
@@ -167,9 +174,9 @@ export default function CheckInPage() {
       supabase.removeChannel(settingsChannel);
       supabase.removeChannel(schedulesChannel);
     };
-  }, []);
+  }, [user]);
 
-  const todayStr = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + String(currentDate.getDate()).padStart(2, '0');
+  const todayStr = thaiToday(currentDate);
   
   let todayDayName = TH_DAYS[currentDate.getDay()];
   const subMatch = substituteDates.find(s => (typeof s === 'string' ? s : s.date) === todayStr);
@@ -178,7 +185,7 @@ export default function CheckInPage() {
   }
 
   const isBeforeStart = startDate && todayStr < startDate;
-  const isEnabledToday = enabledDays.includes(todayDayName) && !disabledDates.includes(todayStr) && !isBeforeStart;
+  const isEnabledToday = isEventCheck || (enabledDays.includes(todayDayName) && !disabledDates.includes(todayStr) && !isBeforeStart);
 
   const getDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3;
@@ -192,10 +199,14 @@ export default function CheckInPage() {
 
   const handleStartCheckIn = () => {
     setLocError(null);
+    gps.current = null;
+    if (!eventContextReady || eventContextError) { alert('ยังอ่านกติกาเช็คชื่อไม่สำเร็จ กรุณารีเฟรช'); return; }
+    if (isEventCheck && !eventContext.can_checkin) { alert('ยังไม่ถึงเวลา หรือหมดเวลาเช็คชื่อกิจกรรมแล้ว'); return; }
+    if (isEventCheck && !eventContext.requires_gps) { setStep(2); setDistanceInfo('กิจกรรมนอกสถานที่ ไม่บังคับพิกัด GPS'); return; }
     setStep(1);
     
     if (!navigator.geolocation) {
-      if (import.meta.env.DEV) {
+      if (import.meta.env.DEV && !isEventCheck) {
         setDistanceInfo("เบราว์เซอร์ไม่รองรับ GPS (จำลองโหมด Dev)");
         setTimeout(() => setStep(2), 1200);
       } else {
@@ -234,6 +245,7 @@ export default function CheckInPage() {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude, accuracy } = pos.coords;
+          gps.current = { latitude, longitude };
           
           const sLat = parseFloat(schoolCenterLat) || 16.713228;
           const sLng = parseFloat(schoolCenterLng) || 98.573082;
@@ -250,7 +262,7 @@ export default function CheckInPage() {
             shortestDist = centerDist;
             allowedRadius = sRad;
             checkPointName = 'ลานเสาธง/บริเวณโรงเรียน';
-          } else if (userAssignedGate) {
+          } else if (userAssignedGate && !isEventCheck) {
             let gateCoord = null;
             let gateName = '';
             if (userAssignedGate === 'gate1') {
@@ -283,7 +295,7 @@ export default function CheckInPage() {
             }
           }
 
-          if (import.meta.env.DEV) {
+          if (import.meta.env.DEV && !isEventCheck) {
             setDistanceInfo(`ระยะห่างจาก${checkPointName}: ${Math.round(shortestDist)} เมตร (จำลองโหมด Dev)`);
             setLocError(null);
             setTimeout(() => setStep(2), 1200);
@@ -308,7 +320,7 @@ export default function CheckInPage() {
             return;
           }
 
-          if (import.meta.env.DEV) {
+          if (import.meta.env.DEV && !isEventCheck) {
             setDistanceInfo("ดึงพิกัดไม่ได้ (จำลองโหมด Dev)");
             setLocError(null);
             setTimeout(() => setStep(2), 1200);
@@ -391,6 +403,7 @@ export default function CheckInPage() {
 
         const { data: checkinResult, error: checkinError } = await supabase.rpc('record_my_checkin', {
           p_photo: finalPhotoUrl,
+          ...(isEventCheck ? { p_lat: gps.current?.latitude ?? null, p_lng: gps.current?.longitude ?? null } : {}),
         });
         if (checkinError) throw checkinError;
 
@@ -401,18 +414,18 @@ export default function CheckInPage() {
         timeStr = checkinResult?.time || timeStr;
         const minutesLate = Number(checkinResult?.minutes_late || 0);
         const finalAmount = Number(checkinResult?.amount || 0);
-        const dateStr = checkinResult?.date || toGregorianStr(now);
 
         // Notify Discord
-        let embedTitle = `🟢 [เช็คชื่อเข้าแถว] ${user.nickname} เช็คชื่อสำเร็จ`;
+        const checkinLabel = checkinResult?.event_title ? `กิจกรรม ${checkinResult.event_title}` : 'เช็คชื่อเข้าแถว';
+        let embedTitle = `🟢 [${checkinLabel}] ${user.nickname} เช็คชื่อสำเร็จ`;
         let embedDesc = `เมื่อเวลา **${timeStr}** ของวันที่ **${toGregorianStr(now)}**`;
         let embedColor = 3066993; // Green
         const fields = [];
 
         if (status === 'late') {
           embedColor = 15158332; // Red
-          embedTitle = `🔴 [เช็คชื่อเข้าแถว] ${user.nickname} มาสาย!`;
-          embedDesc += `\n⚠️ เช็คชื่อสายไป **${minutesLate}** นาที (เกณฑ์ยืนเวร/สภาคือ 07:${limitM.toString().padStart(2,'0')} น.)`;
+          embedTitle = `🔴 [${checkinLabel}] ${user.nickname} มาสาย!`;
+          embedDesc += `\n⚠️ เช็คชื่อสายไป **${minutesLate}** นาที (เกณฑ์ ${checkinResult?.late_at || `07:${limitM.toString().padStart(2,'0')}`} น.)`;
           fields.push({
             name: "ค่าปรับอัตโนมัติ",
             value: `💸 โดนปรับ **${finalAmount}** บาท (บันทึกเข้าระบบ)`,
@@ -451,7 +464,10 @@ export default function CheckInPage() {
     );
   }
 
-  if (!checkInActive) {
+  if (!eventContextReady) return <div className="event-context-banner" role="status">กำลังอ่านกติกาเช็คชื่อของคุณ…</div>;
+  if (eventContextError) return <div role="alert" className="event-context-banner">โหลดกติกาไม่สำเร็จ: {eventContextError} กรุณารีเฟรชก่อนเช็คชื่อ</div>;
+  if (isEventCheck && !checkInState && eventContext.system_active && !eventContext.can_checkin) return <div className="event-context-banner"><h2>{eventContext.title}</h2><p>เปิด {eventContext.opens_at} · เริ่มสายหลัง {eventContext.late_at} · ปิด {eventContext.closes_at}</p><p>{eventContext.status === 'missing' ? 'หมดเวลาเช็คชื่อแล้ว สถานะขาดให้ฝ่ายปกครองพิจารณา' : 'ยังไม่ถึงเวลาเปิดรับเช็คชื่อ'}</p></div>;
+  if (!checkInActive || eventContext?.system_active === false) {
     return (
       <div style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
         <AlertTriangle size={64} color="#e53935" style={{ margin: '0 auto' }} />
@@ -475,13 +491,13 @@ export default function CheckInPage() {
       <div style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
         <CheckCircle size={64} color="#00bcd4" style={{ margin: '0 auto' }} />
         <h2 style={{ fontSize: 22, fontWeight: 700, color: '#00838f', marginTop: 16 }}>
-          วันนี้คุณทำกิจกรรมนอกสถานที่ 🎒
+          วันนี้คุณได้รับยกเว้นเช็คชื่อจากกิจกรรม
         </h2>
         <div style={{ fontSize: 15, fontWeight: 600, color: '#00bcd4', marginTop: 8 }}>
-          {todayEventTitle || 'ค่ายสิ่งแวดล้อม'}
+          {eventContext?.title || todayEventTitle || 'กิจกรรมที่ได้รับยกเว้น'}
         </div>
         <div style={{ fontSize: 14, color: '#757575', marginTop: 8 }}>
-          ระบบได้บันทึกสถานะว่า "ทำกิจกรรม" เรียบร้อยแล้ว คุณไม่จำเป็นต้องเช็คชื่อและไม่ถูกปรับเงินใดๆ ครับ
+          คุณได้รับยกเว้นเช็คชื่อประจำวันจากกิจกรรมนี้ ไม่ใช่การยกเว้นรายงานเวรอื่น
         </div>
         <div style={{ marginTop: 32 }}>
           <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
@@ -511,7 +527,7 @@ export default function CheckInPage() {
       titleColor = '#616161';
     } else if (checkInState.status === 'activity') {
       icon = <CheckCircle size={64} color="#00bcd4" style={{ margin: '0 auto' }} />;
-      titleText = 'วันนี้คุณทำกิจกรรมนอกสถานที่ 🎒';
+      titleText = 'วันนี้คุณได้รับยกเว้นเช็คชื่อจากกิจกรรม';
       titleColor = '#00838f';
     } else if (checkInState.status === 'not_required') {
       icon = <CheckCircle size={64} color="#455a64" style={{ margin: '0 auto' }} />;
@@ -620,7 +636,7 @@ export default function CheckInPage() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
               <MapPin size={48} color="#00bcd4" />
               <div style={{ fontSize: 14, color: '#616161' }}>
-                ระบบจะทำการตรวจสอบพิกัด GPS ว่าคุณอยู่ในบริเวณโรงเรียนหรือไม่ (รัศมี {schoolRadius} ม.) จากนั้นให้ถ่ายภาพเซลฟี่ด้วยกล้องสดเพื่อยืนยันตัวตน
+                {isEventCheck ? `${eventContext.title} · เปิด ${eventContext.opens_at} · เริ่มสาย ${eventContext.late_at} · ปิด ${eventContext.closes_at} · ${eventContext.requires_gps ? 'ตรวจ GPS ในโรงเรียน' : 'ไม่บังคับ GPS'}` : 'ระบบจะทำการตรวจสอบพิกัด GPS ว่าคุณอยู่ในบริเวณโรงเรียนหรือไม่'} (รัศมี {schoolRadius} ม.) จากนั้นให้ถ่ายภาพเซลฟี่ด้วยกล้องสดเพื่อยืนยันตัวตน
               </div>
               <button className="btn btn-primary" onClick={handleStartCheckIn} style={{ marginTop: 16, width: '100%', padding: '12px 0', fontSize: 16 }}>
                 เริ่มเช็คชื่อ

@@ -1,5 +1,7 @@
 {
   "rewrites": [
+    { "source": "/apply/:path*", "destination": "/apply/index.html" },
+    { "source": "/portfolios/:path*", "destination": "/portfolios/index.html" },
     { "source": "/admin/:path*", "destination": "/admin/index.html" },
     { "source": "/learn/:path*", "destination": "/learn/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, getAdminClient, jsonResponse } from '../_shared/auth.ts';
+import { certificateGenerationStatus } from '../_shared/certificateStatus.js';
 
 const EDITION = 'civic-dna-2026';
 const subjectPattern = /^civic-[1-5]$/;
@@ -63,6 +64,22 @@ Deno.serve(async req => {
     const body = await req.json();
     const action = String(body.action || '');
     const subjectId = String(body.subjectId || '');
+    if (action === 'certificate_jobs') {
+      const { data, error } = await admin.from('learning_certificates')
+        .select('id,subject_id,recipient_name,issued_at,pdf_path,email_status,learning_delivery_jobs(status,created_at)')
+        .eq('edition_id', EDITION).order('issued_at', { ascending: false }).limit(100);
+      if (error) throw error;
+      return jsonResponse({ certificates: (data || []).map(({ pdf_path, learning_delivery_jobs: jobs, ...certificate }) => {
+        return { ...certificate, generationStatus: certificateGenerationStatus(pdf_path, jobs, certificate.email_status) };
+      }) });
+    }
+    if (action === 'retry_certificate_pdf') {
+      const id = String(body.certificateId || '');
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return fail('รหัสใบไม่ถูกต้อง');
+      const { data, error } = await admin.rpc('retry_learning_certificate_pdf', { p_certificate_id: id });
+      if (error) return fail(error.message, 409);
+      return jsonResponse(data);
+    }
     if (action === 'learner_overview') {
       const { data, error } = await admin.rpc('learning_admin_summary');
       if (error) throw error;
@@ -146,7 +163,7 @@ Deno.serve(async req => {
         { data: subjects, error: subjectError },
         { data: notes, error: noteError },
         { data: nameRequests, error: nameError }] = await Promise.all([
-        admin.from('learning_editions').select('published,certificates_enabled')
+        admin.from('learning_editions').select('published,certificates_enabled,course_template_path,course_template_approved')
           .eq('id', EDITION).single(),
         admin.from('learning_subject_editions').select('*')
           .eq('edition_id', EDITION).order('ordinal'),
@@ -175,7 +192,9 @@ Deno.serve(async req => {
       }));
       return jsonResponse({ edition, subjects, notes, nameRequests: detailedRequests, quizCounts });
     }
-    if (!subjectPattern.test(subjectId) && !['publish', 'activate_certificates'].includes(action)) {
+    if (!subjectPattern.test(subjectId) &&
+      !(action === 'set_template' && subjectId === 'civic-all') &&
+      !['publish', 'activate_certificates'].includes(action)) {
       return fail('ไม่พบวิชา');
     }
     if (action === 'read_quiz') {
@@ -267,10 +286,17 @@ Deno.serve(async req => {
       const raw = String(body.templateId || '').trim();
       const id = raw.match(/\/presentation\/d\/([\w-]+)/)?.[1] || raw;
       if (!driveIdPattern.test(id)) return fail('ระบุลิงก์หรือ ID ของ Google Slides แบบใบที่เซ็นแล้ว');
-      const { error } = await admin.from('learning_subject_editions').update({
-        template_path: id, template_approved: body.approved === true,
-      }).eq('edition_id', EDITION).eq('subject_id', subjectId);
-      if (error) throw error;
+      if (subjectId === 'civic-all') {
+        const { error } = await admin.from('learning_editions').update({
+          course_template_path: id, course_template_approved: body.approved === true,
+        }).eq('id', EDITION);
+        if (error) throw error;
+      } else {
+        const { error } = await admin.from('learning_subject_editions').update({
+          template_path: id, template_approved: body.approved === true,
+        }).eq('edition_id', EDITION).eq('subject_id', subjectId);
+        if (error) throw error;
+      }
       return jsonResponse({ saved: true });
     }
     if (action === 'publish') {

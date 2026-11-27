@@ -1,3 +1,4 @@
+import { acceptUploadFile } from '../lib/uploadLimits';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Banknote, AlertTriangle, Eye, X, Check, Camera, Search } from 'lucide-react';
@@ -131,6 +132,7 @@ export default function MyFinesPage() {
     // Fee rows are intentionally hidden from members because payments are stored
     // in a shared JSON object; poll the owner-only RPC for approval updates.
     const refreshTimer = setInterval(() => {
+      if (document.hidden) return;
       loadMyFines(false);
       loadMyFees();
     }, 15000);
@@ -1159,7 +1161,7 @@ export default function MyFinesPage() {
                       <span style={{ fontSize: 11, fontWeight: 400, color: '#006064cc' }}>รองรับไฟล์รูปภาพสลิปทุกประเภท</span>
                       <input type="file" accept="image/*" onChange={e => {
                         const file = e.target.files[0];
-                        if (!file) return;
+                        if (!file || !acceptUploadFile(file)) return;
                         const reader = new FileReader();
                         reader.onload = ev => {
                           const img = new Image();
@@ -1275,7 +1277,7 @@ export default function MyFinesPage() {
                       <span style={{ fontSize: 11, fontWeight: 400, color: '#006064cc' }}>รองรับไฟล์รูปภาพสลิปทุกประเภท</span>
                       <input type="file" accept="image/*" onChange={e => {
                         const file = e.target.files[0];
-                        if (!file) return;
+                        if (!file || !acceptUploadFile(file)) return;
                         const reader = new FileReader();
                         reader.onload = ev => {
                           const img = new Image();
@@ -1410,7 +1412,7 @@ export default function MyFinesPage() {
                   <span style={{ fontSize: 11.5, fontWeight: 400, opacity: 0.8 }}>สแน็ปสลิปที่โอนยอดรวม {fines.filter(f => selectedFineIds.includes(f.id)).reduce((sum, f) => sum + f.amount, 0)} บาท</span>
                   <input type="file" accept="image/*" onChange={e => {
                     const file = e.target.files[0];
-                    if (!file) return;
+                    if (!file || !acceptUploadFile(file)) return;
                     const reader = new FileReader();
                     reader.onload = ev => {
                       const img = new Image();

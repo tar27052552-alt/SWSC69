@@ -1,3 +1,4 @@
+import { acceptUploadFile } from '../lib/uploadLimits';
 import { canManageDepartment } from '../lib/councilPermissions';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -81,7 +82,7 @@ export default function SecretaryPage() {
 
   const handleMeetingFileChange = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || !acceptUploadFile(file)) return;
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -160,7 +161,7 @@ export default function SecretaryPage() {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || !acceptUploadFile(file)) return;
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -342,7 +343,7 @@ export default function SecretaryPage() {
 
   const handleEditFileChange = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || !acceptUploadFile(file)) return;
 
     const reader = new FileReader();
     reader.onload = (event) => {

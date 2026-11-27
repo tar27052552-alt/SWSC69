@@ -1,3 +1,4 @@
+import '../components/eventAttendance.css';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { NavLink } from 'react-router-dom';
@@ -66,7 +67,7 @@ function formatRelativeTime(dateStr) {
 }
 
 export default function Dashboard() {
-  const { user, isAdmin, checkInState, cleanDutyState, greetingDutyState } = useAuth();
+  const { eventContext, eventContextError, user, isAdmin, checkInState, cleanDutyState, greetingDutyState } = useAuth();
   const isDiscipline = user?.deptId === 2 || user?.dept_id === 2;
   
   const [events, setEvents] = useState([]);
@@ -195,7 +196,7 @@ export default function Dashboard() {
           .filter(ev => {
             const start = ev.date;
             const end = ev.end_date || ev.date;
-            return (ev.check_attendance || ev.location_category === 'external') && dateStr >= start && dateStr <= end;
+            return (!ev.attendance_by_day && (ev.check_attendance || ev.location_category === 'external')) && dateStr >= start && dateStr <= end;
           })
           .map(ev => ev.id);
         
@@ -354,7 +355,7 @@ export default function Dashboard() {
           .filter(ev => {
             const start = ev.date;
             const end = ev.end_date || ev.date;
-            return (ev.check_attendance || ev.location_category === 'external') && dateStr >= start && dateStr <= end;
+            return (!ev.attendance_by_day && (ev.check_attendance || ev.location_category === 'external')) && dateStr >= start && dateStr <= end;
           })
           .map(ev => ev.id);
         
@@ -571,7 +572,7 @@ export default function Dashboard() {
             if (!tUser.nickname) return;
 
             const myEventIds = (partData || []).filter(p => String(p.user_id) === String(tUser.id)).map(p => p.event_id);
-            const myExtEvents = (eventsData || []).filter(ev => (ev.check_attendance || ev.location_category === 'external') && myEventIds.includes(ev.id));
+            const myExtEvents = (eventsData || []).filter(ev => (!ev.attendance_by_day && (ev.check_attendance || ev.location_category === 'external')) && myEventIds.includes(ev.id));
 
             for (let i = 0; i < 14; i++) {
               const d = new Date(today.getTime() + i * 24 * 60 * 60 * 1000);
@@ -773,8 +774,9 @@ export default function Dashboard() {
 
 
 
+      {eventContext && eventContext.mode !== 'regular' && <div className="event-context-banner"><strong>{eventContext.title}</strong><p>{eventContext.mode === 'exempt' ? 'วันนี้ได้รับยกเว้นเช็คชื่อจากกิจกรรม' : `เช็คชื่อกิจกรรม · เปิด ${eventContext.opens_at} · เริ่มสาย ${eventContext.late_at} · ปิด ${eventContext.closes_at}`}</p></div>}{eventContextError && <p role="alert">โหลดกติกาเช็คชื่อไม่สำเร็จ กรุณารีเฟรช</p>}
       {/* Check-in Banner */}
-      {!checkInActive ? (
+      {(!checkInActive || eventContext?.system_active === false) ? (
         <div style={{ background: '#eceff1', borderRadius: 8, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, border: '1px solid #cfd8dc' }}>
           <MapPin size={24} color="#455a64" />
           <div>
@@ -790,9 +792,9 @@ export default function Dashboard() {
         <div style={{ background: 'linear-gradient(to right, #e0f7fa, #b2ebf2)', borderRadius: 8, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #80deea' }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: '#00838f', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <MapPin size={18} /> เช็คชื่อมาโรงเรียน
+              <MapPin size={18} /> {eventContext?.mode === 'check' ? 'เช็คชื่อกิจกรรม' : 'เช็คชื่อมาโรงเรียน'}
             </div>
-            <div style={{ fontSize: 12, color: '#006064', marginTop: 4 }}>กรุณาเช็คชื่อก่อนเวลา 07:35 น. (เวรยืนไหว้ 07:00 น.)</div>
+            <div style={{ fontSize: 12, color: '#006064', marginTop: 4 }}>{eventContext?.mode === 'check' ? `เปิด ${eventContext.opens_at} · เริ่มสายหลัง ${eventContext.late_at} · ปิด ${eventContext.closes_at}` : 'กรุณาเช็คชื่อก่อนเวลา 07:35 น. (เวรยืนไหว้ 07:00 น.)'}</div>
           </div>
           <NavLink to="/checkin" className="btn btn-primary" style={{ background: '#00838f', border: 'none', textDecoration: 'none' }}>
             📍 เช็คชื่อตอนนี้
@@ -812,6 +814,9 @@ export default function Dashboard() {
             textCol = '#2e7d32';
             icon = <CheckCircle size={24} color="#2e7d32" />;
             statusText = 'บันทึกการเช็คชื่อแล้ว (มาปกติ)';
+          } else if (checkInState.status === 'activity') {
+            bannerBg = '#e0f7fa'; borderCol = '#b2ebf2'; textCol = '#00838f';
+            icon = <CheckCircle size={24} color="#00838f" />; statusText = 'ได้รับยกเว้นเช็คชื่อจากกิจกรรม';
           } else if (checkInState.status === 'leave') {
             bannerBg = '#fff8e1';
             borderCol = '#ffe082';

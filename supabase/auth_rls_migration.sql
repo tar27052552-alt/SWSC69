@@ -458,8 +458,10 @@ BEGIN
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='web_news') THEN
     CREATE POLICY web_news_read ON public.web_news FOR SELECT TO anon, authenticated USING (true);
     CREATE POLICY web_news_manage ON public.web_news FOR ALL TO authenticated
-      USING (private.is_council_leader() OR private.can_manage_department(5))
-      WITH CHECK (private.is_council_leader() OR private.can_manage_department(5));
+      USING ((SELECT private.is_council_leader()) OR (SELECT private.can_manage_department(5))
+        OR ((SELECT private.can_manage_department(9)) AND category NOT IN ('ประกาศ','ประกาศ_ซ่อน')))
+      WITH CHECK ((SELECT private.is_council_leader()) OR (SELECT private.can_manage_department(5))
+        OR ((SELECT private.can_manage_department(9)) AND category NOT IN ('ประกาศ','ประกาศ_ซ่อน')));
   END IF;
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='web_policies') THEN
     CREATE POLICY web_policies_read ON public.web_policies FOR SELECT TO anon, authenticated USING (true);

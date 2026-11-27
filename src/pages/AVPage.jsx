@@ -1,3 +1,4 @@
+import { acceptUploadFile, assertUploadSize } from '../lib/uploadLimits';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, X, Save, Edit2, Search, Trash2, Camera } from 'lucide-react';
@@ -223,6 +224,7 @@ export default function AVPage() {
     setSubmittingObec(true);
     try {
       const toBase64 = (file) => new Promise((resolve, reject) => {
+      assertUploadSize(file);
         if (!file.type.startsWith('image/')) {
           const reader = new FileReader();
           reader.readAsDataURL(file);
@@ -393,6 +395,7 @@ export default function AVPage() {
     setSubmittingNews(true);
     try {
       const toBase64 = (file) => new Promise((resolve, reject) => {
+      assertUploadSize(file);
         if (!file.type.startsWith('image/')) {
           const reader = new FileReader();
           reader.readAsDataURL(file);
@@ -1637,7 +1640,7 @@ export default function AVPage() {
 
       {/* PR News Form & Management for AV */}
       {tab === 'news' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: 20, marginBottom: 20 }}>
+        <div className="council-form-columns">
           {/* Form */}
           <div style={{ background: '#ffffff', border: '1px solid var(--border)', borderRadius: 12, padding: 25, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, color: 'var(--purple-700)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1703,7 +1706,7 @@ export default function AVPage() {
                   className="input-field"
                   onChange={e => {
                     const file = e.target.files[0];
-                    if (file) {
+                    if (file && acceptUploadFile(file)) {
                       const reader = new FileReader();
                       reader.onloadend = () => {
                         setNewsForm(p => ({ ...p, imagePreview: reader.result, imageFile: file }));
@@ -1755,6 +1758,7 @@ export default function AVPage() {
                   onChange={e => {
                     try {
                       const files = Array.from(e.target.files);
+                    if (!files.every(acceptUploadFile)) { e.target.value = ""; return; }
                       const newImages = files.map(file => ({
                         file,
                         preview: URL.createObjectURL(file)
@@ -1889,7 +1893,7 @@ export default function AVPage() {
 
       {/* Obec Line Form & Management for AV */}
       {tab === 'obec' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: 20, marginBottom: 20 }}>
+        <div className="council-form-columns">
           {/* Form */}
           <div style={{ background: '#ffffff', border: '1px solid var(--border)', borderRadius: 12, padding: 25, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, color: 'var(--purple-700)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1908,6 +1912,7 @@ export default function AVPage() {
                   className="input-field"
                   onChange={e => {
                     const files = Array.from(e.target.files);
+                    if (!files.every(acceptUploadFile)) { e.target.value = ""; return; }
                     if (files.length > 0) {
                       const newPreviews = [];
                       let loadedCount = 0;
@@ -2386,9 +2391,9 @@ export default function AVPage() {
                     style={{ display: 'none' }}
                     onChange={(e) => {
                       const file = e.target.files[0];
-                      if (file) {
-                        if (file.size > 15 * 1024 * 1024) {
-                          alert("ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 15MB) กรุณาใช้ไฟล์วิดีโอที่สั้นลง หรือนำลิงก์ Drive มาใส่ในช่องด้านล่างแทน");
+                      if (file && acceptUploadFile(file)) {
+                        if (file.size > 25 * 1024 * 1024) {
+                          alert("ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 25MB) กรุณาใช้ไฟล์วิดีโอที่สั้นลง หรือนำลิงก์ Drive มาใส่ในช่องด้านล่างแทน");
                           return;
                         }
                         const reader = new FileReader();
@@ -2524,9 +2529,9 @@ export default function AVPage() {
                   style={{ display: 'none' }}
                   onChange={(e) => {
                     const file = e.target.files[0];
-                    if (file) {
-                      if (file.size > 15 * 1024 * 1024) {
-                        alert("ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 15MB) กรุณาใช้ไฟล์วิดีโอที่สั้นลง หรือนำลิงก์ Canva / Drive มาใส่แทน");
+                    if (file && acceptUploadFile(file)) {
+                      if (file.size > 25 * 1024 * 1024) {
+                        alert("ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 25MB) กรุณาใช้ไฟล์วิดีโอที่สั้นลง หรือนำลิงก์ Canva / Drive มาใส่แทน");
                         return;
                       }
                       const reader = new FileReader();

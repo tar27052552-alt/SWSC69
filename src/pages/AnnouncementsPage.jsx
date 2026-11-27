@@ -1,3 +1,4 @@
+import { assertUploadSize } from '../lib/uploadLimits';
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -49,6 +50,7 @@ export default function AnnouncementsPage() {
   }, []);
 
   const toBase64 = (file) => new Promise((resolve, reject) => {
+      assertUploadSize(file);
     if (!file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.readAsDataURL(file);

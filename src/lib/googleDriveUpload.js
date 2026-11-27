@@ -1,33 +1,43 @@
 import { supabase } from '../supabaseClient';
 import { normalizeUploadFileName } from './uploadFileName';
+import { assertBase64UploadSize } from './uploadLimits';
+import { fetchWithDeadline } from './requestDeadline';
 
 const gasUrl = import.meta.env.VITE_GAS_URL;
 
+const pendingGasRequests = new Map();
 export async function callGAS(action, payload) {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  if (!session?.access_token) throw new Error('กรุณาเข้าสู่ระบบก่อนใช้งานส่วนนี้');
+  const key = JSON.stringify([session.user.id, action, payload]);
+  if (pendingGasRequests.has(key)) return pendingGasRequests.get(key);
+  const request = performGAS(action, payload, session).finally(() => pendingGasRequests.delete(key));
+  pendingGasRequests.set(key, request);
+  return request;
+}
+async function performGAS(action, payload, session) {
   if (!gasUrl) {
     console.warn("⚠️ [GAS Helper] Missing VITE_GAS_URL in your environment!");
-    alert("ยังไม่ได้ตั้งค่า VITE_GAS_URL สำหรับเชื่อมต่อ Google Apps Script");
     throw new Error("Missing VITE_GAS_URL environment variable.");
   }
   
   try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
-    if (!session?.access_token) throw new Error('กรุณาเข้าสู่ระบบก่อนใช้งานส่วนนี้');
 
-    const response = await fetch(gasUrl, {
+    const readOnly = ['read_sheet', 'read_public_documents', 'search_certificates'].includes(action);
+    const { response, text } = await fetchWithDeadline(gasUrl, {
       method: "POST",
       headers: {
         "Content-Type": "text/plain;charset=utf-8",
       },
       body: JSON.stringify({ action, ...payload, accessToken: session.access_token }),
-    });
+    }, action === 'upload_file' ? 90000 : 30000, !readOnly);
     
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
     }
     
-    const result = await response.json();
+    const result = JSON.parse(text);
     if (!result.success) {
       throw new Error(result.error || "Unknown Apps Script Backend Error");
     }
@@ -35,10 +45,6 @@ export async function callGAS(action, payload) {
     return result.data;
   } catch (error) {
     console.error("❌ Google Apps Script Request failed:", error);
-    // Don't trigger blocking alert popups for background read calls
-    if (!["read_sheet", "send_discord_message"].includes(action)) {
-      alert(`เกิดข้อผิดพลาดในการเชื่อมต่อ Google Apps Script: ${error.message}\n(คำแนะนำ: โปรดตรวจสอบว่าได้ตั้งค่า "Who has access" เป็น "Anyone" ใน Google Apps Script แล้วหรือยัง)`);
-    }
     throw error;
   }
 }
@@ -52,6 +58,7 @@ export async function callGAS(action, payload) {
  * @returns {Promise<{fileId: string, url: string, fileName: string}>} ข้อมูลไฟล์ที่อัปโหลดและลิงก์ตรง
  */
 export async function uploadFileToDrive(fileBase64, fileName, folderCategory, subFolderName = null) {
+  assertBase64UploadSize(fileBase64);
   return callGAS("upload_file", { fileBase64, fileName: normalizeUploadFileName(fileName), folderCategory, subFolderName });
 }
 

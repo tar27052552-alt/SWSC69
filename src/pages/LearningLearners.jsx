@@ -1,15 +1,7 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { adminRequest } from '../lib/learningAdminRequest';
 
-async function adminRequest(body) {
-  const { data, error } = await supabase.functions.invoke('learning-admin', { body });
-  if (error) {
-    const details = await error.context?.json?.().catch(() => null);
-    throw new Error(details?.error || error.message);
-  }
-  if (data?.error) throw new Error(data.error);
-  return data;
-}
+
 
 const dateText = value => value ? new Date(value).toLocaleString('th-TH', {
   dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok',
@@ -43,8 +35,8 @@ export default function LearningLearners() {
   }, [search]);
   useEffect(() => {
     let active = true;
-    setSummaryLoading(true); setSummaryError('');
-    adminRequest({ action: 'learner_overview' }).then(result => {
+    Promise.resolve().then(() => { if (!active) return; setSummaryLoading(true); setSummaryError(''); return adminRequest({ action: 'learner_overview' }); }).then(result => {
+      if (!active) return;
       if (!result.summary) throw new Error('ไม่พบข้อมูลสถิติ');
       if (active) { setSummary(result.summary); setSummaryUpdatedAt(new Date().toISOString()); }
     }).catch(cause => { if (active) { setSummary(null); setSummaryUpdatedAt(null); setSummaryError(cause.message); } })
@@ -53,9 +45,7 @@ export default function LearningLearners() {
   }, [refreshKey]);
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError('');
-    adminRequest({ action: 'learner_roster', search: query, filterSubject: subject, status, page })
+    Promise.resolve().then(() => { if (!active) return; setLoading(true); setError(''); return adminRequest({ action: 'learner_roster', search: query, filterSubject: subject, status, page }); })
       .then(result => { if (active) setRoster(result.roster || { rows: [], total: 0 }); })
       .catch(cause => { if (active) setError(cause.message); })
       .finally(() => { if (active) setLoading(false); });

@@ -1,3 +1,4 @@
+import { acceptUploadFile } from '../lib/uploadLimits';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Edit2, X, Save } from 'lucide-react';
@@ -165,7 +166,7 @@ export default function MyStats() {
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
-    if (file) {
+    if (file && acceptUploadFile(file)) {
       const reader = new FileReader();
       reader.onload = (ev) => {
         const img = new Image();

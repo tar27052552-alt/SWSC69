@@ -5,6 +5,7 @@ import MediaLoading from './MediaLoading.jsx';
 import { materialIsFresh } from './materialCache.js';
 import { lessonCatalog } from './lessonCatalog.js';
 import { latestPosition, mediaKey, readLocalPosition, topicMedia, writeLocalPosition } from './mediaSequence.js';
+import GoogleSignInModal from '../apply/GoogleSignInModal.jsx';
 
 const supabase = createClient(import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -189,13 +190,11 @@ export default function LearnApp() {
     if (!['topic', 'topic_loading', 'quiz', 'quiz_loading'].includes(view)) mediaEpoch.current++;
   }, [view]);
 
-  async function googleSignIn() {
-    setBusy(true); setNotice('');
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: location.origin + import.meta.env.BASE_URL + 'learn/' },
-    });
-    if (error) { setNotice(error.message); setBusy(false); }
+  const [showSignInModal, setShowSignInModal] = useState(false);
+
+  function googleSignIn() {
+    setNotice('');
+    setShowSignInModal(true);
   }
   async function saveProfile(event) {
     event.preventDefault(); setBusy(true); setNotice('');
@@ -625,12 +624,12 @@ export default function LearnApp() {
         <button className="learn-back" disabled={busy} onClick={() => { if (!result && answeredCount && !window.confirm('คำตอบที่กำลังทำจะไม่ถูกบันทึก ต้องการออกจากแบบทดสอบหรือไม่?')) return; setView('courses'); }}>← เส้นทางเรียน</button>
         <h2>{phase === 'pre' ? 'แบบทดสอบก่อนเรียน' : 'แบบทดสอบหลังเรียน'} · {selected.title}</h2>
         <p>{phase === 'pre' ? '10 ข้อ · คะแนนนี้ไม่ใช้ตัดสินผล' :
-          '6/10 เปิดวิชาถัดไป · ผ่าน 8/10 ครบ 5 วิชา รับเกียรติบัตร · สอบซ้ำได้'}</p>
+          '6/10 เปิดวิชาถัดไป · 8/10 รับเกียรติบัตรรายบท · ผ่าน 8/10 ครบ 5 บทรับเกียรติบัตรรวม · สอบซ้ำได้'}</p>
         {result ? <div className="learn-result" role="status"><strong>ได้ {result.score}/10 ข้อ</strong>
           <p>{phase === 'pre' ? 'ทำก่อนเรียนครบแล้ว เริ่มหัวข้อแรกได้' :
             result.passed ? result.certificatePending ?
-              'วิชานี้ผ่าน 8/10 แล้ว ต้องผ่านครบ 5 วิชาจึงรับเกียรติบัตรได้' :
-              'วิชานี้ผ่าน 8/10 แล้ว เมื่อผ่านครบ 5 วิชาจะได้รับเกียรติบัตร' : result.unlockedNext ?
+              'วิชานี้ผ่าน 8/10 แล้ว ระบบจะออกเกียรติบัตรให้อัตโนมัติเมื่อแบบใบพร้อม' :
+              'วิชานี้ผ่าน 8/10 แล้ว ได้รับเกียรติบัตรรายบท (และเมื่อผ่าน 8/10 ครบทั้ง 5 บทจะได้รับเกียรติบัตรรวมเพิ่มอีก 1 ใบ)' : result.unlockedNext ?
                 'ไปวิชาถัดไปได้ และกลับมาสอบซ้ำเพื่อรับเกียรติบัตรได้' :
                 'ทบทวนบทเรียนแล้วสอบซ้ำได้'}</p>
           <div className="learn-result-actions"><button onClick={() => openTopic(selected, 0)}>กลับไปบทเรียน</button>
@@ -666,16 +665,26 @@ export default function LearnApp() {
           <h2>เกียรติบัตรของฉัน</h2></div></div>
         {!session && <div className="learn-panel">เข้าสู่ระบบด้วย Google เพื่อดูเกียรติบัตร</div>}
         {session && certificates.length === 0 && <div className="learn-panel">
-          {certificatesEnabled ? 'ยังไม่มีเกียรติบัตรจากหลักสูตรนี้' :
-            'เมื่อเรียนครบและสอบผ่าน 8/10 ทั้ง 5 วิชา จะได้รับเกียรติบัตรจบหลักสูตรหนึ่งใบ เมื่อแบบใบพร้อม'}</div>}
-        <div className="learn-grid">{certificates.map(certificate => <article className="learn-card" key={certificate.id}>
-          <h3>เกียรติบัตรจบหลักสูตรพลเมือง DNA</h3>
+          {certificatesEnabled ? 'ยังไม่มีเกียรติบัตรจากหลักสูตรนี้ (สอบหลังเรียนให้ได้ 8/10 ขึ้นไปเพื่อรับเกียรติบัตรรายบท และผ่านครบ 5 บทเพื่อรับเกียรติบัตรรวม)' :
+            'เมื่อสอบหลังเรียนผ่าน 8/10 จะได้รับเกียรติบัตรรายบท และเมื่อผ่านครบทั้ง 5 บทจะได้รับเกียรติบัตรรวมเพิ่มอีก 1 ใบ เมื่อแบบใบพร้อม'}</div>}
+        <div className="learn-grid">{certificates.map(certificate => {
+          const matchedSubject = catalog.find(item => item.id === certificate.subject_id);
+          const certTitle = certificate.subject_id === 'civic-all'
+            ? 'เกียรติบัตรจบหลักสูตรพลเมือง DNA (รวม 5 บท)'
+            : matchedSubject
+              ? `เกียรติบัตรบทที่ ${matchedSubject.ordinal}: ${matchedSubject.title}`
+              : 'เกียรติบัตรหลักสูตรพลเมือง DNA';
+          return <article className="learn-card" key={certificate.id}>
+          <h3>{certTitle}</h3>
           <p>ชื่อผู้รับ: {certificate.recipient_name}</p>
           <p>วันที่ออก: {new Date(certificate.issued_at).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}</p>
-          <p>{certificate.downloadable ? 'เกียรติบัตรพร้อมดาวน์โหลด' : 'กำลังจัดทำเกียรติบัตร PDF'}</p>
+          <p role="status">{certificate.downloadable
+            ? (certificate.email_status === 'sent' ? 'เกียรติบัตรพร้อมดาวน์โหลด · ส่งเข้าอีเมลแล้ว' : 'เกียรติบัตรพร้อมดาวน์โหลด')
+            : certificate.generationStatus === 'failed' ? 'สร้าง PDF ไม่สำเร็จ กรุณาแจ้งผู้ดูแลเพื่อจัดทำใหม่' :
+            certificate.generationStatus === 'pending' ? 'รอจัดทำเกียรติบัตร PDF' : 'กำลังจัดทำเกียรติบัตร PDF'}</p>
           <div className="learn-card-actions"><button disabled={!certificate.downloadable}
             onClick={() => downloadCertificate(certificate.id)}>ดาวน์โหลด PDF</button></div>
-        </article>)}</div>
+        </article>; })}</div>
         {session && profile?.certificate_name && <div className="learn-panel learn-name-change">
           <div className="learn-name-change-heading"><span className="learn-note-icon" aria-hidden="true">✦</span>
             <h3>ขอเปลี่ยนชื่อบนเกียรติบัตร</h3></div>
@@ -692,5 +701,15 @@ export default function LearnApp() {
         </div>}
       </section>}
     </main>
+    {showSignInModal && (
+      <GoogleSignInModal
+        supabaseClient={supabase}
+        title="เข้าสู่ระบบบทเรียนพลเมือง DNA"
+        subtitle="เลือกบัญชี Google ของคุณเพื่อบันทึกความคืบหน้าและรับเกียรติบัตร"
+        onClose={() => setShowSignInModal(false)}
+        onSuccess={() => setNotice('เข้าสู่ระบบด้วย Google เรียบร้อยแล้ว')}
+        onError={(msg) => setNotice(msg)}
+      />
+    )}
   </div>;
 }

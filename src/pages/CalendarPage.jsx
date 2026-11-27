@@ -1,7 +1,9 @@
+import EventAttendanceEditor from '../components/EventAttendanceEditor';
+import { defaultEventDay, eventDates, thaiToday, validateEventDays } from '../lib/eventAttendance';
 import { canManageCalendar } from '../lib/councilPermissions';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, RefreshCw, X, Trash2, Edit2, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, RefreshCw, X, Trash2, Edit2, ShieldAlert } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 import { resolveEffectiveSubstitute } from '../lib/dutyHelper';
@@ -15,7 +17,7 @@ const TYPE_LABELS = { meeting:'ประชุม', event:'กิจกรรม
 const TYPE_BADGE  = { meeting:'badge-purple', event:'badge-green', deadline:'badge-yellow', holiday:'badge-red', substitute:'badge-blue' };
 
 export default function CalendarPage() {
-  const { user, isPresident, isAdmin } = useAuth();
+  const { user, eventContext, eventContextReady, eventContextError } = useAuth();
   const today = new Date();
   const [yr, setYr] = useState(today.getFullYear());
   const [mo, setMo] = useState(today.getMonth());
@@ -29,9 +31,14 @@ export default function CalendarPage() {
   const [dutySwaps, setDutySwaps] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [participants, setParticipants] = useState([]);
-  const [selectedParticipants, setSelectedParticipants] = useState([]);
+  const [dailyParticipants, setDailyParticipants] = useState([]);
+  const [dailyRosterError, setDailyRosterError] = useState('');
+  const editorEpoch = useRef(0);
+  const [dayRules, setDayRules] = useState({});
+  const [dailyError, setDailyError] = useState('');
+  const [, setSelectedParticipants] = useState([]);
 
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const todayStr = thaiToday();
   
   const [isAdding, setIsAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -39,6 +46,22 @@ export default function CalendarPage() {
   const [newEv, setNewEv] = useState({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', checkAttendance: false, attendanceStartTime: '07:00', attendanceLimitTime: '08:00', desc: '', replaceDay: 'จันทร์' });
 
   const canManage = canManageCalendar(user);
+
+  useEffect(() => {
+    let active = true;
+    const from = `${yr}-${String(mo + 1).padStart(2,'0')}-01`;
+    const to = new Date(Date.UTC(yr,mo + 1,0)).toISOString().slice(0,10);
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 30000);
+    Promise.resolve().then(async () => {
+      const rows = []; let page;
+      do { const { data, error } = await supabase.from('event_day_participants').select('*').gte('date',from).lte('date',to).order('date').order('user_id').range(rows.length,rows.length+999).abortSignal(controller.signal);
+        if (error) { if (!['PGRST205','42P01'].includes(error.code) && active) setDailyRosterError(error.message); return; }
+        page = data || []; rows.push(...page);
+      } while(page.length === 1000 && active);
+      if (active) { setDailyParticipants(rows); setDailyRosterError(''); }
+    }).catch(error => { if (active) setDailyRosterError(error.message); });
+    return () => { active = false; controller.abort(); clearTimeout(timer); };
+  }, [yr,mo,events]);
 
   useEffect(() => {
     async function loadData() {
@@ -52,7 +75,7 @@ export default function CalendarPage() {
           swapsRes
         ] = await Promise.all([
           supabase.from('events').select('*').order('date', { ascending: true }),
-          supabase.from('user_directory').select('id, name, nickname, dept_id').order('name'),
+          supabase.from('user_directory').select('id, name, nickname, dept_id, role').order('name'),
           supabase.from('event_participants').select('*'),
           supabase.from('attendance_settings').select('*'),
           supabase.from('schedules').select('*'),
@@ -119,6 +142,11 @@ export default function CalendarPage() {
     if (!newEv.title.trim() || !newEv.date || (newEv.endDate && newEv.endDate < newEv.date)) {
       alert('กรุณากรอกชื่อและช่วงวันที่ให้ถูกต้อง'); return;
     }
+    let days;
+    try { days = ['holiday','substitute'].includes(newEv.type) ? [] : validateEventDays(eventDates(newEv.date,newEv.endDate || newEv.date).map(date => dayRules[date] || defaultEventDay(date))); if (!['holiday','substitute'].includes(newEv.type) && !days.length) throw new Error('ช่วงวันที่ไม่ถูกต้อง'); }
+    catch(e) { alert(e.message); return; }
+    if (dailyError) { alert(dailyError); return; }
+    if (days.length && (!eventContextReady || !eventContext || eventContextError)) { alert('ต้องอัปเดต backend สำหรับกติการายวันก่อนบันทึกกิจกรรม'); return; }
     setSaving(true);
     let saved = false;
     try {
@@ -132,11 +160,11 @@ export default function CalendarPage() {
         substitute_for_day: newEv.type === 'substitute' ? newEv.replaceDay : null,
       };
       const { error } = await supabase.rpc('save_council_event', {
-        p_event: event, p_participants: selectedParticipants, p_event_id: editId,
+        p_event: event, p_participants: [...new Set(days.flatMap(d => d.participants))], p_event_id: editId, ...(eventContext ? { p_days: days } : {}),
       });
       if (error) throw error;
       saved = true;
-      setIsAdding(false); setEditId(null); setSelectedParticipants([]);
+      setIsAdding(false); setEditId(null); setDayRules({}); setDailyError(''); setSelectedParticipants([]);
       setNewEv({ title: '', date: todayStr, endDate: todayStr, type: 'event', locationCategory: 'internal', checkAttendance: false, attendanceStartTime: '07:00', attendanceLimitTime: '08:00', desc: '', replaceDay: 'จันทร์' });
       alert('บันทึกกิจกรรมและรายชื่อผู้เข้าร่วมเรียบร้อยแล้ว');
       // Notification delivery has its own persistent queue and status banner.
@@ -150,7 +178,9 @@ export default function CalendarPage() {
     } finally { setSaving(false); }
   };
 
-  const handleEditEvent = (ev) => {
+  const handleEditEvent = async (ev) => {
+    const version = ++editorEpoch.current;
+    setDayRules({}); setDailyError('กำลังอ่านกติกากิจกรรม กรุณารอสักครู่');
     setEditId(ev.id);
     setNewEv({
       title: ev.title,
@@ -168,6 +198,12 @@ export default function CalendarPage() {
     const eventParts = participants.filter(p => p.event_id === ev.id).map(p => p.user_id);
     setSelectedParticipants(eventParts);
     setIsAdding(true);
+    try {
+      const { data, error } = await supabase.rpc('get_event_attendance_editor', { p_event_id: ev.id });
+      if (error) throw error;
+      if (version !== editorEpoch.current) return;
+      setDayRules(Object.fromEntries((data || []).map(day => [day.date, day]))); setDailyError('');
+    } catch(e) { if (version !== editorEpoch.current) return; setDailyError('ยังโหลดกติการายวันไม่ได้ ต้องอัปเดต backend หรือรีเฟรชก่อนบันทึก: ' + e.message); }
   };
 
   const handleDeleteEvent = async (eventId) => {
@@ -225,7 +261,8 @@ export default function CalendarPage() {
   };
 
   const getEventParticipants = (eventId) => {
-    const eventParts = participants.filter(p => p.event_id === eventId);
+    const event = events.find(e => e.id === eventId);
+    const eventParts = event?.attendance_by_day ? dailyParticipants.filter(p => p.event_id === eventId && p.date === selDateStr) : participants.filter(p => p.event_id === eventId);
     return eventParts.map(p => {
       const u = usersList.find(usr => String(usr.id) === String(p.user_id));
       return u ? u.nickname : null;
@@ -266,7 +303,8 @@ export default function CalendarPage() {
   }) : [];
 
   const openAddForType = (type, defaultTitle = '') => {
-    setEditId(null);
+    editorEpoch.current++;
+    setEditId(null); setDayRules({}); setDailyError('');
     setNewEv({
       title: defaultTitle,
       date: selDateStr || todayStr,
@@ -285,6 +323,7 @@ export default function CalendarPage() {
 
   return (
     <div>
+      {dailyRosterError && <p role="alert" className="event-attendance-notice">โหลดรายชื่อรายวันไม่สำเร็จ: {dailyRosterError} <button type="button" onClick={() => refreshCalendar().catch(error => setDailyRosterError(error.message))}>ลองโหลดใหม่</button></p>}
       {/* Hero Header */}
       <div style={{
         background: 'linear-gradient(135deg, #0d0714 0%, #1e0a2e 40%, #006064 100%)',
@@ -628,8 +667,8 @@ export default function CalendarPage() {
                           <div style={{ fontSize: 14, fontWeight: 700, color: ev.color }}>{ev.title}</div>
                           {canManage && (
                             <div style={{ display: 'flex', gap: 4 }}>
-                              <button onClick={() => handleEditEvent(ev)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><Edit2 size={13} /></button>
-                              <button onClick={() => handleDeleteEvent(ev.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}><Trash2 size={13} /></button>
+                              <button aria-label="แก้ไขกิจกรรม" title="แก้ไขกิจกรรม" onClick={() => handleEditEvent(ev)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><Edit2 size={13} /></button>
+                              <button aria-label="ลบกิจกรรม" title="ลบกิจกรรม" onClick={() => handleDeleteEvent(ev.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}><Trash2 size={13} /></button>
                             </div>
                           )}
                         </div>
@@ -705,7 +744,7 @@ export default function CalendarPage() {
       {/* Add / Edit Event Modal */}
       {isAdding && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setIsAdding(false)} style={{ zIndex: 9999 }}>
-          <div className="modal-box" style={{ maxWidth: 500, borderRadius: 20, overflow: 'hidden' }}>
+          <div className="modal-box" role="dialog" aria-modal="true" aria-label={editId ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรม'} style={{ maxWidth: 500, borderRadius: 20, overflow: 'hidden' }}>
             <div className="modal-header" style={{ background: 'linear-gradient(135deg, #0d0714, #1e0a2e)', color: '#fff' }}>
               <span style={{ fontWeight: 700, fontSize: 16 }}>{editId ? '✏️ แก้ไขรายการ' : '➕ เพิ่มรายการลงปฏิทิน'}</span>
               <button onClick={() => setIsAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b2ebf2' }}><X size={18} /></button>
@@ -716,7 +755,7 @@ export default function CalendarPage() {
                 <input className="input-field" placeholder="เช่น ประชุมสภาประจำเดือน, วันหยุดวันแม่แห่งชาติ" value={newEv.title} onChange={e => setNewEv({ ...newEv, title: e.target.value })} style={{ fontSize: 13 }} />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="council-form-columns">
                 <div>
                   <label className="form-label">วันที่เริ่ม *</label>
                   <input type="date" className="input-field" value={newEv.date} onChange={e => setNewEv({ ...newEv, date: e.target.value, endDate: e.target.value })} style={{ fontSize: 13 }} />
@@ -727,7 +766,7 @@ export default function CalendarPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="council-form-columns">
                 <div>
                   <label className="form-label">ประเภทรายการ *</label>
                   <select className="select-field" value={newEv.type} onChange={e => setNewEv({ ...newEv, type: e.target.value })} style={{ fontSize: 13 }}>
@@ -746,6 +785,8 @@ export default function CalendarPage() {
                   </select>
                 </div>
               </div>
+
+              {!['holiday','substitute'].includes(newEv.type) && <><EventAttendanceEditor start={newEv.date} end={newEv.endDate} members={usersList.filter(m => m.role !== 'admin')} rules={dayRules} setRules={setDayRules} disabled={saving || Boolean(dailyError)} today={todayStr}/>{dailyError && <p role="alert" className="event-attendance-notice">{dailyError}</p>}{eventContextReady && !eventContext && <p className="event-attendance-notice">เตรียมกติกาได้ในเครื่อง แต่ต้องอัปเดต backend ก่อนบันทึกกิจกรรมรายวันจริง</p>}</>}
 
               {/* Special options for Substitute Day */}
               {newEv.type === 'substitute' && (

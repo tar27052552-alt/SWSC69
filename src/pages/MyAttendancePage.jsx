@@ -1,3 +1,4 @@
+import { myEventAttendance } from '../lib/attendancePolicy';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CalendarDays, X } from 'lucide-react';
@@ -20,6 +21,8 @@ export default function MyAttendancePage() {
   const [startDate, setStartDate] = useState('');
   const [greetingSchedules, setGreetingSchedules] = useState([]);
   const [swaps, setSwaps] = useState([]);
+  const [eventRules, setEventRules] = useState([]);
+  const [eventRulesError, setEventRulesError] = useState('');
   const [dbExemptDates, setDbExemptDates] = useState([]);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
@@ -96,6 +99,12 @@ export default function MyAttendancePage() {
   }, [month, user]);
 
   useEffect(() => {
+    let active = true;
+    if (user) { const [yr,mo] = month.split('-').map(Number); const last = new Date(Date.UTC(yr,mo,0)).toISOString().slice(0,10);
+      myEventAttendance(month+'-01',last).then(rows => { if (active) { setEventRules(rows); setEventRulesError(''); } }).catch(e => { if (active) { setEventRules([]); setEventRulesError(e.message); } }); }
+    return () => { active = false; };
+  }, [user,month]);
+  useEffect(() => {
     async function loadExemptDates() {
       if (!user) return;
       try {
@@ -108,7 +117,7 @@ export default function MyAttendancePage() {
         if (eventsData && partData) {
           const myEventIds = partData.map(p => p.event_id);
           const myExtEvents = eventsData.filter(ev => 
-            !ev.check_attendance && ev.location_category === 'external' && myEventIds.includes(ev.id)
+            !ev.attendance_by_day && !ev.check_attendance && ev.location_category === 'external' && myEventIds.includes(ev.id)
           );
 
           const exemptDates = [];
@@ -134,6 +143,7 @@ export default function MyAttendancePage() {
   }, [user, month]);
 
   const STATUS = {
+    pending: { label: 'รอเช็คชื่อกิจกรรม', color: '#75559b', bg: '#f4ecfc', icon: '⏳' },
     on_time:      { label: 'มาตรงเวลา', color: '#2e7d32', bg: '#e8f5e9', icon: '✅' },
     late:         { label: 'มาสาย',     color: '#c62828', bg: '#ffebee', icon: '⚠️' },
     leave:        { label: 'ลา',       color: '#f57f17', bg: '#fff8e1', icon: '📝' },
@@ -169,9 +179,11 @@ export default function MyAttendancePage() {
 
     // 1. Check in database record
     const dbRec = dbRecords.find(r => r.date === dateStr);
-    const isExempt = dbExemptDates.includes(dateStr);
+    const eventRule = eventRules.find(r => r.date === dateStr && r.mode !== 'regular');
+    const isExempt = eventRule ? eventRule.status === 'activity' : dbExemptDates.includes(dateStr);
 
-    if (!isRequired && !dbRec && (dateStr !== todayStr || !checkInState) && !isExempt) {
+
+    if (!isRequired && !dbRec && (dateStr !== todayStr || !checkInState) && !isExempt && !eventRule) {
       continue; // skip days with no check-in required and no check-in record
     }
 
@@ -196,6 +208,7 @@ export default function MyAttendancePage() {
       }
     }
 
+    if (eventRule && !dbRec) { records.push({ date: dateStr, dayName, hasGreetingDuty, status: eventRule.status, time: eventRule.mode === 'exempt' ? 'ยกเว้นจากกิจกรรม' : `${eventRule.title} · ${eventRule.opens_at}–${eventRule.closes_at}` }); continue; }
     // 1. Check in database record
     if (dbRec) {
       records.push({
@@ -267,6 +280,7 @@ export default function MyAttendancePage() {
 
   return (
     <div>
+      {eventRulesError && <p role="alert">ยังโหลดประวัติกิจกรรมไม่ได้: {eventRulesError}</p>}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <div className="page-title">📊 ประวัติการเช็คชื่อ</div>

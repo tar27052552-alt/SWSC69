@@ -1401,3 +1401,12 @@ body {
   .modal-overlay { padding-inline: 6px; }
   .modal-box { border-radius: 14px; }
 }
+/* Shared form layout: allow controls to shrink inside narrow screens. */
+.council-form-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 20px; margin-bottom: 20px; }
+.council-form-columns > * { min-width: 0; }
+.council-data-status { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-block: 12px; }
+.council-data-status p { flex-basis: 100%; color: #b91c1c; }
+@media (max-width: 768px) { .council-form-columns { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

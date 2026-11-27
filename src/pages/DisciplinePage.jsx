@@ -1,3 +1,5 @@
+import EventAttendanceReport from '../components/EventAttendanceReport';
+import { acceptUploadFile } from '../lib/uploadLimits';
 import { canManageDepartment } from '../lib/councilPermissions';
 import { useState, useEffect } from 'react';
 import { DEPARTMENTS } from '../data/mockData';
@@ -140,7 +142,7 @@ export default function DisciplinePage() {
       // Filter active external events (ending today or in the future)
       const extEvents = (eventsData || []).filter(ev => {
         const end = ev.end_date || ev.date;
-        return ev.location_category === 'external' && end >= todayStr;
+        return !ev.attendance_by_day && ev.location_category === 'external' && end >= todayStr;
       });
 
       if (extEvents.length === 0) {
@@ -404,6 +406,7 @@ export default function DisciplinePage() {
     loadFines();
 
     const interval = setInterval(() => {
+      if (document.hidden) return;
       loadFines();
       if (users.length > 0) loadConflictsData();
     }, 10000);
@@ -691,7 +694,10 @@ export default function DisciplinePage() {
         .eq('date', selectedDate);
       if (error) throw error;
       if (data) {
-        setDbAttendance(data);
+        const { data: eventRows, error: eventError } = canManage ? await supabase.rpc('get_event_attendance_report', { p_date: selectedDate }) : { data: [], error: null };
+        if (eventError && !['PGRST202','42883'].includes(eventError.code)) throw eventError;
+        const virtual = (eventRows || []).filter(row => !data.some(a => String(a.user_id) === String(row.user_id))).map(row => ({ user_id: String(row.user_id), nickname: row.nickname, date: selectedDate, status: row.context.status, time: row.context.mode === 'exempt' ? 'ยกเว้นจากกิจกรรม' : row.context.title, event_id: row.context.event_id }));
+        setDbAttendance([...data, ...virtual]);
       }
     } catch (err) {
       console.error('Error loading student attendance:', err);
@@ -739,7 +745,7 @@ export default function DisciplinePage() {
         .filter(ev => {
           const start = ev.date;
           const end = ev.end_date || ev.date;
-          return ev.location_category === 'external' && selectedDate >= start && selectedDate <= end;
+          return !ev.attendance_by_day && ev.location_category === 'external' && selectedDate >= start && selectedDate <= end;
         })
         .map(ev => ev.id);
 
@@ -789,6 +795,7 @@ export default function DisciplinePage() {
     loadExemptionsAndSwaps();
 
     const interval = setInterval(() => {
+      if (document.hidden) return;
       loadAttendance();
       loadCleanChecks();
       loadGreetingChecks();
@@ -829,6 +836,7 @@ export default function DisciplinePage() {
   }, [selectedDate, checkInState, users]);
 
   const STATUS_COLORS = {
+    pending: { bg: '#f4ecfc', col: '#75559b', label: 'รอเช็คชื่อกิจกรรม' },
     on_time: { bg: '#e8f5e9', col: '#2e7d32', label: 'มา' },
     late:    { bg: '#ffebee', col: '#c62828', label: 'สาย' },
     leave:   { bg: '#fff8e1', col: '#f57f17', label: 'ลา' },
@@ -2058,6 +2066,7 @@ export default function DisciplinePage() {
       )}
 
       {/* Attendance Table */}
+      {canManage && activeTab === 'checkin' && <EventAttendanceReport date={selectedDate}/>}
       {activeTab === 'checkin' && (
         <div className="card">
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2629,7 +2638,7 @@ export default function DisciplinePage() {
                   <span style={{ fontSize: 11, fontWeight: 400, color: '#006064cc' }}>รองรับไฟล์รูปภาพสลิปทุกประเภท</span>
                   <input type="file" accept="image/*" onChange={e => {
                     const file = e.target.files[0];
-                    if (!file) return;
+                    if (!file || !acceptUploadFile(file)) return;
                     const reader = new FileReader();
                     reader.onload = ev => {
                       const img = new Image();

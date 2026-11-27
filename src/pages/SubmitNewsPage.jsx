@@ -51,6 +51,7 @@ export default function SubmitNewsPage() {
 
   useEffect(() => {
     const interval = setInterval(() => {
+      if (document.hidden) return;
       setNowDate(new Date());
     }, 10000);
     return () => clearInterval(interval);
@@ -246,6 +247,7 @@ export default function SubmitNewsPage() {
     if (!isTopicSet || isContentSubmitted) return;
 
     const interval = setInterval(() => {
+      if (document.hidden) return;
       setSecondsRemaining(prev => {
         if (prev <= 1) {
           trigger10MinDutyNotification();

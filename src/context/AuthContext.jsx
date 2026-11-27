@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { myAttendancePolicy } from '../lib/attendancePolicy';
+import { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { DEPARTMENTS, ROLES } from '../data/mockData';
 import { supabase } from '../supabaseClient';
 import { CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react';
@@ -25,9 +26,18 @@ function mapCouncilProfile(profile) {
 }
 
 function CustomModalAlert({ title, message, type, onClose }) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    const previous = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.querySelector('button')?.focus();
+    return () => { document.body.style.overflow = previousOverflow; previous?.focus?.(); };
+  }, []);
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
+      if (e.key === 'Tab') { e.preventDefault(); dialogRef.current?.querySelector('button')?.focus(); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -86,7 +96,8 @@ function CustomModalAlert({ title, message, type, onClose }) {
           to { transform: scale(1); opacity: 1; }
         }
       `}</style>
-      <div style={{
+      <div ref={dialogRef} role="alertdialog" aria-modal="true" aria-label={title}
+        aria-describedby="council-alert-message" style={{
         background: '#ffffff',
         borderRadius: '16px',
         border: '1px solid rgba(226, 232, 240, 0.8)',
@@ -126,7 +137,7 @@ function CustomModalAlert({ title, message, type, onClose }) {
         }}>{title}</div>
 
         {/* Message */}
-        <div style={{
+        <div id="council-alert-message" style={{
           fontSize: '14px',
           color: '#64748b',
           lineHeight: '1.6',
@@ -175,18 +186,21 @@ export function AuthProvider({ children }) {
   const [authReady, setAuthReady] = useState(false);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [eventContext, setEventContext] = useState(null);
+  const [eventContextReady, setEventContextReady] = useState(false);
+  const [eventContextError, setEventContextError] = useState('');
   const [checkInState, setCheckInState] = useState(null);
   const [cleanDutyState, setCleanDutyState] = useState(null);
   const [greetingDutyState, setGreetingDutyState] = useState(null);
   const [modalAlert, setModalAlert] = useState(null);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
     setMustChangePassword(false);
     localStorage.removeItem('sc_user');
     localStorage.removeItem('sc_last_active'); // Clear last active on logout
-  };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -295,6 +309,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const timer = setInterval(() => {
+      if (document.hidden) return;
       const todayStr = toGregorianStr();
       if (todayStr !== currentDateStr) {
         setCurrentDateStr(todayStr);
@@ -303,12 +318,21 @@ export function AuthProvider({ children }) {
     return () => clearInterval(timer);
   }, [currentDateStr]);
 
-  const loadTodayStates = async () => {
-    if (!user) return;
+  const todayEpoch = useRef(0);
+  const todayLoading = useRef(false);
+  const todayController = useRef(null);
+  const loadTodayStates = useCallback(async () => {
+    if (!user || document.hidden || todayLoading.current) return;
+    const epoch = ++todayEpoch.current;
+    const controller = new AbortController();
+    todayController.current = controller;
+    todayLoading.current = true;
+    const timeout = setTimeout(() => controller.abort(), 30000);
     try {
       // Check if user is banned
       try {
-        const { data: profile, error: profileError } = await supabase.rpc('get_my_council_profile');
+        const { data: profile, error: profileError } = await supabase.rpc('get_my_council_profile').abortSignal(controller.signal);
+        if (epoch !== todayEpoch.current || controller.signal.aborted) return;
         if (!profileError && (!Array.isArray(profile) || profile.length === 0)) {
           console.log('User is banned. Logging out...');
           await logout();
@@ -319,6 +343,11 @@ export function AuthProvider({ children }) {
       }
 
       const todayStr = currentDateStr;
+      let policy;
+      try { policy = await myAttendancePolicy(todayStr, controller.signal); }
+      catch (e) { if (epoch === todayEpoch.current) { setEventContextError(controller.signal.aborted ? 'หมดเวลารอข้อมูล กรุณารีเฟรช' : e.message); setEventContextReady(true); } throw e; }
+      if (epoch !== todayEpoch.current || controller.signal.aborted) return;
+      setEventContext(policy); setEventContextError(''); setEventContextReady(true);
 
       // 1. Fetch today's check-in status
       const { data: attData, error: attError } = await supabase
@@ -326,18 +355,22 @@ export function AuthProvider({ children }) {
         .select('status, time, photo')
         .eq('user_id', String(user.id))
         .eq('date', todayStr)
-        .maybeSingle();
+        .maybeSingle().abortSignal(controller.signal);
 
       if (!attError && attData) {
+        if (epoch !== todayEpoch.current || controller.signal.aborted) return;
         setCheckInState({ status: attData.status, time: attData.time, photo: attData.photo });
+      } else if (policy && policy.mode !== 'regular') {
+        if (epoch !== todayEpoch.current || controller.signal.aborted) return;
+        setCheckInState(policy.mode === 'exempt' && policy.system_active ? { status: 'activity', time: 'ยกเว้นเช็คชื่อ', photo: null } : null);
       } else {
         // Check if user is exempt today (participating in external event)
         try {
-          const { data: eventsData } = await supabase.from('events').select('*');
+          const { data: eventsData } = await supabase.from('events').select('*').abortSignal(controller.signal);
           const { data: partData } = await supabase
             .from('event_participants')
             .select('event_id')
-            .eq('user_id', String(user.id));
+            .eq('user_id', String(user.id)).abortSignal(controller.signal);
 
           let exempt = false;
           if (eventsData && partData) {
@@ -345,14 +378,14 @@ export function AuthProvider({ children }) {
             const hasCheckinEvent = eventsData.some(ev => {
               const start = ev.date;
               const end = ev.end_date || ev.date;
-              return ev.check_attendance && myEventIds.includes(ev.id) && todayStr >= start && todayStr <= end;
+              return !ev.attendance_by_day && ev.check_attendance && myEventIds.includes(ev.id) && todayStr >= start && todayStr <= end;
             });
 
             if (!hasCheckinEvent) {
               const myTodayEvents = eventsData.filter(ev => {
                 const start = ev.date;
                 const end = ev.end_date || ev.date;
-                return ev.location_category === 'external' && myEventIds.includes(ev.id) && todayStr >= start && todayStr <= end;
+                return !ev.attendance_by_day && ev.location_category === 'external' && myEventIds.includes(ev.id) && todayStr >= start && todayStr <= end;
               });
               if (myTodayEvents.length > 0) {
                 exempt = true;
@@ -361,12 +394,15 @@ export function AuthProvider({ children }) {
           }
 
           if (exempt) {
+            if (epoch !== todayEpoch.current || controller.signal.aborted) return;
             setCheckInState({ status: 'activity', time: 'ทำกิจกรรม', photo: null });
           } else {
+            if (epoch !== todayEpoch.current || controller.signal.aborted) return;
             setCheckInState(null);
           }
         } catch (err) {
           console.error('Error checking today exemption in AuthContext:', err);
+          if (epoch !== todayEpoch.current || controller.signal.aborted) return;
           setCheckInState(null);
         }
       }
@@ -378,14 +414,16 @@ export function AuthProvider({ children }) {
           .select('status, photo, created_at')
           .eq('nickname', user.nickname)
           .eq('date', todayStr)
-          .maybeSingle();
+          .maybeSingle().abortSignal(controller.signal);
 
         if (!cdError && cdData) {
           const timeStr = cdData.created_at
             ? new Date(cdData.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
             : 'ไม่ระบุ';
+          if (epoch !== todayEpoch.current || controller.signal.aborted) return;
           setCleanDutyState({ status: cdData.status, time: timeStr, photo: cdData.photo });
         } else {
+          if (epoch !== todayEpoch.current || controller.signal.aborted) return;
           setCleanDutyState(null);
         }
       }
@@ -396,34 +434,43 @@ export function AuthProvider({ children }) {
           .select('status, photo, created_at')
           .eq('nickname', user.nickname)
           .eq('date', todayStr)
-          .maybeSingle();
+          .maybeSingle().abortSignal(controller.signal);
 
         if (!gdError && gdData) {
           const timeStr = gdData.created_at
             ? new Date(gdData.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
             : 'ไม่ระบุ';
+          if (epoch !== todayEpoch.current || controller.signal.aborted) return;
           setGreetingDutyState({ status: gdData.status, time: timeStr, photo: gdData.photo });
         } else {
+          if (epoch !== todayEpoch.current || controller.signal.aborted) return;
           setGreetingDutyState(null);
         }
       }
     } catch (err) {
       console.error('Error fetching today states from Supabase:', err);
+    } finally {
+      clearTimeout(timeout);
+      if (epoch === todayEpoch.current) { todayLoading.current = false; todayController.current = null; }
     }
-  };
+  }, [user, currentDateStr, logout]);
 
   useEffect(() => {
-    if (!user) {
-      setCheckInState(null);
-      setCleanDutyState(null);
-      setGreetingDutyState(null);
-      return;
-    }
+    let active = true;
+    const invalidate = () => { todayEpoch.current++; todayController.current?.abort(); todayLoading.current = false; };
+    Promise.resolve().then(() => {
+      if (!active) return;
+      setEventContext(null); setEventContextReady(false); setEventContextError('');
+      setCheckInState(null); setCleanDutyState(null); setGreetingDutyState(null);
+      if (!user) { setCheckInState(null); setCleanDutyState(null); setGreetingDutyState(null); }
+      else loadTodayStates();
+    });
 
-    loadTodayStates();
+    if (!user) return () => { active = false; invalidate(); };
 
     // Polling fallback every 15 seconds
     const interval = setInterval(() => {
+      if (document.hidden) return;
       loadTodayStates();
     }, 15000);
 
@@ -474,12 +521,14 @@ export function AuthProvider({ children }) {
       .subscribe();
 
     return () => {
+      active = false;
+      invalidate();
       clearInterval(interval);
       supabase.removeChannel(attendanceChannel);
       supabase.removeChannel(cleanDutyChannel);
       supabase.removeChannel(greetingDutyChannel);
     };
-  }, [user, currentDateStr]);
+  }, [user, currentDateStr, loadTodayStates]);
 
   useEffect(() => {
     if (!user) return;
@@ -533,7 +582,7 @@ export function AuthProvider({ children }) {
       window.removeEventListener('click', updateActiveTime);
       window.removeEventListener('keydown', updateActiveTime);
     };
-  }, [user]);
+  }, [user, logout]);
 
   const login = async (studentId, password) => {
     try {
@@ -633,6 +682,7 @@ export function AuthProvider({ children }) {
     notifications,
     setNotifications,
     checkInState,
+    eventContext, eventContextReady, eventContextError,
     setCheckInState,
     cleanDutyState,
     setCleanDutyState,
@@ -640,6 +690,7 @@ export function AuthProvider({ children }) {
     setGreetingDutyState,
     setModalAlert,
   }), [
+    logout,
     user,
     authReady,
     mustChangePassword,
@@ -648,6 +699,7 @@ export function AuthProvider({ children }) {
     isDeptHead,
     notifications,
     checkInState,
+    eventContext, eventContextReady, eventContextError,
     cleanDutyState,
     greetingDutyState,
   ]);
@@ -667,5 +719,7 @@ export function AuthProvider({ children }) {
   );
 }
 
+// The context hook and provider intentionally share this module.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
 

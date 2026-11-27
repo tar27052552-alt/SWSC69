@@ -1,0 +1,55 @@
+@keyframes pfGoldShimmerSweep {
+  0% { left: -140%; }
+  100% { left: 170%; }
+}
+@keyframes pfDropdownReveal {
+  from { opacity: 0; transform: translateY(-6px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.pf-site-header { position: sticky; top: 0; z-index: 200; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(226, 232, 240, 0.85); box-shadow: 0 4px 20px rgba(50, 16, 79, 0.04); transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.pf-site-nav { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 64px; padding: 0 32px; max-width: 1800px; margin: auto; }
+.pf-nav-defs { position: absolute; overflow: hidden; pointer-events: none; }
+.pf-public .pf-site-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; flex-shrink: 0; transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+.pf-public .pf-site-brand:hover { transform: translateY(-1px); }
+.pf-site-brand img { height: 38px; width: auto; max-width: 150px; object-fit: contain; }
+.pf-site-brand>span { font-family: 'Oswald', sans-serif; font-size: 19px; font-weight: 700; white-space: nowrap; background: linear-gradient(110deg, #6b217f, #a56520); color: #702378; background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: .3px; }
+.pf-site-menu,.pf-nav-panel { list-style: none; padding: 0; margin: 0; }
+.pf-site-menu { display: flex; align-items: center; gap: 5px; }
+.pf-site-menu>li { position: relative; }
+.pf-public .pf-site-menu a,.pf-public .pf-site-menu button { display: flex; align-items: center; gap: 7px; text-decoration: none; border: 0; background: transparent; color: #475569; padding: 9px 13px; min-height: 40px; border-radius: 99px; white-space: nowrap; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: color 0.22s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s ease; }
+.pf-public .pf-site-menu a:active,.pf-public .pf-site-menu button:active { transform: scale(0.97); }
+.pf-public .pf-site-menu a:hover,.pf-public .pf-site-menu button:hover,.pf-public .pf-site-menu button[aria-expanded=true],.pf-public .pf-site-menu .pf-nav-current-group { color: #6b21a8; background: #f3e8ff; }
+
+/* Exact index.html Gold Icon Hover Scale + Glow + Shimmer Sweep */
+.pf-nav-gold { position: relative; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; color: #d98b10; border-radius: 4px; overflow: hidden; transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.28s ease; }
+.pf-nav-gold svg { width: 18px; height: 18px; display: block; filter: drop-shadow(0 1px 1px rgba(180, 83, 9, 0.22)); transition: all 0.25s ease; }
+.pf-nav-gold::after { content: ''; position: absolute; top: -60%; left: -140%; width: 70%; height: 220%; background: linear-gradient(75deg, transparent 0%, rgba(255, 255, 255, 0) 25%, rgba(255, 248, 220, 0.95) 50%, rgba(255, 255, 255, 0) 75%, transparent 100%); transform: rotate(25deg); pointer-events: none; opacity: 0; }
+.pf-public .pf-site-menu a:hover .pf-nav-gold,
+.pf-public .pf-site-menu button:hover .pf-nav-gold,
+.pf-public .pf-site-menu button[aria-expanded=true] .pf-nav-gold,
+.pf-public .pf-nav-panel a:hover .pf-nav-gold { transform: scale(1.15); filter: drop-shadow(0 0 7px rgba(245, 158, 11, 0.65)) drop-shadow(0 0 1px rgba(251, 191, 36, 0.9)); }
+.pf-public .pf-site-menu a:hover .pf-nav-gold::after,
+.pf-public .pf-site-menu button:hover .pf-nav-gold::after,
+.pf-public .pf-nav-panel a:hover .pf-nav-gold::after { opacity: 1; animation: pfGoldShimmerSweep 0.75s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+.pf-site-menu button > svg:last-child { transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+.pf-nav-chevron-open { transform: rotate(180deg); }
+
+.pf-nav-panel { position: absolute; top: calc(100% + 8px); left: 0; min-width: 260px; padding: 10px; border-radius: 16px; border: 1px solid #e9dff2; background: rgba(255, 255, 255, 0.96); box-shadow: 0 14px 35px rgba(40, 16, 63, 0.12); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); animation: pfDropdownReveal 0.2s cubic-bezier(0.16, 1, 0.3, 1); transform-origin: top left; }
+.pf-nav-panel::before { content: ''; position: absolute; top: -9px; left: 0; height: 9px; width: 100%; }
+.pf-public .pf-nav-panel a { border-radius: 10px; min-height: 42px; padding: 10px 12px; transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease; }
+.pf-public .pf-nav-panel a:hover { transform: translateX(3px); }
+.pf-public .pf-nav-panel a[aria-current=page] { background: #f3e8ff; color: #6b21a8; font-weight: 700; }
+
+.pf-public .pf-nav-burger { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 8px; border: 1px solid #e6d9ef; border-radius: 12px; color: #6b21a8; background: #fff; transition: background 0.2s ease, transform 0.2s ease; }
+.pf-public .pf-nav-burger:hover { background: #f3e8ff; }
+.pf-public .pf-nav-burger:active { transform: scale(0.95); }
+.pf-public .pf-site-header + .pf-main { padding-top: 30px; }
+html:has(.pf-public) { scroll-padding-top: 92px; }
+@media(min-width:1101px) and (max-width:1300px) { .pf-site-nav { padding: 0 16px; gap: 8px; }.pf-site-brand img { height: 30px; max-width: 100px; }.pf-site-brand>span { font-size: 16px; }.pf-public .pf-site-menu a,.pf-public .pf-site-menu button { padding: 10px 8px; font-size: 12px; gap: 5px; } }
+@media(max-width:1100px) {
+  .pf-site-nav { min-height: 62px; padding: 0 18px; }.pf-public .pf-nav-burger { display: flex; }.pf-site-brand img { height: 32px; max-width: 120px; }.pf-site-brand>span { font-size: 17px; }.pf-site-menu { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fffffff5; backdrop-filter: blur(18px); border-bottom: 1px solid #eadff4; padding: 14px 18px 20px; max-height: calc(100dvh - 62px); overflow-y: auto; box-shadow: 0 18px 30px #35164612; animation: pfDropdownReveal 0.22s ease; }.pf-site-menu-open { display: block; }.pf-public .pf-site-menu a,.pf-public .pf-site-menu button { width: 100%; border-radius: 12px; min-height: 48px; justify-content: flex-start; }.pf-site-menu button>svg:last-child { margin-left: auto; }.pf-nav-panel { position: static; min-width: 0; margin: 6px 0 12px; padding: 4px 0 4px 15px; border: 0; border-left: 2px solid #ecd5ff; border-radius: 0; box-shadow: none; background: transparent; animation: none; }.pf-nav-panel::before { display: none; }.pf-public .pf-nav-panel a { white-space: normal; font-size: 13px; }
+}
+@media(max-width:360px) { .pf-site-brand { gap: 7px!important; }.pf-site-brand img { max-width: 90px; height: 27px; }.pf-site-brand>span { font-size: 16px; }.pf-site-nav { padding: 0 12px; gap: 8px; } }
+@media(prefers-reduced-motion:reduce) { .pf-site-header * { transition: none; animation: none; } }

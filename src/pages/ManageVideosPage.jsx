@@ -1,3 +1,4 @@
+import { acceptUploadFile, assertUploadSize } from '../lib/uploadLimits';
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -115,6 +116,7 @@ export default function ManageVideosPage() {
   };
 
   const toBase64 = (file) => new Promise((resolve, reject) => {
+      assertUploadSize(file);
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result);
@@ -123,7 +125,7 @@ export default function ManageVideosPage() {
 
   const handleCoverUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || !acceptUploadFile(file)) return;
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       alert('ไฟล์รูปภาพมีขนาดใหญ่เกินไป (จำกัด 10MB)');
@@ -151,11 +153,11 @@ export default function ManageVideosPage() {
 
   const handleVideoUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || !acceptUploadFile(file)) return;
     
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    const maxSize = 25 * 1024 * 1024; // Apps Script limit
     if (file.size > maxSize) {
-      alert('ไฟล์วิดีโอมีขนาดใหญ่เกิน 50MB ครับ เนื่องจากข้อจำกัดของการอัปโหลด แนะนำให้อัปโหลดเข้า Google Drive โดยตรง แล้วนำลิงก์ที่แชร์มาวางในช่องลิงก์แทนครับ');
+      alert('ไฟล์วิดีโอมีขนาดใหญ่เกิน 25MB ครับ เนื่องจากข้อจำกัดของการอัปโหลด แนะนำให้อัปโหลดเข้า Google Drive โดยตรง แล้วนำลิงก์ที่แชร์มาวางในช่องลิงก์แทนครับ');
       e.target.value = '';
       return;
     }
@@ -523,7 +525,7 @@ export default function ManageVideosPage() {
                   เลือกไฟล์วิดีโอเพื่ออัปโหลดไปยัง Google Drive
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
-                  ขนาดไฟล์ไม่เกิน 50MB ระบบจะอัปโหลดและกรอกลิงก์ให้อัตโนมัติ
+                  ขนาดไฟล์ไม่เกิน 25MB ระบบจะอัปโหลดและกรอกลิงก์ให้อัตโนมัติ
                 </div>
                 <input
                   type="file"

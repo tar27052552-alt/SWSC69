@@ -29,6 +29,8 @@ export default defineConfig({
         main: resolve('./index.html'),
         admin: resolve('./admin/index.html'),
         learn: resolve('./learn/index.html'),
+        portfolios: resolve('./portfolios/index.html'),
+        apply: resolve('./apply/index.html'),
       },
     },
   },

@@ -1869,7 +1869,7 @@ function getUserIdsByNicknames(nicknames) {
 
 // ฟังก์ชันส่งการแจ้งเตือน Push Notification ผ่าน OneSignal
 // - targetUserIds (ตัวเลือก): ID ของผู้ใช้ (หรืออาร์เรย์ของ ID) ที่ต้องการส่งเจาะจงรายคน (ถ้าไม่ระบุหรือเป็นค่าว่างจะส่งให้ทุกคน)
-function sendOneSignalPush(title, message, targetUserIds) {
+function sendOneSignalPush(title, message, targetUserIds, targetUrl) {
   var properties = PropertiesService.getScriptProperties();
   var appId = properties.getProperty("ONESIGNAL_APP_ID");
   var restApiKey = properties.getProperty("ONESIGNAL_REST_API_KEY");
@@ -1883,7 +1883,7 @@ function sendOneSignalPush(title, message, targetUserIds) {
     "app_id": appId,
     "headings": { "en": title, "th": title },
     "contents": { "en": message, "th": message },
-    "url": "https://tar27052552-alt.github.io/SWSC69/" // เปิดเข้าหน้าเว็บพอร์ทัลเมื่อกดคลิก
+    "url": targetUrl || "https://tar27052552-alt.github.io/SWSC69/" // เปิดเข้าหน้าเว็บพอร์ทัลเมื่อกดคลิก
   };
 
   // ตรวจสอบและกำหนดเป้าหมายผู้รับ
@@ -1939,14 +1939,44 @@ function sendOneSignalPush(title, message, targetUserIds) {
 // ----------------------------------------------------------------------------
 
 // 1. ตรวจสอบการเช็คชื่อเข้าแถวและส่งเวรยืนไหว้วันนี้ (รันทุก 10 นาที ช่วง 06:40 - 08:00 น.)
+// Per-event attendance reminders; call before the regular school-day/time filters.
+// Returns all assigned users (including exemptions) to suppress normal check-in reminders.
+function remindDailyEventAttendance_(todayStr, currentMinute) {
+  var days = fetchFromSupabase("event_attendance_days", "date=eq." + todayStr + "&select=event_id,mode,opens_at,late_at,closes_at,events(title)");
+  var members = fetchFromSupabase("event_day_participants", "date=eq." + todayStr + "&select=event_id,user_id");
+  var assigned = members.map(function(p) { return String(p.user_id); });
+  if (!days.length) return assigned;
+  var checked = fetchFromSupabase("student_attendance", "date=eq." + todayStr + "&select=user_id").map(function(a) { return String(a.user_id); });
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperties();
+  Object.keys(existing).forEach(function(key) { if (key.indexOf('event_checkin_') === 0 && key.indexOf('event_checkin_' + todayStr + '_') !== 0) props.deleteProperty(key); });
+  var minute = function(value) { var parts = String(value || '').split(':'); return Number(parts[0]) * 60 + Number(parts[1]); };
+  days.forEach(function(day) {
+    if (day.mode !== 'check') return;
+    var open = minute(day.opens_at), late = minute(day.late_at), close = minute(day.closes_at);
+    if (currentMinute < open || currentMinute > close) return;
+    var phase = currentMinute > late ? 'late' : 'open';
+    var key = 'event_checkin_' + todayStr + '_' + day.event_id + '_' + phase;
+    var sent = JSON.parse(props.getProperty(key) || '[]');
+    var recipients = members.filter(function(p) { var uid = String(p.user_id); return p.event_id === day.event_id && checked.indexOf(uid) < 0 && sent.indexOf(uid) < 0; }).map(function(p) { return String(p.user_id); });
+    if (!recipients.length) return;
+    var title = day.events && day.events.title ? day.events.title : 'กิจกรรม';
+    var result = sendOneSignalPush('⏰ เช็คชื่อกิจกรรม: ' + title,
+      'เปิด ' + String(day.opens_at).slice(0,5) + ' · เริ่มสาย ' + String(day.late_at).slice(0,5) + ' · ปิด ' + String(day.closes_at).slice(0,5) + ' กรุณาเช็คชื่อกิจกรรมแทนเวลาปกติ', recipients, 'https://www.swscofficial.com/admin/#/checkin');
+    // Only confirmed provider acceptance marks recipients sent; failed sends can retry.
+    if (result && result.success === true) props.setProperty(key, JSON.stringify(sent.concat(recipients)));
+  });
+  return assigned;
+}
+
 function runMorningPeriodicReminders() {
   var now = new Date();
-  var h = now.getHours();
-  var m = now.getMinutes();
+  var h = Number(Utilities.formatDate(now, "Asia/Bangkok", "HH"));
+  var m = Number(Utilities.formatDate(now, "Asia/Bangkok", "mm"));
 
-  var todayStr = getGregorianStr(now);
+  var todayStr = Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
   var daysTh = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
-  var todayDayName = daysTh[now.getDay()];
+  var todayDayName = daysTh[Number(Utilities.formatDate(now, "Asia/Bangkok", "u")) % 7];
 
   try {
     var settings = fetchFromSupabase("attendance_settings", "select=key,value");
@@ -1966,7 +1996,9 @@ function runMorningPeriodicReminders() {
       }
     }
 
-    if (checkInActive === "false" || !enabledDays.includes(todayDayName) || disabledDates.includes(todayStr)) {
+    if (String(checkInActive) === "false") return;
+    var dailyUserIds = remindDailyEventAttendance_(todayStr, h * 60 + m);
+    if (!enabledDays.includes(todayDayName) || disabledDates.includes(todayStr)) {
       return; // ปิดใช้งาน หรือเป็นวันหยุด
     }
 
@@ -2047,7 +2079,7 @@ function runMorningPeriodicReminders() {
           var uidStr = String(userObj.id);
           var uNickname = userObj.nickname;
 
-          if (!checkedInUserIds.includes(uidStr)) {
+          if (!checkedInUserIds.includes(uidStr) && dailyUserIds.indexOf(uidStr) < 0) {
             uncheckGreetingIds.push(uidStr);
           } else {
             if (!greetingCheckedNicknames.includes(uNickname)) {
@@ -2094,7 +2126,7 @@ function runMorningPeriodicReminders() {
 
         if (uNickname === "แอดมิน") continue;
 
-        if (!checkedInUserIds.includes(uidStr)) {
+        if (!checkedInUserIds.includes(uidStr) && dailyUserIds.indexOf(uidStr) < 0) {
           uncheckUserIds.push(uidStr);
         }
       }

@@ -43,6 +43,8 @@ const NAV = [
 ];
 
 const PAGE_TITLES = {
+  '/admin-portfolios': 'จัดการผลงานรายปี',
+  '/admin-recruitment': 'จัดการรับสมัครสภาฯ ปี 70',
   '/dashboard': 'หน้าหลัก', '/checkin': 'เช็คชื่อมาโรงเรียน', '/my-attendance': 'ประวัติเช็คชื่อ', '/greeting-duty': 'ส่งรายงานเวรยืนไหว้', '/clean-duty': 'ส่งเวรห้องสภา', '/submit-news': 'ส่งข่าวประชาสัมพันธ์', '/suggestions': 'ข้อเสนอแนะนักเรียน', '/schedules': 'ตารางเวร', '/calendar': 'ปฏิทินกิจกรรม',
   '/my-fines': 'ชำระเงินและค่าปรับ',
   '/profile': 'ประวัติส่วนตัว', '/settings': 'ตั้งค่าทั่วไป', '/admin': 'จัดการผู้ใช้งาน', '/admin-videos': 'จัดการวิดีโอกิจกรรม', '/admin-policies': 'จัดการนโยบายสภาฯ', '/admin-learning': 'จัดการบทเรียนพลเมือง DNA',
@@ -485,6 +487,12 @@ export default function Layout({ children }) {
               <NavLink to="/admin-learning" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
                 <BookOpen size={15} />
                 <span>จัดการบทเรียนพลเมือง DNA</span>
+              </NavLink>
+              <NavLink to="/admin-portfolios" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
+                <Target size={15} /><span>จัดการผลงานรายปี</span>
+              </NavLink>
+              <NavLink to="/admin-recruitment" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
+                <ClipboardList size={15} /><span>รับสมัครสภาฯ ปี 70 (กกต.)</span>
               </NavLink>
             </div>
           )}

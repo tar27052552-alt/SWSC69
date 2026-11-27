@@ -1,3 +1,4 @@
+import { acceptUploadFile } from '../lib/uploadLimits';
 import { canManageDepartment } from '../lib/councilPermissions';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -217,7 +218,7 @@ export default function AcademicPage() {
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
-    if (!selectedFiles.length) return;
+    if (!selectedFiles.length || !selectedFiles.every(acceptUploadFile)) return;
 
     Promise.all(selectedFiles.map(file => {
       return new Promise((resolve) => {

@@ -1,0 +1,54 @@
+.pf-admin { --pf-admin-purple:#7137a3; padding-bottom:40px; }
+.pf-upload-help { color:#9c88aa; font-size:12px; line-height:1.8; margin:-6px 0 18px; }
+.pf-upload-preview { width:120px; margin:0 0 20px; }
+.pf-upload-preview img,.pf-upload-placeholder { width:120px; height:150px; object-fit:cover; border-radius:10px; border:2px solid #dfc9ee; background:#f5eff9; }
+.pf-upload-placeholder { display:grid; place-items:center; color:#ad91c0; font-size:11px; }
+.pf-admin .pf-upload-preview button { width:100%; margin-top:8px; padding:8px; background:#fff0f0; border-color:#f0cece; color:#b63c3c; font-size:12px; }
+.pf-upload-gallery { display:flex; flex-wrap:wrap; gap:16px; }
+.pf-form-more { background:#faf6fd; border:1px solid #e8dbf1; border-radius:13px; padding:16px; margin:6px 0 22px; }
+.pf-form-more summary { cursor:pointer; color:#866297; font-size:13px; font-weight:600; min-height:28px; }
+.pf-form-more[open] summary { margin-bottom:18px; }
+.pf-form-more label:last-child { margin-bottom:0; }
+.pf-admin .pf-admin-heading { padding:30px 32px; border-radius:24px; background:radial-gradient(ellipse at 100% 0,#8148ad50,transparent 65%),linear-gradient(115deg,#29103d,#51216e); color:#fff; box-shadow:0 14px 35px #4c22681a; border-top:2px solid #edc974; }
+.pf-admin .pf-admin-heading .pf-eyebrow { color:#eac478; font-size:11px; }
+.pf-admin .pf-admin-heading h1 { font-size:28px; margin:10px 0; }
+.pf-admin .pf-admin-heading p { color:#d7c3e6; margin-bottom:0; font-size:14px; line-height:1.8; }
+.pf-admin .pf-admin-heading>a { background:#ffffff10; border:1px solid #e7d4f344; border-radius:12px; padding:12px 17px; color:#f9e0a8; font-size:13px; }
+.pf-admin .pf-toolbar { padding:22px; background:#fff; border:1px solid #e9e0f0; border-radius:20px; margin:22px 0; gap:10px; box-shadow:0 5px 18px #4d206b05; }
+.pf-admin .pf-toolbar label { margin-right:auto; font-size:13px; color:#7c668c; font-weight:600; }
+.pf-admin .pf-toolbar select { min-width:200px; max-width:380px; font-size:14px; color:#4b2568; }
+.pf-admin .pf-toolbar>button:first-of-type { background:#7036a1; border-color:#7036a1; color:#fff; }
+.pf-admin button { font-size:13px; transition:background .18s,box-shadow .18s; }
+.pf-admin button:hover:not(:disabled) { box-shadow:0 3px 12px #68308712; }
+.pf-admin button:disabled { cursor:not-allowed; }
+.pf-admin-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:22px 0; }
+.pf-admin-summary>div { display:flex; align-items:center; gap:15px; padding:22px; border:1px solid #e7deed; border-radius:18px; background:#fff; }
+.pf-summary-icon { width:48px; height:48px; display:grid; place-items:center; flex-shrink:0; border-radius:14px; background:#f1e8fa; color:#7835a4; }
+.pf-summary-green { background:#e9f7ef; color:#2e9365; }.pf-summary-gold { background:#fff5dc; color:#b37b22; }
+.pf-admin-summary small { display:block; font-size:12px; color:#8d7b98; margin-bottom:6px; }.pf-admin-summary strong { font-size:26px; font-variant-numeric:tabular-nums; color:#3e2057; line-height:1; }
+.pf-admin-hint { font-size:13px; line-height:1.8; color:#856523; background:#fff9eb; border:1px solid #f0dfb9; padding:14px 18px; border-radius:12px; }
+.pf-editor-anchor { scroll-margin-top:90px; }
+.pf-admin .pf-form { box-shadow:0 8px 28px #4b206a08; padding:30px; border:1px solid #d9c5e9; border-top:3px solid #a877c5; }
+.pf-admin .pf-form h2 { font-size:22px; margin-top:0; padding-bottom:18px; border-bottom:1px solid #eee5f4; color:#532476; }
+.pf-admin .pf-form label { font-size:13px; color:#62506f; }
+.pf-admin .pf-form input:not([type=checkbox]),.pf-admin .pf-form select,.pf-admin .pf-form textarea { background:#fdfbff; border-color:#e1d5e9; font-size:14px; padding:13px; }
+.pf-admin .pf-form input:focus,.pf-admin .pf-form textarea:focus,.pf-admin .pf-form select:focus { background:#fff; border-color:#ab7ecd; outline:2px solid #bc90da25; outline-offset:0; }
+.pf-admin .pf-form .pf-actions { border-top:1px solid #eee4f5; padding-top:20px; margin-top:20px; }.pf-admin .pf-form .pf-actions button { min-width:110px; }
+.pf-management-controls { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; margin:30px 0 6px; }
+.pf-management-tabs { display:flex; align-items:center; gap:5px; background:#eee7f4; padding:5px; border-radius:14px; }
+.pf-admin .pf-management-tabs button { display:flex; align-items:center; justify-content:center; gap:8px; background:transparent; border:0; color:#8a739a; padding:10px 14px; min-height:44px; border-radius:10px; font-size:13px; }
+.pf-admin .pf-management-tabs button[aria-selected=true] { background:#fff; color:#6d329a; box-shadow:0 2px 8px #5824720c; }
+.pf-management-tabs button>span { background:#e9def2; color:#8b619e; padding:2px 7px; border-radius:6px; font-size:11px; }
+.pf-admin-search { display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #e2d8ec; border-radius:13px; padding:0 13px; color:#9c88ac; flex:1 1 220px; max-width:320px; }
+.pf-admin-search input { width:100%; min-width:0; background:transparent; border:0; outline:0; padding:13px 0; font:inherit; font-size:13px; color:#4e2869; }.pf-admin-search:focus-within { border-color:#b88ace; box-shadow:0 0 0 3px #b88ace15; }
+.pf-admin .pf-section-heading { margin:25px 0 18px; }.pf-admin .pf-section-heading h2 { font-size:21px; color:#47215f; }
+.pf-admin .pf-section-heading>button { background:#723aa0; border-color:#723aa0; color:#fff; }
+.pf-admin .pf-news-management { border:0; margin:0; padding:0; }
+.pf-admin .pf-admin-list article { border:1px solid #e5d9ed; padding:24px; border-radius:19px; box-shadow:0 5px 20px #4b1b6505; align-items:flex-start; }
+.pf-admin .pf-admin-list h3 { font-size:17px; line-height:1.7; margin:14px 0 8px; color:#44225e; }.pf-admin .pf-admin-list p { font-size:12px; }.pf-admin .pf-admin-list .pf-actions { flex-shrink:0; justify-content:flex-end; align-self:center; }.pf-admin .pf-admin-list .pf-actions button { font-size:12px; padding:10px 13px; }.pf-admin .pf-admin-list .pf-badge { margin-right:6px; border-radius:7px; }.pf-admin .pf-admin-list small { color:#a78031; font-size:11px; }
+.pf-admin .pf-empty { border-style:dashed; min-height:200px; padding:40px 20px; background:#ffffffa8; }.pf-admin .pf-empty>svg { color:#b492cc; }.pf-admin .pf-empty h3 { color:#76548e; font-size:16px; margin:14px 0 9px; }.pf-admin .pf-empty p { color:#9e89ac; font-size:13px; line-height:1.8; }
+.pf-admin [role=tabpanel][hidden] { display:none; }
+@media(max-width:1050px) { .pf-admin .pf-admin-list article { flex-direction:column; }.pf-admin .pf-admin-list .pf-actions { justify-content:flex-start; align-self:stretch; } }
+@media(max-width:768px) { .pf-admin .pf-admin-heading { padding:24px 22px; gap:18px; border-radius:20px; }.pf-admin .pf-admin-heading h1 { font-size:24px; }.pf-admin .pf-admin-heading p { font-size:12px; }.pf-admin .pf-toolbar { padding:18px; }.pf-admin .pf-toolbar label { width:100%; gap:8px; }.pf-admin .pf-toolbar select { width:100%; min-width:0; max-width:100%; }.pf-admin .pf-toolbar>button { flex:1; padding:10px 12px; }.pf-admin-summary { gap:10px; }.pf-admin-summary>div { flex-direction:column; gap:10px; text-align:center; padding:16px 8px; border-radius:14px; }.pf-summary-icon { width:38px; height:38px; border-radius:11px; }.pf-admin-summary small { font-size:10px; line-height:1.6; }.pf-admin-summary strong { font-size:23px; }.pf-admin .pf-form { padding:24px 18px; }.pf-management-controls { flex-direction:column; gap:12px; }.pf-management-tabs { width:100%; }.pf-admin .pf-management-tabs button { flex:1; padding:10px 7px; font-size:12px; gap:6px; }.pf-management-tabs svg { width:15px; }.pf-admin-search { max-width:none; flex:auto; min-height:46px; }.pf-admin .pf-admin-list article { padding:20px; }.pf-admin .pf-admin-list .pf-actions { width:100%; }.pf-admin .pf-admin-list .pf-actions>* { flex:1; }.pf-admin .pf-section-heading h2 { font-size:19px; } }
+@media(max-width:360px) { .pf-admin .pf-management-tabs button { font-size:11px; }.pf-management-tabs button>span { padding:2px 5px; }.pf-management-tabs svg { display:none; } }
+@media(prefers-reduced-motion:reduce) { .pf-admin button { transition:none; } }
