@@ -700,7 +700,7 @@ export default function ApplyApp() {
 
   const copyInviteLink = async () => {
     if (!party?.invite_code) return;
-    const link = `${window.location.origin}${import.meta.env.BASE_URL}apply/?join=${party.invite_code}`;
+    const link = `${window.location.origin}${import.meta.env.BASE_URL}apply/?join=${party.invite_code}&openExternalBrowser=1`;
     await navigator.clipboard.writeText(link);
     showNotice('success', `คัดลอกลิงก์เชิญพรรค (${party.invite_code}) แล้ว! ส่งให้เพื่อนในพรรคกดเข้าร่วมได้เลย`);
   };

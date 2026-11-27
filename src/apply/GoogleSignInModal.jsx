@@ -1,8 +1,43 @@
-import { useEffect, useRef, useState } from 'react';
-import { ShieldCheck, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Copy, ExternalLink, ShieldCheck, X } from 'lucide-react';
 import { supabase as defaultSupabase } from '../supabaseClient';
 
 const DEFAULT_GOOGLE_CLIENT_ID = '904792987921-nsifka5uq1k057acsfc5hbphj1oblcov.apps.googleusercontent.com';
+
+function detectInAppBrowser() {
+  if (typeof navigator === 'undefined') return { isInApp: false, appName: '', isLine: false, isAndroid: false };
+  const ua = navigator.userAgent || '';
+  const isAndroid = /Android/i.test(ua);
+  const isLine = /\bLine\//i.test(ua);
+  if (isLine) return { isInApp: true, appName: 'LINE', isLine: true, isAndroid };
+  if (/FBAN|FBAV|FB_IAB/i.test(ua)) return { isInApp: true, appName: 'Facebook', isLine: false, isAndroid };
+  if (/Instagram/i.test(ua)) return { isInApp: true, appName: 'Instagram', isLine: false, isAndroid };
+  if (/Messenger/i.test(ua)) return { isInApp: true, appName: 'Messenger', isLine: false, isAndroid };
+  if (/BytedanceWebview|TikTok|musical_ly/i.test(ua)) return { isInApp: true, appName: 'TikTok', isLine: false, isAndroid };
+  if (isAndroid && /; wv\)/i.test(ua)) return { isInApp: true, appName: 'แอปแชท', isLine: false, isAndroid };
+  return { isInApp: false, appName: '', isLine: false, isAndroid };
+}
+
+function getLineExternalUrl() {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set('openExternalBrowser', '1');
+    return url.toString();
+  } catch {
+    return window.location.href;
+  }
+}
+
+function getAndroidChromeIntentUrl() {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('openExternalBrowser');
+    const clean = url.toString().replace(/^https?:\/\//i, '');
+    return `intent://${clean}#Intent;scheme=https;package=com.android.chrome;end`;
+  } catch {
+    return window.location.href;
+  }
+}
 
 async function createNoncePair() {
   const bytes = new Uint8Array(16);
@@ -25,14 +60,17 @@ export default function GoogleSignInModal({
 }) {
   const btnContainerRef = useRef(null);
   const callbacksRef = useRef({ onClose, onSuccess, onError });
-  const [status, setStatus] = useState('กำลังเตรียมปุ่มเข้าสู่ระบบ Google...');
+  const inAppInfo = useMemo(() => detectInAppBrowser(), []);
+  const [status, setStatus] = useState(inAppInfo.isInApp ? '' : 'กำลังเตรียมปุ่มเข้าสู่ระบบ Google...');
   const [submitting, setSubmitting] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     callbacksRef.current = { onClose, onSuccess, onError };
   }, [onClose, onSuccess, onError]);
 
   useEffect(() => {
+    if (inAppInfo.isInApp) return undefined;
     let cancelled = false;
     let pollTimer = null;
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || DEFAULT_GOOGLE_CLIENT_ID;
@@ -101,7 +139,31 @@ export default function GoogleSignInModal({
       cancelled = true;
       if (pollTimer) clearTimeout(pollTimer);
     };
-  }, [supabaseClient, allowedDomain]);
+  }, [supabaseClient, allowedDomain, inAppInfo.isInApp]);
+
+  const handleOpenExternal = () => {
+    if (inAppInfo.isLine) {
+      window.location.href = getLineExternalUrl();
+      return;
+    }
+    if (inAppInfo.isAndroid) {
+      window.location.href = getAndroidChromeIntentUrl();
+      return;
+    }
+    window.open(getLineExternalUrl(), '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCopyCurrentLink = async () => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('openExternalBrowser');
+      await navigator.clipboard.writeText(url.toString());
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    } catch {
+      setCopiedLink(false);
+    }
+  };
 
   return (
     <div
@@ -168,12 +230,84 @@ export default function GoogleSignInModal({
             ))}
           </p>
 
-          <div
-            ref={btnContainerRef}
-            style={{ minHeight: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '14px 0 6px' }}
-          />
+          {inAppInfo.isInApp ? (
+            <div
+              style={{
+                width: '100%',
+                marginTop: 8,
+                padding: '16px 14px',
+                borderRadius: 14,
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ fontWeight: 800, color: '#92400e', fontSize: 14.5, marginBottom: 6 }}>
+                กรุณาเปิดใน Chrome หรือ Safari เพื่อเข้าสู่ระบบ
+              </div>
+              <div style={{ fontSize: 13, color: '#78350f', lineHeight: 1.6, marginBottom: 12 }}>
+                ระบบความปลอดภัยของ Google ไม่อนุญาตให้เข้าสู่ระบบผ่านเบราว์เซอร์ย่อยภายในแอป <strong>{inAppInfo.appName}</strong> (จะขึ้นจอขาว)
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={handleOpenExternal}
+                  style={{
+                    width: '100%',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    padding: '11px 16px',
+                    borderRadius: 999,
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #5b188a, #7e22ce)',
+                    color: '#fff',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <ExternalLink size={16} /> เปิดใน Chrome / Safari ทันที
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyCurrentLink}
+                  style={{
+                    width: '100%',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    padding: '10px 16px',
+                    borderRadius: 999,
+                    border: '1px solid #d8b4fe',
+                    background: '#fff',
+                    color: '#5b188a',
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <Copy size={15} /> {copiedLink ? '✓ คัดลอกลิงก์แล้ว! นำไปวางใน Chrome / Safari' : 'คัดลอกลิงก์ไปวางใน Chrome / Safari'}
+                </button>
+              </div>
+              <div style={{ fontSize: 12, color: '#92400e', marginTop: 10, lineHeight: 1.55 }}>
+                หรือแตะจุด 3 จุด <strong>(⋮)</strong> มุมขวาล่าง / ขวาบน → เลือก <strong>&ldquo;เปิดด้วยเบราว์เซอร์เริ่มต้น&rdquo;</strong>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div
+                ref={btnContainerRef}
+                style={{ minHeight: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '14px 0 6px' }}
+              />
 
-          {status && <div style={{ fontSize: 13, color: '#6b21a8', fontWeight: 600 }}>{status}</div>}
+              {status && <div style={{ fontSize: 13, color: '#6b21a8', fontWeight: 600 }}>{status}</div>}
+            </>
+          )}
 
           <div style={{ fontSize: 12, color: '#71717a', marginTop: 8 }}>
             ยืนยันตัวตนโดยตรงกับ Google • SWSC.OFFICIAL โรงเรียนสรรพวิทยาคม
