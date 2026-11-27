@@ -318,11 +318,13 @@ async function getSettings(admin: ReturnType<typeof getAdminClient>) {
 async function requireCouncilAdmin(admin: ReturnType<typeof getAdminClient>, authUserId: string) {
   const { data, error } = await admin
     .from('users')
-    .select('id,role,banned')
+    .select('id,role,dept_id,banned')
     .eq('auth_user_id', authUserId)
     .maybeSingle();
   if (error) throw error;
-  if (data?.role !== 'admin' || data.banned === true) return null;
+  if (!data || data.banned === true) return null;
+  const isAllowed = data.role === 'admin' || data.role === 'president' || Number(data.dept_id) === 3;
+  if (!isAllowed) return null;
   return data;
 }
 

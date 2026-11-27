@@ -492,7 +492,16 @@ export default function Layout({ children }) {
                 <Target size={15} /><span>จัดการผลงานรายปี</span>
               </NavLink>
               <NavLink to="/admin-recruitment" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
-                <ClipboardList size={15} /><span>รับสมัครสภาฯ ปี 70 (กกต.)</span>
+                <ClipboardList size={15} /><span>รับสมัครสภาฯ ปี 70</span>
+              </NavLink>
+            </div>
+          )}
+
+          {!isAdmin && (isPresident || Number(user?.deptId) === 3) && (
+            <div>
+              <div className="nav-section">ฝ่ายวิชาการ & รับสมัคร</div>
+              <NavLink to="/admin-recruitment" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={() => setShowSidebar(false)}>
+                <ClipboardList size={15} /><span>รับสมัครสภาฯ ปี 70</span>
               </NavLink>
             </div>
           )}

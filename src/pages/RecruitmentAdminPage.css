@@ -3,6 +3,13 @@
   flex-direction: column;
   gap: 20px;
   padding-bottom: 40px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.rec-admin * {
+  box-sizing: border-box;
 }
 
 .rec-header {
@@ -157,12 +164,20 @@
   border-radius: 18px;
   padding: 20px;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  min-width: 0;
+  max-width: 100%;
 }
 .rec-split {
   display: grid;
-  grid-template-columns: 330px 1fr;
+  grid-template-columns: 300px minmax(0, 1fr);
   gap: 18px;
   align-items: start;
+  min-width: 0;
+  max-width: 100%;
+}
+.rec-split > * {
+  min-width: 0;
+  max-width: 100%;
 }
 .rec-party-list {
   display: flex;
@@ -214,7 +229,12 @@
 }
 
 /* Table */
-.rec-table-wrap { overflow-x: auto; }
+.rec-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  width: 100%;
+}
 .rec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .rec-table th, .rec-table td {
   padding: 10px 12px;
@@ -331,9 +351,13 @@
   flex-wrap: wrap;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1220px) {
   .rec-split { grid-template-columns: 1fr; }
+  .rec-party-list { max-height: 280px; }
   .rec-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1024px) {
   .rec-modal-body {
     grid-template-columns: 1fr;
     overflow-y: auto;
@@ -347,7 +371,7 @@
     overflow-y: visible;
   }
   .rec-doc-preview-frame {
-    min-height: 300px;
+    min-height: 280px;
   }
 }
 
@@ -378,7 +402,8 @@
 }
 .rec-modal-split {
   width: min(1240px, 100%);
-  height: min(92vh, 880px);
+  height: min(92dvh, 880px);
+  max-height: 92dvh;
 }
 .rec-mobile-pane-tabs {
   display: none;
@@ -389,7 +414,7 @@
 }
 .rec-modal-split-body {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -403,6 +428,7 @@
   gap: 10px;
   overflow-y: auto;
   min-height: 0;
+  min-width: 0;
 }
 .rec-review-profile-strip {
   display: flex;
@@ -421,6 +447,7 @@
   gap: 12px;
   overflow-y: auto;
   min-height: 0;
+  min-width: 0;
 }
 .rec-c14-row {
   display: flex;
@@ -462,7 +489,7 @@
   .hide-on-mobile { display: none !important; }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .rec-table-wrap { display: none; }
   .rec-mobile-cards { display: flex; }
 }

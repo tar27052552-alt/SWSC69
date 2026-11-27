@@ -5,6 +5,7 @@ import {
   RotateCcw, Save, Search, Settings, ShieldCheck, Trash2, Users, X, XCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { canManageDepartment } from '../lib/councilPermissions';
 import { callRecruitment } from '../apply/recruitmentApi';
 import ApplicationFormPrint from '../apply/ApplicationFormPrint';
 import { LoadingOverlay, LoadingScreen } from '../apply/LoadingState';
@@ -56,7 +57,8 @@ function toDatetimeLocal(iso) {
 }
 
 export default function RecruitmentAdminPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
+  const canManageRecruitment = isAdmin || canManageDepartment(user, 3);
   const [tab, setTab] = useState('parties'); // 'parties' | 'applicants' | 'settings'
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -506,12 +508,12 @@ export default function RecruitmentAdminPage() {
     }
   };
 
-  if (!isAdmin) {
+  if (!canManageRecruitment) {
     return (
       <div className="rec-card" style={{ textAlign: 'center', padding: 48 }}>
         <AlertCircle size={38} color="#be123c" />
         <h2 style={{ margin: '12px 0 6px' }}>ไม่มีสิทธิ์เข้าถึงหน้านี้</h2>
-        <p style={{ color: '#64748b' }}>เฉพาะผู้ดูแลระบบ (คณะกรรมการสภานักเรียน) เท่านั้นที่สามารถตรวจสอบใบสมัครและตั้งค่าระบบรับสมัครได้</p>
+        <p style={{ color: '#64748b' }}>เฉพาะผู้ดูแลระบบ ประธานสภาฯ หรือฝ่ายวิชาการ เท่านั้นที่สามารถตรวจสอบใบสมัครและตั้งค่าระบบรับสมัครได้</p>
       </div>
     );
   }

@@ -1,12 +1,14 @@
 import { acceptUploadFile } from '../lib/uploadLimits';
 import { canManageDepartment } from '../lib/councilPermissions';
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, X, Save, Search, FileText, Upload, Download, Loader, AlertTriangle, RotateCw } from 'lucide-react';
+import { Plus, X, Save, Search, FileText, Upload, Download, Loader, AlertTriangle, RotateCw, ShieldCheck } from 'lucide-react';
 import { readSheet, writeSheet, updateSheet, uploadFileToDrive, deleteSheet } from '../lib/googleDriveUpload';
 import { sendDiscordEmbedViaGAS } from '../lib/discordWebhook';
 import { supabase } from '../supabaseClient';
 import CollapsibleSection from '../components/CollapsibleSection';
+
+const RecruitmentAdminPage = lazy(() => import('./RecruitmentAdminPage'));
 
 const PROJECT_STATUS = {
   planning:    { label:'วางแผน',        badge:'badge-gray'   },
@@ -399,43 +401,62 @@ export default function AcademicPage() {
           <div className="page-subtitle">จัดการโครงการ เอกสารเผยแพร่ และแผนงานวิชาการประจำปี (เก็บแบบไร้ค่าใช้จ่ายบน Google Sheets & Drive)</div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="btn btn-gray" onClick={loadAcademicData} disabled={loadingData} aria-label="รีเฟรชข้อมูลฝ่ายวิชาการ">
-            <RotateCw size={14} className={loadingData ? 'animate-spin' : ''} /> รีเฟรชข้อมูล
-          </button>
-          {canManage && (tab === 'projects' ? (
-            <button className="btn btn-primary" onClick={() => setProjModal(true)}>
-              <Plus size={14} /> เพิ่มโครงการ
-            </button>
-          ) : (
-            <button className="btn btn-primary" onClick={() => setDocModal(true)}>
-              <Upload size={14} /> อัปโหลดเอกสาร
-            </button>
-          ))}
+          {tab !== 'recruitment' && (
+            <>
+              <button className="btn btn-gray" onClick={loadAcademicData} disabled={loadingData} aria-label="รีเฟรชข้อมูลฝ่ายวิชาการ">
+                <RotateCw size={14} className={loadingData ? 'animate-spin' : ''} /> รีเฟรชข้อมูล
+              </button>
+              {canManage && (tab === 'projects' ? (
+                <button className="btn btn-primary" onClick={() => setProjModal(true)}>
+                  <Plus size={14} /> เพิ่มโครงการ
+                </button>
+              ) : (
+                <button className="btn btn-primary" onClick={() => setDocModal(true)}>
+                  <Upload size={14} /> อัปโหลดเอกสาร
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </div>
 
       {/* Stats */}
-      <div className="stats-row" style={{ marginBottom: 16 }}>
-        {Object.entries(PROJECT_STATUS).map(([k, s]) => (
-          <div key={k} className="stat-box">
-            <div className="stat-icon-box" style={{ background: '#f5f5f5', fontSize: 16 }}>
-              {k === 'planning' ? '📋' : k === 'in_progress' ? '⚙️' : k === 'review' ? '👁' : k === 'done' ? '✅' : '❌'}
+      {tab !== 'recruitment' && (
+        <div className="stats-row" style={{ marginBottom: 16 }}>
+          {Object.entries(PROJECT_STATUS).map(([k, s]) => (
+            <div key={k} className="stat-box">
+              <div className="stat-icon-box" style={{ background: '#f5f5f5', fontSize: 16 }}>
+                {k === 'planning' ? '📋' : k === 'in_progress' ? '⚙️' : k === 'review' ? '👁' : k === 'done' ? '✅' : '❌'}
+              </div>
+              <div>
+                <div className="stat-value" style={{ color: '#212121' }}>{projects.filter(p => p.status === k).length}</div>
+                <div className="stat-label">{s.label}</div>
+              </div>
             </div>
-            <div>
-              <div className="stat-value" style={{ color: '#212121' }}>{projects.filter(p => p.status === k).length}</div>
-              <div className="stat-label">{s.label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="tab-bar">
         <button className={`tab-btn${tab === 'projects' ? ' active' : ''}`} onClick={() => setTab('projects')}>📋 โครงการทั้งหมด</button>
         <button className={`tab-btn${tab === 'docs' ? ' active' : ''}`} onClick={() => setTab('docs')}>📁 คลังเอกสาร</button>
+        {canManage && (
+          <button
+            className={`tab-btn${tab === 'recruitment' ? ' active' : ''}`}
+            onClick={() => setTab('recruitment')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <ShieldCheck size={15} /> ระบบรับสมัครสภาฯ ปี 70
+          </button>
+        )}
       </div>
 
-      {loadingData ? (
+      {tab === 'recruitment' && canManage ? (
+        <Suspense fallback={<div className="card" style={{ textAlign: 'center', padding: 48, color: '#64748b' }}>กำลังโหลดระบบจัดการรับสมัครสภาฯ ปี 70...</div>}>
+          <RecruitmentAdminPage />
+        </Suspense>
+      ) : loadingData ? (
         <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: 12 }}>
           <div style={{ width: 40, height: 40, border: '4px solid #f3f3f3', borderTop: '4px solid #00bcd4', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
           <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
