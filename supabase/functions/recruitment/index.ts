@@ -6,7 +6,6 @@ const BUCKET = 'recruitment-docs';
 const ALLOWED_DOC_TYPES = new Set(['grade', 'conduct', 'consent']);
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
 const ALLOWED_CLASSROOMS = new Set(Array.from({ length: 14 }, (_, i) => `ม.4/${i + 1}`));
-const COUNCIL_TEST_SPECIAL_EMAILS = new Set(['swscsappha@sappha.ac.th']);
 
 function sanitizeSignatureData(raw: unknown): string | null {
   if (raw === '' || raw === null || raw === undefined) return '';
@@ -73,7 +72,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 }
 
 async function resolveStudentPhoto(
-  admin: ReturnType<typeof getAdminClient>,
+  _admin: ReturnType<typeof getAdminClient>,
   { studentId, classroom }: { studentId: string; classroom: string; photoPath?: string | null },
 ) {
   // Strictly resolve official student photo from school Google Drive folder (M4 / 4.x / <studentId>.JPG)
@@ -104,25 +103,6 @@ async function resolveStudentPhoto(
       const mimeType = (imgRes.headers.get('content-type') || 'image/jpeg').split(';')[0];
       return { found: true, source: 'drive', fileId, mimeType, base64: bytesToBase64(arr) };
     }
-  }
-
-  // 3. Fallback for Student Council test accounts: use avatar stored in public.users
-  const { data: councilUser } = await admin
-    .from('users')
-    .select('avatar')
-    .eq('student_id', cleanId)
-    .neq('student_id', '00000')
-    .eq('banned', false)
-    .maybeSingle();
-  const rawAvatar = typeof councilUser?.avatar === 'string' ? councilUser.avatar.trim() : '';
-  const dataUriMatch = rawAvatar.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-  if (dataUriMatch) {
-    return {
-      found: true,
-      source: 'council_avatar',
-      mimeType: dataUriMatch[1],
-      base64: dataUriMatch[2],
-    };
   }
 
   return { found: false };
@@ -189,94 +169,18 @@ async function lookupEligibleM4(
   return data || null;
 }
 
-async function lookupCouncilTestUser(
-  admin: ReturnType<typeof getAdminClient>,
-  email: string,
-  fallbackStudentId = '',
-) {
-  const clean = cleanEmail(email);
-  const isSpecial = COUNCIL_TEST_SPECIAL_EMAILS.has(clean);
-  const sid = extractStudentIdFromEmail(clean) || fallbackStudentId.trim();
-  if (!isSpecial && (!sid || sid === '00000')) return null;
-
-  const { data: councilUsers, error: cErr } = await admin
-    .from('users')
-    .select('student_id')
-    .neq('student_id', '00000')
-    .eq('banned', false)
-    .order('student_id', { ascending: true });
-  if (cErr) throw cErr;
-
-  const sortedIds = (councilUsers || [])
-    .map((u) => String(u.student_id || '').trim())
-    .filter(Boolean);
-
-  let slotIndex = -1;
-  if (isSpecial) {
-    slotIndex = 0;
-  } else {
-    const idx = sortedIds.indexOf(sid);
-    if (idx < 0) return null;
-    slotIndex = idx + 1;
-  }
-
-  // Deterministically assign a unique real M.4 student spread round-robin across ม.4/1..ม.4/14
-  // so council testers can verify real M.4 roster data + Google Drive M.4 photos end-to-end.
-  const { data: m4Rows, error: mErr } = await admin
-    .from('recruitment_eligible_students')
-    .select('student_id, prefix, full_name, classroom, student_no')
-    .eq('academic_year', ACADEMIC_YEAR)
-    .order('student_id', { ascending: true });
-  if (mErr) throw mErr;
-  if (!m4Rows || m4Rows.length === 0) return null;
-
-  const byRoom: Record<string, typeof m4Rows> = {};
-  for (const r of m4Rows) {
-    byRoom[r.classroom] = byRoom[r.classroom] || [];
-    byRoom[r.classroom].push(r);
-  }
-  const rooms = Array.from({ length: 14 }, (_, i) => `ม.4/${i + 1}`).filter((rm) => (byRoom[rm]?.length || 0) > 0);
-  const roundRobin: typeof m4Rows = [];
-  let depth = 0;
-  while (roundRobin.length < m4Rows.length) {
-    let added = false;
-    for (const rm of rooms) {
-      if (byRoom[rm][depth]) {
-        roundRobin.push(byRoom[rm][depth]);
-        added = true;
-      }
-    }
-    if (!added) break;
-    depth += 1;
-  }
-
-  const picked = roundRobin[slotIndex % roundRobin.length];
-  return {
-    student_id: picked.student_id,
-    prefix: picked.prefix,
-    full_name: picked.full_name,
-    classroom: picked.classroom,
-    student_no: picked.student_no ?? null,
-    simulated_m4: true,
-  };
-}
-
 async function lookupEligibleApplicant(
   admin: ReturnType<typeof getAdminClient>,
   email: string,
-  allowCouncilTest: boolean,
   fallbackStudentId = '',
 ) {
+  // Strictly enforce real school email matching official M.4 student roster ONLY
   const sid = extractStudentIdFromEmail(cleanEmail(email)) || fallbackStudentId.trim();
   if (sid) {
     const m4 = await lookupEligibleM4(admin, sid);
-    if (m4) return { eligible: true, isTestAccount: false, student: m4 };
+    if (m4) return { eligible: true, student: m4 };
   }
-  if (allowCouncilTest) {
-    const council = await lookupCouncilTestUser(admin, email, fallbackStudentId);
-    if (council) return { eligible: true, isTestAccount: true, student: council };
-  }
-  return { eligible: false, isTestAccount: false, student: null };
+  return { eligible: false, student: null };
 }
 
 function isUuid(v: unknown) {
@@ -396,38 +300,15 @@ Deno.serve(async (req) => {
           .order('created_at', { ascending: true });
         if (mErr) throw mErr;
 
-        const { data: councilUsers } = await admin
-          .from('users')
-          .select('student_id')
-          .neq('student_id', '00000')
-          .eq('banned', false);
-        const councilIdSet = new Set((councilUsers || []).map((u) => String(u.student_id || '').trim()).filter(Boolean));
-        const isTestEmailOrId = (email: unknown, studentId?: unknown) => {
-          const clean = cleanEmail(email);
-          if (COUNCIL_TEST_SPECIAL_EMAILS.has(clean)) return true;
-          const sidFromEmail = extractStudentIdFromEmail(clean);
-          if (sidFromEmail && councilIdSet.has(sidFromEmail)) return true;
-          const sid = String(studentId || '').trim();
-          return Boolean(sid && councilIdSet.has(sid));
-        };
-
-        const taggedMembers = (members || []).map((m) => ({
-          ...m,
-          is_test_account: isTestEmailOrId(m.email, m.student_id),
-        }));
-        const testPartyIds = new Set(taggedMembers.filter((m) => m.is_test_account).map((m) => m.party_id));
-        const taggedParties = (parties || []).map((p) => ({
-          ...p,
-          has_test_members: testPartyIds.has(p.id) || isTestEmailOrId(p.leader_email),
-        }));
-
-        return jsonResponse({ settings, parties: taggedParties, members: taggedMembers });
+        return jsonResponse({ settings, parties: parties || [], members: members || [] });
       }
 
       if (action === 'admin_update_settings') {
-        const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+        const patch: Record<string, unknown> = {
+          allow_council_test: false,
+          updated_at: new Date().toISOString(),
+        };
         if (typeof body.is_open === 'boolean') patch.is_open = body.is_open;
-        if (typeof body.allow_council_test === 'boolean') patch.allow_council_test = body.allow_council_test;
         if (body.target_member_count !== undefined) {
           const n = Number(body.target_member_count);
           if (!Number.isInteger(n) || n < 1 || n > 50) return fail('จำนวนสมาชิกต้องอยู่ระหว่าง 1-50 คน');
@@ -605,10 +486,8 @@ Deno.serve(async (req) => {
       return fail(`กรุณาเข้าสู่ระบบด้วยอีเมลโรงเรียน (@${domain}) เท่านั้น`, 403);
     }
 
-    const allowCouncilTest = Boolean(settings.allow_council_test);
-    const eligibility = await lookupEligibleApplicant(admin, userEmail, allowCouncilTest);
+    const eligibility = await lookupEligibleApplicant(admin, userEmail);
     const eligibleStudent = eligibility.student;
-    const isTestAccount = eligibility.isTestAccount;
 
     if (!eligibility.eligible || !eligibleStudent) {
       if (action === 'my_state') {
@@ -616,7 +495,6 @@ Deno.serve(async (req) => {
           settings,
           me: { email: userEmail, authUserId: callerUser.id },
           eligible: false,
-          isTestAccount: false,
           eligibilityError: 'บัญชีนี้ไม่อยู่ในรายชื่อนักเรียนชั้นมัธยมศึกษาปีที่ 4 โรงเรียนสรรพวิทยาคม (เฉพาะนักเรียน ม.4 เท่านั้นที่มีสิทธิลงสมัครรับเลือกตั้ง)',
           eligibleStudent: null,
           party: null,
@@ -656,7 +534,6 @@ Deno.serve(async (req) => {
           settings,
           me: { email: userEmail, authUserId: callerUser.id },
           eligible: true,
-          isTestAccount,
           eligibleStudent,
           party: null,
           myMember: null,
@@ -682,7 +559,6 @@ Deno.serve(async (req) => {
         settings,
         me: { email: userEmail, authUserId: callerUser.id },
         eligible: true,
-        isTestAccount,
         eligibleStudent,
         party: party || null,
         myMember,
@@ -696,7 +572,7 @@ Deno.serve(async (req) => {
 
     const checkRegistrationOpen = () => {
       if (!settings.is_open) return 'ระบบปิดรับสมัครแล้วในขณะนี้';
-      if (!isTestAccount && settings.open_at && new Date(settings.open_at).getTime() > Date.now()) {
+      if (settings.open_at && new Date(settings.open_at).getTime() > Date.now()) {
         const openDateText = new Date(settings.open_at).toLocaleDateString('th-TH', {
           day: 'numeric',
           month: 'long',
@@ -915,7 +791,7 @@ Deno.serve(async (req) => {
         if (target.id === existingMember.id) {
           lockedIdentity = eligibleStudent;
         } else {
-          const targetLookup = await lookupEligibleApplicant(admin, target.email, allowCouncilTest, target.student_id || '');
+          const targetLookup = await lookupEligibleApplicant(admin, target.email, target.student_id || '');
           lockedIdentity = targetLookup.student;
         }
 
@@ -1025,7 +901,6 @@ Deno.serve(async (req) => {
         const preAddCheck = await lookupEligibleApplicant(
           admin,
           newEmail,
-          allowCouncilTest,
           String(body.student_id || '').trim(),
         );
         const preAddEligible = preAddCheck.student;

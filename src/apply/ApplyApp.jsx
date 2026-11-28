@@ -205,7 +205,7 @@ export default function ApplyApp() {
   const isRegOpen = settingsLoaded
     && Boolean(settings.is_open)
     && !countdown?.expired
-    && (!isUpcoming || Boolean(myState?.isTestAccount));
+    && !isUpcoming;
   const openDateLabel = formatThaiShortDate(settings.open_at);
   const closeDateLabel = formatThaiShortDate(settings.deadline_at);
 
@@ -841,9 +841,6 @@ export default function ApplyApp() {
               {myMember?.classroom && (
                 <span className="apply-compact-room">{myMember.classroom}</span>
               )}
-              {myState?.isTestAccount && (
-                <span className="apply-compact-test">ทดลอง</span>
-              )}
             </div>
             <button
               type="button"
@@ -955,17 +952,7 @@ export default function ApplyApp() {
           <div className="apply-user-strip">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 14 }}>
               <span className="pill pill-purple">เข้าสู่ระบบแล้ว</span>
-              {myState?.isTestAccount && (
-                <span className="pill pill-amber" title="บัญชีคณะกรรมการสภานักเรียนสำหรับทดลองระบบ">
-                  โหมดทดลอง (สภา)
-                </span>
-              )}
               <strong style={{ color: '#2d1046' }}>{userEmail}</strong>
-              {myState?.isTestAccount && myState?.eligibleStudent && (
-                <span style={{ fontSize: 12.5, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', padding: '2px 10px', borderRadius: 999 }}>
-                  จำลองเป็น ม.4: <strong>{myState.eligibleStudent.prefix}{myState.eligibleStudent.full_name}</strong> ({myState.eligibleStudent.student_id} • {myState.eligibleStudent.classroom})
-                </span>
-              )}
               {party && <span className="pill pill-amber">พรรค {party.party_name}</span>}
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1036,15 +1023,6 @@ export default function ApplyApp() {
             />
           ) : (
           <>
-            {myState?.isTestAccount && isUpcoming && (
-              <div className="apply-alert amber" style={{ marginBottom: 14 }}>
-                <Clock size={18} style={{ flexShrink: 0, marginTop: 2 }} />
-                <div>
-                  <strong>โหมดทดสอบคณะกรรมการสภานักเรียน:</strong> ขณะนี้ระบบยังไม่เปิดให้คนทั่วไปกรอกใบสมัคร (กำหนดเปิด {openDateLabel}) — คนอื่นจะเห็นเฉพาะหน้าจอรอเวลา แต่บัญชีสภานักเรียนสามารถทดสอบสร้างพรรค กรอกข้อมูล และส่งใบสมัครได้เต็มรูปแบบ
-                </div>
-              </div>
-            )}
-
             {!party && !isRegOpen ? (
               <section className="apply-card" style={{ textAlign: 'center', padding: '36px 24px' }}>
                 <div style={{ width: 64, height: 64, borderRadius: 20, margin: '0 auto 16px', background: isUpcoming ? '#fef3c7' : '#ffe4e6', color: isUpcoming ? '#b45309' : '#be123c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

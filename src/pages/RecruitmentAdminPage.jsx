@@ -103,7 +103,6 @@ export default function RecruitmentAdminPage() {
     setMembers(data.members || []);
     setSettingsForm({
       is_open: Boolean(data.settings?.is_open),
-      allow_council_test: Boolean(data.settings?.allow_council_test),
       target_member_count: data.settings?.target_member_count ?? DEFAULT_TARGET_MEMBERS,
       min_gpax: data.settings?.min_gpax ?? DEFAULT_MIN_GPAX,
       max_per_special_room: data.settings?.max_per_special_room ?? '',
@@ -644,9 +643,6 @@ export default function RecruitmentAdminPage() {
                             {p.party_number ? `เบอร์ ${p.party_number} • ` : ''}{p.party_name}
                           </strong>
                           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                            {p.has_test_members && (
-                              <span style={statusBadgeStyle('amber')}>โหมดทดลอง (สภา)</span>
-                            )}
                             <span style={statusBadgeStyle(meta.tone)}>{meta.label}</span>
                           </div>
                         </div>
@@ -686,9 +682,6 @@ export default function RecruitmentAdminPage() {
                             <span style={statusBadgeStyle(PARTY_STATUS_META[selectedParty.status]?.tone)}>
                               {PARTY_STATUS_META[selectedParty.status]?.label || selectedParty.status}
                             </span>
-                            {selectedParty.has_test_members && (
-                              <span style={statusBadgeStyle('amber')}>โหมดทดลอง (สภา)</span>
-                            )}
                           </div>
                           <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
                             หัวหน้าพรรค: <strong>{selectedParty.leader_email}</strong> • รหัสเชิญ: <code>{selectedParty.invite_code}</code>
@@ -1078,20 +1071,6 @@ export default function RecruitmentAdminPage() {
                   <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, border: '1.5px solid #e9dff2', background: '#faf5ff', cursor: 'pointer', fontWeight: 700 }}>
                     <input type="checkbox" checked={settingsForm.publish_approved_parties} onChange={(e) => setSettingsForm({ ...settingsForm, publish_approved_parties: e.target.checked })} />
                     ประกาศรายชื่อพรรคที่ผ่านรับรองหน้าเว็บ
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12, border: '1.5px solid #fde68a', background: '#fffbeb', cursor: 'pointer', gridColumn: '1 / -1' }}>
-                    <input
-                      type="checkbox"
-                      style={{ marginTop: 3 }}
-                      checked={Boolean(settingsForm.allow_council_test)}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, allow_council_test: e.target.checked })}
-                    />
-                    <div>
-                      <div style={{ fontWeight: 700, color: '#92400e' }}>เปิดให้เพื่อนสภาทดลองระบบ (Test Mode)</div>
-                      <div style={{ fontSize: 12, color: '#b45309', marginTop: 2 }}>
-                        อนุญาตให้คณะกรรมการสภา 29 คน + <code>swscsappha@sappha.ac.th</code> เข้าระบบทดลองสมัครและดึงรูปอัตโนมัติ (กดปิดก่อนเปิดรับสมัคร ม.4 จริงเพื่อล็อกเฉพาะ ม.4 100%)
-                      </div>
-                    </div>
                   </label>
                   <div>
                     <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, marginBottom: 4 }}>จำนวนสมาชิกต่อพรรค (คน)</label>
